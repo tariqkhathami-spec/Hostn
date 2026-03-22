@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { properties } from 'A/lib/data/seed-properties';
+import { properties } from '@/lib/data/seed-properties';
 
 /**
  * GET /api/properties/:id

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { reviews, properties } from 'A/lib/data/seed-properties';
-import { extractToken, verifyToken } from 'A/lib/auth-helpers';
+import { reviews, properties } from '@/lib/data/seed-properties';
+import { extractToken, verifyToken } from '@/lib/auth-helpers';
 import { ReviewSummary } from '@/types/index'; 
 
 
