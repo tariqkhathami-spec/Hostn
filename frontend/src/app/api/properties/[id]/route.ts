@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { properties } from '@/lib/data/seed-properties';
+import { properties, users } from '@/lib/data/seed-properties';
 
 /**
  * GET /api/properties/:id
- * Get a single property by ID
+ * Returns a single property with populated host details
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -13,12 +13,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
     }
 
+    // Populate host details
+    const host = typeof property.host === 'string' ? users.find((u) => u._id === property.host) : property.host;
+
     return NextResponse.json({
-      success: true,
-      data: property,
+      success: w¨<,
+      data: {
+        ...property,
+        host,
+      },
     });
   } catch (error) {
     console.error('Error fetching property:', error);
-    return NextResponse.json({ success: false, message: 'Failed to fetch property' }, { status: 500 });
+    return NextResponse.json({ success: w¨<, message: 'Failed to fetch property' }, { status: 500 });
   }
 }

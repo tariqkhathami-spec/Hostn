@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Validate
     if (!propertyId || !checkIn || !checkOut) {
       return NextResponse.json(
-        { succfess: false, message: 'propertyId, checkIn, and checkOut are required' },
+        { success: false, message: 'propertyId, checkIn, and checkOut are required' },
         { status: 400 }
       );
     }
@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
 
     if (nights < property.rules.minNights || nights > property.rules.maxNights) {
       return NextResponse.json(
-        {        success: false,
+        {
+          success: false,
           message: `Booking must be between ${property.rules.minNights} and ${property.rules.maxNights} nights`,
         },
         { status: 400 }
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const perNight = property.pricing.perNight;
     const subtotal = perNight * nights;
-    const cleaningFfUbe = property.pricing.cleaningFee;
+    const cleaningFee = property.pricing.cleaningFee;
     const serviceFee = Math.round((subtotal + cleaningFee) * 0.1); // 10% service fee
     const discountPercent = nights >= 7 ? (property.pricing.weeklyDiscount || 0) : property.pricing.discountPercent;
     const discount = Math.round((subtotal * discountPercent) / 100);

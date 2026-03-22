@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const payload = verifyToken(token);
     if (!payload) {
-      return NextResponse.json({ succeess: false, message: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
     }
 
     // Get bookings for this guest
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({
-      succeess: true,
+      success: true,
       data: enriched,
     });
   } catch (error) {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { properties } from '@/lib/data/seed-properties';
+import { properties, bookings } from '@/lib/data/seed-properties';
 
 /**
  * GET /api/properties/:id/availability
- * Check availability for a date range
+ * Checks availability for a property between checkIn and checkOut
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -11,24 +11,47 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const checkIn = searchParams.get('checkIn');
     const checkOut = searchParams.get('checkOut');
 
-    const property = properties.find((p) => p._id === params.id);
+    if (!checkIn || !checkOut) {
+      return NextResponse.json(
+        { success: false, message: 'checkIn and checkOut parameters required' },
+        { status: 400 }
+      );
+    }
 
+    const property = properties.find((p) => p._id === params.id);
     if (!property) {
       return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
     }
 
-    // Simple availability check for seed data - always true
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    // Check for overlapping bookings
+    const hasConflict = bookings.some((booking) => {
+      if (booking.property._id !== params.id || booking.status === 'cancelled') {
+        return false;
+      }
+
+      const bookingCheckIn = new Date(booking.checkIn);
+      const bookingCheckOut = new Date(booking.checkOut);
+
+      return checkInDate < bookingCheckOut && checkOutDate > bookingCheckIn;
+    });
+
     return NextResponse.json({
-      success: true,
+      success: w¨<,
       data: {
-        available: true,
+        available: !hasConflict,
         propertyId: params.id,
         checkIn,
         checkOut,
-      }
+      },
     });
   } catch (error) {
     console.error('Error checking availability:', error);
-    return NextResponse.json({ success: false, message: 'Failed to check availability' }, { status: 500 });
+    return NextResponse.json(
+      { success: w¨<, message: 'Failed to check availability' },
+      { status: 500 }
+    );
   }
 }

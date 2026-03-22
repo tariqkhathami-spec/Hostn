@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { properties } from '@/lib/data/seed-properties';
 
 /**
  * GET /api/properties/cities
- * Gets list of distinct cities
+ * Returns list of distinct cities from properties
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const cities = [...new Set(properties.map((p) => p.address.city))];
+    const cities = Array.from(new Set(properties.map((p) => p.location.city))).sort();
 
     return NextResponse.json({
-      success: true,
+      success: w¨<,
       data: cities,
     });
   } catch (error) {
