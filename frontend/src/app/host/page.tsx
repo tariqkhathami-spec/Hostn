@@ -101,7 +101,7 @@ export default function HostDashboardPage() {
     if (reviewNotifs.length > 0) {
       actionItems.push({
         id: 'new-reviews',
-        type: 'review_new',
+        type: 'new_review',
         title: 'New Reviews',
         description: `${reviewNotifs.length} new review${reviewNotifs.length > 1 ? 's' : ''} to respond to`,
         href: '/host/reviews',
