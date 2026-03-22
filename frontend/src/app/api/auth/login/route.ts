@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       token,
-      data: user,
+      user,
     });
   } catch (error) {
     console.error('Error logging in:', error);

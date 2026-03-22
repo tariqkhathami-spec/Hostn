@@ -37,9 +37,13 @@ function LoginContent() {
 
     setLoading(true);
     try {
-      await login(email, password);
+      const userData = await login(email, password);
       toast.success('Welcome back!');
-      router.push(redirect);
+      // Redirect admins to admin dashboard, others to their redirect path
+      const storedUser = localStorage.getItem('hostn_user');
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const destination = parsedUser?.role === 'admin' ? '/admin' : redirect;
+      router.push(destination);
     } catch (error: unknown) {
       const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Invalid credentials';
       toast.error(msg);

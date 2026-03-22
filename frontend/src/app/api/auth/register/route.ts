@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         token,
-        data: newUser,
+        user: newUser,
       },
       { status: 201 }
     );
