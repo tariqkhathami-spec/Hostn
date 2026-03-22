@@ -71,8 +71,8 @@ export default function SearchFilters() {
 
   return (
     <div className="sticky top-16 z-30 bg-white border-b border-gray-100 shadow-sm">
-      <div className="container-custom py-3">
-        <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="container-custom py-2 sm:py-3">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
           {/* Filter button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -147,7 +147,7 @@ export default function SearchFilters() {
         {/* Expanded filters panel */}
         {showFilters && (
           <div className="mt-4 p-5 bg-gray-50 rounded-2xl border border-gray-200 animate-fade-in-up">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">City</label>
                 <select

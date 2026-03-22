@@ -74,7 +74,10 @@ export type AmenityType =
   | 'pet_friendly'
   | 'smoking_allowed'
   | 'breakfast_included'
-  | 'heating';
+  | 'heating'
+  | 'beach_access'
+  | 'fireplace'
+  | 'hot_tub';
 
 export interface Property {
   _id: string;
@@ -116,8 +119,8 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' 
 
 export interface Booking {
   _id: string;
-  property: Property;
-  guest: User;
+  property: Property | string;
+  guest: User | string;
   checkIn: string;
   checkOut: string;
   guests: GuestCount;

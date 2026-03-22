@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Booking, BookingStatus } from '@/types';
@@ -53,7 +53,7 @@ const statusConfig: Record<string, { color: string; bg: string; icon: React.Elem
 type SortKey = 'date' | 'amount' | 'checkin';
 type SortDir = 'asc' | 'desc';
 
-export default function HostBookingsPage() {
+function HostBookingsContent() {
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -599,5 +599,13 @@ export default function HostBookingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HostBookingsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <HostBookingsContent />
+    </Suspense>
   );
 }
