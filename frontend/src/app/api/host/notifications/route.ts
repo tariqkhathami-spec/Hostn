@@ -34,11 +34,12 @@ export async function GET(request: NextRequest) {
     });
 
     pendingBookings.forEach((booking, idx) => {
+      const guestName = typeof booking.guest === 'string' ? 'Guest' : booking.guest.name;
       notifications.push({
         id: `notif_booking_${booking._id}`,
         type: 'booking_pending',
         title: 'New Booking Request',
-        message: `${booking.guest.name} requested to book your property`,
+        message: `${guestName} requested to book your property`,
         time: new Date(booking.createdAt).toISOString(),
         read: false,
         action: `/host/bookings/${booking._id}`,
@@ -52,11 +53,12 @@ export async function GET(request: NextRequest) {
     });
 
     recentReviews.slice(0, 2).forEach((review) => {
+      const guestName = typeof review.guest === 'string' ? 'Guest' : review.guest.name;
       notifications.push({
         id: `notif_review_${review._id}`,
         type: 'review_new',
         title: 'New Review',
-        message: `${review.guest.name} left a ${review.ratings.overall}-star review`,
+        message: `${guestName} left a ${review.ratings.overall}-star review`,
         time: new Date(review.createdAt).toISOString(),
         read: false,
         action: `/host/reviews`,

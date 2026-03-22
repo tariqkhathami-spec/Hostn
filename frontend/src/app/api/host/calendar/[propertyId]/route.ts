@@ -37,17 +37,21 @@ export async function GET(request: NextRequest, { params }: { params: { property
         const propId = typeof b.property === 'string' ? b.property : b.property._id;
         return propId === params.propertyId;
       })
-      .map((b) => ({
-        _id: b._id,
-        checkIn: b.checkIn,
-        checkOut: b.checkOut,
-        status: b.status,
-        guest: {
-          name: b.guest.name,
-          email: b.guest.email,
-        },
-        total: b.pricing.total,
-      }));
+      .map((b) => {
+        const guestName = typeof b.guest === 'string' ? 'Guest' : b.guest.name;
+        const guestEmail = typeof b.guest === 'string' ? '' : b.guest.email;
+        return {
+          _id: b._id,
+          checkIn: b.checkIn,
+          checkOut: b.checkOut,
+          status: b.status,
+          guest: {
+            name: guestName,
+            email: guestEmail,
+          },
+          total: b.pricing.total,
+        };
+      });
 
     // For seed data, blocked dates are empty
     const blockedDates: { start: string; end: string }[] = [];

@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get bookings for this guest
-    const myBookings = bookings.filter((b) => b.guest._id === payload.userId);
+    const myBookings = bookings.filter((b) => {
+      const guestId = typeof b.guest === 'string' ? b.guest : b.guest._id;
+      return guestId === payload.userId;
+    });
 
     // Ensure full details are populated
     const enriched = myBookings.map((booking) => ({
