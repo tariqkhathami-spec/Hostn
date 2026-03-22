@@ -265,3 +265,57 @@ export interface UnavailableDate {
   start: string;
   end: string;
 }
+
+// ─── Admin Dashboard Types ──────────────────────────────────────────────────────
+
+export type ModerationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AdminDashboardStats {
+  totalUsers: number;
+  totalHosts: number;
+  totalProperties: number;
+  totalBookings: number;
+  totalRevenue: number;
+  pendingProperties: number;
+  recentActivity: AdminActivityLog[];
+}
+
+export interface AdminActivityLog {
+  _id: string;
+  action: 'property_approved' | 'property_rejected' | 'user_banned' | 'user_unbanned' | 'booking_cancelled' | 'host_suspended' | 'host_activated' | 'property_created' | 'booking_created' | 'review_created';
+  performedBy: string;
+  targetType: 'user' | 'property' | 'booking' | 'review';
+  targetId: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface AdminUser extends User {
+  isBanned?: boolean;
+  bookingsCount?: number;
+  totalSpent?: number;
+}
+
+export interface AdminProperty extends Property {
+  moderationStatus: ModerationStatus;
+  rejectionReason?: string;
+  moderatedBy?: string;
+  moderatedAt?: string;
+}
+
+export interface AdminBooking extends Booking {
+  hostName?: string;
+  guestName?: string;
+  propertyTitle?: string;
+}
+
+export interface PaymentRecord {
+  _id: string;
+  bookingId: string;
+  guestName: string;
+  propertyTitle: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'refunded';
+  method: string;
+  createdAt: string;
+}

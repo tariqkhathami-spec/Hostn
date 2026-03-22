@@ -94,8 +94,38 @@ const reviewIds = {
   review40: '707f1f77bcf86cd799439040',
 };
 
+// Admin IDs
+const adminIds = {
+  admin1: '907f1f77bcf86cd799439001',
+  admin2: '907f1f77bcf86cd799439002',
+};
+
 // Seed users
 export const seedUsers: User[] = [
+  // Admin Users
+  {
+    _id: adminIds.admin1,
+    name: 'طارق الخثامي',
+    email: 'admin@hostn.co',
+    phone: '+966500000001',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop',
+    role: 'admin',
+    isVerified: true,
+    wishlist: [],
+    createdAt: '2023-09-01T00:00:00Z',
+  },
+  {
+    _id: adminIds.admin2,
+    name: 'مدير النظام',
+    email: 'system@hostn.co',
+    phone: '+966500000002',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop',
+    role: 'admin',
+    isVerified: true,
+    wishlist: [],
+    createdAt: '2023-09-01T00:00:00Z',
+  },
+
   // Host Users
   {
     _id: hostIds.host1,
