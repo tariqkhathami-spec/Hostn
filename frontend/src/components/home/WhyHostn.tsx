@@ -1,40 +1,45 @@
-import { ShieldCheck, Star, Headphones, CreditCard } from 'lucide-react';
+'use client';
 
-const features = [
-  {
-    Icon: ShieldCheck,
-    title: 'Verified Properties',
-    description: 'Every listing is verified for quality and accuracy before going live.',
-    color: 'bg-blue-50 text-blue-600',
-  },
-  {
-    Icon: Star,
-    title: 'Trusted Reviews',
-    description: 'Real reviews from real guests to help you make the best choice.',
-    color: 'bg-amber-50 text-amber-600',
-  },
-  {
-    Icon: Headphones,
-    title: '24/7 Support',
-    description: 'Our team is always available to help before, during, and after your stay.',
-    color: 'bg-green-50 text-green-600',
-  },
-  {
-    Icon: CreditCard,
-    title: 'Secure Payments',
-    description: 'Fully encrypted transactions and flexible payment options you can trust.',
-    color: 'bg-purple-50 text-purple-600',
-  },
-];
+import { ShieldCheck, Star, Headphones, CreditCard } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function WhyHostn() {
+  const { t } = useLanguage();
+
+  const features = [
+    {
+      Icon: ShieldCheck,
+      title: t('why.verified'),
+      description: t('why.verifiedDesc'),
+      color: 'bg-blue-50 text-blue-600',
+    },
+    {
+      Icon: Star,
+      title: t('why.reviews'),
+      description: t('why.reviewsDesc'),
+      color: 'bg-amber-50 text-amber-600',
+    },
+    {
+      Icon: Headphones,
+      title: t('why.support'),
+      description: t('why.supportDesc'),
+      color: 'bg-green-50 text-green-600',
+    },
+    {
+      Icon: CreditCard,
+      title: t('why.payments'),
+      description: t('why.paymentsDesc'),
+      color: 'bg-purple-50 text-purple-600',
+    },
+  ];
+
   return (
     <section className="py-10 sm:py-16">
       <div className="container-custom">
         <div className="text-center mb-8 sm:mb-12">
-          <h2 className="section-title mb-2 sm:mb-3">Why Choose Hostn?</h2>
+          <h2 className="section-title mb-2 sm:mb-3">{t('why.title')}</h2>
           <p className="text-gray-500 max-w-lg mx-auto text-sm sm:text-base">
-            We make finding and booking your perfect stay simple, safe, and stress-free.
+            {t('why.subtitle')}
           </p>
         </div>
 
