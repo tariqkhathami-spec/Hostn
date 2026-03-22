@@ -43,13 +43,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const { action } = body;
 
   if (action === 'cancel') {
-    // In real implementation, update the booking in DB
+    // Actually update the booking status in the data array
+    const bookingIndex = seedBookings.findIndex(b => b._id === params.id);
+    if (bookingIndex !== -1) {
+      (seedBookings[bookingIndex] as Record<string, unknown>).status = 'cancelled';
+      (seedBookings[bookingIndex] as Record<string, unknown>).paymentStatus = 'refunded';
+    }
+
     addActivityLog({
       action: 'booking_cancelled',
       performedBy: auth.payload!.userId,
       targetType: 'booking',
       targetId: params.id,
-      details: `Booking ${params.id} was cancelled by admin`,
+      details: `Booking #${booking._id?.slice(-8) || params.id} was cancelled by admin`,
     });
 
     return NextResponse.json({ success: true, message: 'Booking has been cancelled' });

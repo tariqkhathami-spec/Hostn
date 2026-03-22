@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { users } from '@/lib/data/seed-properties';
 import { generateToken } from '@/lib/auth-helpers';
+import { isUserBanned, isHostSuspended } from '@/lib/admin-helpers';
 
 interface LoginRequest {
   email: string;
@@ -30,6 +31,22 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ success: false, message: 'Invalid credentials' }, { status: 401 });
+    }
+
+    // Check if user is banned
+    if (isUserBanned(user._id)) {
+      return NextResponse.json(
+        { success: false, message: 'Your account has been suspended. Contact support for assistance.' },
+        { status: 403 }
+      );
+    }
+
+    // Check if host is suspended
+    if (user.role === 'host' && isHostSuspended(user._id)) {
+      return NextResponse.json(
+        { success: false, message: 'Your host account has been suspended. Contact support for assistance.' },
+        { status: 403 }
+      );
     }
 
     // For seed data, skip password validation

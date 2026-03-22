@@ -5,10 +5,11 @@ import Link from 'next/link';
 
 interface DashboardData {
   users: { total: number; guests: number; hosts: number; admins: number };
-  properties: { total: number; types: Record<string, number>; cities: Record<string, number> };
+  properties: { total: number; pending?: number; rejected?: number; types: Record<string, number>; cities: Record<string, number> };
   bookings: { total: number; pending: number; confirmed: number; completed: number; cancelled: number };
   payments: { totalRevenue: number; paid: number; unpaid: number };
   reviews: { total: number };
+  moderation?: { pendingProperties: number; rejectedProperties: number; bannedUsers: number; suspendedHosts: number };
   monthlyRevenue: { month: string; revenue: number; bookings: number }[];
   recentActivity: any[];
 }
@@ -86,6 +87,33 @@ export default function AdminDashboard() {
         <StatCard label="Reviews" value={data.reviews.total} color="#ec4899" />
         <StatCard label="Pending Bookings" value={data.bookings.pending} sub="Needs attention" color="#f97316" href="/admin/bookings" />
       </div>
+
+      {/* Moderation Queue */}
+      {data.moderation && (data.moderation.pendingProperties > 0 || data.moderation.bannedUsers > 0 || data.moderation.suspendedHosts > 0) && (
+        <div style={{ background: '#fffbeb', borderRadius: 12, padding: 20, border: '1px solid #fde68a', marginBottom: 24 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#92400e', margin: '0 0 12px' }}>⚠ Moderation Queue</h3>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            {data.moderation.pendingProperties > 0 && (
+              <Link href="/admin/properties" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: '#d97706' }}>{data.moderation.pendingProperties}</span>
+                <span style={{ fontSize: 13, color: '#92400e' }}>properties awaiting review</span>
+              </Link>
+            )}
+            {data.moderation.bannedUsers > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: '#dc2626' }}>{data.moderation.bannedUsers}</span>
+                <span style={{ fontSize: 13, color: '#92400e' }}>banned users</span>
+              </div>
+            )}
+            {data.moderation.suspendedHosts > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: '#dc2626' }}>{data.moderation.suspendedHosts}</span>
+                <span style={{ fontSize: 13, color: '#92400e' }}>suspended hosts</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
         {/* Booking Status Breakdown */}

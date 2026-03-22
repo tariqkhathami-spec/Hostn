@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bookings, properties, users } from '@/lib/data/seed-properties';
 import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import { isUserBanned, getPropertyModeration } from '@/lib/admin-helpers';
 import { Booking, GuestCount, BookingPricing } from '@/types/index';
 
 interface CreateBookingRequest {
@@ -39,9 +40,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user is banned
+    if (isUserBanned(payload.userId)) {
+      return NextResponse.json(
+        { success: false, message: 'Your account has been suspended. You cannot make bookings.' },
+        { status: 403 }
+      );
+    }
+
     const property = properties.find((p) => p._id === propertyId);
     if (!property) {
       return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
+    }
+
+    // Ensure property is approved for booking
+    const moderation = getPropertyModeration(propertyId);
+    if (moderation.status !== 'approved') {
+      return NextResponse.json({ success: false, message: 'This property is not available for booking' }, { status: 400 });
     }
 
     const guest = users.find((u) => u._id === payload.userId);

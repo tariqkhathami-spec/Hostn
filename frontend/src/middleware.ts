@@ -46,9 +46,34 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users from auth pages to dashboard
+  // For host routes, verify the user has host or admin role
+  if (isProtectedRoute && pathname.startsWith('/host') && token) {
+    try {
+      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      const payload = JSON.parse(decoded);
+      if (payload.role !== 'host' && payload.role !== 'admin') {
+        // Regular guest trying to access host routes
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
+    } catch {
+      // Invalid token, let it through - the page will handle the error
+    }
+  }
+
+  // Redirect authenticated users from auth pages to appropriate dashboard
   if (isAuthRoute && token) {
-    return NextResponse.redirect(new URL('/host', request.url));
+    try {
+      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      const payload = JSON.parse(decoded);
+      if (payload.role === 'admin') {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      } else if (payload.role === 'host') {
+        return NextResponse.redirect(new URL('/host', request.url));
+      }
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    } catch {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   return NextResponse.next();

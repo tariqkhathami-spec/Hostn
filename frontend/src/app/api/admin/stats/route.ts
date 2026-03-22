@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin, getActivityLogs } from '@/lib/admin-helpers';
+import { requireAdmin, getActivityLogs, getPropertyModeration, isUserBanned, isHostSuspended } from '@/lib/admin-helpers';
 import { seedUsers, seedProperties, seedBookings, seedReviews } from '@/lib/data/seed-properties';
 
 export async function GET(request: Request) {
@@ -36,6 +36,12 @@ export async function GET(request: Request) {
 
   const recentLogs = getActivityLogs().slice(0, 10);
 
+  // Moderation queue stats
+  const pendingProperties = properties.filter(p => getPropertyModeration(p._id).status === 'pending').length;
+  const rejectedProperties = properties.filter(p => getPropertyModeration(p._id).status === 'rejected').length;
+  const bannedUsersCount = users.filter(u => isUserBanned(u._id)).length;
+  const suspendedHostsCount = users.filter(u => u.role === 'host' && isHostSuspended(u._id)).length;
+
   // Property type distribution
   const propertyTypes: Record<string, number> = {};
   properties.forEach(p => {
@@ -68,10 +74,11 @@ export async function GET(request: Request) {
     success: true,
     data: {
       users: { total: totalUsers + totalHosts + totalAdmins, guests: totalUsers, hosts: totalHosts, admins: totalAdmins },
-      properties: { total: totalProperties, types: propertyTypes, cities: cityDistribution },
+      properties: { total: totalProperties, pending: pendingProperties, rejected: rejectedProperties, types: propertyTypes, cities: cityDistribution },
       bookings: { total: totalBookings, pending: pendingBookings, confirmed: confirmedBookings, completed: completedBookings, cancelled: cancelledBookings },
       payments: { totalRevenue, paid: paidBookings, unpaid: unpaidBookings },
       reviews: { total: seedReviews.length },
+      moderation: { pendingProperties, rejectedProperties, bannedUsers: bannedUsersCount, suspendedHosts: suspendedHostsCount },
       monthlyRevenue,
       recentActivity: recentLogs,
     },
