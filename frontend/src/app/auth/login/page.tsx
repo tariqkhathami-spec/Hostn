@@ -109,15 +109,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Demo credentials */}
-          <div className="mt-5 p-4 bg-primary-50 rounded-xl">
-            <p className="text-xs font-semibold text-primary-700 mb-2">Demo accounts:</p>
-            <div className="space-y-1 text-xs text-primary-600">
-              <p>Guest: omar@hostn.com / Password123</p>
-              <p>Host: samir@hostn.com / Password123</p>
-            </div>
-          </div>
-
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
             <Link href="/auth/register" className="font-semibold text-primary-600 hover:text-primary-700">
