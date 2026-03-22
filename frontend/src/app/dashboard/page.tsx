@@ -95,9 +95,36 @@ export default function DashboardPage() {
       <Header />
       <main className="min-h-screen bg-gray-50">
         <div className="container-custom py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar */}
-            <aside className="lg:w-64 flex-shrink-0">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+            {/* Mobile tab nav */}
+            <div className="lg:hidden overflow-x-auto -mx-4 px-4 pb-2">
+              <div className="flex gap-2 min-w-max">
+                {tabs.map(({ id, label, Icon, badge }: { id: string; label: string; Icon: React.ElementType; badge?: number }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id as TabType)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                      activeTab === id
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-200'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                    {badge && badge > 0 && (
+                      <span className={`w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold ${
+                        activeTab === id ? 'bg-white text-primary-600' : 'bg-primary-100 text-primary-600'
+                      }`}>
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop Sidebar */}
+            <aside className="hidden lg:block lg:w-64 flex-shrink-0">
               <div className="bg-white rounded-2xl shadow-card p-6 mb-4">
                 <div className="flex flex-col items-center text-center mb-5">
                   <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-3">
@@ -155,7 +182,7 @@ export default function DashboardPage() {
                   href="/auth/register?role=host"
                   className="block bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-2xl p-5 text-center hover:opacity-95 transition-opacity"
                 >
-                  <div className="text-2xl mb-2">🏠</div>
+                  <div className="text-2xl mb-2">ð </div>
                   <p className="font-bold text-sm">Become a Host</p>
                   <p className="text-xs text-primary-200 mt-1">Earn by listing your space</p>
                 </Link>
@@ -167,19 +194,19 @@ export default function DashboardPage() {
               {/* Overview */}
               {activeTab === 'overview' && (
                 <div className="space-y-6">
-                  <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user.name.split(' ')[0]}! 👋</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Welcome back, {user.name.split(' ')[0]}! ð</h1>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { label: 'Total Bookings', value: bookings.length, icon: '📅', color: 'bg-blue-50' },
-                      { label: 'Confirmed', value: bookings.filter(b => b.status === 'confirmed').length, icon: '✅', color: 'bg-green-50' },
-                      { label: 'Completed', value: bookings.filter(b => b.status === 'completed').length, icon: '🎉', color: 'bg-amber-50' },
-                      { label: 'Wishlisted', value: user.wishlist?.length || 0, icon: '❤️', color: 'bg-red-50' },
+                      { label: 'Total Bookings', value: bookings.length, icon: 'ð', color: 'bg-blue-50' },
+                      { label: 'Confirmed', value: bookings.filter(b => b.status === 'confirmed').length, icon: 'â', color: 'bg-green-50' },
+                      { label: 'Completed', value: bookings.filter(b => b.status === 'completed').length, icon: 'ð', color: 'bg-amber-50' },
+                      { label: 'Wishlisted', value: user.wishlist?.length || 0, icon: 'â¤ï¸', color: 'bg-red-50' },
                     ].map((stat) => (
-                      <div key={stat.label} className={`rounded-2xl p-5 ${stat.color}`}>
-                        <div className="text-2xl mb-2">{stat.icon}</div>
-                        <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                        <div className="text-xs text-gray-600 font-medium">{stat.label}</div>
+                      <div key={stat.label} className={`rounded-xl sm:rounded-2xl p-3 sm:p-5 ${stat.color}`}>
+                        <div className="text-xl sm:text-2xl mb-1 sm:mb-2">{stat.icon}</div>
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</div>
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium">{stat.label}</div>
                       </div>
                     ))}
                   </div>
@@ -212,7 +239,7 @@ export default function DashboardPage() {
                             )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate">{booking.property?.title}</p>
-                              <p className="text-xs text-gray-500">{formatDate(booking.checkIn)} → {formatDate(booking.checkOut)}</p>
+                              <p className="text-xs text-gray-500">{formatDate(booking.checkIn)} â {formatDate(booking.checkOut)}</p>
                             </div>
                             <span className={`badge text-xs font-medium flex items-center gap-1 ${statusColors[booking.status]}`}>
                               <StatusIcon status={booking.status} />
@@ -260,9 +287,9 @@ export default function DashboardPage() {
                                 </span>
                               </div>
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-                                <span>📅 {formatDate(booking.checkIn)} → {formatDate(booking.checkOut)}</span>
-                                <span>👥 {booking.guests.adults} guest{booking.guests.adults !== 1 ? 's' : ''}</span>
-                                <span className="font-semibold text-gray-700">💰 {formatPrice(booking.pricing.total)}</span>
+                                <span>ð {formatDate(booking.checkIn)} â {formatDate(booking.checkOut)}</span>
+                                <span>ð¥ {booking.guests.adults} guest{booking.guests.adults !== 1 ? 's' : ''}</span>
+                                <span className="font-semibold text-gray-700">ð° {formatPrice(booking.pricing.total)}</span>
                               </div>
                             </div>
                           </div>
@@ -352,15 +379,15 @@ export default function DashboardPage() {
               {activeTab === 'profile' && (
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Settings</h2>
-                  <div className="bg-white rounded-2xl shadow-card p-6">
-                    <div className="flex items-center gap-5 mb-8 pb-6 border-b border-gray-100">
-                      <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center">
-                        <span className="text-primary-600 font-bold text-3xl">
+                  <div className="bg-white rounded-2xl shadow-card p-4 sm:p-6">
+                    <div className="flex items-center gap-4 sm:gap-5 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-gray-100">
+                      <div className="w-14 h-14 sm:w-20 sm:h-20 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-primary-600 font-bold text-xl sm:text-3xl">
                           {user.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-xl text-gray-900">{user.name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg sm:text-xl text-gray-900 truncate">{user.name}</h3>
                         <p className="text-sm text-gray-500">{user.email}</p>
                         <span className={`mt-2 badge text-xs inline-block ${user.role === 'host' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-700'}`}>
                           {user.role}
@@ -372,7 +399,7 @@ export default function DashboardPage() {
                       {[
                         { label: 'Full Name', value: user.name },
                         { label: 'Email', value: user.email },
-                        { label: 'Phone', value: user.phone || '—' },
+                        { label: 'Phone', value: user.phone || 'â' },
                         { label: 'Member Since', value: new Date(user.createdAt).toLocaleDateString() },
                       ].map((field) => (
                         <div key={field.label} className="bg-gray-50 rounded-xl p-4">
@@ -382,12 +409,12 @@ export default function DashboardPage() {
                       ))}
                     </div>
 
-                    <div className="mt-6 flex gap-3">
-                      <button className="btn-primary flex items-center gap-2">
+                    <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                      <button className="btn-primary flex items-center justify-center gap-2 text-sm sm:text-base">
                         <Settings className="w-4 h-4" />
                         Edit Profile
                       </button>
-                      <button className="btn-outline">Change Password</button>
+                      <button className="btn-outline text-sm sm:text-base">Change Password</button>
                     </div>
                   </div>
                 </div>
