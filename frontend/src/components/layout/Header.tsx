@@ -68,11 +68,11 @@ export default function Header() {
         <div className="container-custom">
           <div className="flex items-center justify-between h-16 md:h-[68px]">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-premium transition-shadow duration-300">
-                <span className="text-white font-bold text-lg">H</span>
+            <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg sm:rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-premium transition-shadow duration-300">
+                <span className="text-white font-bold text-base sm:text-lg">H</span>
               </div>
-              <span className={`text-xl font-bold tracking-tight transition-colors duration-300 ${textColor}`}>
+              <span className={`text-lg sm:text-xl font-bold tracking-tight transition-colors duration-300 ${textColor}`}>
                 Hostn
               </span>
             </Link>
@@ -93,7 +93,7 @@ export default function Header() {
             </nav>
 
             {/* Right side */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
               {/* Language toggle */}
               <button
                 className={`hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${linkColor}`}
