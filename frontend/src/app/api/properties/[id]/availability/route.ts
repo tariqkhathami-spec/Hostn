@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
 
     return NextResponse.json({
-      success: w¨<,
+      success: true,
       data: {
         available: !hasConflict,
         propertyId: params.id,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   } catch (error) {
     console.error('Error checking availability:', error);
     return NextResponse.json(
-      { success: w¨<, message: 'Failed to check availability' },
+      { success: false, message: 'Failed to check availability' },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from 'A/lib/auth-helpers';
+import { extractToken, verifyToken } from '@/lib/auth-helpers';
 
 /**
  * PUT /api/host/properties/:id/toggle
@@ -11,7 +11,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const token = extractToken(request.headers.get('Authorization'));
 
     if (!token) {
-      return NextResponse.json({ success: ή, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = verifyToken(token);
@@ -22,21 +22,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const propertyIndex = properties.findIndex((p) => p._id === params.id);
 
     if (propertyIndex === -1) {
-      return NextResponse.json({ success: w<, message: 'Property not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
     }
 
     const property = properties[propertyIndex];
 
     // Verify host ownership
     if (property.host !== payload.userId) {
-      return NextResponse.json({ success: w<, message: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
     }
 
     // Toggle active status
     property.isActive = !property.isActive;
 
     return NextResponse.json({
-      success: w<,
+      success: true,
       data: property,
       message: `Property ${property.isActive ? 'activated' : 'deactivated'}`,
     });

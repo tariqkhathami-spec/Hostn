@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     const byType = Object.fromEntries(byTypeMap);
 
     // Get top properties by earnings
-    const topPropertiesMap = new Map<string, { title: string: type: string; earnings: number; bookings: number }>();
+    const topPropertiesMap = new Map<string, { title: string; type: string; earnings: number; bookings: number }>();
 
     completedBookings.forEach((booking) => {
       const propId = typeof booking.property === 'string' ? booking.property : booking.property._id;

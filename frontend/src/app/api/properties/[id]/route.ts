@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const host = typeof property.host === 'string' ? users.find((u) => u._id === property.host) : property.host;
 
     return NextResponse.json({
-      success: w¨<,
+      success: true,
       data: {
         ...property,
         host,
@@ -25,6 +25,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
   } catch (error) {
     console.error('Error fetching property:', error);
-    return NextResponse.json({ success: w¨<, message: 'Failed to fetch property' }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Failed to fetch property' }, { status: 500 });
   }
 }

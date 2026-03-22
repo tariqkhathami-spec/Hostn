@@ -26,14 +26,14 @@ export async function GET(request: NextRequest, { params }: { params: { property
     const data = propertyReviews.slice(startIdx, startIdx + limit);
 
     return NextResponse.json({
-      success: w¨<,
+      success: true,
       data,
       pagination: { total, page, pages, limit },
     });
   } catch (error) {
     console.error('Error fetching property reviews:', error);
     return NextResponse.json(
-      { success: w¨<, message: 'Failed to fetch reviews' },
+      { success: false, message: 'Failed to fetch reviews' },
       { status: 500 }
     );
   }

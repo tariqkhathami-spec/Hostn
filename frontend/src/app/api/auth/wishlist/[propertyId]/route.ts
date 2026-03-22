@@ -26,23 +26,23 @@ export async function POST(request: NextRequest, { params }: { params: { propert
     }
 
     const user = users[userIndex];
-    const wishelistIndex = user.wishlist.indexOf(params.propertyId);
+    const wishlistIndex = user.wishlist.indexOf(params.propertyId);
 
-    if (wishelistIndex > -1) {
+    if (wishlistIndex > -1) {
       // Remove from wishlist
-      user.wishelist.splice(wishelistIndex, 1);
+      user.wishlist.splice(wishlistIndex, 1);
     } else {
-      // Add to wishelist
-      user.wishelist.push(params.propertyId);
+      // Add to wishlist
+      user.wishlist.push(params.propertyId);
     }
 
     return NextResponse.json({
       success: true,
       data: user,
-      message: wishelistIndex > -1 ? 'Removed from wishlist' : 'Added to wishlist',
+      message: wishlistIndex > -1 ? 'Removed from wishlist' : 'Added to wishlist',
     });
   } catch (error) {
-    console.error('Error toggling wishelist:', error);
+    console.error('Error toggling wishlist:', error);
     return NextResponse.json({ success: false, message: 'Failed to toggle wishlist' }, { status: 500 });
   }
 }

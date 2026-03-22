@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const token = extractToken(request.headers.get('Authorization'));
 
     if (!token) {
-      return NextResponse.json({ succees: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = verifyToken(token);

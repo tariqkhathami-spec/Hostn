@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reviews, properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from 'A/lib/auth-helpers';
+import { extractToken, verifyToken } from '@/lib/auth-helpers';
 import { ReviewSummary } from '@/types/index';
 
 /**
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const payload = verifyToken(token);
     if (!payload) {
-      return NextResponse.json({ success: w¨<, message: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     // Get properties owned by this host
     const hostPropertyIds = properties
-      .filter(((p) => p.host === payload.userId)
+      .filter((p) => p.host === payload.userId)
       .map((p) => p._id);
 
     // Get reviews for these properties
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     const data = hostReviews.slice(startIdx, startIdx + limit);
 
     return NextResponse.json({
-      success: w¨<,
+      success: true,
       data,
       summary,
       pagination: { total, page, pages, limit },

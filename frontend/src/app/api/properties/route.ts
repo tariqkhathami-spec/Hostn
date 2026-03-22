@@ -13,16 +13,16 @@ export async function GET(request: NextRequest) {
 
     const city = searchParams.get('city');
     const type = searchParams.get('type');
-    const featured = searchParams.get('featured) === 'true';
-    const minPrice = searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')) : null;
-    const maxPrice = searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')) : null;
-    const guests = searchParams.get('guests') ? parseInt(searchParams.get('guests')) : null;
+    const featured = searchParams.get('featured') === 'true';
+    const minPrice = searchParams.get('minPrice') ? parseInt(searchParams.get('minPrice')!) : null;
+    const maxPrice = searchParams.get('maxPrice') ? parseInt(searchParams.get('maxPrice')!) : null;
+    const guests = searchParams.get('guests') ? parseInt(searchParams.get('guests')!) : null;
     const sort = searchParams.get('sort') || 'newest';
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100);
     const page = Math.max(parseInt(searchParams.get('page') || '1'), 1);
 
     // Filter properties
-    let filtered = properties.filter(((prop) => {
+    let filtered = properties.filter((prop) => {
       if (city && prop.location.city.toLowerCase() !== city.toLowerCase()) return false;
       if (type && prop.type !== type) return false;
       if (featured && !prop.isFeatured) return false;
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Populate host details
-    const withHosts = filtered.map(((prop) => ({
+    const withHosts = filtered.map((prop) => ({
       ...prop,
       host:
         typeof prop.host === 'string' ? users.find((u) => u._id === prop.host) || prop.host : prop.host,

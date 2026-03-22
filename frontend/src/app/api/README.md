@@ -150,7 +150,7 @@ Update user profile.
 **Auth Required:** Yes
 
 #### POST /auth/wishlist/:propertyId
-Toggle property in user's wishilst.
+Toggle property in user's wishlist.
 
 **Auth Required:** Yes
 
