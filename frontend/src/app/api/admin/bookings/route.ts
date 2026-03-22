@@ -1,71 +1,79 @@
-import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin-helpers';
-import { seedBookings, seedUsers, seedProperties } from '@/lib/data/seed-properties';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
+import { requireAdmin } from '@/lib/auth-helpers';
+import Booking from '@/lib/models/Booking';
 
-export async function GET(request: Request) {
-  const auth = requireAdmin(request);
-  if ('error' in auth) return auth.error;
+export async function GET(request: NextRequest) {
+  try {
+    const auth = requireAdmin(request);
+    if ('error' in auth) return auth.error;
 
-  const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status');
-  const paymentStatus = searchParams.get('paymentStatus');
-  const search = searchParams.get('search')?.toLowerCase();
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '20');
+    await dbConnect();
 
-  let bookings = seedBookings.map(b => {
-    const guest = seedUsers.find(u => {
-      const guestId = typeof b.guest === 'string' ? b.guest : b.guest._id;
-      return u._id === guestId;
-    });
-    const property = seedProperties.find(p => {
-      const propId = typeof b.property === 'string' ? b.property : b.property._id;
-      return p._id === propId;
-    });
-    const host = property ? seedUsers.find(u => {
-      const hostId = typeof property.host === 'string' ? property.host : property.host._id;
-      return u._id === hostId;
-    }) : null;
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, parseInt(searchParams.get('limit') || '10'));
+    const status = searchParams.get('status');
+    const paymentStatus = searchParams.get('paymentStatus');
+    const search = searchParams.get('search');
 
-    return {
-      ...b,
-      guestName: guest?.name || 'Unknown',
-      guestEmail: guest?.email || '',
-      propertyTitle: property?.title || 'Unknown Property',
-      propertyCity: typeof property?.location === 'object' ? property.location.city : '',
-      hostName: host?.name || 'Unknown Host',
-    };
-  });
+    const skip = (page - 1) * limit;
+    const filter: any = {};
 
-  // Filter by status
-  if (status && status !== 'all') {
-    bookings = bookings.filter(b => b.status === status);
-  }
+    if (status && ['pending', 'confirmed', 'cancelled', 'completed', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
 
-  // Filter by payment status
-  if (paymentStatus && paymentStatus !== 'all') {
-    bookings = bookings.filter(b => b.paymentStatus === paymentStatus);
-  }
+    if (paymentStatus && ['unpaid', 'paid', 'refunded'].includes(paymentStatus)) {
+      filter.paymentStatus = paymentStatus;
+    }
 
-  // Search
-  if (search) {
-    bookings = bookings.filter(b =>
-      b.guestName.toLowerCase().includes(search) ||
-      b.propertyTitle.toLowerCase().includes(search) ||
-      b._id.toLowerCase().includes(search)
+    if (search) {
+      // Search by booking ID, guest name, property title
+      filter.$or = [
+        { _id: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const totalCount = await Booking.countDocuments(filter);
+    const bookings = await Booking.find(filter)
+      .populate('property', 'title location')
+      .populate('guest', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // If search is provided, filter results on client side (since guest/property names are populated)
+    let filteredBookings = bookings;
+    if (search) {
+      filteredBookings = bookings.filter((b: any) => {
+        const guestName = b.guest?.name?.toLowerCase() || '';
+        const propertyTitle = b.property?.title?.toLowerCase() || '';
+        return guestName.includes(search.toLowerCase()) || propertyTitle.includes(search.toLowerCase());
+      });
+    }
+
+    // For pagination consistency, recalculate if filter changed results
+    const displayCount = filteredBookings.length;
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: filteredBookings,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Admin bookings list error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
     );
   }
-
-  // Sort by date (newest first)
-  bookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const total = bookings.length;
-  const startIdx = (page - 1) * limit;
-  const paginatedBookings = bookings.slice(startIdx, startIdx + limit);
-
-  return NextResponse.json({
-    success: true,
-    data: paginatedBookings,
-    pagination: { total, page, pages: Math.ceil(total / limit), limit },
-  });
 }

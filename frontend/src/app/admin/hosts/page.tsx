@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { adminApi } from '@/lib/api';
 
 interface HostUser {
   _id: string;
@@ -34,52 +35,85 @@ interface HostDetail {
 export default function AdminHostsPage() {
   const [hosts, setHosts] = useState<HostUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedHost, setSelectedHost] = useState<HostDetail | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ hostId: string; action: string; name: string } | null>(null);
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : '';
-
   const fetchHosts = async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ role: 'host', limit: '50' });
-    if (search) params.set('search', search);
-
-    const res = await fetch(`/api/admin/users?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) setHosts(data.data);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getHosts({
+        role: 'host',
+        limit: 50,
+        ...(search && { search }),
+      });
+      if (response.data?.success) {
+        setHosts(response.data.data || []);
+      } else {
+        setError(response.data?.message || 'Failed to load hosts');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setError(message);
+      console.error('Fetch hosts error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchHosts(); }, []);
 
   const fetchHostDetail = async (hostId: string) => {
-    const res = await fetch(`/api/admin/hosts/${hostId}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) setSelectedHost(data.data);
+    try {
+      const response = await adminApi.getHostDetail(hostId);
+      if (response.data?.success) {
+        setSelectedHost(response.data.data);
+      } else {
+        setActionError(response.data?.message || 'Failed to load host details');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to load host details';
+      setActionError(message);
+      console.error('Fetch host detail error:', err);
+    }
   };
 
   const handleAction = async (hostId: string, action: string) => {
-    setActionLoading(true);
-    const res = await fetch(`/api/admin/hosts/${hostId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchHosts();
-      if (selectedHost?._id === hostId) fetchHostDetail(hostId);
-      setConfirmAction(null);
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const response = await adminApi.updateHost(hostId, action);
+      if (response.data?.success) {
+        fetchHosts();
+        if (selectedHost?._id === hostId) fetchHostDetail(hostId);
+        setConfirmAction(null);
+      } else {
+        setActionError(response.data?.message || 'Action failed');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setActionError(message);
+      console.error('Action error:', err);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchHosts(); };
 
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
           <input type="text" placeholder="Search hosts..." value={search} onChange={e => setSearch(e.target.value)}
@@ -148,12 +182,17 @@ export default function AdminHostsPage() {
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px' }}>
               {confirmAction.action === 'suspend' ? 'Suspend Host' : 'Activate Host'}
             </h3>
+            {actionError && (
+              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
+                {actionError}
+              </div>
+            )}
             <p style={{ fontSize: 14, color: '#475569', margin: '0 0 20px' }}>
               Are you sure you want to {confirmAction.action} <strong>{confirmAction.name}</strong>?
               {confirmAction.action === 'suspend' && ' Their properties will be hidden from the platform.'}
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button onClick={() => setConfirmAction(null)} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { setConfirmAction(null); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button onClick={() => handleAction(confirmAction.hostId, confirmAction.action)} disabled={actionLoading}
                 style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: confirmAction.action === 'suspend' ? '#f59e0b' : '#10b981', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
                 {actionLoading ? '...' : 'Confirm'}

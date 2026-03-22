@@ -11,9 +11,27 @@ const nextConfig = {
         hostname: '**.unsplash.com',
       },
     ],
+    // Optimize images for Vercel
+    formats: ['image/avif', 'image/webp'],
   },
+  // Strict TypeScript checking in production - do NOT ignore build errors
   typescript: {
-    ignoreBuildErrors: true,
+    tsconfigPath: './tsconfig.json',
+  },
+  // Production optimizations for Vercel serverless
+  swcMinify: true,
+  compress: true,
+  productionBrowserSourceMaps: false,
+  // Environment variable validation
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api',
+    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'Hostn',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  },
+  // Vercel-specific optimizations
+  experimental: {
+    // Enable turbopack for faster builds (optional, requires Next.js 14+)
+    // turbopack: true,
   },
 };
 

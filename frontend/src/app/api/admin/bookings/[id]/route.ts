@@ -1,65 +1,105 @@
-import { NextResponse } from 'next/server';
-import { requireAdmin, addActivityLog } from '@/lib/admin-helpers';
-import { seedBookings, seedUsers, seedProperties } from '@/lib/data/seed-properties';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
+import { requireAdmin } from '@/lib/auth-helpers';
+import Booking from '@/lib/models/Booking';
+import ActivityLog from '@/lib/models/ActivityLog';
+import mongoose from 'mongoose';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const auth = requireAdmin(request);
-  if ('error' in auth) return auth.error;
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const auth = requireAdmin(request);
+    if ('error' in auth) return auth.error;
 
-  const booking = seedBookings.find(b => b._id === params.id);
-  if (!booking) {
-    return NextResponse.json({ success: false, message: 'Booking not found' }, { status: 404 });
-  }
+    await dbConnect();
 
-  const guest = seedUsers.find(u => {
-    const guestId = typeof booking.guest === 'string' ? booking.guest : booking.guest._id;
-    return u._id === guestId;
-  });
-  const property = seedProperties.find(p => {
-    const propId = typeof booking.property === 'string' ? booking.property : booking.property._id;
-    return p._id === propId;
-  });
-
-  return NextResponse.json({
-    success: true,
-    data: {
-      ...booking,
-      guest,
-      property,
-    },
-  });
-}
-
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const auth = requireAdmin(request);
-  if ('error' in auth) return auth.error;
-
-  const booking = seedBookings.find(b => b._id === params.id);
-  if (!booking) {
-    return NextResponse.json({ success: false, message: 'Booking not found' }, { status: 404 });
-  }
-
-  const body = await request.json();
-  const { action } = body;
-
-  if (action === 'cancel') {
-    // Actually update the booking status in the data array
-    const bookingIndex = seedBookings.findIndex(b => b._id === params.id);
-    if (bookingIndex !== -1) {
-      (seedBookings[bookingIndex] as Record<string, unknown>).status = 'cancelled';
-      (seedBookings[bookingIndex] as Record<string, unknown>).paymentStatus = 'refunded';
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid booking ID' },
+        { status: 400 }
+      );
     }
 
-    addActivityLog({
-      action: 'booking_cancelled',
-      performedBy: auth.payload!.userId,
-      targetType: 'booking',
-      targetId: params.id,
-      details: `Booking #${booking._id?.slice(-8) || params.id} was cancelled by admin`,
-    });
+    const booking = await Booking.findById(params.id)
+      .populate('property')
+      .populate('guest', 'name email phone avatar');
 
-    return NextResponse.json({ success: true, message: 'Booking has been cancelled' });
+    if (!booking) {
+      return NextResponse.json(
+        { success: false, message: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: booking,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Admin booking detail error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
   }
+}
 
-  return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const auth = requireAdmin(request);
+    if ('error' in auth) return auth.error;
+
+    await dbConnect();
+
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid booking ID' },
+        { status: 400 }
+      );
+    }
+
+    const booking = await Booking.findById(params.id);
+    if (!booking) {
+      return NextResponse.json(
+        { success: false, message: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const { action } = body;
+
+    if (action === 'cancel') {
+      booking.status = 'cancelled';
+      booking.paymentStatus = 'refunded';
+      booking.cancelledAt = new Date();
+      await booking.save();
+
+      await ActivityLog.create({
+        action: 'booking_cancelled',
+        performedBy: auth.payload.userId,
+        targetType: 'booking',
+        targetId: booking._id.toString(),
+        details: `Booking #${booking._id.toString().slice(-8)} was cancelled by admin`,
+      });
+
+      return NextResponse.json(
+        { success: true, message: 'Booking has been cancelled' },
+        { status: 200 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, message: 'Invalid action' },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error('Admin booking update error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }

@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <div className="container-custom py-8">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             {/* Mobile tab nav */}
-            <div className="lg:hidden overflow-x-auto -mx-4 px-4 pb-2">
+            <div className="lg:hidden overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
               <div className="flex gap-2 min-w-max">
                 {tabs.map(({ id, label, Icon, badge }: { id: string; label: string; Icon: React.ElementType; badge?: number }) => (
                   <button

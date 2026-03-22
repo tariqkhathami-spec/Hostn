@@ -1,86 +1,151 @@
-import { NextResponse } from 'next/server';
-import { requireAdmin, getActivityLogs, getPropertyModeration, isUserBanned, isHostSuspended } from '@/lib/admin-helpers';
-import { seedUsers, seedProperties, seedBookings, seedReviews } from '@/lib/data/seed-properties';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
+import { requireAdmin } from '@/lib/auth-helpers';
+import User from '@/lib/models/User';
+import Property from '@/lib/models/Property';
+import Booking from '@/lib/models/Booking';
+import Review from '@/lib/models/Review';
+import ActivityLog from '@/lib/models/ActivityLog';
 
-export async function GET(request: Request) {
-  const auth = requireAdmin(request);
-  if ('error' in auth) return auth.error;
+export async function GET(request: NextRequest) {
+  try {
+    const auth = requireAdmin(request);
+    if ('error' in auth) return auth.error;
 
-  const users = seedUsers;
-  const properties = seedProperties;
-  const bookings = seedBookings;
+    await dbConnect();
 
-  const totalUsers = users.filter(u => u.role === 'guest').length;
-  const totalHosts = users.filter(u => u.role === 'host').length;
-  const totalAdmins = users.filter(u => u.role === 'admin').length;
-  const totalProperties = properties.length;
-  const totalBookings = bookings.length;
+    // User stats
+    const totalUsers = await User.countDocuments({ role: 'guest' });
+    const totalHosts = await User.countDocuments({ role: 'host' });
+    const totalAdmins = await User.countDocuments({ role: 'admin' });
+    const bannedUsers = await User.countDocuments({ isBanned: true });
 
-  const totalRevenue = bookings
-    .filter(b => {
-      const status = typeof b.status === 'string' ? b.status : '';
-      return status === 'confirmed' || status === 'completed';
-    })
-    .reduce((sum, b) => {
-      const total = typeof b.pricing === 'object' ? b.pricing.total : 0;
-      return sum + total;
-    }, 0);
-
-  const pendingBookings = bookings.filter(b => b.status === 'pending').length;
-  const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
-  const completedBookings = bookings.filter(b => b.status === 'completed').length;
-  const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
-
-  const paidBookings = bookings.filter(b => b.paymentStatus === 'paid').length;
-  const unpaidBookings = bookings.filter(b => b.paymentStatus === 'unpaid').length;
-
-  const recentLogs = getActivityLogs().slice(0, 10);
-
-  // Moderation queue stats
-  const pendingProperties = properties.filter(p => getPropertyModeration(p._id).status === 'pending').length;
-  const rejectedProperties = properties.filter(p => getPropertyModeration(p._id).status === 'rejected').length;
-  const bannedUsersCount = users.filter(u => isUserBanned(u._id)).length;
-  const suspendedHostsCount = users.filter(u => u.role === 'host' && isHostSuspended(u._id)).length;
-
-  // Property type distribution
-  const propertyTypes: Record<string, number> = {};
-  properties.forEach(p => {
-    propertyTypes[p.type] = (propertyTypes[p.type] || 0) + 1;
-  });
-
-  // City distribution
-  const cityDistribution: Record<string, number> = {};
-  properties.forEach(p => {
-    const city = typeof p.location === 'object' ? p.location.city : '';
-    if (city) cityDistribution[city] = (cityDistribution[city] || 0) + 1;
-  });
-
-  // Monthly revenue (simulated based on booking dates)
-  const monthlyRevenue: { month: string; revenue: number; bookings: number }[] = [];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  months.forEach((month, idx) => {
-    const monthBookings = bookings.filter(b => {
-      const date = new Date(b.createdAt);
-      return date.getMonth() === idx;
+    // Property stats
+    const totalProperties = await Property.countDocuments();
+    const propertyTypes = await Property.aggregate([
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+    ]);
+    const propertyTypeMap: Record<string, number> = {};
+    propertyTypes.forEach((item: any) => {
+      propertyTypeMap[item._id] = item.count;
     });
-    monthlyRevenue.push({
-      month,
-      revenue: monthBookings.reduce((s, b) => s + (typeof b.pricing === 'object' ? b.pricing.total : 0), 0),
-      bookings: monthBookings.length,
-    });
-  });
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      users: { total: totalUsers + totalHosts + totalAdmins, guests: totalUsers, hosts: totalHosts, admins: totalAdmins },
-      properties: { total: totalProperties, pending: pendingProperties, rejected: rejectedProperties, types: propertyTypes, cities: cityDistribution },
-      bookings: { total: totalBookings, pending: pendingBookings, confirmed: confirmedBookings, completed: completedBookings, cancelled: cancelledBookings },
-      payments: { totalRevenue, paid: paidBookings, unpaid: unpaidBookings },
-      reviews: { total: seedReviews.length },
-      moderation: { pendingProperties, rejectedProperties, bannedUsers: bannedUsersCount, suspendedHosts: suspendedHostsCount },
-      monthlyRevenue,
-      recentActivity: recentLogs,
-    },
-  });
+    const pendingProperties = await Property.countDocuments({ moderationStatus: 'pending' });
+    const rejectedProperties = await Property.countDocuments({ moderationStatus: 'rejected' });
+
+    const cityCounts = await Property.aggregate([
+      { $group: { _id: '$location.city', count: { $sum: 1 } } },
+    ]);
+    const cityDistribution: Record<string, number> = {};
+    cityCounts.forEach((item: any) => {
+      if (item._id) cityDistribution[item._id] = item.count;
+    });
+
+    // Booking stats
+    const totalBookings = await Booking.countDocuments();
+    const pendingBookings = await Booking.countDocuments({ status: 'pending' });
+    const confirmedBookings = await Booking.countDocuments({ status: 'confirmed' });
+    const completedBookings = await Booking.countDocuments({ status: 'completed' });
+    const cancelledBookings = await Booking.countDocuments({ status: 'cancelled' });
+
+    // Payment stats
+    const paidBookings = await Booking.countDocuments({ paymentStatus: 'paid' });
+    const unpaidBookings = await Booking.countDocuments({ paymentStatus: 'unpaid' });
+
+    const paidBookingsData = await Booking.find({ paymentStatus: 'paid' }).select('pricing.total');
+    const totalRevenue = paidBookingsData.reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
+
+    // Review stats
+    const totalReviews = await Review.countDocuments();
+
+    // Suspended hosts
+    const suspendedHosts = await User.countDocuments({ role: 'host', isSuspended: true });
+
+    // Monthly revenue
+    const monthlyRevenue = await Booking.aggregate([
+      {
+        $match: { paymentStatus: 'paid' },
+      },
+      {
+        $group: {
+          _id: {
+            month: { $month: '$createdAt' },
+            year: { $year: '$createdAt' },
+          },
+          revenue: { $sum: '$pricing.total' },
+          bookingCount: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { '_id.year': -1, '_id.month': -1 },
+      },
+      {
+        $limit: 12,
+      },
+    ]);
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formattedMonthlyRevenue = monthlyRevenue.map((item: any) => ({
+      month: months[item._id.month - 1],
+      revenue: item.revenue,
+      bookings: item.bookingCount,
+    }));
+
+    // Recent activity logs
+    const recentLogs = await ActivityLog.find()
+      .populate('performedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          users: {
+            total: totalUsers + totalHosts + totalAdmins,
+            guests: totalUsers,
+            hosts: totalHosts,
+            admins: totalAdmins,
+          },
+          properties: {
+            total: totalProperties,
+            pending: pendingProperties,
+            rejected: rejectedProperties,
+            types: propertyTypeMap,
+            cities: cityDistribution,
+          },
+          bookings: {
+            total: totalBookings,
+            pending: pendingBookings,
+            confirmed: confirmedBookings,
+            completed: completedBookings,
+            cancelled: cancelledBookings,
+          },
+          payments: {
+            totalRevenue,
+            paid: paidBookings,
+            unpaid: unpaidBookings,
+          },
+          reviews: {
+            total: totalReviews,
+          },
+          moderation: {
+            pendingProperties,
+            rejectedProperties,
+            bannedUsers,
+            suspendedHosts,
+          },
+          monthlyRevenue: formattedMonthlyRevenue,
+          recentActivity: recentLogs,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Admin stats error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }

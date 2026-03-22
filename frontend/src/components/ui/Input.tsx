@@ -28,7 +28,7 @@ export default function Input({
       )}
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 text-gray-400">
             {leftIcon}
           </div>
         )}
@@ -36,15 +36,15 @@ export default function Input({
           id={inputId}
           className={cn(
             'input-base',
-            leftIcon && 'pl-10',
-            rightIcon && 'pr-10',
+            leftIcon && 'ltr:pl-10 rtl:pr-10',
+            rightIcon && 'ltr:pr-10 rtl:pl-10',
             error && 'border-red-400 focus:ring-red-300',
             className
           )}
           {...props}
         />
         {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 text-gray-400">
             {rightIcon}
           </div>
         )}

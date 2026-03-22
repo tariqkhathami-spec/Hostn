@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { adminApi } from '@/lib/api';
 
 interface AdminUser {
   _id: string;
@@ -19,51 +20,75 @@ interface AdminUser {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ userId: string; action: string; name: string } | null>(null);
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : '';
-
   const fetchUsers = async (page = 1) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
-    if (roleFilter !== 'all') params.set('role', roleFilter);
-    if (search) params.set('search', search);
-
-    const res = await fetch(`/api/admin/users?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      setUsers(data.data);
-      setPagination(data.pagination);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getUsers({
+        page,
+        limit: 20,
+        ...(roleFilter !== 'all' && { role: roleFilter }),
+        ...(search && { search }),
+      });
+      if (response.data?.success) {
+        setUsers(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
+      } else {
+        setError(response.data?.message || 'Failed to load users');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setError(message);
+      console.error('Fetch users error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchUsers(); }, [roleFilter]);
 
   const handleAction = async (userId: string, action: string) => {
-    setActionLoading(true);
-    const res = await fetch(`/api/admin/users/${userId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchUsers(pagination.page);
-      setConfirmAction(null);
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const response = await adminApi.updateUser(userId, action);
+      if (response.data?.success) {
+        fetchUsers(pagination.page);
+        setConfirmAction(null);
+      } else {
+        setActionError(response.data?.message || 'Action failed');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setActionError(message);
+      console.error('Action error:', err);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const fetchUserDetail = async (userId: string) => {
-    const res = await fetch(`/api/admin/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) setSelectedUser(data.data);
+    try {
+      const response = await adminApi.getUserDetail(userId);
+      if (response.data?.success) {
+        setSelectedUser(response.data.data);
+      } else {
+        setActionError(response.data?.message || 'Failed to load user details');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to load user details';
+      setActionError(message);
+      console.error('Fetch user detail error:', err);
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchUsers(1); };
@@ -76,6 +101,13 @@ export default function AdminUsersPage() {
 
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
@@ -165,12 +197,17 @@ export default function AdminUsersPage() {
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#0f172a' }}>
               {confirmAction.action === 'ban' ? 'Ban User' : 'Unban User'}
             </h3>
+            {actionError && (
+              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
+                {actionError}
+              </div>
+            )}
             <p style={{ fontSize: 14, color: '#475569', margin: '0 0 20px' }}>
               Are you sure you want to {confirmAction.action} <strong>{confirmAction.name}</strong>?
               {confirmAction.action === 'ban' && ' They will not be able to access the platform.'}
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button onClick={() => setConfirmAction(null)} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { setConfirmAction(null); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button onClick={() => handleAction(confirmAction.userId, confirmAction.action)} disabled={actionLoading}
                 style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: confirmAction.action === 'ban' ? '#ef4444' : '#10b981', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
                 {actionLoading ? '...' : 'Confirm'}

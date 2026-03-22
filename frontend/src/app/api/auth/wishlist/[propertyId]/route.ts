@@ -1,48 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { users } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import { Types } from 'mongoose';
+import dbConnect from '@/lib/db';
+import User from '@/lib/models/User';
+import { requireAuth } from '@/lib/auth-helpers';
 
 /**
  * POST /api/auth/wishlist/:propertyId
  * Toggles a property in the user's wishlist
+ * Returns action taken: 'added' or 'removed'
  */
-export async function POST(request: NextRequest, { params }: { params: { propertyId: string } }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { propertyId: string } }
+) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    await dbConnect();
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    // Check authentication
+    const auth = requireAuth(request);
+    if ('error' in auth) {
+      return auth.error;
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
+    const { payload } = auth;
+    const propertyId = params.propertyId;
+
+    // Validate propertyId is a valid MongoDB ObjectId
+    if (!Types.ObjectId.isValid(propertyId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid property ID' },
+        { status: 400 }
+      );
     }
 
-    const userIndex = users.findIndex((u) => u._id === payload.userId);
+    const propertyObjectId = new Types.ObjectId(propertyId);
 
-    if (userIndex === -1) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    // Check if property is already in wishlist
+    const user = await User.findById(payload.userId);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
     }
 
-    const user = users[userIndex];
-    const wishlistIndex = user.wishlist.indexOf(params.propertyId);
+    const isInWishlist = user.wishlist.some(
+      (id) => id.toString() === propertyObjectId.toString()
+    );
 
-    if (wishlistIndex > -1) {
-      // Remove from wishlist
-      user.wishlist.splice(wishlistIndex, 1);
+    let updatedUser;
+    let action: 'added' | 'removed';
+
+    if (isInWishlist) {
+      // Remove from wishlist using $pull
+      updatedUser = await User.findByIdAndUpdate(
+        payload.userId,
+        { $pull: { wishlist: propertyObjectId } },
+        { new: true }
+      );
+      action = 'removed';
     } else {
-      // Add to wishlist
-      user.wishlist.push(params.propertyId);
+      // Add to wishlist using $addToSet (prevents duplicates)
+      updatedUser = await User.findByIdAndUpdate(
+        payload.userId,
+        { $addToSet: { wishlist: propertyObjectId } },
+        { new: true }
+      );
+      action = 'added';
+    }
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to update wishlist' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      data: user,
-      message: wishlistIndex > -1 ? 'Removed from wishlist' : 'Added to wishlist',
+      data: {
+        wishlist: updatedUser.wishlist,
+        action,
+      },
     });
   } catch (error) {
     console.error('Error toggling wishlist:', error);
-    return NextResponse.json({ success: false, message: 'Failed to toggle wishlist' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'Failed to toggle wishlist' },
+      { status: 500 }
+    );
   }
 }

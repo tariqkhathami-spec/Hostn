@@ -1,59 +1,79 @@
-import { NextResponse } from 'next/server';
-import { requireAdmin, isUserBanned } from '@/lib/admin-helpers';
-import { seedUsers, seedBookings } from '@/lib/data/seed-properties';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
+import { requireAdmin } from '@/lib/auth-helpers';
+import User from '@/lib/models/User';
+import Booking from '@/lib/models/Booking';
 
-export async function GET(request: Request) {
-  const auth = requireAdmin(request);
-  if ('error' in auth) return auth.error;
+export async function GET(request: NextRequest) {
+  try {
+    const auth = requireAdmin(request);
+    if ('error' in auth) return auth.error;
 
-  const { searchParams } = new URL(request.url);
-  const role = searchParams.get('role');
-  const search = searchParams.get('search')?.toLowerCase();
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '20');
+    await dbConnect();
 
-  let users = [...seedUsers];
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, parseInt(searchParams.get('limit') || '10'));
+    const role = searchParams.get('role');
+    const search = searchParams.get('search');
 
-  // Filter by role
-  if (role && role !== 'all') {
-    users = users.filter(u => u.role === role);
-  }
+    const skip = (page - 1) * limit;
+    const filter: any = {};
 
-  // Search by name or email
-  if (search) {
-    users = users.filter(u =>
-      u.name.toLowerCase().includes(search) ||
-      u.email.toLowerCase().includes(search)
+    if (role && ['guest', 'host', 'admin'].includes(role)) {
+      filter.role = role;
+    }
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const totalCount = await User.countDocuments(filter);
+    const users = await User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Enrich users with booking stats
+    const enrichedUsers = await Promise.all(
+      users.map(async (user: any) => {
+        const bookingCount = await Booking.countDocuments({ guest: user._id });
+        const totalSpent = await Booking.aggregate([
+          { $match: { guest: user._id, paymentStatus: 'paid' } },
+          { $group: { _id: null, total: { $sum: '$pricing.total' } } },
+        ]);
+
+        return {
+          ...user,
+          bookingCount,
+          totalSpent: totalSpent.length > 0 ? totalSpent[0].total : 0,
+        };
+      })
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: enrichedUsers,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Admin users list error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
     );
   }
-
-  // Enrich with booking data and ban status
-  const enrichedUsers = users.map(u => {
-    const userBookings = seedBookings.filter(b => {
-      const guestId = typeof b.guest === 'string' ? b.guest : b.guest._id;
-      return guestId === u._id;
-    });
-    const totalSpent = userBookings.reduce((s, b) => s + (typeof b.pricing === 'object' ? b.pricing.total : 0), 0);
-
-    return {
-      ...u,
-      isBanned: isUserBanned(u._id),
-      bookingsCount: userBookings.length,
-      totalSpent,
-    };
-  });
-
-  // Sort by creation date (newest first)
-  enrichedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  // Paginate
-  const total = enrichedUsers.length;
-  const startIdx = (page - 1) * limit;
-  const paginatedUsers = enrichedUsers.slice(startIdx, startIdx + limit);
-
-  return NextResponse.json({
-    success: true,
-    data: paginatedUsers,
-    pagination: { total, page, pages: Math.ceil(total / limit), limit },
-  });
 }

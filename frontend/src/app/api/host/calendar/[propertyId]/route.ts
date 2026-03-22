@@ -1,65 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { bookings, properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
-import { CalendarData } from '@/types/index';
+import dbConnect from '@/lib/db';
+import { requireHost } from '@/lib/auth-helpers';
+import Property from '@/lib/models/Property';
+import Booking from '@/lib/models/Booking';
+import mongoose from 'mongoose';
+
+interface CalendarBooking {
+  _id: string;
+  checkIn: string;
+  checkOut: string;
+  status: string;
+  guest: {
+    name: string;
+    email: string;
+  };
+  total: number;
+}
+
+interface CalendarData {
+  propertyId: string;
+  propertyTitle: string;
+  bookings: CalendarBooking[];
+  blockedDates: Array<{ start: string; end: string }>;
+}
 
 /**
  * GET /api/host/calendar/:propertyId
  * Returns calendar data (bookings and blocked dates) for a property
  */
-export async function GET(request: NextRequest, { params }: { params: { propertyId: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { propertyId: string } }
+) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    const auth = requireHost(request);
+    if ('error' in auth) return auth.error;
+    const { payload } = auth;
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    await dbConnect();
+
+    // Validate propertyId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(params.propertyId)) {
+      return NextResponse.json({ success: false, message: 'Invalid property ID' }, { status: 400 });
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    const propertyId = new mongoose.Types.ObjectId(params.propertyId);
 
-    const property = properties.find((p) => p._id === params.propertyId);
+    // Get the property
+    const property = await Property.findById(propertyId);
 
     if (!property) {
       return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
     }
 
     // Verify host ownership
-    if (property.host !== payload.userId) {
+    if (!property.host.equals(new mongoose.Types.ObjectId(payload.userId))) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
     }
 
-    // Get bookings for this property
-    const propertyBookings = bookings
-      .filter((b) => {
-        const propId = typeof b.property === 'string' ? b.property : b.property._id;
-        return propId === params.propertyId;
+    // Get bookings for this property (pending/confirmed)
+    const propertyBookings = await Booking.find({
+      property: propertyId,
+      status: { $in: ['pending', 'confirmed'] },
+    })
+      .populate({
+        path: 'guest',
+        select: 'name email',
       })
-      .map((b) => {
-        const guestName = typeof b.guest === 'string' ? 'Guest' : b.guest.name;
-        const guestEmail = typeof b.guest === 'string' ? '' : b.guest.email;
-        return {
-          _id: b._id,
-          checkIn: b.checkIn,
-          checkOut: b.checkOut,
-          status: b.status,
-          guest: {
-            name: guestName,
-            email: guestEmail,
-          },
-          total: b.pricing.total,
-        };
-      });
+      .lean();
 
-    // For seed data, blocked dates are empty
-    const blockedDates: { start: string; end: string }[] = [];
+    const bookings: CalendarBooking[] = propertyBookings.map((b) => ({
+      _id: b._id.toString(),
+      checkIn: new Date(b.checkIn).toISOString(),
+      checkOut: new Date(b.checkOut).toISOString(),
+      status: b.status,
+      guest: {
+        name: (b.guest as any)?.name || 'Guest',
+        email: (b.guest as any)?.email || '',
+      },
+      total: b.pricing.total,
+    }));
+
+    // Get blocked dates from property unavailableDates
+    const blockedDates = property.unavailableDates.map((d) => ({
+      start: new Date(d.start).toISOString(),
+      end: new Date(d.end).toISOString(),
+    }));
 
     const data: CalendarData = {
-      propertyId: params.propertyId,
+      propertyId: propertyId.toString(),
       propertyTitle: property.title,
-      bookings: propertyBookings,
+      bookings,
       blockedDates,
     };
 

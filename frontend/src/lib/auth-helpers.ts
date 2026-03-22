@@ -1,30 +1,45 @@
-import { User } from '@/types/index';
+import jwt from 'jsonwebtoken';
+import { NextResponse } from 'next/server';
 
-const JWT_SECRET = 'hostn-secret-key-development-only';
+// Validate JWT_SECRET is set in production
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  const errorMsg =
+    'CRITICAL: JWT_SECRET is not defined. ' +
+    'This environment variable is REQUIRED for production deployments. ' +
+    'Set JWT_SECRET to a strong random value (minimum 32 characters). ' +
+    'Generate with: openssl rand -base64 32';
 
-interface TokenPayload {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(errorMsg);
+  } else {
+    console.warn('[WARNING] ' + errorMsg);
+    // Use a temporary value in development only (never for production)
+    JWT_SECRET = 'dev-temporary-secret-change-immediately-in-production';
+  }
+}
+
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
-  iat: number;
-  exp: number;
+  iat?: number;
+  exp?: number;
 }
 
 /**
- * Generate a simple JWT token (for development/seed data only)
- * In production, use a proper library like jose
+ * Generate a signed JWT token
  */
-export function generateToken(user: User): string {
-  const payload: TokenPayload = {
-    userId: user._id,
+export function generateToken(user: { _id: any; email: string; role: string }): string {
+  const payload: Omit<TokenPayload, 'iat' | 'exp'> = {
+    userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
   };
 
-  // Simple base64 encoding (NOT secure for production)
-  return Buffer.from(JSON.stringify(payload)).toString('base64');
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 /**
@@ -32,33 +47,11 @@ export function generateToken(user: User): string {
  */
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    const payload = JSON.parse(decoded) as TokenPayload;
-
-    // Check if token is expired
-    if (payload.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return payload;
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    return decoded;
   } catch {
     return null;
   }
-}
-
-/**
- * Hash password (simple approach - in production use bcrypt)
- */
-export function hashPassword(password: string): string {
-  // Simple implementation - in production use bcrypt
-  return Buffer.from(password).toString('base64');
-}
-
-/**
- * Compare password with hash
- */
-export function comparePassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
 }
 
 /**
@@ -69,4 +62,43 @@ export function extractToken(authHeader: string | null): string | null {
     return null;
   }
   return authHeader.slice(7);
+}
+
+/**
+ * Require authenticated user - extracts and verifies token from request
+ */
+export function requireAuth(request: Request): { payload: TokenPayload } | { error: NextResponse } {
+  const token = extractToken(request.headers.get('Authorization'));
+  if (!token) {
+    return { error: NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 }) };
+  }
+  const payload = verifyToken(token);
+  if (!payload) {
+    return { error: NextResponse.json({ success: false, message: 'Invalid or expired token' }, { status: 401 }) };
+  }
+  return { payload };
+}
+
+/**
+ * Require admin role - extracts token and verifies admin role
+ */
+export function requireAdmin(request: Request): { payload: TokenPayload } | { error: NextResponse } {
+  const auth = requireAuth(request);
+  if ('error' in auth) return auth;
+  if (auth.payload.role !== 'admin') {
+    return { error: NextResponse.json({ success: false, message: 'Admin access required' }, { status: 403 }) };
+  }
+  return auth;
+}
+
+/**
+ * Require host or admin role
+ */
+export function requireHost(request: Request): { payload: TokenPayload } | { error: NextResponse } {
+  const auth = requireAuth(request);
+  if ('error' in auth) return auth;
+  if (auth.payload.role !== 'host' && auth.payload.role !== 'admin') {
+    return { error: NextResponse.json({ success: false, message: 'Host access required' }, { status: 403 }) };
+  }
+  return auth;
 }

@@ -102,4 +102,44 @@ export const hostApi = {
     api.put(`/host/properties/${id}/toggle`),
 };
 
+// ─── Admin Dashboard ──────────────────────────────────────────────────────────
+export const adminApi = {
+  // Stats & Dashboard
+  getStats: () => api.get('/admin/stats'),
+
+  // Users Management
+  getUsers: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/admin/users', { params }),
+  getUserDetail: (id: string) => api.get(`/admin/users/${id}`),
+  updateUser: (id: string, action: string) =>
+    api.patch(`/admin/users/${id}`, { action }),
+
+  // Hosts Management
+  getHosts: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/admin/users', { params }),
+  getHostDetail: (id: string) => api.get(`/admin/hosts/${id}`),
+  updateHost: (id: string, action: string) =>
+    api.patch(`/admin/hosts/${id}`, { action }),
+
+  // Properties Management
+  getProperties: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/admin/properties', { params }),
+  moderateProperty: (id: string, action: 'approve' | 'reject', reason?: string) =>
+    api.post(`/admin/properties/${id}/moderate`, { action, reason }),
+
+  // Bookings Management
+  getBookings: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/admin/bookings', { params }),
+  updateBooking: (id: string, action: string) =>
+    api.patch(`/admin/bookings/${id}`, { action }),
+
+  // Payments
+  getPayments: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/admin/payments', { params }),
+
+  // Activity Logs
+  getLogs: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/admin/logs', { params }),
+};
+
 export default api;

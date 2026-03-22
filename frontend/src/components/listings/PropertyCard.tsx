@@ -65,7 +65,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Discount badge */}
           {property.pricing.discountPercent > 0 && (
-            <div className="absolute top-3 right-3">
+            <div className="absolute top-3 ltr:right-3 rtl:left-3">
               <span className="badge bg-orange-500 text-white text-xs font-bold px-2.5 py-1">
                 {property.pricing.discountPercent}% OFF
               </span>
@@ -74,7 +74,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Featured badge */}
           {property.isFeatured && (
-            <div className="absolute top-3 left-3">
+            <div className="absolute top-3 ltr:left-3 rtl:right-3">
               <span className="badge bg-primary-600 text-white text-xs font-semibold px-2.5 py-1">
                 ⭐ Featured
               </span>
@@ -85,7 +85,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <button
             onClick={handleWishlist}
             disabled={wishlistLoading}
-            className="absolute bottom-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-200 disabled:opacity-60"
+            className="absolute bottom-3 ltr:right-3 rtl:left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-200 disabled:opacity-60"
           >
             <Heart
               className={`w-4 h-4 transition-colors ${
@@ -95,7 +95,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           </button>
 
           {/* Type badge */}
-          <div className="absolute bottom-3 left-3">
+          <div className="absolute bottom-3 ltr:left-3 rtl:right-3">
             <span className="badge bg-black/60 text-white text-xs backdrop-blur-sm">
               {getPropertyTypeLabel(property.type)}
             </span>

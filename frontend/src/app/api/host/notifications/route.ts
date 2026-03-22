@@ -1,72 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { bookings, properties, reviews } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
-import { HostNotification } from '@/types/index';
+import dbConnect from '@/lib/db';
+import { requireHost } from '@/lib/auth-helpers';
+import Property from '@/lib/models/Property';
+import Booking from '@/lib/models/Booking';
+import Review from '@/lib/models/Review';
+
+interface HostNotification {
+  id: string;
+  type: 'booking_pending' | 'review_new';
+  title: string;
+  message: string;
+  action: string;
+  read: boolean;
+  createdAt: string;
+}
 
 /**
  * GET /api/host/notifications
- * Returns notifications for the host
+ * Returns notifications from pending bookings and recent reviews
  */
 export async function GET(request: NextRequest) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    const auth = requireHost(request);
+    if ('error' in auth) return auth.error;
+    const { payload } = auth;
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    await dbConnect();
 
     const notifications: HostNotification[] = [];
 
     // Get properties owned by this host
-    const hostPropertyIds = properties
-      .filter((p) => p.host === payload.userId)
-      .map((p) => p._id);
+    const hostProperties = await Property.find({ host: payload.userId });
+    const hostPropertyIds = hostProperties.map((p) => p._id);
 
     // Find pending bookings
-    const pendingBookings = bookings.filter((b) => {
-      const propId = typeof b.property === 'string' ? b.property : b.property._id;
-      return hostPropertyIds.includes(propId) && b.status === 'pending';
+    const pendingBookings = await Booking.find({
+      property: { $in: hostPropertyIds },
+      status: 'pending',
+    }).populate({
+      path: 'guest',
+      select: 'name',
     });
 
-    pendingBookings.forEach((booking, idx) => {
-      const guestName = typeof booking.guest === 'string' ? 'Guest' : booking.guest.name;
+    pendingBookings.forEach((booking) => {
+      const guestName = booking.guest ? (booking.guest as any).name : 'Guest';
       notifications.push({
         id: `notif_booking_${booking._id}`,
         type: 'booking_pending',
         title: 'New Booking Request',
         message: `${guestName} requested to book your property`,
-        time: new Date(booking.createdAt).toISOString(),
-        read: false,
         action: `/host/bookings/${booking._id}`,
+        read: false,
+        createdAt: new Date(booking.createdAt).toISOString(),
       });
     });
 
-    // Find new reviews
-    const recentReviews = reviews.filter((r) => {
-      const propId = typeof r.property === 'string' ? r.property : r.property._id;
-      return hostPropertyIds.includes(propId);
+    // Find recent reviews from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentReviews = await Review.find({
+      property: { $in: hostPropertyIds },
+      createdAt: { $gte: sevenDaysAgo },
+    }).populate({
+      path: 'guest',
+      select: 'name',
     });
 
-    recentReviews.slice(0, 2).forEach((review) => {
-      const guestName = typeof review.guest === 'string' ? 'Guest' : review.guest.name;
+    recentReviews.forEach((review) => {
+      const guestName = review.guest ? (review.guest as any).name : 'Guest';
       notifications.push({
         id: `notif_review_${review._id}`,
         type: 'review_new',
         title: 'New Review',
         message: `${guestName} left a ${review.ratings.overall}-star review`,
-        time: new Date(review.createdAt).toISOString(),
-        read: false,
         action: `/host/reviews`,
+        read: false,
+        createdAt: new Date(review.createdAt).toISOString(),
       });
     });
 
-    // Sort by time (newest first)
-    notifications.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+    // Sort by date (newest first)
+    notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import dbConnect from '@/lib/db';
+import { requireHost } from '@/lib/auth-helpers';
+import Property from '@/lib/models/Property';
+import mongoose from 'mongoose';
 
 /**
  * PUT /api/host/properties/:id/toggle
@@ -8,32 +10,34 @@ import { extractToken, verifyToken } from '@/lib/auth-helpers';
  */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    const auth = requireHost(request);
+    if ('error' in auth) return auth.error;
+    const { payload } = auth;
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    await dbConnect();
+
+    // Validate property ID
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json({ success: false, message: 'Invalid property ID' }, { status: 400 });
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    const propertyId = new mongoose.Types.ObjectId(params.id);
 
-    const propertyIndex = properties.findIndex((p) => p._id === params.id);
+    // Find the property
+    const property = await Property.findById(propertyId);
 
-    if (propertyIndex === -1) {
+    if (!property) {
       return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
     }
 
-    const property = properties[propertyIndex];
-
     // Verify host ownership
-    if (property.host !== payload.userId) {
+    if (!property.host.equals(new mongoose.Types.ObjectId(payload.userId))) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
     }
 
     // Toggle active status
     property.isActive = !property.isActive;
+    await property.save();
 
     return NextResponse.json({
       success: true,

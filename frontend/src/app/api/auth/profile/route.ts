@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { users } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import dbConnect from '@/lib/db';
+import User from '@/lib/models/User';
+import { requireAuth } from '@/lib/auth-helpers';
 
 interface UpdateProfileRequest {
   name?: string;
@@ -11,38 +12,59 @@ interface UpdateProfileRequest {
 /**
  * PUT /api/auth/profile
  * Updates the authenticated user's profile
+ * Only allows whitelisted fields: name, phone, avatar
  */
 export async function PUT(request: NextRequest) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    await dbConnect();
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    // Check authentication
+    const auth = requireAuth(request);
+    if ('error' in auth) {
+      return auth.error;
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    const { payload } = auth;
 
     const body = (await request.json()) as UpdateProfileRequest;
-    const userIndex = users.findIndex((u) => u._id === payload.userId);
 
-    if (userIndex === -1) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    // Whitelist fields that can be updated
+    const updates: Record<string, any> = {};
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.phone !== undefined) updates.phone = body.phone;
+    if (body.avatar !== undefined) updates.avatar = body.avatar;
+
+    // Update user with validation
+    const user = await User.findByIdAndUpdate(payload.userId, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
     }
-
-    // Update user properties
-    if (body.name !== undefined) users[userIndex].name = body.name;
-    if (body.phone !== undefined) users[userIndex].phone = body.phone;
-    if (body.avatar !== undefined) users[userIndex].avatar = body.avatar;
 
     return NextResponse.json({
       success: true,
-      data: users[userIndex],
+      data: user,
     });
   } catch (error) {
     console.error('Error updating profile:', error);
-    return NextResponse.json({ success: false, message: 'Failed to update profile' }, { status: 500 });
+
+    // Handle validation errors
+    if (error instanceof Error && error.message.includes('validation')) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid input data' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, message: 'Failed to update profile' },
+      { status: 500 }
+    );
   }
 }

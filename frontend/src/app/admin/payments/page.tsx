@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { adminApi } from '@/lib/api';
 
 interface Payment {
   _id: string;
@@ -35,30 +36,46 @@ export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : '';
-
   const fetchPayments = async (page = 1) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
-    if (filter !== 'all') params.set('status', filter);
-
-    const res = await fetch(`/api/admin/payments?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      setPayments(data.data);
-      setSummary(data.summary);
-      setPagination(data.pagination);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getPayments({
+        page,
+        limit: 20,
+        ...(filter !== 'all' && { status: filter }),
+      });
+      if (response.data?.success) {
+        setPayments(response.data.data || []);
+        setSummary(response.data.summary || null);
+        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
+      } else {
+        setError(response.data?.message || 'Failed to load payments');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setError(message);
+      console.error('Fetch payments error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchPayments(); }, [filter]);
 
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
       {/* Summary Cards */}
       {summary && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>

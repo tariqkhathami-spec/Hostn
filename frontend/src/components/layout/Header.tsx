@@ -140,7 +140,7 @@ export default function Header() {
 
                   {/* Dropdown */}
                   {userMenuOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-slide-in">
+                    <div className="absolute ltr:right-0 rtl:left-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-slide-in">
                       <div className="p-3 border-b border-gray-100 bg-gray-50/50">
                         <p className="font-semibold text-gray-900 text-sm">{user?.name}</p>
                         <p className="text-xs text-gray-500">{user?.email}</p>

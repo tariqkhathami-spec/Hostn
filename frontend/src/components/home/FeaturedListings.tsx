@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import { Property } from '@/types';
 import { propertiesApi } from '@/lib/api';
 import PropertyCard from '@/components/listings/PropertyCard';
@@ -20,6 +21,7 @@ export default function FeaturedListings({
   city,
   featured,
 }: FeaturedListingsProps) {
+  const { t } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -82,7 +84,7 @@ export default function FeaturedListings({
             href={`/listings${city ? `?city=${city}` : featured ? '?featured=true' : ''}`}
             className="hidden md:flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
           >
-            View all
+            {t('featured.viewAll')}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -98,7 +100,7 @@ export default function FeaturedListings({
             href={`/listings${city ? `?city=${city}` : ''}`}
             className="btn-outline inline-flex items-center gap-2"
           >
-            View all properties
+            {t('featured.viewAllProperties')}
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

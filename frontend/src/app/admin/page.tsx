@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { adminApi } from '@/lib/api';
 
 interface DashboardData {
   users: { total: number; guests: number; hosts: number; admins: number };
@@ -58,22 +59,60 @@ const actionColors: Record<string, string> = {
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('hostn_token');
-    fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(res => { if (res.success) setData(res.data); })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    const fetchData = async () => {
+      try {
+        setError(null);
+        const response = await adminApi.getStats();
+        if (response.data?.success) {
+          setData(response.data.data);
+        } else {
+          setError(response.data?.message || 'Failed to load dashboard data');
+        }
+      } catch (err: any) {
+        const message = err?.response?.data?.message || err?.message || 'An error occurred while loading dashboard data';
+        setError(message);
+        console.error('Dashboard data fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: 60, color: '#64748b' }}>Loading dashboard...</div>;
   }
 
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ color: '#ef4444', marginBottom: 16, fontSize: 16, fontWeight: 600 }}>Error Loading Dashboard</div>
+        <div style={{ color: '#64748b', marginBottom: 24 }}>{error}</div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ padding: '8px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (!data) {
-    return <div style={{ textAlign: 'center', padding: 60, color: '#ef4444' }}>Failed to load dashboard data</div>;
+    return (
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ color: '#94a3b8', marginBottom: 24 }}>No dashboard data available</div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ padding: '8px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+        >
+          Reload
+        </button>
+      </div>
+    );
   }
 
   return (

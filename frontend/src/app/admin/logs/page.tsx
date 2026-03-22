@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { adminApi } from '@/lib/api';
 
 interface ActivityLog {
   _id: string;
@@ -42,29 +43,45 @@ const actionLabels: Record<string, string> = {
 export default function AdminLogsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionFilter, setActionFilter] = useState('all');
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : '';
-
   const fetchLogs = async (page = 1) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '30' });
-    if (actionFilter !== 'all') params.set('action', actionFilter);
-
-    const res = await fetch(`/api/admin/logs?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      setLogs(data.data);
-      setPagination(data.pagination);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getLogs({
+        page,
+        limit: 30,
+        ...(actionFilter !== 'all' && { action: actionFilter }),
+      });
+      if (response.data?.success) {
+        setLogs(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
+      } else {
+        setError(response.data?.message || 'Failed to load logs');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setError(message);
+      console.error('Fetch logs error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchLogs(); }, [actionFilter]);
 
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
       {/* Filter */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
         <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
