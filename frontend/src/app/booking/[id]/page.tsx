@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -14,7 +14,7 @@ import Image from 'next/image';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
-export default function BookingPage() {
+function BookingContent() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -141,7 +141,7 @@ export default function BookingPage() {
                         <div>
                           <p className="text-sm font-medium text-gray-800">Dates</p>
                           <p className="text-xs text-gray-500">
-                            {formatDate(checkIn)} → {formatDate(checkOut)}
+                            {formatDate(checkIn)} \u2192 {formatDate(checkOut)}
                           </p>
                         </div>
                       </div>
@@ -235,7 +235,7 @@ export default function BookingPage() {
                   <div className="space-y-3 text-sm mb-6">
                     <h3 className="font-bold text-gray-900">Price details</h3>
                     <div className="flex justify-between text-gray-600">
-                      <span>{formatPrice(pricePerNight)} × {nights} night{nights !== 1 ? 's' : ''}</span>
+                      <span>{formatPrice(pricePerNight)} \u00d7 {nights} night{nights !== 1 ? 's' : ''}</span>
                       <span>{formatPrice(subtotal)}</span>
                     </div>
                     {cleaningFee > 0 && (
@@ -283,5 +283,25 @@ export default function BookingPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <main className="container-custom py-12">
+          <div className="max-w-2xl mx-auto animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3" />
+            <div className="h-40 bg-gray-200 rounded-2xl" />
+            <div className="h-60 bg-gray-100 rounded-2xl" />
+          </div>
+        </main>
+        <Footer />
+      </>
+    }>
+      <BookingContent />
+    </Suspense>
   );
 }
