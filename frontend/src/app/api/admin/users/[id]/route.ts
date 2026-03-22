@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin, isUserBanned, banUser, unbanUser, addActivityLog } from '@/lib/admin-helpers';
+import { requireAdmin, isUserBanned, banUser, unbanUser, isHostSuspended, suspendHost, activateHost, addActivityLog } from '@/lib/admin-helpers';
 import { seedUsers, seedBookings, seedProperties, seedReviews } from '@/lib/data/seed-properties';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -36,6 +36,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     data: {
       ...user,
       isBanned: isUserBanned(user._id),
+      isSuspended: user.role === 'host' ? isHostSuspended(user._id) : false,
       bookingsCount: userBookings.length,
       totalSpent,
       bookings: userBookings.slice(0, 10),
@@ -79,6 +80,30 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       details: `User "${user.name}" (${user.email}) was unbanned`,
     });
     return NextResponse.json({ success: true, message: `User ${user.name} has been unbanned` });
+  }
+
+  if (action === 'suspend' && user.role === 'host') {
+    suspendHost(user._id);
+    addActivityLog({
+      action: 'host_suspended',
+      performedBy: auth.payload!.userId,
+      targetType: 'user',
+      targetId: user._id,
+      details: `Host "${user.name}" (${user.email}) was suspended`,
+    });
+    return NextResponse.json({ success: true, message: `Host ${user.name} has been suspended` });
+  }
+
+  if (action === 'activate' && user.role === 'host') {
+    activateHost(user._id);
+    addActivityLog({
+      action: 'host_activated',
+      performedBy: auth.payload!.userId,
+      targetType: 'user',
+      targetId: user._id,
+      details: `Host "${user.name}" (${user.email}) was activated`,
+    });
+    return NextResponse.json({ success: true, message: `Host ${user.name} has been activated` });
   }
 
   return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
