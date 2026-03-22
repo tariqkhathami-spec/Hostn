@@ -41,7 +41,7 @@ export default function HeroSearch() {
   const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
 
   return (
-    <div className="relative min-h-[600px] md:min-h-[720px] flex items-center justify-center overflow-hidden">
+    <div className="relative min-h-[520px] sm:min-h-[600px] md:min-h-[720px] flex items-center justify-center overflow-hidden">
       {/* Background image */}
       <div className="absolute inset-0">
         <div
@@ -61,15 +61,15 @@ export default function HeroSearch() {
         />
       </div>
 
-      {/* Decorative orbs */}
-      <div className="absolute top-20 left-10 w-64 h-64 bg-gold-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" />
-      <div className="absolute bottom-20 right-10 w-80 h-80 bg-primary-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" style={{ animationDelay: '1.5s' }} />
+      {/* Decorative orbs - hidden on small screens for performance */}
+      <div className="hidden sm:block absolute top-20 left-10 w-64 h-64 bg-gold-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" />
+      <div className="hidden sm:block absolute bottom-20 right-10 w-80 h-80 bg-primary-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" style={{ animationDelay: '1.5s' }} />
 
       {/* Content */}
-      <div className="relative z-10 container-custom text-center py-16 md:py-20">
+      <div className="relative z-10 container-custom text-center py-10 sm:py-16 md:py-20 px-4 sm:px-6">
         {/* Badge */}
         <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <span className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-sm font-medium px-5 py-2 rounded-full backdrop-blur-md border border-white/10">
+          <span className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-xs sm:text-sm font-medium px-3 sm:px-5 py-1.5 sm:py-2 rounded-full backdrop-blur-md border border-white/10">
             <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse-soft" />
             Over 1,000+ curated luxury properties
           </span>
@@ -77,14 +77,14 @@ export default function HeroSearch() {
 
         {/* Headline */}
         <div className="animate-fade-in-up mt-6" style={{ animationDelay: '0.2s' }}>
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white mb-5 leading-[1.1] tracking-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-3 sm:mb-5 leading-[1.1] tracking-tight">
             Where Every Stay
             <br />
             <span className="font-display italic text-gradient-gold inline-block mt-1">
               Becomes a Memory
             </span>
           </h1>
-          <p className="text-base md:text-lg text-white/70 mb-10 max-w-xl mx-auto leading-relaxed font-light">
+          <p className="text-sm sm:text-base md:text-lg text-white/70 mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light px-2 sm:px-0">
             Discover extraordinary chalets, villas, and exclusive retreats
             across Saudi Arabia. Your perfect escape is one search away.
           </p>
@@ -95,8 +95,8 @@ export default function HeroSearch() {
           className="animate-fade-in-up max-w-4xl mx-auto"
           style={{ animationDelay: '0.35s' }}
         >
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-4 md:p-5 border border-white/40">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 md:p-5 border border-white/40">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3">
               {/* City */}
               <div className="relative">
                 <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
@@ -176,7 +176,7 @@ export default function HeroSearch() {
               </div>
 
               {/* Search button */}
-              <div className="flex flex-col justify-end">
+              <div className="flex flex-col justify-end col-span-2 md:col-span-1">
                 <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1 md:opacity-0">
                   Search
                 </label>
@@ -204,7 +204,7 @@ export default function HeroSearch() {
                 setCity(c);
                 router.push(`/listings?city=${c}`);
               }}
-              className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-sm px-4 py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/5 hover:border-white/15"
+              className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/5 hover:border-white/15"
             >
               {c}
             </button>
@@ -213,7 +213,7 @@ export default function HeroSearch() {
 
         {/* Trust indicators */}
         <div
-          className="flex flex-wrap justify-center gap-6 md:gap-10 mt-10 animate-fade-in-up"
+          className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-10 mt-6 sm:mt-10 animate-fade-in-up"
           style={{ animationDelay: '0.65s' }}
         >
           {[
