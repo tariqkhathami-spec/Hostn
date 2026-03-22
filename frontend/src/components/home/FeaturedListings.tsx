@@ -71,12 +71,12 @@ export default function FeaturedListings({
   if (properties.length === 0) return null;
 
   return (
-    <section className="py-14">
+    <section className="py-8 sm:py-14">
       <div className="container-custom">
-        <div className="flex justify-between items-end mb-8">
+        <div className="flex justify-between items-end mb-5 sm:mb-8">
           <div>
             <h2 className="section-title mb-1">{title}</h2>
-            <p className="text-gray-500 text-sm">{subtitle}</p>
+            <p className="text-gray-500 text-xs sm:text-sm">{subtitle}</p>
           </div>
           <Link
             href={`/listings${city ? `?city=${city}` : featured ? '?featured=true' : ''}`}
