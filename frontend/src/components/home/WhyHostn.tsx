@@ -29,28 +29,28 @@ const features = [
 
 export default function WhyHostn() {
   return (
-    <section className="py-16">
+    <section className="py-10 sm:py-16">
       <div className="container-custom">
-        <div className="text-center mb-12">
-          <h2 className="section-title mb-3">Why Choose Hostn?</h2>
-          <p className="text-gray-500 max-w-lg mx-auto">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="section-title mb-2 sm:mb-3">Why Choose Hostn?</h2>
+          <p className="text-gray-500 max-w-lg mx-auto text-sm sm:text-base">
             We make finding and booking your perfect stay simple, safe, and stress-free.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {features.map(({ Icon, title, description, color }) => (
             <div
               key={title}
-              className="card p-6 hover:-translate-y-1 transition-transform duration-300 group"
+              className="card p-4 sm:p-6 hover:-translate-y-1 transition-transform duration-300 group"
             >
               <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-5 ${color} group-hover:scale-110 transition-transform`}
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-5 ${color} group-hover:scale-110 transition-transform`}
               >
-                <Icon className="w-6 h-6" />
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
+              <h3 className="font-semibold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">{title}</h3>
+              <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">{description}</p>
             </div>
           ))}
         </div>
