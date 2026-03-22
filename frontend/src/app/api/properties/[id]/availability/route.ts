@@ -28,7 +28,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     // Check for overlapping bookings
     const hasConflict = bookings.some((booking) => {
-      if (booking.property._id !== params.id || booking.status === 'cancelled') {
+      const propId = typeof booking.property === 'string' ? booking.property : booking.property._id;
+      if (propId !== params.id || booking.status === 'cancelled') {
         return false;
       }
 
