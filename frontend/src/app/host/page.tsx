@@ -97,11 +97,11 @@ export default function HostDashboardPage() {
   }
   const unreadNotifs = notifications.filter((n) => !n.read);
   if (unreadNotifs.length > 0) {
-    const reviewNotifs = unreadNotifs.filter((n) => n.type === 'new_review');
+    const reviewNotifs = unreadNotifs.filter((n) => n.type === 'review_new');
     if (reviewNotifs.length > 0) {
       actionItems.push({
         id: 'new-reviews',
-        type: 'new_review',
+        type: 'review_new',
         title: 'New Reviews',
         description: `${reviewNotifs.length} new review${reviewNotifs.length > 1 ? 's' : ''} to respond to`,
         href: '/host/reviews',
