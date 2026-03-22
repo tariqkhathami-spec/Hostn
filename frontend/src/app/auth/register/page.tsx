@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +9,7 @@ import Input from '@/components/ui/Input';
 import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { register } = useAuth();
@@ -99,7 +99,7 @@ export default function RegisterPage() {
                     : 'border-gray-200 text-gray-600 hover:border-gray-300'
                 }`}
               >
-                {r === 'guest' ? '🧳 I\'m a Guest' : '🏠 I\'m a Host'}
+                {r === 'guest' ? '\u{1F9F3} I\u0027m a Guest' : '\u{1F3E0} I\u0027m a Host'}
               </button>
             ))}
           </div>
@@ -190,7 +190,7 @@ export default function RegisterPage() {
               { value: '1,200+', label: 'Properties Listed' },
               { value: '15K+', label: 'Happy Guests' },
               { value: '50+', label: 'Cities Covered' },
-              { value: '4.9★', label: 'Average Rating' },
+              { value: '4.9\u2605', label: 'Average Rating' },
             ].map((stat) => (
               <div key={stat.label} className="bg-white/20 backdrop-blur-sm rounded-xl p-4">
                 <div className="text-2xl font-extrabold">{stat.value}</div>
@@ -201,5 +201,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }
