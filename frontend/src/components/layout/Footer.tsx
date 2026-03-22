@@ -33,8 +33,8 @@ const footerLinks = {
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300">
-      <div className="container-custom py-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
+      <div className="container-custom py-10 sm:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
@@ -85,9 +85,9 @@ export default function Footer() {
         </div>
 
         {/* Contact & Bottom */}
-        <div className="mt-12 pt-8 border-t border-gray-800">
+        <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6">
               <a
                 href="mailto:hello@hostn.com"
                 className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
@@ -104,7 +104,7 @@ export default function Footer() {
               </a>
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500">
-              <span>© {new Date().getFullYear()} Hostn. All rights reserved.</span>
+              <span>Â© {new Date().getFullYear()} Hostn. All rights reserved.</span>
               <Link href="#" className="hover:text-gray-300 transition-colors">Privacy</Link>
               <Link href="#" className="hover:text-gray-300 transition-colors">Terms</Link>
             </div>
