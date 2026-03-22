@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Calendar, Users, ChevronDown } from 'lucide-react';
+import { Search, MapPin, Calendar, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 const CITIES = [

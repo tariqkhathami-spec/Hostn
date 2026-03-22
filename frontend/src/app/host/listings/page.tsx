@@ -24,7 +24,6 @@ import {
   BedDouble,
   Bath,
   CalendarDays,
-  TrendingUp,
   Copy,
   ExternalLink,
   ChevronDown,

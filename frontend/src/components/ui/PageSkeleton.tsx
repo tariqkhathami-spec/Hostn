@@ -7,10 +7,11 @@
 
 interface SkeletonProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
-function Bone({ className = '' }: SkeletonProps) {
-  return <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} />;
+function Bone({ className = '', style }: SkeletonProps) {
+  return <div className={`animate-pulse bg-gray-200 rounded-xl ${className}`} style={style} />;
 }
 
 // ── Stat cards row (used by dashboard, bookings, earnings, reviews) ──────────
