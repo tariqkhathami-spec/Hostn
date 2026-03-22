@@ -58,6 +58,9 @@ export function getAmenityLabel(amenity: string) {
     smoking_allowed: 'Smoking Allowed',
     breakfast_included: 'Breakfast Included',
     heating: 'Heating',
+    beach_access: 'Beach Access',
+    fireplace: 'Fireplace',
+    hot_tub: 'Hot Tub',
   };
   return labels[amenity] || amenity;
 }
@@ -77,13 +80,16 @@ export function getAmenityIcon(amenity: string) {
     garden: '🌿',
     balcony: '🏙️',
     sea_view: '🌊',
-    mountain_view: '⛰️',
+    mountain_view: '⟰️',
     elevator: '🛗',
     security: '🔒',
     pet_friendly: '🐾',
     smoking_allowed: '🚬',
     breakfast_included: '🍳',
     heating: '🌡️',
+    beach_access: '🏖️',
+    fireplace: '🔥',
+    hot_tub: '♨️',
   };
   return icons[amenity] || '✓';
 }

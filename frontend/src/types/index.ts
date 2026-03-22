@@ -74,7 +74,10 @@ export type AmenityType =
   | 'pet_friendly'
   | 'smoking_allowed'
   | 'breakfast_included'
-  | 'heating';
+  | 'heating'
+  | 'beach_access'
+  | 'fireplace'
+  | 'hot_tub';
 
 export interface Property {
   _id: string;

@@ -4,30 +4,28 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Calendar, ChevronDown, Star, Shield, Award } from 'lucide-react';
 import { format } from 'date-fns';
-import { useLanguage } from '@/context/LanguageContext';
 
 const CITIES = [
   'Riyadh', 'Jeddah', 'Abha', 'Khobar', 'Taif', 'Al Ula', 'Hail', 'Mecca',
 ];
 
+const PROPERTY_TYPES = [
+  { label: 'All Types', value: '' },
+  { label: 'Chalets', value: 'chalet' },
+  { label: 'Apartments', value: 'apartment' },
+  { label: 'Villas', value: 'villa' },
+  { label: 'Studios', value: 'studio' },
+  { label: 'Farms', value: 'farm' },
+  { label: 'Camps', value: 'camp' },
+];
+
 export default function HeroSearch() {
   const router = useRouter();
-  const { t } = useLanguage();
   const [city, setCity] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
-
-  const PROPERTY_TYPES = [
-    { label: t('hero.allTypes'), value: '' },
-    { label: t('type.chalets'), value: 'chalet' },
-    { label: t('type.apartments'), value: 'apartment' },
-    { label: t('type.villas'), value: 'villa' },
-    { label: t('type.studios'), value: 'studio' },
-    { label: t('type.farms'), value: 'farm' },
-    { label: t('type.camps'), value: 'camp' },
-  ];
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -53,153 +51,25 @@ export default function HeroSearch() {
               'url(https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600)',
           }}
         />
+        {/* Cinematic gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(160deg, rgba(26,14,46,0.95) 0%, rgba(59,21,120,0.88) 35%, rgba(109,40,217,0.72) 70%, rgba(109,40,217,0.55) 100%)',
+              'linear-gradient(160deg, rgba(26,14,46,0.95) 0%, rgba(59,25,67,0.8) 100%)',
           }}
         />
       </div>
-
-      <div className="hidden sm:block absolute top-20 left-10 w-64 h-64 bg-gold-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" />
-      <div className="hidden sm:block absolute bottom-20 right-10 w-80 h-80 bg-primary-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" style={{ animationDelay: '1.5s' }} />
-
-      <div className="relative z-10 container-custom text-center py-10 sm:py-16 md:py-20 px-4 sm:px-6">
-        <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <span className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-xs sm:text-sm font-medium px-3 sm:px-5 py-1.5 sm:py-2 rounded-full backdrop-blur-md border border-white/10">
-            <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse-soft" />
-            {t('hero.badge')}
-          </span>
-        </div>
-
-        <div className="animate-fade-in-up mt-6" style={{ animationDelay: '0.2s' }}>
-          <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-3 sm:mb-5 leading-[1.1] tracking-tight">
-            {t('hero.title1')}
-            <br />
-            <span className="font-display italic text-gradient-gold inline-block mt-1">
-              {t('hero.title2')}
-            </span>
+      <{/* Content */}
+      <div className="relative z-10 max-w-6xl mx-auto p-4 sm:p-8" direction="ltr">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb4n">
+            Discover Your Next Dream Escape
           </h1>
-          <p className="text-sm sm:text-base md:text-lg text-white/70 mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light px-2 sm:px-0">
-            {t('hero.subtitle')}
+          <p className="text-lg sm:text-xl text-gray-200">
+            Explore unique vacation rentals in Saudi Arabia
           </p>
         </div>
 
-        <div className="animate-fade-in-up max-w-4xl mx-auto" style={{ animationDelay: '0.35s' }}>
-          <div className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 md:p-5 border border-white/40">
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3">
-              <div className="relative">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  {t('hero.destination')}
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full pl-9 pr-8 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
-                  >
-                    <option value="">{t('hero.selectCity')}</option>
-                    {CITIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                       ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="relative">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  {t('hero.propertyType')}
-                </label>
-                <div className="relative">
-                  <select
-                    value={propertyType}
-                    onChange={(e) => setPropertyType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
-                  >
-                    {PROPERTY_TYPES.map((pt) => (
-                      <option key={pt.value} value={pt.value}>{pt.label}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  {t('hero.checkIn')}
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
-                  <input
-                    type="date"
-                    value={checkIn}
-                    min={today}
-                    onChange={(e) => setCheckIn(e.target.value)}
-                    className="w-full pl-9 pr-3 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  {t('hero.checkOut')}
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
-                  <input
-                    type="date"
-                    value={checkOut}
-                    min={checkIn || tomorrow}
-                    onChange={(e) => setCheckOut(e.target.value)}
-                    className="w-full pl-9 pr-3 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-end col-span-2 md:col-span-1">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1 md:opacity-0">
-                  {t('hero.search')}
-                </label>
-                <button
-                  onClick={handleSearch}
-                  className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-300 flex items-center justify-center gap-2 shadow-premium hover:shadow-premium-lg hover:-translate-y-0.5"
-                >
-                  <Search className="w-4 h-4" />
-                  {t('hero.search')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap justify-center gap-2 mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-          {CITIES.slice(0, 6).map((c) => (
-            <button
-              key={c}
-              onClick={() => { setCity(c); router.push(`/listings?city=${c}`); }}
-              className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/5 hover:border-white/15"
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-10 mt-6 sm:mt-10 animate-fade-in-up" style={{ animationDelay: '0.65s' }}>
-          {[
-            { icon: Shield, label: t('hero.verified') },
-            { icon: Star, label: t('hero.rating') },
-            { icon: Award, label: t('hero.support') },
-          ].map(({ icon: Icon, label }) => (
-            <div key={label} className="flex items-center gap-2 text-white/60">
-              <Icon className="w-4 h-4 text-gold-400" />
-              <span className="text-xs font-medium tracking-wide">{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+        <div className="bg-white/[0.03] backdrop-blur-md rounded-2l p-6 sm:p-8 space-y-4">
+          <div className="hiwgi">
