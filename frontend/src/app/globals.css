@@ -266,6 +266,7 @@ body {
 /* RTL support */
 [dir="rtl"] {
   font-family: 'Noto Sans Arabic', 'Inter', system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  direction: rtl;
 }
 
 [dir="rtl"] .container-custom {
@@ -283,6 +284,29 @@ body {
 [dir="rtl"] .space-x-2 > :not([hidden]) ~ :not([hidden]) {
   margin-left: 0;
   margin-right: 0.5rem;
+}
+
+/* RTL-specific icon positioning for selects */
+[dir="rtl"] select {
+  background-position: left 0.75rem center;
+}
+
+/* RTL table alignment */
+[dir="rtl"] table {
+  direction: rtl;
+}
+
+[dir="rtl"] .text-right {
+  text-align: left;
+}
+
+/* Ensure proper text alignment in buttons */
+[dir="rtl"] .btn-primary,
+[dir="rtl"] .btn-outline,
+[dir="rtl"] .btn-ghost,
+[dir="rtl"] .btn-gold {
+  direction: rtl;
+  text-align: center;
 }
 
 /* Mobile touch improvements */

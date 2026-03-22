@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { users } from '@/lib/data/seed-properties';
-import { generateToken, hashPassword } from '@/lib/auth-helpers';
-import { User } from '@/types/index';
+import dbConnect from '@/lib/db';
+import User from '@/lib/models/User';
+import { generateToken } from '@/lib/auth-helpers';
 
 interface RegisterRequest {
   name: string;
@@ -14,9 +14,12 @@ interface RegisterRequest {
 /**
  * POST /api/auth/register
  * Registers a new user and returns JWT token
+ * Password is automatically hashed by User pre-save hook
  */
 export async function POST(request: NextRequest) {
   try {
+    await dbConnect();
+
     const body = (await request.json()) as RegisterRequest;
     const { name, email, password, phone, role = 'guest' } = body;
 
@@ -28,40 +31,79 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user exists
-    if (users.some((u) => u.email === email)) {
-      return NextResponse.json({ success: false, message: 'Email already registered' }, { status: 400 });
+    // Password length validation
+    if (password.length < 8) {
+      return NextResponse.json(
+        { success: false, message: 'Password must be at least 8 characters' },
+        { status: 400 }
+      );
     }
 
-    // Create new user
-    const newUser: User = {
-      _id: `user_${Date.now()}`,
+    // Validate role - only allow 'guest' or 'host'
+    if (role !== 'guest' && role !== 'host') {
+      return NextResponse.json(
+        { success: false, message: 'Invalid role. Only guest or host allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return NextResponse.json(
+        { success: false, message: 'Email already registered' },
+        { status: 400 }
+      );
+    }
+
+    // Generate avatar
+    const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+
+    // Create new user - password will be hashed by pre-save hook
+    const newUser = await User.create({
       name,
       email,
-      phone,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+      password,
+      phone: phone || undefined,
+      avatar,
       role,
       isVerified: false,
+      isBanned: false,
+      isSuspended: false,
       wishlist: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    // Add to users array
-    users.push(newUser);
+    });
 
     // Generate token
     const token = generateToken(newUser);
+
+    // Return user without password
+    const userObj = newUser.toObject();
+    delete userObj.password;
 
     return NextResponse.json(
       {
         success: true,
         token,
-        user: newUser,
+        user: userObj,
       },
       { status: 201 }
     );
   } catch (error) {
     console.error('Error registering user:', error);
-    return NextResponse.json({ success: false, message: 'Failed to register' }, { status: 500 });
+
+    // Handle validation errors
+    if (error instanceof Error) {
+      if (error.message.includes('email')) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid email format' },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { success: false, message: 'Failed to register' },
+      { status: 500 }
+    );
   }
 }

@@ -19,7 +19,7 @@ export const translations = {
     'nav.signOut': 'Sign Out',
 
     // Hero
-    'hero.badge': 'Over 1,000+ curated luxury properties',
+    'hero.badge': 'Curated luxury properties across Saudi Arabia',
     'hero.title1': 'Where Every Stay',
     'hero.title2': 'Becomes a Memory',
     'hero.subtitle': 'Discover extraordinary chalets, villas, and exclusive retreats across Saudi Arabia. Your perfect escape is one search away.',
@@ -31,8 +31,12 @@ export const translations = {
     'hero.checkOut': 'Check-out',
     'hero.search': 'Search',
     'hero.verified': 'Verified Properties',
-    'hero.rating': '4.9 Average Rating',
+    'hero.rating': 'Top-Rated Stays',
     'hero.support': 'Premium Support',
+    'hero.exploreStays': 'Explore stays',
+    'hero.trustedStays': 'Trusted Stays',
+    'hero.guestReviewed': 'Guest Reviewed',
+    'hero.support24': '24/7 Support',
 
     // Property types
     'type.chalets': 'Chalets',
@@ -47,6 +51,7 @@ export const translations = {
     'cities.title': 'Browse by Destination',
     'cities.subtitle': 'Find the perfect stay in your favorite city',
     'cities.stays': 'stays',
+    'cities.exploreStays': 'Explore stays',
 
     // Featured
     'featured.viewAll': 'View all',
@@ -126,6 +131,34 @@ export const translations = {
     'dash.changePassword': 'Change Password',
     'dash.guest': 'guest',
     'dash.guests': 'guests',
+
+    // Auth
+    'auth.welcomeBack': 'Welcome back',
+    'auth.signInSubtitle': 'Sign in to continue your luxury experience',
+    'auth.emailLabel': 'Email address',
+    'auth.emailPlaceholder': 'you@example.com',
+    'auth.passwordLabel': 'Password',
+    'auth.passwordPlaceholder': 'Enter your password',
+    'auth.forgotPassword': 'Forgot password?',
+    'auth.signInButton': 'Sign In',
+    'auth.noAccount': "Don't have an account?",
+    'auth.createFree': 'Create one free',
+    'auth.createAccount': 'Create Account',
+    'auth.joinHostn': 'Join Hostn and Start Your Hosting Journey',
+    'auth.signUpSubtitle': 'Create your account in minutes and start earning from your space',
+    'auth.createAccountHeading': 'Create account',
+    'auth.joinThousands': 'Join thousands of travelers and hosts',
+    'auth.imGuest': "I'm a Guest",
+    'auth.imHost': "I'm a Host",
+    'auth.nameLabel': 'Full Name',
+    'auth.namePlaceholder': 'John Doe',
+    'auth.phoneLabel': 'Phone Number',
+    'auth.phonePlaceholder': '+966 50 000 0000',
+    'auth.confirmPasswordLabel': 'Confirm Password',
+    'auth.confirmPasswordPlaceholder': 'Confirm your password',
+    'auth.signUpButton': 'Create Account',
+    'auth.haveAccount': 'Already have an account?',
+    'auth.signInLink': 'Sign in here',
   },
   ar: {
     // Header nav
@@ -145,7 +178,7 @@ export const translations = {
     'nav.signOut': 'تسجيل الخروج',
 
     // Hero
-    'hero.badge': 'أكثر من 1,000 عقار فاخر مختار',
+    'hero.badge': 'عقارات فاخرة مختارة في جميع أنحاء المملكة',
     'hero.title1': 'حيث كل إقامة',
     'hero.title2': 'تصبح ذكرى',
     'hero.subtitle': 'اكتشف شاليهات وفلل ومنتجعات استثنائية في جميع أنحاء المملكة العربية السعودية. إقامتك المثالية على بُعد بحث واحد.',
@@ -157,8 +190,12 @@ export const translations = {
     'hero.checkOut': 'تاريخ المغادرة',
     'hero.search': 'بحث',
     'hero.verified': 'عقارات موثقة',
-    'hero.rating': 'تقييم 4.9 من 5',
+    'hero.rating': 'إقامات مميزة',
     'hero.support': 'دعم متميز',
+    'hero.exploreStays': 'اكتشف الإقامات',
+    'hero.trustedStays': 'إقامات موثوقة',
+    'hero.guestReviewed': 'تقييمات الضيوف',
+    'hero.support24': 'دعم 24/7',
 
     // Property types
     'type.chalets': 'شاليهات',
@@ -173,6 +210,7 @@ export const translations = {
     'cities.title': 'تصفح حسب الوجهة',
     'cities.subtitle': 'اعثر على الإقامة المثالية في مدينتك المفضلة',
     'cities.stays': 'إقامة',
+    'cities.exploreStays': 'اكتشف الإقامات',
 
     // Featured
     'featured.viewAll': 'عرض الكل',
@@ -252,5 +290,33 @@ export const translations = {
     'dash.changePassword': 'تغيير كلمة المرور',
     'dash.guest': 'ضيف',
     'dash.guests': 'ضيوف',
+
+    // Auth
+    'auth.welcomeBack': 'مرحباً بعودتك',
+    'auth.signInSubtitle': 'سجل الدخول لمتابعة تجربتك الفاخرة',
+    'auth.emailLabel': 'عنوان البريد الإلكتروني',
+    'auth.emailPlaceholder': 'you@example.com',
+    'auth.passwordLabel': 'كلمة المرور',
+    'auth.passwordPlaceholder': 'أدخل كلمة المرور الخاصة بك',
+    'auth.forgotPassword': 'هل نسيت كلمة المرور؟',
+    'auth.signInButton': 'تسجيل الدخول',
+    'auth.noAccount': 'ليس لديك حساب؟',
+    'auth.createFree': 'أنشئ حساباً مجاناً',
+    'auth.createAccount': 'إنشاء حساب',
+    'auth.joinHostn': 'انضم إلى Hostn وابدأ رحلتك الاستضافة',
+    'auth.signUpSubtitle': 'أنشئ حسابك في دقائق قليلة وابدأ في الكسب من مساحتك',
+    'auth.createAccountHeading': 'إنشاء حساب',
+    'auth.joinThousands': 'انضم إلى آلاف المسافرين والمضيفين',
+    'auth.imGuest': 'أنا ضيف',
+    'auth.imHost': 'أنا مضيف',
+    'auth.nameLabel': 'الاسم الكامل',
+    'auth.namePlaceholder': 'أحمد محمد',
+    'auth.phoneLabel': 'رقم الهاتف',
+    'auth.phonePlaceholder': '+966 50 000 0000',
+    'auth.confirmPasswordLabel': 'تأكيد كلمة المرور',
+    'auth.confirmPasswordPlaceholder': 'أكد كلمة المرور الخاصة بك',
+    'auth.signUpButton': 'إنشاء حساب',
+    'auth.haveAccount': 'هل لديك حساب بالفعل؟',
+    'auth.signInLink': 'سجل دخول هنا',
   },
 } as const;

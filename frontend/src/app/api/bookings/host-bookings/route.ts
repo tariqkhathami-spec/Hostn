@@ -1,37 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { bookings, properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import dbConnect from '@/lib/db';
+import Booking from '@/lib/models/Booking';
+import Property from '@/lib/models/Property';
+import { requireHost } from '@/lib/auth-helpers';
+import mongoose from 'mongoose';
 
 /**
  * GET /api/bookings/host-bookings
  * Returns all bookings for properties owned by the authenticated host
+ * Retrieves host's properties first, then finds all bookings for those properties
  */
 export async function GET(request: NextRequest) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    await dbConnect();
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    const auth = requireHost(request);
+    if ('error' in auth) return auth.error;
 
     // Get properties owned by this host
-    const hostPropertyIds = properties
-      .filter((p) => p.host === payload.userId)
-      .map((p) => p._id);
+    const hostProperties = await Property.find({
+      host: new mongoose.Types.ObjectId(auth.payload.userId),
+    }).select('_id');
 
-    // Get bookings for these properties
-    const hostBookings = bookings.filter((b) => {
-      const propId = typeof b.property === 'string' ? b.property : b.property._id;
-      return hostPropertyIds.includes(propId);
-    });
+    const propertyIds = hostProperties.map((p) => p._id);
 
-    // Sort by creation date (newest first)
-    hostBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Get bookings for these properties, populate guest and property details
+    const hostBookings = await Booking.find({
+      property: { $in: propertyIds },
+    })
+      .populate('property', 'title location host pricing')
+      .populate('guest', 'name email avatar phone')
+      .sort({ createdAt: -1 });
 
     return NextResponse.json({
       success: true,

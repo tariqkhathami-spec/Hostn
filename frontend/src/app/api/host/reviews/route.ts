@@ -1,44 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { reviews, properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
-import { ReviewSummary } from '@/types/index';
+import dbConnect from '@/lib/db';
+import { requireHost } from '@/lib/auth-helpers';
+import Property from '@/lib/models/Property';
+import Review from '@/lib/models/Review';
+
+interface ReviewSummary {
+  total: number;
+  averageRating: number;
+  distribution: Record<number, number>;
+  subRatings: {
+    cleanliness: number;
+    accuracy: number;
+    communication: number;
+    location: number;
+    value: number;
+  };
+}
+
+interface PaginationInfo {
+  total: number;
+  page: number;
+  pages: number;
+  limit: number;
+}
 
 /**
  * GET /api/host/reviews
- * Returns reviews for all properties owned by the host with summary stats
+ * Returns reviews for all properties owned by the host with summary stats and pagination
  */
 export async function GET(request: NextRequest) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    const auth = requireHost(request);
+    if ('error' in auth) return auth.error;
+    const { payload } = auth;
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    await dbConnect();
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(parseInt(searchParams.get('page') || '1'), 1);
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100);
 
     // Get properties owned by this host
-    const hostPropertyIds = properties
-      .filter((p) => p.host === payload.userId)
-      .map((p) => p._id);
+    const hostProperties = await Property.find({ host: payload.userId });
+    const hostPropertyIds = hostProperties.map((p) => p._id);
 
-    // Get reviews for these properties
-    const hostReviews = reviews.filter((r) => {
-      const propId = typeof r.property === 'string' ? r.property : r.property._id;
-      return hostPropertyIds.includes(propId);
-    });
+    // Get all reviews for these properties
+    const allHostReviews = await Review.find({ property: { $in: hostPropertyIds } })
+      .populate({
+        path: 'guest',
+        select: 'name',
+      })
+      .populate({
+        path: 'property',
+        select: 'title',
+      })
+      .sort({ createdAt: -1 });
 
-    // Sort by date (newest first)
-    hostReviews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    // Calculate summary
+    // Calculate summary stats
     const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let totalRating = 0;
     let cleanlinessSum = 0;
@@ -46,18 +64,40 @@ export async function GET(request: NextRequest) {
     let communicationSum = 0;
     let locationSum = 0;
     let valueSum = 0;
+    let cleanlinessCount = 0;
+    let accuracyCount = 0;
+    let communicationCount = 0;
+    let locationCount = 0;
+    let valueCount = 0;
 
-    hostReviews.forEach((r) => {
-      distribution[r.ratings.overall as keyof typeof distribution]++;
+    allHostReviews.forEach((r) => {
+      const rating = r.ratings.overall as keyof typeof distribution;
+      distribution[rating]++;
       totalRating += r.ratings.overall;
-      if (r.ratings.cleanliness) cleanlinessSum += r.ratings.cleanliness;
-      if (r.ratings.accuracy) accuracySum += r.ratings.accuracy;
-      if (r.ratings.communication) communicationSum += r.ratings.communication;
-      if (r.ratings.location) locationSum += r.ratings.location;
-      if (r.ratings.value) valueSum += r.ratings.value;
+
+      if (r.ratings.cleanliness) {
+        cleanlinessSum += r.ratings.cleanliness;
+        cleanlinessCount++;
+      }
+      if (r.ratings.accuracy) {
+        accuracySum += r.ratings.accuracy;
+        accuracyCount++;
+      }
+      if (r.ratings.communication) {
+        communicationSum += r.ratings.communication;
+        communicationCount++;
+      }
+      if (r.ratings.location) {
+        locationSum += r.ratings.location;
+        locationCount++;
+      }
+      if (r.ratings.value) {
+        valueSum += r.ratings.value;
+        valueCount++;
+      }
     });
 
-    const count = hostReviews.length;
+    const count = allHostReviews.length;
     const averageRating = count > 0 ? Math.round((totalRating / count) * 10) / 10 : 0;
 
     const summary: ReviewSummary = {
@@ -65,25 +105,32 @@ export async function GET(request: NextRequest) {
       averageRating,
       distribution,
       subRatings: {
-        cleanliness: count > 0 ? Math.round((cleanlinessSum / count) * 10) / 10 : 0,
-        accuracy: count > 0 ? Math.round((accuracySum / count) * 10) / 10 : 0,
-        communication: count > 0 ? Math.round((communicationSum / count) * 10) / 10 : 0,
-        location: count > 0 ? Math.round((locationSum / count) * 10) / 10 : 0,
-        value: count > 0 ? Math.round((valueSum / count) * 10) / 10 : 0,
+        cleanliness: cleanlinessCount > 0 ? Math.round((cleanlinessSum / cleanlinessCount) * 10) / 10 : 0,
+        accuracy: accuracyCount > 0 ? Math.round((accuracySum / accuracyCount) * 10) / 10 : 0,
+        communication:
+          communicationCount > 0 ? Math.round((communicationSum / communicationCount) * 10) / 10 : 0,
+        location: locationCount > 0 ? Math.round((locationSum / locationCount) * 10) / 10 : 0,
+        value: valueCount > 0 ? Math.round((valueSum / valueCount) * 10) / 10 : 0,
       },
     };
 
     // Paginate
-    const total = count;
-    const pages = Math.ceil(total / limit);
+    const pages = Math.ceil(count / limit);
     const startIdx = (page - 1) * limit;
-    const data = hostReviews.slice(startIdx, startIdx + limit);
+    const paginatedReviews = allHostReviews.slice(startIdx, startIdx + limit);
+
+    const pagination: PaginationInfo = {
+      total: count,
+      page,
+      pages,
+      limit,
+    };
 
     return NextResponse.json({
       success: true,
-      data,
+      data: paginatedReviews,
       summary,
-      pagination: { total, page, pages, limit },
+      pagination,
     });
   } catch (error) {
     console.error('Error fetching host reviews:', error);

@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { properties, bookings } from '@/lib/data/seed-properties';
+import dbConnect from '@/lib/db';
+import Property from '@/lib/models/Property';
+import Booking from '@/lib/models/Booking';
 
 /**
  * GET /api/properties/:id/availability
  * Checks availability for a property between checkIn and checkOut
+ * PUBLIC endpoint
+ * Returns {available: boolean} if dates don't conflict with pending or confirmed bookings
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    await dbConnect();
+
     const { searchParams } = new URL(request.url);
     const checkIn = searchParams.get('checkIn');
     const checkOut = searchParams.get('checkOut');
@@ -18,7 +24,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const property = properties.find((p) => p._id === params.id);
+    // Verify property exists
+    const property = await Property.findById(params.id).lean();
     if (!property) {
       return NextResponse.json({ success: false, message: 'Property not found' }, { status: 404 });
     }
@@ -26,26 +33,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 
-    // Check for overlapping bookings
-    const hasConflict = bookings.some((booking) => {
-      const propId = typeof booking.property === 'string' ? booking.property : booking.property._id;
-      if (propId !== params.id || booking.status === 'cancelled') {
-        return false;
-      }
-
-      const bookingCheckIn = new Date(booking.checkIn);
-      const bookingCheckOut = new Date(booking.checkOut);
-
-      return checkInDate < bookingCheckOut && checkOutDate > bookingCheckIn;
+    // Check for conflicting bookings (pending or confirmed)
+    const conflictingBooking = await Booking.findOne({
+      property: params.id,
+      status: { $in: ['pending', 'confirmed'] },
+      $expr: {
+        $and: [{ $lt: ['$checkIn', checkOutDate] }, { $gt: ['$checkOut', checkInDate] }],
+      },
     });
+
+    const available = !conflictingBooking;
 
     return NextResponse.json({
       success: true,
       data: {
-        available: !hasConflict,
-        propertyId: params.id,
-        checkIn,
-        checkOut,
+        available,
       },
     });
   } catch (error) {

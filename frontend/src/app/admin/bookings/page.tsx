@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { adminApi } from '@/lib/api';
 
 interface AdminBooking {
   _id: string;
@@ -35,6 +36,7 @@ const paymentColors: Record<string, { bg: string; text: string }> = {
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -42,46 +44,67 @@ export default function AdminBookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<AdminBooking | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : '';
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchBookings = async (page = 1) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
-    if (search) params.set('search', search);
-
-    const res = await fetch(`/api/admin/bookings?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      setBookings(data.data);
-      setPagination(data.pagination);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getBookings({
+        page,
+        limit: 20,
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(paymentFilter !== 'all' && { paymentStatus: paymentFilter }),
+        ...(search && { search }),
+      });
+      if (response.data?.success) {
+        setBookings(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
+      } else {
+        setError(response.data?.message || 'Failed to load bookings');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setError(message);
+      console.error('Fetch bookings error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchBookings(); }, [statusFilter, paymentFilter]);
 
   const handleCancel = async (bookingId: string) => {
-    setActionLoading(true);
-    const res = await fetch(`/api/admin/bookings/${bookingId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: 'cancel' }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchBookings(pagination.page);
-      setConfirmCancel(null);
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const response = await adminApi.updateBooking(bookingId, 'cancel');
+      if (response.data?.success) {
+        fetchBookings(pagination.page);
+        setConfirmCancel(null);
+      } else {
+        setActionError(response.data?.message || 'Failed to cancel booking');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setActionError(message);
+      console.error('Cancel booking error:', err);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchBookings(1); };
 
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
@@ -213,11 +236,16 @@ export default function AdminBookingsPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 400 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#ef4444' }}>Cancel Booking</h3>
+            {actionError && (
+              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
+                {actionError}
+              </div>
+            )}
             <p style={{ fontSize: 14, color: '#475569', margin: '0 0 20px' }}>
               Are you sure you want to cancel booking <strong>#{confirmCancel._id.slice(-8)}</strong> for <strong>{confirmCancel.guestName}</strong>? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button onClick={() => setConfirmCancel(null)} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Keep Booking</button>
+              <button onClick={() => { setConfirmCancel(null); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Keep Booking</button>
               <button onClick={() => handleCancel(confirmCancel._id)} disabled={actionLoading}
                 style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
                 {actionLoading ? 'Cancelling...' : 'Cancel Booking'}

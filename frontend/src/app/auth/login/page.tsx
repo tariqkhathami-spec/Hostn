@@ -8,11 +8,13 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Mail, Lock, Eye, EyeOff, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLanguage } from '@/context/LanguageContext';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,30 +69,30 @@ function LoginContent() {
 
           <div className="mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">
-              Welcome back
+              {t('auth.welcomeBack')}
             </h1>
-            <p className="text-sm sm:text-base text-gray-500">Sign in to continue your luxury experience</p>
+            <p className="text-sm sm:text-base text-gray-500">{t('auth.signInSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input
-              label="Email address"
+              label={t('auth.emailLabel')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               leftIcon={<Mail className="w-4 h-4" />}
               autoComplete="email"
             />
 
             <Input
-              label="Password"
+              label={t('auth.passwordLabel')}
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
-              placeholder="Enter your password"
+              placeholder={t('auth.passwordPlaceholder')}
               leftIcon={<Lock className="w-4 h-4" />}
               rightIcon={
                 <button
@@ -104,21 +106,21 @@ function LoginContent() {
               autoComplete="current-password"
             />
 
-            <div className="flex justify-end">
+            <div className="flex ltr:justify-end rtl:justify-start">
               <a href="#" className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors">
-                Forgot password?
+                {t('auth.forgotPassword')}
               </a>
             </div>
 
             <Button type="submit" isLoading={loading} size="lg" className="w-full">
-              Sign In
+              {t('auth.signInButton')}
             </Button>
           </form>
 
           <p className="mt-8 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link href="/auth/register" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
-              Create one free
+              {t('auth.createFree')}
             </Link>
           </p>
         </div>
@@ -140,7 +142,7 @@ function LoginContent() {
         />
 
         {/* Decorative gold line */}
-        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gold-400 via-gold-500/50 to-transparent" />
+        <div className="absolute top-0 ltr:left-0 rtl:right-0 w-1 h-full bg-gradient-to-b from-gold-400 via-gold-500/50 to-transparent" />
 
         <div className="absolute inset-0 flex flex-col justify-between p-12 xl:p-16 text-white">
           {/* Top: Brand tagline */}
@@ -172,12 +174,12 @@ function LoginContent() {
             </div>
           </div>
 
-          {/* Bottom: Stats */}
+          {/* Bottom: Platform highlights */}
           <div className="flex gap-8 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
             {[
-              { value: '1,200+', label: 'Properties' },
-              { value: '4.9', label: 'Avg Rating' },
-              { value: '15K+', label: 'Happy Guests' },
+              { value: 'Verified', label: 'Properties' },
+              { value: 'Curated', label: 'Experiences' },
+              { value: '24/7', label: 'Support' },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="text-xl font-bold text-gold-300">{stat.value}</div>

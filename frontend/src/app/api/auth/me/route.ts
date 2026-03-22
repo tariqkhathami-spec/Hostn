@@ -1,28 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { users } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import dbConnect from '@/lib/db';
+import User from '@/lib/models/User';
+import { requireAuth } from '@/lib/auth-helpers';
 
 /**
  * GET /api/auth/me
- * Returns the authenticated user's profile
+ * Returns the authenticated user's profile with populated wishlist
  */
 export async function GET(request: NextRequest) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    await dbConnect();
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    // Check authentication
+    const auth = requireAuth(request);
+    if ('error' in auth) {
+      return auth.error;
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    const { payload } = auth;
 
-    const user = users.find((u) => u._id === payload.userId);
+    // Find user by ID and populate wishlist with Property details
+    const user = await User.findById(payload.userId).populate({
+      path: 'wishlist',
+      model: 'Property',
+      select: 'title images pricing location ratings',
+    });
 
     if (!user) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
@@ -31,6 +39,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching user:', error);
-    return NextResponse.json({ success: false, message: 'Failed to fetch user' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'Failed to fetch user' },
+      { status: 500 }
+    );
   }
 }

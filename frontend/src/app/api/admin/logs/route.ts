@@ -1,39 +1,53 @@
-import { NextResponse } from 'next/server';
-import { requireAdmin, getActivityLogs } from '@/lib/admin-helpers';
-import { seedUsers } from '@/lib/data/seed-properties';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
+import { requireAdmin } from '@/lib/auth-helpers';
+import ActivityLog from '@/lib/models/ActivityLog';
 
-export async function GET(request: Request) {
-  const auth = requireAdmin(request);
-  if ('error' in auth) return auth.error;
+export async function GET(request: NextRequest) {
+  try {
+    const auth = requireAdmin(request);
+    if ('error' in auth) return auth.error;
 
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action');
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '50');
+    await dbConnect();
 
-  let logs = getActivityLogs();
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, parseInt(searchParams.get('limit') || '20'));
+    const action = searchParams.get('action');
 
-  // Filter by action type
-  if (action && action !== 'all') {
-    logs = logs.filter(l => l.action === action);
+    const skip = (page - 1) * limit;
+    const filter: any = {};
+
+    if (action && action !== 'all') {
+      filter.action = action;
+    }
+
+    const totalCount = await ActivityLog.countDocuments(filter);
+
+    const logs = await ActivityLog.find(filter)
+      .populate('performedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: logs,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Admin activity logs error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    );
   }
-
-  // Enrich with performer name
-  const enrichedLogs = logs.map(log => {
-    const performer = seedUsers.find(u => u._id === log.performedBy);
-    return {
-      ...log,
-      performerName: performer?.name || (log.performedBy === 'system' ? 'System' : 'Unknown'),
-    };
-  });
-
-  const total = enrichedLogs.length;
-  const startIdx = (page - 1) * limit;
-  const paginatedLogs = enrichedLogs.slice(startIdx, startIdx + limit);
-
-  return NextResponse.json({
-    success: true,
-    data: paginatedLogs,
-    pagination: { total, page, pages: Math.ceil(total / limit), limit },
-  });
 }

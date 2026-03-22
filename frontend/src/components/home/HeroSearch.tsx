@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Calendar, ChevronDown, Star, Shield, Award } from 'lucide-react';
 import { format } from 'date-fns';
+import { useLanguage } from '@/context/LanguageContext';
 
 const CITIES = [
   'Riyadh', 'Jeddah', 'Abha', 'Khobar', 'Taif', 'Al Ula', 'Hail', 'Mecca',
@@ -21,6 +22,7 @@ const PROPERTY_TYPES = [
 
 export default function HeroSearch() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [city, setCity] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [checkIn, setCheckIn] = useState('');
@@ -71,22 +73,21 @@ export default function HeroSearch() {
         <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
           <span className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-xs sm:text-sm font-medium px-3 sm:px-5 py-1.5 sm:py-2 rounded-full backdrop-blur-md border border-white/10">
             <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse-soft" />
-            Luxury vacation rentals across Saudi Arabia
+            {t('hero.badge')}
           </span>
         </div>
 
         {/* Headline */}
         <div className="animate-fade-in-up mt-6" style={{ animationDelay: '0.2s' }}>
           <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-3 sm:mb-5 leading-[1.1] tracking-tight">
-            Where Every Stay
+            {t('hero.title1')}
             <br />
             <span className="font-display italic text-gradient-gold inline-block mt-1">
-              Becomes a Memory
+              {t('hero.title2')}
             </span>
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-white/70 mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light px-2 sm:px-0">
-            Discover extraordinary chalets, villas, and exclusive retreats
-            across Saudi Arabia. Your perfect escape is one search away.
+            {t('hero.subtitle')}
           </p>
         </div>
 
@@ -99,8 +100,8 @@ export default function HeroSearch() {
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3">
               {/* City */}
               <div className="relative">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  Destination
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1">
+                  {t('hero.destination')}
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
@@ -109,7 +110,7 @@ export default function HeroSearch() {
                     onChange={(e) => setCity(e.target.value)}
                     className="w-full pl-9 pr-8 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
                   >
-                    <option value="">Select city</option>
+                    <option value="">{t('hero.selectCity')}</option>
                     {CITIES.map((c) => (
                       <option key={c} value={c}>
                         {c}
@@ -122,8 +123,8 @@ export default function HeroSearch() {
 
               {/* Type */}
               <div className="relative">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  Property Type
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1">
+                  {t('hero.propertyType')}
                 </label>
                 <div className="relative">
                   <select
@@ -131,9 +132,9 @@ export default function HeroSearch() {
                     onChange={(e) => setPropertyType(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
                   >
-                    {PROPERTY_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
+                    {PROPERTY_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
                       </option>
                     ))}
                   </select>
@@ -143,8 +144,8 @@ export default function HeroSearch() {
 
               {/* Check-in */}
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  Check-in
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1">
+                  {t('hero.checkIn')}
                 </label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
@@ -160,8 +161,8 @@ export default function HeroSearch() {
 
               {/* Check-out */}
               <div>
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1">
-                  Check-out
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1">
+                  {t('hero.checkOut')}
                 </label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
@@ -177,15 +178,15 @@ export default function HeroSearch() {
 
               {/* Search button */}
               <div className="flex flex-col justify-end col-span-2 md:col-span-1">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 text-left px-1 md:opacity-0">
-                  Search
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1 md:opacity-0">
+                  {t('hero.search')}
                 </label>
                 <button
                   onClick={handleSearch}
                   className="w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-300 flex items-center justify-center gap-2 shadow-premium hover:shadow-premium-lg hover:-translate-y-0.5"
                 >
                   <Search className="w-4 h-4" />
-                  Search
+                  {t('hero.search')}
                 </button>
               </div>
             </div>
@@ -217,9 +218,9 @@ export default function HeroSearch() {
           style={{ animationDelay: '0.65s' }}
         >
           {[
-            { icon: Shield, label: 'Trusted Stays' },
-            { icon: Star, label: 'Guest Reviewed' },
-            { icon: Award, label: '24/7 Support' },
+            { icon: Shield, label: t('hero.trustedStays') },
+            { icon: Star, label: t('hero.guestReviewed') },
+            { icon: Award, label: t('hero.support24') },
           ].map(({ icon: Icon, label }) => (
             <div
               key={label}

@@ -8,11 +8,13 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Mail, Lock, User, Phone, Eye, EyeOff, Shield, Star, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLanguage } from '@/context/LanguageContext';
 
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { register } = useAuth();
+  const { t } = useLanguage();
 
   const defaultRole = searchParams.get('role') || 'guest';
 
@@ -83,9 +85,9 @@ function RegisterContent() {
 
           <div className="mb-6">
             <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">
-              Create account
+              {t('auth.createAccountHeading')}
             </h1>
-            <p className="text-gray-500">Join thousands of travelers and hosts</p>
+            <p className="text-gray-500">{t('auth.joinThousands')}</p>
           </div>
 
           {/* Role selector */}
@@ -111,38 +113,38 @@ function RegisterContent() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Full name"
+              label={t('auth.nameLabel')}
               type="text"
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
               error={errors.name}
-              placeholder="Your full name"
+              placeholder={t('auth.namePlaceholder')}
               leftIcon={<User className="w-4 h-4" />}
             />
             <Input
-              label="Email address"
+              label={t('auth.emailLabel')}
               type="email"
               value={form.email}
               onChange={(e) => update('email', e.target.value)}
               error={errors.email}
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               leftIcon={<Mail className="w-4 h-4" />}
             />
             <Input
-              label="Phone (optional)"
+              label={t('auth.phoneLabel')}
               type="tel"
               value={form.phone}
               onChange={(e) => update('phone', e.target.value)}
-              placeholder="+966 5XX XXX XXX"
+              placeholder={t('auth.phonePlaceholder')}
               leftIcon={<Phone className="w-4 h-4" />}
             />
             <Input
-              label="Password"
+              label={t('auth.passwordLabel')}
               type={showPassword ? 'text' : 'password'}
               value={form.password}
               onChange={(e) => update('password', e.target.value)}
               error={errors.password}
-              placeholder="At least 8 characters"
+              placeholder={t('auth.passwordPlaceholder')}
               leftIcon={<Lock className="w-4 h-4" />}
               rightIcon={
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="focus:outline-none text-gray-400 hover:text-gray-600 transition-colors">
@@ -151,12 +153,12 @@ function RegisterContent() {
               }
             />
             <Input
-              label="Confirm password"
+              label={t('auth.confirmPasswordLabel')}
               type="password"
               value={form.confirmPassword}
               onChange={(e) => update('confirmPassword', e.target.value)}
               error={errors.confirmPassword}
-              placeholder="Repeat password"
+              placeholder={t('auth.confirmPasswordPlaceholder')}
               leftIcon={<Lock className="w-4 h-4" />}
             />
 
@@ -167,14 +169,14 @@ function RegisterContent() {
             </p>
 
             <Button type="submit" isLoading={loading} size="lg" className="w-full">
-              Create Account
+              {t('auth.signUpButton')}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{' '}
+            {t('auth.haveAccount')}{' '}
             <Link href="/auth/login" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
-              Sign in
+              {t('auth.signInLink')}
             </Link>
           </p>
         </div>
@@ -196,7 +198,7 @@ function RegisterContent() {
         />
 
         {/* Decorative gold line */}
-        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-gold-400 via-gold-500/50 to-transparent" />
+        <div className="absolute top-0 ltr:left-0 rtl:right-0 w-1 h-full bg-gradient-to-b from-gold-400 via-gold-500/50 to-transparent" />
 
         <div className="absolute inset-0 flex flex-col justify-between p-12 xl:p-16 text-white">
           {/* Top */}
@@ -226,13 +228,13 @@ function RegisterContent() {
             ))}
           </div>
 
-          {/* Bottom: Stats */}
+          {/* Bottom: Platform highlights */}
           <div className="grid grid-cols-2 gap-4 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
             {[
-              { value: '1,200+', label: 'Properties Listed' },
-              { value: '15K+', label: 'Happy Guests' },
-              { value: '50+', label: 'Cities Covered' },
-              { value: '4.9', label: 'Average Rating' },
+              { value: 'Verified', label: 'Listings' },
+              { value: 'Secure', label: 'Payments' },
+              { value: 'Saudi-First', label: 'Platform' },
+              { value: '24/7', label: 'Support' },
             ].map((stat) => (
               <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/5">
                 <div className="text-xl font-extrabold text-gold-300">{stat.value}</div>

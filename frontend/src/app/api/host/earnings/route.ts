@@ -1,37 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { bookings, properties } from '@/lib/data/seed-properties';
-import { extractToken, verifyToken } from '@/lib/auth-helpers';
-import { EarningsData, MonthlyEarning } from '@/types/index';
+import dbConnect from '@/lib/db';
+import { requireHost } from '@/lib/auth-helpers';
+import Property from '@/lib/models/Property';
+import Booking from '@/lib/models/Booking';
+
+interface MonthlyEarning {
+  month: number;
+  monthName: string;
+  earnings: number;
+  bookings: number;
+  avgPerBooking: number;
+}
+
+interface PropertyEarning {
+  propertyId: string;
+  title: string;
+  type: string;
+  earnings: number;
+  bookings: number;
+}
+
+interface EarningsData {
+  year: number;
+  totalEarnings: number;
+  totalBookings: number;
+  avgPerBooking: number;
+  monthly: MonthlyEarning[];
+  byPropertyType: Record<string, { earnings: number; bookings: number }>;
+  topProperties: PropertyEarning[];
+}
 
 /**
  * GET /api/host/earnings
- * Returns earnings data for the host
+ * Returns earnings data for the host with monthly breakdown, by type, and top properties
  */
 export async function GET(request: NextRequest) {
   try {
-    const token = extractToken(request.headers.get('Authorization'));
+    const auth = requireHost(request);
+    if ('error' in auth) return auth.error;
+    const { payload } = auth;
 
-    if (!token) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
-    }
+    await dbConnect();
 
     const { searchParams } = new URL(request.url);
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
 
     // Get properties owned by this host
-    const hostProperties = properties.filter((p) => p.host === payload.userId);
+    const hostProperties = await Property.find({ host: payload.userId });
     const hostPropertyIds = hostProperties.map((p) => p._id);
 
-    // Get completed bookings
-    const completedBookings = bookings.filter((b) => {
-      const propId = typeof b.property === 'string' ? b.property : b.property._id;
+    // Get completed bookings for the year
+    const completedBookings = await Booking.find({
+      property: { $in: hostPropertyIds },
+      status: 'completed',
+    }).lean();
+
+    const completedBookingsForYear = completedBookings.filter((b) => {
       const bookingYear = new Date(b.createdAt).getFullYear();
-      return hostPropertyIds.includes(propId) && b.status === 'completed' && bookingYear === year;
+      return bookingYear === year;
     });
 
     // Calculate monthly earnings
@@ -41,7 +67,7 @@ export async function GET(request: NextRequest) {
       monthlyMap.set(i, { earnings: 0, bookings: 0 });
     }
 
-    completedBookings.forEach((booking) => {
+    completedBookingsForYear.forEach((booking) => {
       const month = new Date(booking.createdAt).getMonth();
       const current = monthlyMap.get(month) || { earnings: 0, bookings: 0 };
       current.earnings += booking.pricing.total;
@@ -75,9 +101,8 @@ export async function GET(request: NextRequest) {
     // Calculate by property type
     const byTypeMap = new Map<string, { earnings: number; bookings: number }>();
 
-    completedBookings.forEach((booking) => {
-      const propId = typeof booking.property === 'string' ? booking.property : booking.property._id;
-      const property = hostProperties.find((p) => p._id === propId);
+    completedBookingsForYear.forEach((booking) => {
+      const property = hostProperties.find((p) => p._id.equals(booking.property));
       const type = property?.type || 'unknown';
 
       const current = byTypeMap.get(type) || { earnings: 0, bookings: 0 };
@@ -86,16 +111,19 @@ export async function GET(request: NextRequest) {
       byTypeMap.set(type, current);
     });
 
-    const byType = Object.fromEntries(byTypeMap);
+    const byPropertyType = Object.fromEntries(byTypeMap);
 
-    // Get top properties by earnings
-    const topPropertiesMap = new Map<string, { title: string; type: string; earnings: number; bookings: number }>();
+    // Get top 5 properties by earnings
+    const topPropertiesMap = new Map<
+      string,
+      { title: string; type: string; earnings: number; bookings: number }
+    >();
 
-    completedBookings.forEach((booking) => {
-      const propId = typeof booking.property === 'string' ? booking.property : booking.property._id;
-      const property = hostProperties.find((p) => p._id === propId);
+    completedBookingsForYear.forEach((booking) => {
+      const property = hostProperties.find((p) => p._id.equals(booking.property));
 
       if (property) {
+        const propId = property._id.toString();
         const current = topPropertiesMap.get(propId) || {
           title: property.title,
           type: property.type,
@@ -108,13 +136,13 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const topProperties = Array.from(topPropertiesMap.entries())
+    const topProperties: PropertyEarning[] = Array.from(topPropertiesMap.entries())
       .map(([propertyId, data]) => ({ propertyId, ...data }))
       .sort((a, b) => b.earnings - a.earnings)
       .slice(0, 5);
 
-    const totalEarnings = completedBookings.reduce((sum, b) => sum + b.pricing.total, 0);
-    const totalBookings = completedBookings.length;
+    const totalEarnings = completedBookingsForYear.reduce((sum, b) => sum + b.pricing.total, 0);
+    const totalBookings = completedBookingsForYear.length;
 
     const data: EarningsData = {
       year,
@@ -122,7 +150,7 @@ export async function GET(request: NextRequest) {
       totalBookings,
       avgPerBooking: totalBookings > 0 ? Math.round(totalEarnings / totalBookings) : 0,
       monthly,
-      byType,
+      byPropertyType,
       topProperties,
     };
 

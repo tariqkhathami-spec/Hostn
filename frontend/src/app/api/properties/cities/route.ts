@@ -1,17 +1,26 @@
 import { NextResponse } from 'next/server';
-import { properties } from '@/lib/data/seed-properties';
+import dbConnect from '@/lib/db';
+import Property from '@/lib/models/Property';
 
 /**
  * GET /api/properties/cities
- * Returns list of distinct cities from properties
+ * Returns list of distinct cities from approved, active properties
  */
 export async function GET() {
   try {
-    const cities = Array.from(new Set(properties.map((p) => p.location.city))).sort();
+    await dbConnect();
+
+    const cities = await Property.distinct('location.city', {
+      isActive: true,
+      moderationStatus: 'approved',
+    });
+
+    // Sort cities alphabetically
+    const sortedCities = cities.sort();
 
     return NextResponse.json({
       success: true,
-      data: cities,
+      data: sortedCities,
     });
   } catch (error) {
     console.error('Error fetching cities:', error);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { adminApi } from '@/lib/api';
 
 interface AdminProperty {
   _id: string;
@@ -28,6 +29,7 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 export default function AdminPropertiesPage() {
   const [properties, setProperties] = useState<AdminProperty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -36,42 +38,56 @@ export default function AdminPropertiesPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-
-  const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : '';
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchProperties = async (page = 1) => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '15' });
-    if (filter !== 'all') params.set('status', filter);
-    if (typeFilter !== 'all') params.set('type', typeFilter);
-    if (search) params.set('search', search);
-
-    const res = await fetch(`/api/admin/properties?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    if (data.success) {
-      setProperties(data.data);
-      setPagination(data.pagination);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminApi.getProperties({
+        page,
+        limit: 15,
+        ...(filter !== 'all' && { status: filter }),
+        ...(typeFilter !== 'all' && { type: typeFilter }),
+        ...(search && { search }),
+      });
+      if (response.data?.success) {
+        setProperties(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
+      } else {
+        setError(response.data?.message || 'Failed to load properties');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setError(message);
+      console.error('Fetch properties error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchProperties(); }, [filter, typeFilter]);
 
   const handleModerate = async (propertyId: string, action: 'approve' | 'reject', reason?: string) => {
-    setActionLoading(true);
-    const res = await fetch(`/api/admin/properties/${propertyId}/moderate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action, reason }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      fetchProperties(pagination.page);
-      setSelectedProperty(null);
-      setShowRejectModal(false);
-      setRejectReason('');
+    try {
+      setActionLoading(true);
+      setActionError(null);
+      const response = await adminApi.moderateProperty(propertyId, action, reason);
+      if (response.data?.success) {
+        fetchProperties(pagination.page);
+        setSelectedProperty(null);
+        setShowRejectModal(false);
+        setRejectReason('');
+      } else {
+        setActionError(response.data?.message || 'Moderation action failed');
+      }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'An error occurred';
+      setActionError(message);
+      console.error('Moderation error:', err);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -81,6 +97,13 @@ export default function AdminPropertiesPage() {
 
   return (
     <div>
+      {/* Error Alert */}
+      {error && (
+        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
@@ -254,6 +277,11 @@ export default function AdminPropertiesPage() {
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 480 }}>
             <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Reject Property</h3>
             <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>"{selectedProperty.title}"</p>
+            {actionError && (
+              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
+                {actionError}
+              </div>
+            )}
             <textarea
               placeholder="Enter rejection reason (required)..."
               value={rejectReason}
@@ -262,7 +290,7 @@ export default function AdminPropertiesPage() {
               style={{ width: '100%', padding: 12, border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: 12, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowRejectModal(false); setRejectReason(''); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { setShowRejectModal(false); setRejectReason(''); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button
                 onClick={() => handleModerate(selectedProperty._id, 'reject', rejectReason)}
                 disabled={!rejectReason.trim() || actionLoading}
