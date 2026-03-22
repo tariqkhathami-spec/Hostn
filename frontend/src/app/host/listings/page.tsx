@@ -147,7 +147,7 @@ export default function HostListingsPage() {
   };
 
   // Unique property types in user's listings
-  const propertyTypes = [...new Set(properties.map((p) => p.type))];
+    const propertyTypes = Array.from(new Set(properties.map((p) => p.type)));
 
   const filtered = properties
     .filter((p) => {

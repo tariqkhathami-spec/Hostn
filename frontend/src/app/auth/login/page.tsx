@@ -131,7 +131,7 @@ export default function LoginPage() {
           <blockquote className="text-2xl font-semibold leading-relaxed mb-4">
             "Hostn made booking my family vacation effortless and the property was absolutely stunning."
           </blockquote>
-          <p className="text-primary-200 font-medium">— Nora A., Jeddah</p>
+          <p className="text-primary-200 font-medium">â Nora A., Jeddah</p>
         </div>
       </div>
     </div>

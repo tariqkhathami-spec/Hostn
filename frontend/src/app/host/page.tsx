@@ -97,7 +97,7 @@ export default function HostDashboardPage() {
   }
   const unreadNotifs = notifications.filter((n) => !n.read);
   if (unreadNotifs.length > 0) {
-    const reviewNotifs = unreadNotifs.filter((n) => n.type === 'new_review');
+    const reviewNotifs = unreadNotifs.filter((n) => n.type === 'review_new');
     if (reviewNotifs.length > 0) {
       actionItems.push({
         id: 'new-reviews',
