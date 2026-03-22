@@ -131,6 +131,35 @@ export interface Booking {
   createdAt: string;
 }
 
+export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed' | 'refunded' | 'cancelled';
+
+export interface Payment {
+  _id: string;
+  booking: Booking | string;
+  user: User | string;
+  property: Property | string;
+  amount: number;
+  currency: string;
+  provider: 'moyasar' | 'stripe' | 'manual';
+  providerPaymentId?: string;
+  providerStatus?: string;
+  status: PaymentStatus;
+  paymentMethod?: string;
+  cardBrand?: string;
+  cardLast4?: string;
+  fees: {
+    platformFee: number;
+    providerFee: number;
+    hostPayout: number;
+  };
+  refundedAmount: number;
+  paidAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ReviewRatings {
   overall: number;
   cleanliness?: number;
@@ -313,9 +342,22 @@ export interface PaymentRecord {
   _id: string;
   bookingId: string;
   guestName: string;
+  guestEmail?: string;
   propertyTitle: string;
   amount: number;
-  status: 'paid' | 'pending' | 'refunded';
-  method: string;
+  currency: string;
+  provider: string;
+  providerPaymentId?: string;
+  status: PaymentStatus;
+  paymentMethod?: string;
+  cardBrand?: string;
+  cardLast4?: string;
+  fees?: {
+    platformFee: number;
+    providerFee: number;
+    hostPayout: number;
+  };
+  bookingStatus: string;
   createdAt: string;
+  paidAt?: string;
 }

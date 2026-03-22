@@ -76,7 +76,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     booking.status = status;
 
     if (status === 'confirmed') {
-      booking.paymentStatus = 'paid';
+      // Don't auto-set paymentStatus to 'paid' — payment verification handles that.
+      // Only set confirmedAt for host/admin manual confirmations.
       booking.confirmedAt = new Date();
     } else if (status === 'cancelled') {
       booking.cancelledAt = new Date();

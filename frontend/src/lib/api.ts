@@ -102,6 +102,16 @@ export const hostApi = {
     api.put(`/host/properties/${id}/toggle`),
 };
 
+// ─── Payments ────────────────────────────────────────────────────────────────
+export const paymentsApi = {
+  initiate: (data: { bookingId: string }) =>
+    api.post('/payments/initiate', data),
+  verify: (data: { paymentId: string; moyasarPaymentId: string }) =>
+    api.post('/payments/verify', data),
+  getOne: (id: string) => api.get(`/payments/${id}`),
+  getMyPayments: () => api.get('/payments/my-payments'),
+};
+
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 export const adminApi = {
   // Stats & Dashboard
@@ -133,9 +143,9 @@ export const adminApi = {
   updateBooking: (id: string, action: string) =>
     api.patch(`/admin/bookings/${id}`, { action }),
 
-  // Payments
+  // Payments (new real payment records)
   getPayments: (params?: Record<string, string | number | boolean | undefined>) =>
-    api.get('/admin/payments', { params }),
+    api.get('/payments', { params }),
 
   // Activity Logs
   getLogs: (params?: Record<string, string | number | boolean | undefined>) =>

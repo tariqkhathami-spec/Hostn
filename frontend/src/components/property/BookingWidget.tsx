@@ -28,7 +28,7 @@ export default function BookingWidget({ property }: BookingWidgetProps) {
 
   const subtotal = nights * pricePerNight;
   const cleaningFee = property.pricing.cleaningFee || 0;
-  const serviceFee = Math.round(subtotal * 0.1);
+  const serviceFee = Math.round((subtotal + cleaningFee) * 0.1);
   const total = subtotal + cleaningFee + serviceFee;
 
   const handleBookNow = () => {
