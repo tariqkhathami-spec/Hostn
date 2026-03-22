@@ -51,7 +51,7 @@ function LoginContent() {
   return (
     <div className="min-h-screen flex">
       {/* Left: Form */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-16 xl:px-24 max-w-2xl">
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-6 py-8 sm:py-12 lg:px-16 xl:px-24 max-w-2xl">
         <div className="w-full max-w-sm mx-auto">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 mb-12 group">
@@ -61,11 +61,11 @@ function LoginContent() {
             <span className="text-xl font-bold text-gray-900 tracking-tight">Hostn</span>
           </Link>
 
-          <div className="mb-8">
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">
               Welcome back
             </h1>
-            <p className="text-gray-500">Sign in to continue your luxury experience</p>
+            <p className="text-sm sm:text-base text-gray-500">Sign in to continue your luxury experience</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
