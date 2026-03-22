@@ -21,20 +21,20 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const payload = verifyToken(token);
     if (!payload) {
-      return NextResponse.json({ succeess: false, message: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
     }
 
     const body = (await request.json()) as UpdateStatusRequest;
     const { status } = body;
 
     if (!status) {
-      return NextResponse.json({ succeess: false, message: 'Status is required' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Status is required' }, { status: 400 });
     }
 
     const bookingIndex = bookings.findIndex((b) => b._id === params.id);
 
     if (bookingIndex === -1) {
-      return NextResponse.json({ succeess: false, message: 'Booking not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Booking not found' }, { status: 404 });
     }
 
     const booking = bookings[bookingIndex];

@@ -11,12 +11,12 @@ export async function GET(request: NextRequest) {
     const token = extractToken(request.headers.get('Authorization'));
 
     if (!token) {
-      return NextResponse.json({ succeess: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ succees: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = verifyToken(token);
     if (!payload) {
-      return NextResponse.json({ succeess: false, message: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
     }
 
     // Get properties owned by this host
@@ -30,11 +30,11 @@ export async function GET(request: NextRequest) {
       return hostPropertyIds.includes(propId);
     });
 
-    // Sort by creation date (newer first)
+    // Sort by creation date (newest first)
     hostBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({
-      succeess: true,
+      success: true,
       data: hostBookings,
     });
   } catch (error) {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { bookings, properties, reviews } from '@/lib/data/seed-properties';
 import { extractToken, verifyToken } from '@/lib/auth-helpers';
-import { HostStats } from '@/types/index';
+import { HostDashboardStats } from '@/types/index';
 
 /**
  * GET /api/host/stats
- * Returns dashboard statistics for host
+ * Returns dashboard statistics for the host
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,42 +20,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Invalid token' }, { status: 401 });
     }
 
+    // Get host properties
     const hostProperties = properties.filter((p) => p.host === payload.userId);
     const hostPropertyIds = hostProperties.map((p) => p._id);
 
+    // Calculate property stats
+    const total = hostProperties.length;
+    const active = hostProperties.filter((p) => p.isActive).length;
+    const inactive = total - active;
+
+    // Calculate booking stats
     const hostBookings = bookings.filter((b) => {
       const propId = typeof b.property === 'string' ? b.property : b.property._id;
       return hostPropertyIds.includes(propId);
     });
 
-    const hostReviews = reviews.filter(() => {
+    const pendingBookings = hostBookings.filter((b) => b.status === 'pending').length;
+    const confirmedBookings = hostBookings.filter((b) => b.status === 'confirmed').length;
+    const completedBookings = hostBookings.filter((b) => b.status === 'completed').length;
+    const cancelledBookings = hostBookings.filter((b) => b.status === 'cancelled').length;
+
+    // Calculate earnings
+    const completedBookingsData = hostBookings.filter((b) => b.status === 'completed');
+    const totalEarnings = completedBookingsData.reduce((sum, b) => sum + b.pricing.total, 0);
+    const monthlyEarnings = completedBookingsData
+      .filter((b) => {
+        const bookingMonth = new Date(b.createdAt).getMonth();
+        const currentMonth = new Date().getMonth();
+        return bookingMonth === currentMonth;
+      })
+      .reduce((sum, b) => sum + b.pricing.total, 0);
+
+    // Calculate reviews
+    const propertyReviews = reviews.filter((r) => {
       const propId = typeof r.property === 'string' ? r.property : r.property._id;
       return hostPropertyIds.includes(propId);
     });
 
-    const stats: HostStats = {
-      properties: {
-      total: hostProperties.length,
-      active: hostProperties.filter((p) => p.isActive).length,
-      inactive: hostProperties.filter((p) => !p.isActive).length,
-    },
-    bookings: {
-      total: hostBookings.length,
-      pending: hostBookings.filter((b) => b.status === 'pending').length,
-      confirmed: hostBookings.filter((b) => b.status === 'confirmed').length,
-      completed: hostBookings.filter((b) => b.status === 'completed').length,
-      rejected: hostBookings.filter((b) => b.status === 'rejected').length,
-      cancelled: hostBookings.filter((b) => b.status === 'cancelled').length,
-    },
-    earnings: {
-      total: hostBookings.reduce((sum, b) => sum + b.pricing.total, 0),
-      monthly: Math.floor(hostBookings.reduce((sum, b) => sum + b.pricing.total, 0) / 12),
-    },
-    reviews: {
-      total: hostReviews.length,
-      averageRating: hostReviews.length > 0 ? (hostReviews.reduce((sum, r) => sum + r.ratings.overall, 0) / hostReviews.length).toFixed(1) : '0',
-    },
-    occupancyRate: Math.ceil((hostBookings.filter((b) => b.status === 'completed').length / hostBookings.length) * 100) || 0,
+    const avgRating = propertyReviews.length
+      ? propertyReviews.reduce((sum, r) => sum + r.ratings.overall, 0) / propertyReviews.length
+      : 0;
+
+    // Calculate occupancy
+    const occupancyRate = hostBookings.length > 0 ? (confirmedBookings / hostBookings.length) * 100 : 0;
+
+    const stats: HostDashboardStats = {
+      properties: { total, active, inactive },
+      bookings: {
+        total: hostBookings.length,
+        pending: pendingBookings,
+        confirmed: confirmedBookings,
+        completed: completedBookings,
+        cancelled: cancelledBookings,
+      },
+      earnings: { total: totalEarnings, monthly: monthlyEarnings },
+      reviews: { total: propertyReviews.length, averageRating: Math.round(avgRating * 10) / 10 },
+      occupancyRate: Math.round(occupancyRate),
     };
 
     return NextResponse.json({
@@ -63,7 +83,7 @@ export async function GET(request: NextRequest) {
       data: stats,
     });
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    console.error('Error fetching host stats:', error);
     return NextResponse.json({ success: false, message: 'Failed to fetch stats' }, { status: 500 });
   }
 }

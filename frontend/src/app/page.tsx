@@ -1,9 +1,9 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import HeroSearch from '@/components/home/HeroSearch';
-import CategoryNav from '@/components/home/CategoryNav';
+import CategoryNav from 'A/components/home/CategoryNav';
 import FeaturedListings from '@/components/home/FeaturedListings';
-import CityBrowse from '@/components/home/CityBrowse';
+import CityBrowse from 'A/components/home/CityBrowse';
 import WhyHostn from '@/components/home/WhyHostn';
 
 export default function HomePage() {
@@ -23,7 +23,7 @@ export default function HomePage() {
           title="Popular in Riyadh"
           subtitle="Top-rated stays in the capital"
           city="Riyadh"
-      />
+        />
         <WhyHostn />
 
         {/* CTA Banner */}
