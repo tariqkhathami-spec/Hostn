@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   Menu,
   X,
@@ -17,24 +18,25 @@ import {
   Globe,
 } from 'lucide-react';
 
-const propertyTypes = [
-  { label: 'Chalets & Resorts', value: 'chalet', href: '/listings?type=chalet' },
-  { label: 'Apartments', value: 'apartment', href: '/listings?type=apartment' },
-  { label: 'Villas', value: 'villa', href: '/listings?type=villa' },
-  { label: 'Studios', value: 'studio', href: '/listings?type=studio' },
-  { label: 'Farms', value: 'farm', href: '/listings?type=farm' },
-  { label: 'Camps', value: 'camp', href: '/listings?type=camp' },
-];
-
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
 
   const isHome = pathname === '/';
+
+  const propertyTypes = [
+    { label: t('nav.chalets'), value: 'chalet', href: '/listings?type=chalet' },
+    { label: t('nav.apartments'), value: 'apartment', href: '/listings?type=apartment' },
+    { label: t('nav.villas'), value: 'villa', href: '/listings?type=villa' },
+    { label: t('nav.studios'), value: 'studio', href: '/listings?type=studio' },
+    { label: t('nav.farms'), value: 'farm', href: '/listings?type=farm' },
+    { label: t('nav.camps'), value: 'camp', href: '/listings?type=camp' },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -96,11 +98,12 @@ export default function Header() {
             <div className="flex items-center gap-1.5 sm:gap-2.5">
               {/* Language toggle */}
               <button
-                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${linkColor}`}
+                onClick={toggleLanguage}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${linkColor}`}
                 title="Language"
               >
                 <Globe className="w-4 h-4" />
-                <span className="text-xs">EN</span>
+                <span className="text-xs font-bold">{language === 'en' ? 'AR' : 'EN'}</span>
               </button>
 
               {/* Host CTA */}
@@ -113,7 +116,7 @@ export default function Header() {
                       : 'text-primary-600 border border-primary-200 hover:bg-primary-50'
                   }`}
                 >
-                  Become a Host
+                  {t('nav.becomeHost')}
                 </Link>
               )}
 
@@ -149,7 +152,7 @@ export default function Header() {
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
                         >
                           <Home className="w-4 h-4 text-gray-400" />
-                          Dashboard
+                          {t('nav.dashboard')}
                         </Link>
                         <Link
                           href="/dashboard/bookings"
@@ -157,7 +160,7 @@ export default function Header() {
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
                         >
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          My Bookings
+                          {t('nav.myBookings')}
                         </Link>
                         <Link
                           href="/dashboard/wishlist"
@@ -165,7 +168,7 @@ export default function Header() {
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
                         >
                           <Heart className="w-4 h-4 text-gray-400" />
-                          Wishlist
+                          {t('nav.wishlist')}
                         </Link>
                         <Link
                           href="/dashboard/profile"
@@ -173,7 +176,7 @@ export default function Header() {
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
                         >
                           <Settings className="w-4 h-4 text-gray-400" />
-                          Settings
+                          {t('nav.settings')}
                         </Link>
                         <hr className="my-1.5 border-gray-100" />
                         <button
@@ -181,7 +184,7 @@ export default function Header() {
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-sm text-red-600 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
-                          Sign Out
+                          {t('nav.signOut')}
                         </button>
                       </div>
                     </div>
@@ -197,13 +200,13 @@ export default function Header() {
                         : 'text-gray-700 hover:text-primary-600'
                     }`}
                   >
-                    Sign In
+                    {t('nav.signIn')}
                   </Link>
                   <Link
                     href="/auth/register"
                     className="bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-semibold py-2 px-5 rounded-xl hover:from-primary-700 hover:to-primary-800 transition-all duration-300 shadow-sm hover:shadow-premium"
                   >
-                    Sign Up
+                    {t('nav.signUp')}
                   </Link>
                 </div>
               )}
@@ -237,10 +240,10 @@ export default function Header() {
             {!isAuthenticated && (
               <div className="pt-3 flex flex-col gap-2 border-t border-gray-100 mt-2">
                 <Link href="/auth/login" onClick={() => setMobileOpen(false)} className="btn-outline text-center text-sm">
-                  Sign In
+                  {t('nav.signIn')}
                 </Link>
                 <Link href="/auth/register" onClick={() => setMobileOpen(false)} className="btn-primary text-center text-sm">
-                  Sign Up
+                  {t('nav.signUp')}
                 </Link>
               </div>
             )}
