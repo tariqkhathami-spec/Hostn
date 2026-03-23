@@ -4,7 +4,7 @@ export interface IActivityLog extends Document {
   _id: mongoose.Types.ObjectId;
   action: string;
   performedBy: mongoose.Types.ObjectId;
-  targetType: 'user' | 'property' | 'booking' | 'review' | 'system';
+  targetType: 'user' | 'property' | 'booking' | 'review' | 'system' | 'payment';
   targetId?: string;
   details: string;
   createdAt: Date;
@@ -19,8 +19,11 @@ const activityLogSchema = new Schema<IActivityLog>(
         'property_approved', 'property_rejected', 'property_created',
         'user_banned', 'user_unbanned',
         'host_suspended', 'host_activated',
-        'booking_cancelled', 'booking_created',
+        'booking_cancelled', 'booking_created', 'booking_confirmed',
         'review_deleted', 'system_action',
+        'payment_initiated', 'payment_verified', 'payment_failed',
+        'refund_requested', 'refund_processed', 'refund_failed',
+        'payout_completed', 'image_uploaded',
       ],
     },
     performedBy: {
@@ -30,7 +33,7 @@ const activityLogSchema = new Schema<IActivityLog>(
     },
     targetType: {
       type: String,
-      enum: ['user', 'property', 'booking', 'review', 'system'],
+      enum: ['user', 'property', 'booking', 'review', 'system', 'payment'],
       required: true,
     },
     targetId: { type: String },
