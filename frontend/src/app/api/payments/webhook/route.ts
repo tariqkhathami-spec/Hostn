@@ -27,16 +27,29 @@ export async function POST(request: NextRequest) {
     // Read raw body for signature verification
     const rawBody = await request.text();
 
-    // Verify webhook signature (HMAC)
+    // SECURITY: Verify webhook HMAC signature — hard reject on failure
     const signature = request.headers.get('x-moyasar-signature') ||
                       request.headers.get('x-signature') ||
                       request.headers.get('signature');
-    const signatureValid = verifyWebhookSignature(rawBody, signature);
+
+    let signatureValid: boolean;
+    try {
+      signatureValid = verifyWebhookSignature(rawBody, signature);
+    } catch (error) {
+      // MOYASAR_WEBHOOK_SECRET is not configured — refuse to process any webhooks
+      console.error('Webhook processing disabled:', (error as Error).message);
+      return NextResponse.json(
+        { success: false, message: 'Webhook verification not configured' },
+        { status: 500 }
+      );
+    }
 
     if (!signatureValid) {
-      console.warn('Webhook signature verification failed. IP:', ip);
-      // Still process but log the warning - Moyasar may not send signatures for all events
-      // The server-side re-verification with Moyasar API provides defense in depth
+      console.warn('Webhook REJECTED: invalid signature. IP:', ip);
+      return NextResponse.json(
+        { success: false, message: 'Invalid webhook signature' },
+        { status: 401 }
+      );
     }
 
     await dbConnect();
