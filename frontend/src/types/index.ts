@@ -7,7 +7,7 @@ export interface User {
   role: 'guest' | 'host' | 'admin';
   isVerified: boolean;
   wishlist: string[];
-  createdAt: string;h
+  createdAt: string;
 }
 
 export interface PropertyImage {
