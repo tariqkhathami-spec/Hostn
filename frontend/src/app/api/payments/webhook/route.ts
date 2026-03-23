@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/db';
 import Payment from '@/lib/models/Payment';
 import Booking from '@/lib/models/Booking';
+import User from '@/lib/models/User';
 import { getPaymentProvider } from '@/lib/payment';
 import { verifyWebhookSignature } from '@/lib/webhook-verify';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { logPaymentEvent } from '@/lib/logger';
+import { sendPaymentReceipt, sendPaymentFailureEmail } from '@/lib/email';
 
 /**
  * POST /api/payments/webhook
@@ -109,12 +112,30 @@ export async function POST(request: NextRequest) {
       await payment.save();
 
       // Update associated Booking
-      const booking = await Booking.findById(payment.booking);
+      const booking = await Booking.findById(payment.booking).populate('property', 'title');
       if (booking && booking.status === 'pending' && booking.paymentStatus === 'unpaid') {
         booking.paymentStatus = 'paid';
         booking.status = 'confirmed';
         booking.confirmedAt = new Date();
         await booking.save();
+      }
+
+      // Log and notify (fire-and-forget)
+      logPaymentEvent(payment._id.toString(), 'payment_verified', `Payment of ${payment.amount} SAR verified via webhook`).catch(() => {});
+
+      // Send payment receipt email
+      const guest = await User.findById(payment.user).select('name email');
+      if (guest && booking) {
+        sendPaymentReceipt({
+          guestEmail: guest.email,
+          guestName: guest.name || 'Guest',
+          propertyTitle: (booking.property as any)?.title || 'Property',
+          total: payment.amount,
+          paymentMethod: payment.paymentMethod,
+          cardLast4: payment.cardLast4,
+          bookingId: payment.booking.toString(),
+          paymentId: payment._id.toString(),
+        }).catch(() => {});
       }
     } else if (
       verificationResult.status === 'failed' ||
@@ -126,6 +147,23 @@ export async function POST(request: NextRequest) {
       payment.failedAt = new Date();
       payment.failureReason = verificationResult.source?.message || `Status: ${verificationResult.status}`;
       await payment.save();
+
+      // Log and notify (fire-and-forget)
+      logPaymentEvent(payment._id.toString(), 'payment_failed', `Payment failed: ${payment.failureReason}`).catch(() => {});
+
+      // Send payment failure email
+      const guest = await User.findById(payment.user).select('name email');
+      const booking = await Booking.findById(payment.booking).populate('property', 'title');
+      if (guest && booking) {
+        sendPaymentFailureEmail({
+          guestEmail: guest.email,
+          guestName: guest.name || 'Guest',
+          propertyTitle: (booking.property as any)?.title || 'Property',
+          total: payment.amount,
+          reason: payment.failureReason,
+          bookingId: payment.booking.toString(),
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
