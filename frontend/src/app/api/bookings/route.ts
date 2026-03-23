@@ -8,6 +8,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import { bookingSchema } from '@/lib/validation';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendBookingConfirmation } from '@/lib/email';
+import { logBookingEvent } from '@/lib/logger';
 import mongoose from 'mongoose';
 
 /**
@@ -178,6 +179,14 @@ export async function POST(request: NextRequest) {
       { path: 'property', select: 'title images location pricing' },
       { path: 'guest', select: 'name email avatar' },
     ]);
+
+    // Log booking creation (fire-and-forget)
+    logBookingEvent(
+      newBooking._id.toString(),
+      'booking_created',
+      `Booking created for ${property.title} (${nights} nights, ${total} SAR)`,
+      auth.payload.userId
+    ).catch(() => {});
 
     // Send booking confirmation email (non-blocking)
     try {
