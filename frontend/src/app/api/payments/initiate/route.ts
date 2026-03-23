@@ -73,15 +73,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for existing successful/processing payment (idempotency)
+    // Check for existing payment (idempotency) - includes pending to prevent duplicate payment records
     const existingPayment = await Payment.findOne({
       booking: bookingId,
-      status: { $in: ['paid', 'processing'] },
+      status: { $in: ['pending', 'paid', 'processing'] },
     });
 
     if (existingPayment) {
       return NextResponse.json(
-        { success: false, message: 'A payment is already processing or completed for this booking' },
+        { success: false, message: 'A payment is already pending, processing, or completed for this booking' },
         { status: 400 }
       );
     }
