@@ -247,9 +247,9 @@ export default function HostDashboardPage() {
                 const StatusIcon = config.icon;
                 return (
                   <div key={booking._id} className="flex items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors">
-                    {booking.property?.images?.[0] && (
+                    {(booking.property as any)?.images?.[0] && (
                       <div className="relative w-12 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                        <Image src={booking.property.images[0].url} alt="" fill className="object-cover" unoptimized />
+                        <Image src={(booking.property as any).images[0].url} alt="" fill className="object-cover" unoptimized />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
@@ -257,7 +257,7 @@ export default function HostDashboardPage() {
                         {(booking.guest as any)?.name || 'Guest'}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
-                        {booking.property?.title}
+                        {(booking.property as any)?.title}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
