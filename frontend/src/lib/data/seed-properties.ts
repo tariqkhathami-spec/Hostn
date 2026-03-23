@@ -101,7 +101,7 @@ const adminIds = {
 };
 
 // Seed users
-export const seedUsers: User[] = [
+export const seedUsers = [
   // Admin Users
   {
     _id: adminIds.admin1,
@@ -297,7 +297,7 @@ export const seedUsers: User[] = [
 ];
 
 // Seed properties - 24 realistic Saudi Arabian properties
-export const seedProperties: Property[] = [
+export const seedProperties = [
   // RIYADH - 6 properties (3 villas, 1 studio, 1 apartment, 1 farm)
   {
     _id: propertyIds.riyadh1,
@@ -875,7 +875,7 @@ export const seedProperties: Property[] = [
 ];
 
 // Seed bookings - 8 sample bookings with various statuses
-export const seedBookings: Booking[] = [
+export const seedBookings = [
   {
     _id: '807f1f77bcf86cd799439001',
     property: propertyIds.riyadh1,
@@ -980,7 +980,7 @@ export const seedBookings: Booking[] = [
 ];
 
 // Seed reviews - 40 reviews spread across properties
-export const seedReviews: Review[] = [
+export const seedReviews = [
   { _id: reviewIds.review1, property: propertyIds.riyadh1, guest: guestIds.guest1, ratings: { overall: 5, cleanliness: 5, accuracy: 5, communication: 5, location: 4, value: 4 }, comment: 'Absolutely stunning villa! The pool is perfect and the staff was very hospitable. Best vacation in Riyadh!', hostResponse: { comment: 'Thank you for staying with us! We hope to see you again soon.', respondedAt: '2024-01-20T10:30:00Z' }, isVerified: true, createdAt: '2024-01-18T14:22:00Z' },
   { _id: reviewIds.review2, property: propertyIds.riyadh1, guest: guestIds.guest2, ratings: { overall: 4, cleanliness: 4, accuracy: 5, communication: 5, location: 4, value: 4 }, comment: 'Excellent property with great amenities. Very clean and well-maintained. Highly recommend!', hostResponse: { comment: 'We appreciate your feedback. Thank you for being an excellent guest!', respondedAt: '2024-01-22T09:15:00Z' }, isVerified: true, createdAt: '2024-01-21T16:45:00Z' },
   { _id: reviewIds.review3, property: propertyIds.riyadh2, guest: guestIds.guest3, ratings: { overall: 4, cleanliness: 4, accuracy: 4, communication: 4, location: 5, value: 4 }, comment: 'Great location, easy access to shopping. Perfect for short stays. Clean and comfortable.', isVerified: true, createdAt: '2024-02-25T11:30:00Z' },
