@@ -115,7 +115,7 @@ function HostBookingsContent() {
       .filter((b) =>
         search
           ? (b.guest as any)?.name?.toLowerCase().includes(search.toLowerCase()) ||
-            b.property?.title?.toLowerCase().includes(search.toLowerCase()) ||
+            (b.property as any)?.title?.toLowerCase().includes(search.toLowerCase()) ||
             b._id.toLowerCase().includes(search.toLowerCase())
           : true
       )
@@ -152,7 +152,7 @@ function HostBookingsContent() {
       rows.push([
         b._id,
         (b.guest as any)?.name || '',
-        b.property?.title || '',
+        (b.property as any)?.title || '',
         b.checkIn,
         b.checkOut,
         calculateNights(b.checkIn, b.checkOut).toString(),
@@ -369,13 +369,13 @@ function HostBookingsContent() {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
-                          {booking.property?.images?.[0] && (
+                          {(booking.property as any)?.images?.[0] && (
                             <div className="w-9 h-7 rounded-md overflow-hidden flex-shrink-0 bg-gray-100">
-                              <Image src={booking.property.images[0].url} alt="" width={36} height={28} className="w-full h-full object-cover" unoptimized />
+                              <Image src={(booking.property as any).images[0].url} alt="" width={36} height={28} className="w-full h-full object-cover" unoptimized />
                             </div>
                           )}
                           <p className="text-sm text-gray-700 truncate max-w-[160px]">
-                            {booking.property?.title || '—'}
+                            {(booking.property as any)?.title || '—'}
                           </p>
                         </div>
                       </td>
@@ -494,14 +494,14 @@ function HostBookingsContent() {
 
               {/* Property */}
               <div className="flex items-center gap-3">
-                {selectedBooking.property?.images?.[0] && (
+                {(selectedBooking.property as any)?.images?.[0] && (
                   <div className="relative w-16 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image src={selectedBooking.property.images[0].url} alt="" fill className="object-cover" unoptimized />
+                    <Image src={(selectedBooking.property as any).images[0].url} alt="" fill className="object-cover" unoptimized />
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{selectedBooking.property?.title}</p>
-                  <p className="text-xs text-gray-500">{selectedBooking.property?.location?.city}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{(selectedBooking.property as any)?.title}</p>
+                  <p className="text-xs text-gray-500">{(selectedBooking.property as any)?.location?.city}</p>
                 </div>
               </div>
 
