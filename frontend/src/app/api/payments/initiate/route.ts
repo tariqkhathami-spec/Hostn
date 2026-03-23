@@ -4,15 +4,14 @@ import { requireAuth } from '@/lib/auth-helpers';
 import Payment from '@/lib/models/Payment';
 import Booking from '@/lib/models/Booking';
 import { getPaymentProvider } from '@/lib/payment';
+import { initiatePaymentSchema } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rate-limit';
 import mongoose from 'mongoose';
-
-interface InitiatePaymentRequest {
-  bookingId: string;
-}
 
 /**
  * POST /api/payments/initiate
- * Initiates a payment for a booking
+ * Initiates a payment for a booking.
+ * Rate limited and validated with Zod.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -21,24 +20,26 @@ export async function POST(request: NextRequest) {
     const auth = requireAuth(request);
     if ('error' in auth) return auth.error;
 
-    const body = (await request.json()) as InitiatePaymentRequest;
-    const { bookingId } = body;
-
-    // Validate bookingId is provided
-    if (!bookingId) {
+    // Rate limit: 5 payment attempts per minute per user
+    const rateLimitResult = await checkRateLimit(`payment:${auth.payload.userId}`, 5, '1m');
+    if (!rateLimitResult.allowed) {
       return NextResponse.json(
-        { success: false, message: 'bookingId is required' },
+        { success: false, message: 'Too many payment attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    // Validate input with Zod
+    const body = await request.json();
+    const parsed = initiatePaymentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: parsed.error.errors[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
 
-    // Validate bookingId is a valid MongoDB ID
-    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid bookingId format' },
-        { status: 400 }
-      );
-    }
+    const { bookingId } = parsed.data;
 
     // Find the booking
     const booking = await Booking.findById(bookingId).populate('property', 'title');

@@ -13,6 +13,8 @@ export interface IUser extends Document {
   isBanned: boolean;
   isSuspended: boolean;
   wishlist: mongoose.Types.ObjectId[];
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -71,6 +73,14 @@ const userSchema = new Schema<IUser>(
         ref: 'Property',
       },
     ],
+    passwordResetToken: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
   },
   { timestamps: true }
 );

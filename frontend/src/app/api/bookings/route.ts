@@ -4,25 +4,17 @@ import Booking from '@/lib/models/Booking';
 import Property from '@/lib/models/Property';
 import User from '@/lib/models/User';
 import { requireAuth } from '@/lib/auth-helpers';
+import { sanitizeText } from '@/lib/sanitize';
+import { bookingSchema } from '@/lib/validation';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { sendBookingConfirmation } from '@/lib/email';
 import mongoose from 'mongoose';
-
-interface CreateBookingRequest {
-  propertyId: string;
-  checkIn: string;
-  checkOut: string;
-  guests: {
-    adults: number;
-    children: number;
-    infants: number;
-  };
-  specialRequests?: string;
-  cleaningFee?: number;
-  discount?: number;
-}
 
 /**
  * POST /api/bookings
- * Creates a new booking with pricing calculation and availability check
+ * Creates a new booking with SERVER-SIDE pricing calculation and availability check.
+ * SECURITY: All pricing is calculated server-side from the property's database record.
+ * Client-supplied discount/cleaningFee fields are IGNORED to prevent price manipulation.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,16 +23,26 @@ export async function POST(request: NextRequest) {
     const auth = requireAuth(request);
     if ('error' in auth) return auth.error;
 
-    const body = (await request.json()) as CreateBookingRequest;
-    const { propertyId, checkIn, checkOut, guests, specialRequests, cleaningFee = 0, discount = 0 } = body;
-
-    // Validate required fields
-    if (!propertyId || !checkIn || !checkOut) {
+    // Rate limit: 10 bookings per minute per user
+    const rateLimitResult = await checkRateLimit(`booking:${auth.payload.userId}`, 10, '1m');
+    if (!rateLimitResult.allowed) {
       return NextResponse.json(
-        { success: false, message: 'propertyId, checkIn, and checkOut are required' },
+        { success: false, message: 'Too many booking requests. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
+    // Validate and parse input with Zod
+    const body = await request.json();
+    const parsed = bookingSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: parsed.error.errors[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
+
+    const { propertyId, checkIn, checkOut, guests, specialRequests } = parsed.data;
 
     // Check if user exists and is not banned
     const user = await User.findById(auth.payload.userId);
@@ -118,13 +120,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate pricing
+    // SECURITY: Calculate ALL pricing SERVER-SIDE from property database record
+    // Client-supplied discount and cleaningFee are completely IGNORED
     const perNight = property.pricing.perNight;
     const subtotal = perNight * nights;
-    const actualCleaningFee = cleaningFee || property.pricing.cleaningFee;
-    const serviceFee = Math.round((subtotal + actualCleaningFee) * 0.1); // 10% service fee
-    const actualDiscount = discount || 0;
-    const total = subtotal + actualCleaningFee + serviceFee - actualDiscount;
+    const cleaningFee = property.pricing.cleaningFee || 0;
+    const serviceFee = Math.round((subtotal + cleaningFee) * 0.1); // 10% service fee
+
+    // Calculate discount from property-configured promotions only
+    let discount = 0;
+    if (nights >= 7 && property.pricing.weeklyDiscount > 0) {
+      discount = Math.round(subtotal * (property.pricing.weeklyDiscount / 100));
+    } else if (property.pricing.discountPercent > 0) {
+      discount = Math.round(subtotal * (property.pricing.discountPercent / 100));
+    }
+
+    const total = subtotal + cleaningFee + serviceFee - discount;
+
+    // SECURITY: Ensure total is always positive
+    if (total <= 0) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid pricing calculation. Please contact support.' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize special requests text
+    const sanitizedRequests = specialRequests ? sanitizeText(specialRequests) : undefined;
 
     // Create booking
     const newBooking = await Booking.create({
@@ -141,14 +163,14 @@ export async function POST(request: NextRequest) {
         perNight,
         nights,
         subtotal,
-        cleaningFee: actualCleaningFee,
+        cleaningFee,
         serviceFee,
-        discount: actualDiscount,
+        discount,
         total,
       },
       status: 'pending',
       paymentStatus: 'unpaid',
-      specialRequests,
+      specialRequests: sanitizedRequests,
     });
 
     // Populate guest and property details
@@ -156,6 +178,22 @@ export async function POST(request: NextRequest) {
       { path: 'property', select: 'title images location pricing' },
       { path: 'guest', select: 'name email avatar' },
     ]);
+
+    // Send booking confirmation email (non-blocking)
+    try {
+      sendBookingConfirmation({
+        guestEmail: user.email,
+        guestName: user.name,
+        propertyTitle: property.title,
+        checkIn: checkInDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        checkOut: checkOutDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        nights,
+        total,
+        bookingId: newBooking._id.toString(),
+      }).catch((err) => console.error('Failed to send booking confirmation email:', err));
+    } catch (emailError) {
+      console.error('Email notification error:', emailError);
+    }
 
     return NextResponse.json(
       {

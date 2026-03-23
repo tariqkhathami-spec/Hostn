@@ -2,47 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/lib/models/User';
 import { generateToken } from '@/lib/auth-helpers';
-
-interface RegisterRequest {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  role?: 'guest' | 'host';
-}
+import { registerSchema } from '@/lib/validation';
+import { sanitizeText } from '@/lib/sanitize';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/register
- * Registers a new user and returns JWT token
- * Password is automatically hashed by User pre-save hook
+ * Registers a new user and returns JWT token.
+ * Input validated with Zod. Rate limited. Names sanitized against XSS.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 3 registrations per hour per IP
+    const ip = getClientIp(request);
+    const rateLimitResult = await checkRateLimit(`register:${ip}`, 3, '1h');
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Too many registration attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     await dbConnect();
 
-    const body = (await request.json()) as RegisterRequest;
-    const { name, email, password, phone, role = 'guest' } = body;
-
-    // Validation
-    if (!name || !email || !password) {
+    // Validate input with Zod
+    const body = await request.json();
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: 'Name, email, and password are required' },
+        { success: false, message: parsed.error.errors[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
 
-    // Password length validation
-    if (password.length < 8) {
-      return NextResponse.json(
-        { success: false, message: 'Password must be at least 8 characters' },
-        { status: 400 }
-      );
-    }
+    const { name, email, password, phone, role } = parsed.data;
 
-    // Validate role - only allow 'guest' or 'host'
-    if (role !== 'guest' && role !== 'host') {
+    // Sanitize name to prevent stored XSS
+    const sanitizedName = sanitizeText(name);
+    if (!sanitizedName) {
       return NextResponse.json(
-        { success: false, message: 'Invalid role. Only guest or host allowed.' },
+        { success: false, message: 'Name contains invalid characters' },
         { status: 400 }
       );
     }
@@ -56,12 +55,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate avatar
-    const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+    // Generate avatar using sanitized name
+    const avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(sanitizedName)}`;
 
     // Create new user - password will be hashed by pre-save hook
     const newUser = await User.create({
-      name,
+      name: sanitizedName,
       email,
       password,
       phone: phone || undefined,

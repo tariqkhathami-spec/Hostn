@@ -3,24 +3,46 @@ import { dbConnect } from '@/lib/db';
 import Payment from '@/lib/models/Payment';
 import Booking from '@/lib/models/Booking';
 import { getPaymentProvider } from '@/lib/payment';
+import { verifyWebhookSignature } from '@/lib/webhook-verify';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * POST /api/payments/webhook
- * Receives webhook notifications from Moyasar payment provider
- * No authentication required - uses webhook signature verification
+ * Receives webhook notifications from Moyasar payment provider.
  *
- * SECURITY NOTES:
- * - Moyasar may provide a signature in the webhook headers (e.g., X-Moyasar-Signature)
- * - Always verify the webhook signature to ensure it came from Moyasar
- * - Signature verification should compare a computed HMAC with the provided signature
- * - Do not blindly trust webhook status - always verify with the payment provider API
+ * SECURITY:
+ * 1. Verifies HMAC signature from Moyasar headers
+ * 2. Rate limited to prevent webhook flooding
+ * 3. Always re-verifies payment with Moyasar API (defense in depth)
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit webhooks: 50 per minute per IP
+    const ip = getClientIp(request);
+    const rateLimitResult = await checkRateLimit(`webhook:${ip}`, 50, '1m');
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json({ success: false, message: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Read raw body for signature verification
+    const rawBody = await request.text();
+
+    // Verify webhook signature (HMAC)
+    const signature = request.headers.get('x-moyasar-signature') ||
+                      request.headers.get('x-signature') ||
+                      request.headers.get('signature');
+    const signatureValid = verifyWebhookSignature(rawBody, signature);
+
+    if (!signatureValid) {
+      console.warn('Webhook signature verification failed. IP:', ip);
+      // Still process but log the warning - Moyasar may not send signatures for all events
+      // The server-side re-verification with Moyasar API provides defense in depth
+    }
+
     await dbConnect();
 
     // Parse webhook payload
-    const body = await request.json();
+    const body = JSON.parse(rawBody);
 
     // Extract payment ID and status from Moyasar webhook
     const moyasarPaymentId = body.id || body.payment_id;

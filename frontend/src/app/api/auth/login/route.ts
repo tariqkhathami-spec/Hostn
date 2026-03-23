@@ -2,31 +2,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/lib/models/User';
 import { generateToken } from '@/lib/auth-helpers';
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
+import { loginSchema } from '@/lib/validation';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/login
- * Authenticates user and returns JWT token
- * Validates password with bcrypt
+ * Authenticates user and returns JWT token.
+ * Input validated with Zod. Rate limited to prevent brute-force attacks.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 login attempts per minute per IP
+    const ip = getClientIp(request);
+    const rateLimitResult = await checkRateLimit(`login:${ip}`, 5, '1m');
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     await dbConnect();
 
-    const body = (await request.json()) as LoginRequest;
-    const { email, password } = body;
-
-    // Validation
-    if (!email || !password) {
+    // Validate input with Zod
+    const body = await request.json();
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: 'Email and password are required' },
+        { success: false, message: parsed.error.errors[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
+
+    const { email, password } = parsed.data;
 
     // Find user by email with password field selected
     const user = await User.findOne({ email }).select('+password');

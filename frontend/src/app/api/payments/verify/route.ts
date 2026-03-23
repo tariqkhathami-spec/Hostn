@@ -3,18 +3,18 @@ import { dbConnect } from '@/lib/db';
 import { requireAuth } from '@/lib/auth-helpers';
 import Payment from '@/lib/models/Payment';
 import Booking from '@/lib/models/Booking';
+import User from '@/lib/models/User';
+import Property from '@/lib/models/Property';
 import ActivityLog from '@/lib/models/ActivityLog';
 import { getPaymentProvider } from '@/lib/payment';
+import { verifyPaymentSchema } from '@/lib/validation';
+import { sendPaymentReceipt, sendHostBookingNotification } from '@/lib/email';
 import mongoose from 'mongoose';
-
-interface VerifyPaymentRequest {
-  paymentId: string;
-  moyasarPaymentId: string;
-}
 
 /**
  * POST /api/payments/verify
- * Verifies a payment with Moyasar and updates booking status
+ * Verifies a payment with Moyasar and updates booking status.
+ * Sends email notifications on successful payment.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -23,24 +23,17 @@ export async function POST(request: NextRequest) {
     const auth = requireAuth(request);
     if ('error' in auth) return auth.error;
 
-    const body = (await request.json()) as VerifyPaymentRequest;
-    const { paymentId, moyasarPaymentId } = body;
-
-    // Validate required fields
-    if (!paymentId || !moyasarPaymentId) {
+    // Validate input with Zod
+    const body = await request.json();
+    const parsed = verifyPaymentSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: 'paymentId and moyasarPaymentId are required' },
+        { success: false, message: parsed.error.errors[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
 
-    // Validate paymentId format
-    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid paymentId format' },
-        { status: 400 }
-      );
-    }
+    const { paymentId, moyasarPaymentId } = parsed.data;
 
     // Find Payment record
     const payment = await Payment.findById(paymentId);
@@ -151,6 +144,43 @@ export async function POST(request: NextRequest) {
         targetId: booking._id.toString(),
         details: `Payment verified and booking confirmed. Payment ID: ${moyasarPaymentId}`,
       });
+
+      // Send email notifications (non-blocking)
+      try {
+        const guest = await User.findById(auth.payload.userId);
+        const property = await Property.findById(booking.property);
+        if (guest && property) {
+          // Send payment receipt to guest
+          sendPaymentReceipt({
+            guestEmail: guest.email,
+            guestName: guest.name,
+            propertyTitle: property.title,
+            total: booking.pricing.total,
+            paymentMethod: payment.paymentMethod,
+            cardLast4: payment.cardLast4,
+            bookingId: booking._id.toString(),
+            paymentId: payment._id.toString(),
+          }).catch((err) => console.error('Failed to send payment receipt:', err));
+
+          // Send booking notification to host
+          const host = await User.findById(property.host);
+          if (host) {
+            sendHostBookingNotification({
+              hostEmail: host.email,
+              hostName: host.name,
+              guestName: guest.name,
+              propertyTitle: property.title,
+              checkIn: booking.checkIn.toLocaleDateString('en-US'),
+              checkOut: booking.checkOut.toLocaleDateString('en-US'),
+              total: booking.pricing.total,
+              bookingId: booking._id.toString(),
+            }).catch((err) => console.error('Failed to send host notification:', err));
+          }
+        }
+      } catch (emailError) {
+        // Email failures should not block the payment response
+        console.error('Email notification error:', emailError);
+      }
 
       return NextResponse.json(
         {

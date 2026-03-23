@@ -45,6 +45,10 @@ export const authApi = {
     api.put('/auth/change-password', data),
   toggleWishlist: (propertyId: string) =>
     api.post(`/auth/wishlist/${propertyId}`),
+  forgotPassword: (data: { email: string }) =>
+    api.post('/auth/forgot-password', data),
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post('/auth/reset-password', data),
 };
 
 // ─── Properties ───────────────────────────────────────────────────────────────

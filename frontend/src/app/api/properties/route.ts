@@ -4,6 +4,8 @@ import Property from '@/lib/models/Property';
 import User from '@/lib/models/User';
 import ActivityLog from '@/lib/models/ActivityLog';
 import { extractToken, verifyToken } from '@/lib/auth-helpers';
+import { escapeRegex, sanitizeText } from '@/lib/sanitize';
+import { createPropertySchema } from '@/lib/validation';
 
 /**
  * GET /api/properties
@@ -39,7 +41,8 @@ export async function GET(request: NextRequest) {
     };
 
     if (city) {
-      filter['location.city'] = { $regex: city, $options: 'i' };
+      // SECURITY: Escape regex special characters to prevent ReDoS
+      filter['location.city'] = { $regex: escapeRegex(city), $options: 'i' };
     }
 
     if (type) {
@@ -130,6 +133,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Validate input with Zod
+    const parsed = createPropertySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: parsed.error.errors[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
+    }
+
     const {
       title,
       description,
@@ -147,19 +160,16 @@ export async function POST(request: NextRequest) {
       beds,
       rules,
       tags,
-    } = body;
+    } = parsed.data;
 
-    if (!title || !type || !city || perNight === undefined) {
-      return NextResponse.json(
-        { success: false, message: 'Title, type, city, and price per night are required' },
-        { status: 400 }
-      );
-    }
+    // Sanitize text fields to prevent stored XSS
+    const sanitizedTitle = sanitizeText(title);
+    const sanitizedDescription = sanitizeText(description || '');
 
     const newProperty = new Property({
       host: payload.userId,
-      title,
-      description: description || '',
+      title: sanitizedTitle,
+      description: sanitizedDescription,
       type,
       location: {
         city,

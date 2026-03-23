@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import { requireAdmin } from '@/lib/auth-helpers';
 import User from '@/lib/models/User';
 import Booking from '@/lib/models/Booking';
+import { escapeRegex } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,9 +26,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      // SECURITY: Escape regex special characters to prevent NoSQL injection / ReDoS
+      const escapedSearch = escapeRegex(search);
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 

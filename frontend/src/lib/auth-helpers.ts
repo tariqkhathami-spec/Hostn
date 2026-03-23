@@ -1,22 +1,23 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
-// Validate JWT_SECRET is set in production
-let JWT_SECRET = process.env.JWT_SECRET;
+// SECURITY: JWT_SECRET is REQUIRED in ALL environments.
+// The application will NOT start without it. No fallback secrets.
+const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  const errorMsg =
-    'CRITICAL: JWT_SECRET is not defined. ' +
-    'This environment variable is REQUIRED for production deployments. ' +
+  throw new Error(
+    'FATAL: JWT_SECRET environment variable is not set. ' +
+    'This is REQUIRED for the application to function securely. ' +
     'Set JWT_SECRET to a strong random value (minimum 32 characters). ' +
-    'Generate with: openssl rand -base64 32';
+    'Generate with: openssl rand -base64 32'
+  );
+}
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(errorMsg);
-  } else {
-    console.warn('[WARNING] ' + errorMsg);
-    // Use a temporary value in development only (never for production)
-    JWT_SECRET = 'dev-temporary-secret-change-immediately-in-production';
-  }
+if (JWT_SECRET.length < 32) {
+  console.warn(
+    '[SECURITY WARNING] JWT_SECRET is shorter than 32 characters. ' +
+    'Use a longer secret for production security.'
+  );
 }
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -39,7 +40,7 @@ export function generateToken(user: { _id: any; email: string; role: string }): 
     role: user.role,
   };
 
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET as string, { expiresIn: JWT_EXPIRES_IN });
 }
 
 /**
@@ -47,7 +48,7 @@ export function generateToken(user: { _id: any; email: string; role: string }): 
  */
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET as string) as TokenPayload;
     return decoded;
   } catch {
     return null;
