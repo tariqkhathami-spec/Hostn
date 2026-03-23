@@ -85,10 +85,10 @@ export default function ReviewsList({ propertyId, averageRating, reviewCount }: 
               <div className="flex items-start gap-3 mb-3">
                 {/* Avatar */}
                 <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  {review.guest?.avatar ? (
+                  {(review.guest as any)?.avatar ? (
                     <Image
-                      src={review.guest.avatar}
-                      alt={review.guest.name}
+                      src={(review.guest as any).avatar}
+                      alt={(review.guest as any).name}
                       width={40}
                       height={40}
                       className="rounded-full"
@@ -96,14 +96,14 @@ export default function ReviewsList({ propertyId, averageRating, reviewCount }: 
                     />
                   ) : (
                     <span className="text-primary-600 font-semibold text-sm">
-                      {review.guest?.name?.charAt(0).toUpperCase()}
+                      {(review.guest as any)?.name?.charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
 
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold text-gray-900 text-sm">{review.guest?.name}</p>
+                    <p className="font-semibold text-gray-900 text-sm">{(review.guest as any)?.name}</p>
                     <span className="text-xs text-gray-400">{formatDate(review.createdAt)}</span>
                   </div>
                   <StarRating rating={review.ratings.overall} showCount={false} className="mt-0.5" />
