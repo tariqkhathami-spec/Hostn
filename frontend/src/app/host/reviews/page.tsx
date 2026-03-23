@@ -135,8 +135,8 @@ export default function ReviewsPage() {
       list = list.filter(
         (r) =>
           r.comment.toLowerCase().includes(q) ||
-          r.guest?.name?.toLowerCase().includes(q) ||
-          r.property?.title?.toLowerCase().includes(q)
+          (r.guest as any)?.name?.toLowerCase().includes(q) ||
+          (r.property as any)?.title?.toLowerCase().includes(q)
       );
     }
 
@@ -419,10 +419,10 @@ export default function ReviewsPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  {review.guest?.avatar ? (
+                  {(review.guest as any)?.avatar ? (
                     <img
-                      src={review.guest.avatar}
-                      alt={review.guest.name}
+                      src={(review.guest as any).avatar}
+                      alt={(review.guest as any).name}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
@@ -432,7 +432,7 @@ export default function ReviewsPage() {
                   )}
                   <div>
                     <p className="text-sm font-semibold text-gray-900">
-                      {review.guest?.name || 'Guest'}
+                      {(review.guest as any)?.name || 'Guest'}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       {renderStars(review.rating)}
@@ -456,7 +456,7 @@ export default function ReviewsPage() {
                   <div className="flex items-center gap-1 text-xs text-gray-400">
                     <Building2 className="w-3 h-3" />
                     <span className="max-w-[150px] truncate">
-                      {review.property?.title}
+                      {(review.property as any)?.title}
                     </span>
                   </div>
                   <p className="text-[10px] text-gray-400 mt-1">
