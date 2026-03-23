@@ -232,13 +232,13 @@ export default function DashboardPage() {
                       <div className="space-y-3">
                         {bookings.slice(0, 3).map((booking) => (
                           <div key={booking._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
-                            {booking.property?.images?.[0] && (
+                            {(booking.property as any)?.images?.[0] && (
                               <div className="relative w-14 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                                <Image src={booking.property.images[0].url} alt="" fill className="object-cover" unoptimized />
+                                <Image src={(booking.property as any).images[0].url} alt="" fill className="object-cover" unoptimized />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">{booking.property?.title}</p>
+                              <p className="text-sm font-semibold text-gray-900 truncate">{(booking.property as any)?.title}</p>
                               <p className="text-xs text-gray-500">{formatDate(booking.checkIn)} â {formatDate(booking.checkOut)}</p>
                             </div>
                             <span className={`badge text-xs font-medium flex items-center gap-1 ${statusColors[booking.status]}`}>
@@ -273,14 +273,14 @@ export default function DashboardPage() {
                       {bookings.map((booking) => (
                         <div key={booking._id} className="bg-white rounded-2xl shadow-card p-5">
                           <div className="flex gap-4">
-                            {booking.property?.images?.[0] && (
+                            {(booking.property as any)?.images?.[0] && (
                               <div className="relative w-24 h-20 rounded-xl overflow-hidden flex-shrink-0">
-                                <Image src={booking.property.images[0].url} alt="" fill className="object-cover" unoptimized />
+                                <Image src={(booking.property as any).images[0].url} alt="" fill className="object-cover" unoptimized />
                               </div>
                             )}
                             <div className="flex-1">
                               <div className="flex justify-between items-start gap-2 mb-2">
-                                <h3 className="font-semibold text-gray-900 leading-snug">{booking.property?.title}</h3>
+                                <h3 className="font-semibold text-gray-900 leading-snug">{(booking.property as any)?.title}</h3>
                                 <span className={`badge text-xs font-medium flex items-center gap-1 flex-shrink-0 ${statusColors[booking.status]}`}>
                                   <StatusIcon status={booking.status} />
                                   {booking.status}
