@@ -84,11 +84,11 @@ async function updatePropertyRating(propertyId: mongoose.Types.ObjectId) {
 }
 
 reviewSchema.post('save', async function () {
-  await updatePropertyRating(this.property);
+  await updatePropertyRating((this as any).property);
 });
 
 reviewSchema.post('deleteOne', { document: true } as any, async function () {
-  await updatePropertyRating(this.property);
+  await updatePropertyRating((this as any).property);
 });
 
 const Review: Model<IReview> =
