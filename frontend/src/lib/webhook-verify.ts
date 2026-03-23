@@ -14,29 +14,32 @@ const WEBHOOK_SECRET = process.env.MOYASAR_WEBHOOK_SECRET;
 /**
  * Verify the HMAC signature of a webhook payload.
  *
+ * SECURITY: This function enforces strict signature verification.
+ * - MOYASAR_WEBHOOK_SECRET MUST be set or verification throws an error.
+ * - Missing or invalid signatures always return false.
+ * - Uses timing-safe comparison to prevent timing attacks.
+ *
  * @param rawBody - The raw request body string
  * @param signature - The signature from the webhook header
  * @returns true if signature is valid, false otherwise
+ * @throws Error if MOYASAR_WEBHOOK_SECRET is not configured
  */
 export function verifyWebhookSignature(
   rawBody: string,
   signature: string | null
 ): boolean {
-  // If no webhook secret is configured, warn and skip verification
+  // SECURITY: Webhook secret MUST be configured in production
   if (!WEBHOOK_SECRET) {
-    console.warn(
-      '[SECURITY WARNING] MOYASAR_WEBHOOK_SECRET is not configured. ' +
-      'Webhook signature verification is disabled. ' +
-      'Set this environment variable from your Moyasar dashboard for production security.'
+    throw new Error(
+      '[CRITICAL] MOYASAR_WEBHOOK_SECRET is not configured. ' +
+      'Webhook processing is disabled until this environment variable is set. ' +
+      'Get the webhook secret from your Moyasar dashboard and add it to Vercel environment variables.'
     );
-    // Return true to allow processing but log the warning
-    // The server-side payment re-verification with Moyasar API still protects against forged webhooks
-    return true;
   }
 
-  // If webhook secret is configured but no signature provided, reject
+  // Reject webhooks with no signature header
   if (!signature) {
-    console.warn('Webhook received without signature header');
+    console.warn('Webhook rejected: no signature header provided');
     return false;
   }
 
