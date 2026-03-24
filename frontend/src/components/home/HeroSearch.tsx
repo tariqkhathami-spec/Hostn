@@ -15,6 +15,7 @@ const CITIES = [
   { value: 'Al Ula', en: 'Al Ula', ar: 'العلا' },
   { value: 'Hail', en: 'Hail', ar: 'حائل' },
   { value: 'Mecca', en: 'Mecca', ar: 'مكة المكرمة' },
+  { value: 'Dammam', en: 'Dammam', ar: 'الدمام' },
 ];
 
 export default function HeroSearch() {

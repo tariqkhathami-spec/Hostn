@@ -7,6 +7,7 @@ interface UpdateProfileRequest {
   name?: string;
   phone?: string;
   avatar?: string;
+  role?: string;
 }
 
 /**
@@ -33,6 +34,13 @@ export async function PUT(request: NextRequest) {
     if (body.name !== undefined) updates.name = body.name;
     if (body.phone !== undefined) updates.phone = body.phone;
     if (body.avatar !== undefined) updates.avatar = body.avatar;
+    // Allow guest → host upgrade (but not downgrade or admin)
+    if (body.role === 'host') {
+      const currentUser = await User.findById(payload.userId);
+      if (currentUser && currentUser.role === 'guest') {
+        updates.role = 'host';
+      }
+    }
 
     // Update user with validation
     const user = await User.findByIdAndUpdate(payload.userId, updates, {

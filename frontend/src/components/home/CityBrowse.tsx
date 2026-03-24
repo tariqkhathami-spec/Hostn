@@ -40,6 +40,12 @@ const cities = [
     ar: 'الطائف',
     image: 'https://images.unsplash.com/photo-1504214208698-ea1916a2195a?w=400',
   },
+  {
+    value: 'Dammam',
+    en: 'Dammam',
+    ar: 'الدمام',
+    image: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400',
+  },
 ];
 
 export default function CityBrowse() {
