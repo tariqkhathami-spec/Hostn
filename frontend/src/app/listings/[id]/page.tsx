@@ -13,12 +13,14 @@ import { propertiesApi } from '@/lib/api';
 import { getPropertyTypeLabel } from '@/lib/utils';
 import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music } from 'lucide-react';
 import StarRating from '@/components/ui/StarRating';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function PropertyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -61,9 +63,9 @@ export default function PropertyDetailPage() {
       <>
         <Header />
         <main className="container-custom py-20 text-center">
-          <h1 className="text-2xl font-bold text-gray-700 mb-2">Property not found</h1>
+          <h1 className="text-2xl font-bold text-gray-700 mb-2">{t('property.notFound')}</h1>
           <p className="text-gray-500">This property may have been removed or is no longer available.</p>
-          <a href="/listings" className="btn-primary inline-flex mt-6">Browse Properties</a>
+          <a href="/listings" className="btn-primary inline-flex mt-6">{t('property.browseProperties')}</a>
         </main>
         <Footer />
       </>
@@ -79,9 +81,9 @@ export default function PropertyDetailPage() {
         <div className="container-custom py-8">
           {/* Breadcrumb */}
           <nav className="text-sm text-gray-500 mb-4">
-            <a href="/" className="hover:text-primary-600">Home</a>
+            <a href="/" className="hover:text-primary-600">{t('breadcrumb.home')}</a>
             <span className="mx-2">/</span>
-            <a href="/listings" className="hover:text-primary-600">Properties</a>
+            <a href="/listings" className="hover:text-primary-600">{t('breadcrumb.properties')}</a>
             <span className="mx-2">/</span>
             <a href={`/listings?city=${property.location.city}`} className="hover:text-primary-600">
               {property.location.city}
@@ -128,10 +130,10 @@ export default function PropertyDetailPage() {
               {/* Quick stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                  { Icon: Users, label: 'Max Guests', value: property.capacity.maxGuests },
-                  { Icon: BedDouble, label: 'Bedrooms', value: property.capacity.bedrooms },
-                  { Icon: BedDouble, label: 'Beds', value: property.capacity.beds },
-                  { Icon: Bath, label: 'Bathrooms', value: property.capacity.bathrooms },
+                  { Icon: Users, label: t('property.maxGuests'), value: property.capacity.maxGuests },
+                  { Icon: BedDouble, label: t('property.bedrooms'), value: property.capacity.bedrooms },
+                  { Icon: BedDouble, label: t('property.beds'), value: property.capacity.beds },
+                  { Icon: Bath, label: t('property.bathrooms'), value: property.capacity.bathrooms },
                 ].map(({ Icon, label, value }) => (
                   <div key={label} className="bg-gray-50 rounded-2xl p-4 text-center">
                     <Icon className="w-5 h-5 text-primary-600 mx-auto mb-2" />
@@ -150,7 +152,7 @@ export default function PropertyDetailPage() {
                     </span>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Hosted by {host.name}</p>
+                    <p className="font-semibold text-gray-900">{t('property.hostedBy')} {host.name}</p>
                     <p className="text-sm text-gray-500">
                       Host since {new Date(host.createdAt).getFullYear()}
                     </p>
@@ -160,7 +162,7 @@ export default function PropertyDetailPage() {
 
               {/* Description */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">About this place</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.aboutThisPlace')}</h2>
                 <p className="text-gray-600 leading-relaxed whitespace-pre-line">{property.description}</p>
               </div>
 
@@ -168,7 +170,7 @@ export default function PropertyDetailPage() {
               {property.amenities.length > 0 && (
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    What this place offers
+                    {t('property.whatThisPlaceOffers')}
                   </h2>
                   <AmenitiesList amenities={property.amenities} showAll={showAllAmenities} />
                   {property.amenities.length > 10 && (
@@ -176,7 +178,7 @@ export default function PropertyDetailPage() {
                       onClick={() => setShowAllAmenities(!showAllAmenities)}
                       className="mt-4 text-sm font-semibold text-primary-600 hover:text-primary-700 underline"
                     >
-                      {showAllAmenities ? 'Show less' : `Show all ${property.amenities.length} amenities`}
+                      {showAllAmenities ? t('property.showLess') : `${t('property.showAll')} (${property.amenities.length})`}
                     </button>
                   )}
                 </div>
@@ -184,33 +186,33 @@ export default function PropertyDetailPage() {
 
               {/* House rules */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">House rules</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.houseRules')}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     {
                       Icon: Clock,
-                      label: 'Check-in',
+                      label: t('property.checkIn'),
                       value: `After ${property.rules.checkInTime}`,
                     },
                     {
                       Icon: Clock,
-                      label: 'Check-out',
+                      label: t('property.checkOut'),
                       value: `Before ${property.rules.checkOutTime}`,
                     },
                     {
                       Icon: Cigarette,
-                      label: 'Smoking',
-                      value: property.rules.smokingAllowed ? 'Allowed' : 'Not allowed',
+                      label: t('property.smoking'),
+                      value: property.rules.smokingAllowed ? t('property.allowed') : t('property.notAllowed'),
                     },
                     {
                       Icon: PawPrint,
-                      label: 'Pets',
-                      value: property.rules.petsAllowed ? 'Allowed' : 'Not allowed',
+                      label: t('property.pets'),
+                      value: property.rules.petsAllowed ? t('property.allowed') : t('property.notAllowed'),
                     },
                     {
                       Icon: Music,
-                      label: 'Parties/Events',
-                      value: property.rules.partiesAllowed ? 'Allowed' : 'Not allowed',
+                      label: t('property.parties'),
+                      value: property.rules.partiesAllowed ? t('property.allowed') : t('property.notAllowed'),
                     },
                   ].map(({ Icon, label, value }) => (
                     <div key={label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -225,7 +227,7 @@ export default function PropertyDetailPage() {
 
               {/* Reviews */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Guest Reviews</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.guestReviews')}</h2>
                 <ReviewsList
                   propertyId={property._id}
                   averageRating={property.ratings.average}

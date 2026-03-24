@@ -7,6 +7,7 @@ import { Property } from '@/types';
 import { formatPrice, getPropertyTypeLabel, getDiscountedPrice } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -16,6 +17,7 @@ interface PropertyCardProps {
 
 export default function PropertyCard({ property }: PropertyCardProps) {
   const { user, isAuthenticated, toggleWishlist } = useAuth();
+  const { t } = useLanguage();
   const [isWishlisted, setIsWishlisted] = useState(
     user?.wishlist?.includes(property._id) ?? false
   );
@@ -128,11 +130,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <div className="flex items-center gap-3 text-gray-500 text-xs mb-3">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {property.capacity.maxGuests} guests
+              {property.capacity.maxGuests} {property.capacity.maxGuests === 1 ? t('card.guest') : t('card.guests')}
             </span>
             <span className="flex items-center gap-1">
               <BedDouble className="w-3 h-3" />
-              {property.capacity.bedrooms} bed{property.capacity.bedrooms !== 1 ? 's' : ''}
+              {property.capacity.bedrooms} {property.capacity.bedrooms !== 1 ? t('card.beds') : t('card.bed')}
             </span>
           </div>
 
@@ -147,14 +149,14 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                   <span className="text-xs text-gray-400 line-through">
                     {formatPrice(property.pricing.perNight)}
                   </span>
-                  <span className="text-xs text-gray-500">/night</span>
+                  <span className="text-xs text-gray-500">{t('property.perNight')}</span>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-1">
                   <span className="text-base font-bold text-primary-600">
                     {formatPrice(property.pricing.perNight)}
                   </span>
-                  <span className="text-xs text-gray-500">/night</span>
+                  <span className="text-xs text-gray-500">{t('property.perNight')}</span>
                 </div>
               )}
             </div>
