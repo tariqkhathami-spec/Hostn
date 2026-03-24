@@ -7,27 +7,34 @@ import { format } from 'date-fns';
 import { useLanguage } from '@/context/LanguageContext';
 
 const CITIES = [
-  'Riyadh', 'Jeddah', 'Abha', 'Khobar', 'Taif', 'Al Ula', 'Hail', 'Mecca',
-];
-
-const PROPERTY_TYPES = [
-  { label: 'All Types', value: '' },
-  { label: 'Chalets', value: 'chalet' },
-  { label: 'Apartments', value: 'apartment' },
-  { label: 'Villas', value: 'villa' },
-  { label: 'Studios', value: 'studio' },
-  { label: 'Farms', value: 'farm' },
-  { label: 'Camps', value: 'camp' },
+  { value: 'Riyadh', en: 'Riyadh', ar: 'Ø§ÙØ±ÙØ§Ø¶' },
+  { value: 'Jeddah', en: 'Jeddah', ar: 'Ø¬Ø¯Ø©' },
+  { value: 'Abha', en: 'Abha', ar: 'Ø£Ø¨ÙØ§' },
+  { value: 'Khobar', en: 'Khobar', ar: 'Ø§ÙØ®Ø¨Ø±' },
+  { value: 'Taif', en: 'Taif', ar: 'Ø§ÙØ·Ø§Ø¦Ù' },
+  { value: 'Al Ula', en: 'Al Ula', ar: 'Ø§ÙØ¹ÙØ§' },
+  { value: 'Hail', en: 'Hail', ar: 'Ø­Ø§Ø¦Ù' },
+  { value: 'Mecca', en: 'Mecca', ar: 'ÙÙØ© Ø§ÙÙÙØ±ÙØ©' },
 ];
 
 export default function HeroSearch() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [city, setCity] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
+
+  const PROPERTY_TYPES = [
+    { label: t('hero.allTypes'), value: '' },
+    { label: t('type.chalets'), value: 'chalet' },
+    { label: t('type.apartments'), value: 'apartment' },
+    { label: t('type.villas'), value: 'villa' },
+    { label: t('type.studios'), value: 'studio' },
+    { label: t('type.farms'), value: 'farm' },
+    { label: t('type.camps'), value: 'camp' },
+  ];
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -104,20 +111,20 @@ export default function HeroSearch() {
                   {t('hero.destination')}
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+                  <MapPin className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
                   <select
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full pl-9 pr-8 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
+                    className="w-full ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
                   >
                     <option value="">{t('hero.selectCity')}</option>
                     {CITIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                      <option key={c.value} value={c.value}>
+                        {language === 'ar' ? c.ar : c.en}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
 
@@ -138,7 +145,7 @@ export default function HeroSearch() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
 
@@ -148,13 +155,13 @@ export default function HeroSearch() {
                   {t('hero.checkIn')}
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+                  <Calendar className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
                   <input
                     type="date"
                     value={checkIn}
                     min={today}
                     onChange={(e) => setCheckIn(e.target.value)}
-                    className="w-full pl-9 pr-3 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
+                    className="w-full ltr:pl-9 ltr:pr-3 rtl:pr-9 rtl:pl-3 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -165,13 +172,13 @@ export default function HeroSearch() {
                   {t('hero.checkOut')}
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+                  <Calendar className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
                   <input
                     type="date"
                     value={checkOut}
                     min={checkIn || tomorrow}
                     onChange={(e) => setCheckOut(e.target.value)}
-                    className="w-full pl-9 pr-3 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
+                    className="w-full ltr:pl-9 ltr:pr-3 rtl:pr-9 rtl:pl-3 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -200,14 +207,14 @@ export default function HeroSearch() {
         >
           {CITIES.slice(0, 6).map((c) => (
             <button
-              key={c}
+              key={c.value}
               onClick={() => {
-                setCity(c);
-                router.push(`/listings?city=${c}`);
+                setCity(c.value);
+                router.push(`/listings?city=${c.value}`);
               }}
               className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/5 hover:border-white/15"
             >
-              {c}
+              {language === 'ar' ? c.ar : c.en}
             </button>
           ))}
         </div>
