@@ -5,33 +5,45 @@ import { useLanguage } from '@/context/LanguageContext';
 
 const cities = [
   {
-    name: 'Riyadh',
+    value: 'Riyadh',
+    en: 'Riyadh',
+    ar: 'الرياض',
     image: 'https://images.unsplash.com/photo-1586724237569-f3d0c1dee8c6?w=400',
   },
   {
-    name: 'Jeddah',
+    value: 'Jeddah',
+    en: 'Jeddah',
+    ar: 'جدة',
     image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400',
   },
   {
-    name: 'Abha',
+    value: 'Abha',
+    en: 'Abha',
+    ar: 'أبها',
     image: 'https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?w=400',
   },
   {
-    name: 'Al Ula',
+    value: 'Al Ula',
+    en: 'Al Ula',
+    ar: 'العلا',
     image: 'https://images.unsplash.com/photo-1565534416698-4e9e2c8dae95?w=400',
   },
   {
-    name: 'Khobar',
+    value: 'Khobar',
+    en: 'Khobar',
+    ar: 'الخبر',
     image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400',
   },
   {
-    name: 'Taif',
+    value: 'Taif',
+    en: 'Taif',
+    ar: 'الطائف',
     image: 'https://images.unsplash.com/photo-1504214208698-ea1916a2195a?w=400',
   },
 ];
 
 export default function CityBrowse() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <section className="py-8 sm:py-14 bg-gray-50">
@@ -44,8 +56,8 @@ export default function CityBrowse() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {cities.map((city) => (
             <Link
-              key={city.name}
-              href={`/listings?city=${city.name}`}
+              key={city.value}
+              href={`/listings?city=${city.value}`}
               className="group relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
             >
               <div
@@ -54,7 +66,7 @@ export default function CityBrowse() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                <p className="font-bold text-sm">{city.name}</p>
+                <p className="font-bold text-sm">{language === 'ar' ? city.ar : city.en}</p>
                 <p className="text-xs text-white/80">{t('cities.exploreStays')}</p>
               </div>
             </Link>
