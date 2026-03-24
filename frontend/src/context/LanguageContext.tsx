@@ -15,7 +15,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Lanhguage>('ar');
+  const [language, setLanguage] = useState<Language>('ar');
 
   useEffect(() => {
     const saved = localStorage.getItem('hostn-lang') as Language | null;
@@ -26,23 +26,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem('hostn-lang', language);
-    const html = document.documentElement;
-    html.setAttribute('lang', language);
-    html.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
-
-    if (language === 'ar') {
-      html.style.fontFamily = "'Noto Sans Arabic', 'Inter', system-ui, sans-serif";
-    } else {
-      html.style.fontFamily = "'Inter', system-ui, sans-serif";
-    }
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   }, [language]);
 
   const toggleLanguage = () => {
-    setLanguage((prev) => (prev === 'en' ? 'ar' : 'en'));
+    setLanguage((prev) => (prev === 'ar' ? 'en' : 'ar'));
   };
 
   const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations['en'][key] || key;
+    return translations[language]?.[key] || translations['ar'][key] || key;
   };
 
   return (
@@ -54,8 +47,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
+  if (!context) throw new Error('useLanguage must be used within LanguageProvider');
   return context;
 }
