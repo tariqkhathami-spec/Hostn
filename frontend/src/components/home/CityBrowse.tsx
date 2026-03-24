@@ -32,7 +32,7 @@ const cities = [
     value: 'Khobar',
     en: 'Khobar',
     ar: 'الخبر',
-    image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400',
+    image: 'https://images.unsplash.com/photo-1578895101408-1a36b834405b?w=400',
   },
   {
     value: 'Taif',
@@ -44,7 +44,7 @@ const cities = [
     value: 'Dammam',
     en: 'Dammam',
     ar: 'الدمام',
-    image: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=400',
+    image: 'https://images.unsplash.com/photo-1586724237569-f3d0c1dee8c6?w=400&q=80&fit=crop',
   },
 ];
 
