@@ -5,7 +5,15 @@ import { Instagram, Twitter, Facebook, Youtube, Mail, Phone } from 'lucide-react
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+
+  const cityNames: Record<string, { en: string; ar: string }> = {
+    Riyadh: { en: 'Riyadh', ar: 'الرياض' },
+    Jeddah: { en: 'Jeddah', ar: 'جدة' },
+    Abha: { en: 'Abha', ar: 'أبها' },
+    'Al Ula': { en: 'Al Ula', ar: 'العلا' },
+    Taif: { en: 'Taif', ar: 'الطائف' },
+  };
 
   const footerLinks = {
     [t('footer.explore')]: [
@@ -15,13 +23,10 @@ export default function Footer() {
       { label: t('type.farms'), href: '/listings?type=farm' },
       { label: t('type.studios'), href: '/listings?type=studio' },
     ],
-    [t('footer.destinations')]: [
-      { label: 'Riyadh', href: '/listings?city=Riyadh' },
-      { label: 'Jeddah', href: '/listings?city=Jeddah' },
-      { label: 'Abha', href: '/listings?city=Abha' },
-      { label: 'Al Ula', href: '/listings?city=Al+Ula' },
-      { label: 'Taif', href: '/listings?city=Taif' },
-    ],
+    [t('footer.destinations')]: Object.entries(cityNames).map(([key, names]) => ({
+      label: language === 'ar' ? names.ar : names.en,
+      href: `/listings?city=${key.replace(' ', '+')}`,
+    })),
     [t('footer.hosting')]: [
       { label: t('footer.listProperty'), href: '/dashboard/list-property' },
       { label: t('footer.hostResources'), href: '#' },
@@ -83,13 +88,13 @@ export default function Footer() {
         <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6">
-              <a href="mailto:hello@hostn.com" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+              <a href="mailto:hello@hostn.co" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
                 <Mail className="w-4 h-4" />
-                hello@hostn.com
+                hello@hostn.co
               </a>
-              <a href="tel:+966500000000" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
+              <a href="tel:+966500407888" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
                 <Phone className="w-4 h-4" />
-                +966 50 000 0000
+                0500407888
               </a>
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500">
