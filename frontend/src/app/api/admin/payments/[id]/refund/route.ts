@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth-helpers';
 import Payment from '@/lib/models/Payment';
-import Booking from 'A/lib/models/Booking';
+import Booking from '@/lib/models/Booking';
 import { getPaymentProvider } from '@/lib/payment';
 import { logPaymentEvent } from '@/lib/logger';
 import { sendRefundEmail } from '@/lib/email';
