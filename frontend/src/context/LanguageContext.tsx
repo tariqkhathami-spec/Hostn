@@ -26,16 +26,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem('hostn-lang', language);
-    document.documentElement.lang = language;
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    const html = document.documentElement;
+    html.setAttribute('lang', language);
+    html.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
+
+    if (language === 'ar') {
+      html.style.fontFamily = "'Noto Sans Arabic', 'Inter', system-ui, sans-serif";
+    } else {
+      html.style.fontFamily = "'Inter', system-ui, sans-serif";
+    }
   }, [language]);
 
   const toggleLanguage = () => {
-    setLanguage((prev) => (prev === 'ar' ? 'en' : 'ar'));
+    setLanguage((prev) => (prev === 'en' ? 'ar' : 'en'));
   };
 
   const t = (key: TranslationKey): string => {
-    return translations[language]?.[key] || translations['ar'][key] || key;
+    return translations[language][key] || translations['en'][key] || key;
   };
 
   return (
@@ -47,6 +54,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (!context) throw new Error('useLanguage must be used within LanguageProvider');
+  if (!context) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
   return context;
 }

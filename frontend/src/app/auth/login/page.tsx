@@ -14,7 +14,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -107,9 +107,9 @@ function LoginContent() {
             />
 
             <div className="flex ltr:justify-end rtl:justify-start">
-              <a href="#" className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors">
+              <Link href="/auth/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors">
                 {t('auth.forgotPassword')}
-              </a>
+              </Link>
             </div>
 
             <Button type="submit" isLoading={loading} size="lg" className="w-full">
@@ -149,7 +149,7 @@ function LoginContent() {
           <div className="animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
             <div className="gold-line mb-4" />
             <p className="text-sm font-medium text-white/60 uppercase tracking-widest">
-              Luxury Stays in Saudi Arabia
+              {language === 'ar' ? 'إقامات فاخرة في السعودية' : 'Luxury Stays in Saudi Arabia'}
             </p>
           </div>
 
@@ -161,26 +161,32 @@ function LoginContent() {
               ))}
             </div>
             <blockquote className="text-xl xl:text-2xl font-semibold leading-relaxed mb-5 max-w-md">
-              &ldquo;Hostn made booking our family vacation effortless. The property was absolutely stunning.&rdquo;
+              {language === 'ar'
+                ? '\u201Cهوستن سهّل علينا حجز إجازتنا العائلية. العقار كان رائع بكل المقاييس.\u201D'
+                : '\u201CHostn made booking our family vacation effortless. The property was absolutely stunning.\u201D'}
             </blockquote>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <span className="text-sm font-bold">NA</span>
+                <span className="text-sm font-bold">{language === 'ar' ? 'نا' : 'NA'}</span>
               </div>
               <div>
-                <p className="font-semibold text-sm">Nora A.</p>
-                <p className="text-white/50 text-xs">Jeddah, Saudi Arabia</p>
+                <p className="font-semibold text-sm">{language === 'ar' ? 'نورة أ.' : 'Nora A.'}</p>
+                <p className="text-white/50 text-xs">{language === 'ar' ? 'جدة، السعودية' : 'Jeddah, Saudi Arabia'}</p>
               </div>
             </div>
           </div>
 
           {/* Bottom: Platform highlights */}
           <div className="flex gap-8 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-            {[
+            {(language === 'ar' ? [
+              { value: 'موثقة', label: 'العقارات' },
+              { value: 'مختارة', label: 'التجارب' },
+              { value: '٢٤/٧', label: 'الدعم' },
+            ] : [
               { value: 'Verified', label: 'Properties' },
               { value: 'Curated', label: 'Experiences' },
               { value: '24/7', label: 'Support' },
-            ].map((stat) => (
+            ]).map((stat) => (
               <div key={stat.label}>
                 <div className="text-xl font-bold text-gold-300">{stat.value}</div>
                 <div className="text-xs text-white/50">{stat.label}</div>

@@ -13,6 +13,7 @@ export default function Footer() {
     Abha: { en: 'Abha', ar: 'أبها' },
     'Al Ula': { en: 'Al Ula', ar: 'العلا' },
     Taif: { en: 'Taif', ar: 'الطائف' },
+    Dammam: { en: 'Dammam', ar: 'الدمام' },
   };
 
   const footerLinks = {
@@ -28,16 +29,16 @@ export default function Footer() {
       href: `/listings?city=${key.replace(' ', '+')}`,
     })),
     [t('footer.hosting')]: [
-      { label: t('footer.listProperty'), href: '/dashboard/list-property' },
-      { label: t('footer.hostResources'), href: '#' },
-      { label: t('footer.hostCommunity'), href: '#' },
-      { label: t('footer.responsibleHosting'), href: '#' },
+      { label: t('footer.listProperty'), href: '/host/listings/new' },
+      { label: t('footer.hostResources'), href: '/about' },
+      { label: t('footer.hostCommunity'), href: '/about' },
+      { label: t('footer.responsibleHosting'), href: '/about' },
     ],
     [t('footer.supportTitle')]: [
-      { label: t('footer.helpCenter'), href: '#' },
-      { label: t('footer.safety'), href: '#' },
-      { label: t('footer.cancellation'), href: '#' },
-      { label: t('footer.contact'), href: '#' },
+      { label: t('footer.helpCenter'), href: '/help' },
+      { label: t('footer.safety'), href: '/help' },
+      { label: t('footer.cancellation'), href: '/help' },
+      { label: t('footer.contact'), href: '/contact' },
     ],
   };
 
@@ -99,8 +100,8 @@ export default function Footer() {
             </div>
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <span>&copy; {new Date().getFullYear()} Hostn. {t('footer.rights')}</span>
-              <Link href="#" className="hover:text-gray-300 transition-colors">{t('footer.privacy')}</Link>
-              <Link href="#" className="hover:text-gray-300 transition-colors">{t('footer.terms')}</Link>
+              <Link href="/privacy" className="hover:text-gray-300 transition-colors">{t('footer.privacy')}</Link>
+              <Link href="/terms" className="hover:text-gray-300 transition-colors">{t('footer.terms')}</Link>
             </div>
           </div>
         </div>

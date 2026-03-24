@@ -8,6 +8,7 @@ import { Property } from '@/types';
 import { propertiesApi, bookingsApi, paymentsApi } from '@/lib/api';
 import { formatPrice, formatDate, calculateNights, getDiscountedPrice } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { CalendarDays, Users, CreditCard, Shield, ChevronRight, Lock, CheckCircle, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Image from 'next/image';
@@ -27,6 +28,7 @@ function BookingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
+  const { language } = useLanguage();
 
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ function BookingContent() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
+
+  const isAr = language === 'ar';
 
   const checkIn = searchParams.get('checkIn') || '';
   const checkOut = searchParams.get('checkOut') || '';
@@ -67,13 +71,11 @@ function BookingContent() {
   };
 
   const loadMoyasarForm = () => {
-    // Load CSS
     const cssLink = document.createElement('link');
     cssLink.rel = 'stylesheet';
     cssLink.href = 'https://cdn.moyasar.com/mpf/1.14.0/moyasar.css';
     document.head.appendChild(cssLink);
 
-    // Load JS and initialize
     const script = document.createElement('script');
     script.src = 'https://cdn.moyasar.com/mpf/1.14.0/moyasar.js';
     script.async = true;
@@ -100,7 +102,7 @@ function BookingContent() {
 
   const handleContinueToPayment = async () => {
     if (!checkIn || !checkOut) {
-      toast.error('Missing dates');
+      toast.error(isAr ? 'يرجى تحديد التواريخ' : 'Missing dates');
       return;
     }
 
@@ -131,10 +133,15 @@ function BookingContent() {
 
       // Move to payment step
       setStep(2);
-      toast.success('Booking created. Please complete payment.');
+      toast.success(isAr ? 'تم إنشاء الحجز. يرجى إتمام الدفع.' : 'Booking created. Please complete payment.');
     } catch (error: unknown) {
-      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to create booking';
-      toast.error(msg);
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (msg) {
+        // Show the server error message (e.g., "Property is not available for selected dates")
+        toast.error(isAr ? 'العقار غير متاح للتواريخ المحددة. يرجى اختيار تواريخ أخرى.' : msg);
+      } else {
+        toast.error(isAr ? 'فشل إنشاء الحجز. حاول مرة أخرى.' : 'Failed to create booking. Please try again.');
+      }
     } finally {
       setProcessing(false);
     }
@@ -174,9 +181,9 @@ function BookingContent() {
         <div className="container-custom py-8">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-gray-900 mb-6">
-              {step === 1 && 'Review your booking'}
-              {step === 2 && 'Complete payment'}
-              {step === 3 && 'Processing'}
+              {step === 1 && (isAr ? 'مراجعة الحجز' : 'Review your booking')}
+              {step === 2 && (isAr ? 'إتمام الدفع' : 'Complete payment')}
+              {step === 3 && (isAr ? 'جاري المعالجة' : 'Processing')}
             </h1>
 
             {/* Steps */}
@@ -191,7 +198,7 @@ function BookingContent() {
                     {step > s ? <CheckCircle className="w-4 h-4" /> : s}
                   </div>
                   <span className={`text-sm font-medium ${step >= s ? step > s ? 'text-green-600' : 'text-primary-600' : 'text-gray-400'}`}>
-                    {s === 1 ? 'Review' : s === 2 ? 'Payment' : 'Confirmation'}
+                    {s === 1 ? (isAr ? 'المراجعة' : 'Review') : s === 2 ? (isAr ? 'الدفع' : 'Payment') : (isAr ? 'التأكيد' : 'Confirmation')}
                   </span>
                   {s < 3 && <ChevronRight className="w-4 h-4 text-gray-300 mx-1" />}
                 </div>
@@ -206,21 +213,23 @@ function BookingContent() {
                   <>
                     {/* Trip details */}
                     <div className="bg-white rounded-2xl p-6 shadow-card">
-                      <h2 className="font-bold text-gray-900 text-lg mb-4">Trip details</h2>
+                      <h2 className="font-bold text-gray-900 text-lg mb-4">
+                        {isAr ? 'تفاصيل الرحلة' : 'Trip details'}
+                      </h2>
 
                       <div className="space-y-4">
                         <div className="flex items-center justify-between py-3 border-b border-gray-100">
                           <div className="flex items-center gap-3">
                             <CalendarDays className="w-5 h-5 text-primary-500" />
                             <div>
-                              <p className="text-sm font-medium text-gray-800">Dates</p>
+                              <p className="text-sm font-medium text-gray-800">{isAr ? 'التواريخ' : 'Dates'}</p>
                               <p className="text-xs text-gray-500">
                                 {formatDate(checkIn)} – {formatDate(checkOut)}
                               </p>
                             </div>
                           </div>
                           <span className="text-sm font-semibold text-gray-700">
-                            {nights} night{nights !== 1 ? 's' : ''}
+                            {nights} {isAr ? (nights === 1 ? 'ليلة' : 'ليالي') : (nights !== 1 ? 'nights' : 'night')}
                           </span>
                         </div>
 
@@ -228,22 +237,26 @@ function BookingContent() {
                           <div className="flex items-center gap-3">
                             <Users className="w-5 h-5 text-primary-500" />
                             <div>
-                              <p className="text-sm font-medium text-gray-800">Guests</p>
+                              <p className="text-sm font-medium text-gray-800">{isAr ? 'الضيوف' : 'Guests'}</p>
                               <p className="text-xs text-gray-500">
-                                Up to {property.capacity.maxGuests} allowed
+                                {isAr ? `حتى ${property.capacity.maxGuests} ضيف مسموح` : `Up to ${property.capacity.maxGuests} allowed`}
                               </p>
                             </div>
                           </div>
                           <span className="text-sm font-semibold text-gray-700">
-                            {guestsCount} guest{guestsCount !== 1 ? 's' : ''}
+                            {guestsCount} {isAr ? (guestsCount === 1 ? 'ضيف' : 'ضيوف') : (guestsCount !== 1 ? 'guests' : 'guest')}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-3 py-3">
                           <Shield className="w-5 h-5 text-green-500" />
                           <div>
-                            <p className="text-sm font-medium text-gray-800">Free cancellation</p>
-                            <p className="text-xs text-gray-500">Cancel before check-in for a full refund</p>
+                            <p className="text-sm font-medium text-gray-800">
+                              {isAr ? 'إلغاء مجاني' : 'Free cancellation'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {isAr ? 'ألغِ قبل تاريخ الوصول واسترد المبلغ كاملاً' : 'Cancel before check-in for a full refund'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -251,21 +264,25 @@ function BookingContent() {
 
                     {/* Special requests */}
                     <div className="bg-white rounded-2xl p-6 shadow-card">
-                      <h2 className="font-bold text-gray-900 text-lg mb-3">Special requests (optional)</h2>
+                      <h2 className="font-bold text-gray-900 text-lg mb-3">
+                        {isAr ? 'طلبات خاصة (اختياري)' : 'Special requests (optional)'}
+                      </h2>
                       <textarea
                         value={specialRequests}
                         onChange={(e) => setSpecialRequests(e.target.value)}
-                        placeholder="Any special requests or notes for the host?"
+                        placeholder={isAr ? 'أي طلبات أو ملاحظات للمضيف؟' : 'Any special requests or notes for the host?'}
                         rows={3}
                         className="input-base resize-none"
                         maxLength={500}
                       />
-                      <p className="text-xs text-gray-400 mt-1.5 text-right">{specialRequests.length}/500</p>
+                      <p className="text-xs text-gray-400 mt-1.5 ltr:text-right rtl:text-left">{specialRequests.length}/500</p>
                     </div>
 
                     {/* Guest info */}
                     <div className="bg-white rounded-2xl p-6 shadow-card">
-                      <h2 className="font-bold text-gray-900 text-lg mb-4">Guest information</h2>
+                      <h2 className="font-bold text-gray-900 text-lg mb-4">
+                        {isAr ? 'معلومات الضيف' : 'Guest information'}
+                      </h2>
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
                           <span className="text-primary-600 font-bold text-lg">
@@ -277,9 +294,6 @@ function BookingContent() {
                           <p className="text-sm text-gray-500">{user?.email}</p>
                         </div>
                       </div>
-                      <Link href="/dashboard/profile" className="text-xs text-primary-600 hover:underline mt-3 inline-block">
-                        Edit profile
-                      </Link>
                     </div>
                   </>
                 )}
@@ -290,14 +304,18 @@ function BookingContent() {
                     <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
                       <Lock className="w-5 h-5 text-green-500" />
                       <div>
-                        <h2 className="font-bold text-gray-900 text-lg">Secure Payment</h2>
-                        <p className="text-xs text-gray-500">Your card information is secure and encrypted</p>
+                        <h2 className="font-bold text-gray-900 text-lg">
+                          {isAr ? 'دفع آمن' : 'Secure Payment'}
+                        </h2>
+                        <p className="text-xs text-gray-500">
+                          {isAr ? 'بيانات بطاقتك محمية ومشفرة' : 'Your card information is secure and encrypted'}
+                        </p>
                       </div>
                     </div>
 
                     {/* Payment logos */}
                     <div className="mb-6">
-                      <p className="text-xs text-gray-500 mb-3">We accept</p>
+                      <p className="text-xs text-gray-500 mb-3">{isAr ? 'نقبل' : 'We accept'}</p>
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-8 bg-blue-50 rounded flex items-center justify-center text-xs font-bold text-blue-600">VISA</div>
                         <div className="w-12 h-8 bg-red-50 rounded flex items-center justify-center text-xs font-bold text-red-600">MC</div>
@@ -314,8 +332,12 @@ function BookingContent() {
                 {step === 3 && (
                   <div className="bg-white rounded-2xl p-8 shadow-card text-center">
                     <Loader2 className="w-12 h-12 text-primary-500 mx-auto mb-4 animate-spin" />
-                    <h2 className="font-bold text-gray-900 text-lg mb-2">Processing Payment</h2>
-                    <p className="text-gray-500">Please wait while we verify your payment...</p>
+                    <h2 className="font-bold text-gray-900 text-lg mb-2">
+                      {isAr ? 'جاري معالجة الدفع' : 'Processing Payment'}
+                    </h2>
+                    <p className="text-gray-500">
+                      {isAr ? 'يرجى الانتظار حتى نتحقق من عملية الدفع...' : 'Please wait while we verify your payment...'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -344,29 +366,29 @@ function BookingContent() {
 
                   {/* Price breakdown */}
                   <div className="space-y-3 text-sm mb-6">
-                    <h3 className="font-bold text-gray-900">Price details</h3>
+                    <h3 className="font-bold text-gray-900">{isAr ? 'تفاصيل السعر' : 'Price details'}</h3>
                     <div className="flex justify-between text-gray-600">
-                      <span>{formatPrice(pricePerNight)} × {nights} night{nights !== 1 ? 's' : ''}</span>
+                      <span>{formatPrice(pricePerNight)} × {nights} {isAr ? (nights === 1 ? 'ليلة' : 'ليالي') : (nights !== 1 ? 'nights' : 'night')}</span>
                       <span>{formatPrice(subtotal)}</span>
                     </div>
                     {cleaningFee > 0 && (
                       <div className="flex justify-between text-gray-600">
-                        <span>Cleaning fee</span>
+                        <span>{isAr ? 'رسوم التنظيف' : 'Cleaning fee'}</span>
                         <span>{formatPrice(cleaningFee)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-gray-600">
-                      <span>Service fee</span>
+                      <span>{isAr ? 'رسوم الخدمة' : 'Service fee'}</span>
                       <span>{formatPrice(serviceFee)}</span>
                     </div>
                     {property.pricing.discountPercent > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>Discount ({property.pricing.discountPercent}%)</span>
+                        <span>{isAr ? `خصم (${property.pricing.discountPercent}%)` : `Discount (${property.pricing.discountPercent}%)`}</span>
                         <span>-{formatPrice(property.pricing.perNight * nights * (property.pricing.discountPercent / 100))}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200 text-base">
-                      <span>Total</span>
+                      <span>{isAr ? 'الإجمالي' : 'Total'}</span>
                       <span>{formatPrice(total)}</span>
                     </div>
                   </div>
@@ -380,25 +402,27 @@ function BookingContent() {
                       className="w-full"
                       leftIcon={<CreditCard className="w-4 h-4" />}
                     >
-                      Continue to Payment
+                      {isAr ? 'متابعة للدفع' : 'Continue to Payment'}
                     </Button>
                   )}
 
                   {step === 2 && (
                     <div className="text-xs text-gray-500 text-center">
-                      <p>You will be redirected after payment</p>
+                      <p>{isAr ? 'سيتم تحويلك بعد إتمام الدفع' : 'You will be redirected after payment'}</p>
                     </div>
                   )}
 
                   {step === 3 && (
                     <div className="text-xs text-gray-500 text-center">
-                      <p>Please do not close this window</p>
+                      <p>{isAr ? 'يرجى عدم إغلاق هذه النافذة' : 'Please do not close this window'}</p>
                     </div>
                   )}
 
                   <p className="text-xs text-center text-gray-500 mt-3">
-                    By confirming, you agree to our{' '}
-                    <a href="#" className="text-primary-600 hover:underline">Terms of Service</a>
+                    {isAr ? 'بتأكيد الحجز، أنت توافق على ' : 'By confirming, you agree to our '}
+                    <Link href="/terms" className="text-primary-600 hover:underline">
+                      {isAr ? 'الشروط والأحكام' : 'Terms of Service'}
+                    </Link>
                   </p>
                 </div>
               </div>

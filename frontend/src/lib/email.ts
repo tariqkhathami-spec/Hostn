@@ -96,7 +96,7 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
   return false;
 }
 
-// ââ Email Templates ââ
+// ── Email Templates ──
 
 const baseTemplate = (content: string) => `
 <!DOCTYPE html>
