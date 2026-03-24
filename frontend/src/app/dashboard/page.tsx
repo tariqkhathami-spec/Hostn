@@ -101,7 +101,135 @@ export default function DashboardPage() {
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             {/* Mobile tab nav */}
             <div className="lg:hidden overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-              <div className="flex gap-2 min-w-max">��b6�74��S�'76Rג�#��F'2������B��&V���6���&FvRӢ��C�7G&��s��&Vâ7G&��s��6��&V7B�V�V�V�EG�S�&FvS��V�&W"Ғ�����'WGF���W�׶�GТ��6Ɩ6�ײ����6WD7F�fUF"��B2F%G�R�Т6�74��S׶r�gV��f�W��FV�2�6V�FW"�W7F�g��&WGvVV���2��"�R&�V�FVB׆�FW�B�6�f��B��VF�V�G&�6�F������G��7F�fUF"����@��v&r�&��'��cFW�B�v��FRp��wFW�B�w&��c��fW#�&r�w&��Sp��Т��7�6�74��S�&f�W��FV�2�6V�FW"v�"�R#�Ė6��6�74��S�'r�B��B"����&V�Т��7���&FvRbb&FvR�bb���7�6�74��S׶r�R��R&�V�FVB�gV��FW�Bׇ2f�W��FV�2�6V�FW"�W7F�g��6V�FW"f��B�&��BG��7F�fUF"����B�v&r�v��FRFW�B�&��'��cr�v&r�&��'��FW�B�&��'��cp�����&FvWТ��7���Т��'WGF�����Т���cࠢƇ"6�74��S�&ג�B&�&FW"�w&��"���'WGF����6Ɩ6�׶��v�WGТ6�74��S�'r�gV��f�W��FV�2�6V�FW"v�"�R��2��"�R&�V�FVB׆�FW�B�6�f��B��VF�V�FW�B�&VB�c��fW#�&r�&VB�SG&�6�F����6���'2 ��ń6�&6�R6�74��S�'r�B��B"���B�vF6��6�v��WBr�Т��'WGF�����F�cࠢ�W6W"�&��R��v��7Brbb���Ɩ氢�&Vc�"�WF��&Vv�7FW#�&��Sֆ�7B �6�74��S�&&��6�&r�w&F�V�B�F��"g&���&��'��cF��&��'��sFW�B�v��FR&�V�FVB�'���RFW�B�6V�FW"��fW#��6�G�ӓRG&�6�F�����6�G� ��Ć��R6�74��S�'r�r��rׂ�WF��"�"FW�B�v��FR�"���6�74��S�&f��B�&��BFW�B�6�#�B�vF6��&V6��T��7Br������6�74��S�'FW�Bׇ2FW�B�&��'��#�B�#�B�vF6��V&�'�Ɨ7F��rr�������Ɩ���Т��6�FSࠢ�����6��FV�B��Т�F�b6�74��S�&f�W��֖��r�#����fW'f�Wr��Т�7F�fUF"���v�fW'f�Wrrbb���F�b6�74��S�'76Rג�b#�ƃ6�74��S�'FW�B׆�6ӧFW�B�'��f��B�&��BFW�B�w&�ӓ#��B�vF6��vV�6��Rr���W6W"���R�7ƗB�rr��������ࠢ�F�b6�74��S�&w&�Bw&�B�6��2�"�C�w&�B�6��2�Bv�B#������&VâB�vF6��F�F�&�����w2r��f�VS�&�����w2��V�wF���6��&����V��6���#�v&r�&�VR�Sr��6��6���#�wFW�B�&�VR�Sr�����&VâB�vF6��6��f�&�VBr��f�VS�&�����w2�f��FW"�"��"�7FGW2���v6��f�&�VBr���V�wF���6��6�V6�6�&6�S"�6���#�v&r�w&VV��Sr��6��6���#�wFW�B�w&VV��Sr�����&VâB�vF6��6���WFVBr��f�VS�&�����w2�f��FW"�"��"�7FGW2���v6���WFVBr���V�wF���6��G&����6���#�v&r��&W"�Sr��6��6���#�wFW�B��&W"�Sr�����&VâB�vF6��v�6�Ɨ7FVBr��f�VS�W6W"�v�6�Ɨ7C���V�wF�����6���V'B�6���#�v&r�&VB�Sr��6��6���#�wFW�B�&VB�Sr��������7FB������F�b�W�׷7FB��&V��6�74��S׶&�V�FVB׆�6ӧ&�V�FVB�'���26ӧ�RG�7FB�6���'����7FB�6��6�74��S׶r�R��R6ӧr�b6Ӧ��b�"�6Ӧ�"�"G�7FB�6��6���'�����F�b6�74��S�'FW�B׆�6ӧFW�B�'��f��B�&��BFW�B�w&�ӓ#�7FB�f�VW���F�c��F�b6�74��S�'FW�Bճ��6ӧFW�Bׇ2FW�B�w&��cf��B��VF�V�#�7FB��&V����F�c���F�c���Т��F�cࠢ��&V6V�B&�����w2��Т�F�b6�74��S�&&r�v��FR&�V�FVB�'��6�F�r�6&B�b#��F�b6�74��S�&f�W��W7F�g��&WGvVV��FV�2�6V�FW"�"�R#�ƃ"6�74��S�&f��B�&��BFW�B�w&�ӓ#�B�vF6��&V6V�D&�����w2r�����#��'WGF����6Ɩ6�ײ����6WD7F�fUF"�v&�����w2r��6�74��S�'FW�B�6�FW�B�&��'��c��fW#�FW�B�&��'��sf��B��VF�V�f�W��FV�2�6V�FW"v�#��B�vF6��f�Wt��r���'&�u&�v�B6�74��S�'r�2�R��2�R"����'WGF�����F�c�          <p className="text-xs text-gray-500">{formatDate(booking.checkIn)} &ndash; {formatDate(booking.checkOut)}</p>
+              <div className="flex gap-2 min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as TabType)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-primary-600 text-white shadow-sm'
+                        : 'bg-white text-gray-600 border border-gray-200'
+                    }`}
+                  >
+                    <tab.Icon className="w-4 h-4" />
+                    {tab.label}
+                    {'badge' in tab && (tab as { badge?: number }).badge ? (
+                      <span className="bg-white/20 text-xs px-1.5 rounded-full">{(tab as { badge?: number }).badge}</span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop sidebar */}
+            <aside className="hidden lg:block w-64 flex-shrink-0">
+              <div className="bg-white rounded-2xl shadow-card p-4 sticky top-24">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                  <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
+                    <span className="text-primary-600 font-bold text-lg">{user.name.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm truncate">{user.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+
+                <nav className="space-y-1">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as TabType)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        activeTab === tab.id
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <tab.Icon className="w-4 h-4" />
+                      {tab.label}
+                      {'badge' in tab && (tab as { badge?: number }).badge ? (
+                        <span className="ltr:ml-auto rtl:mr-auto bg-primary-100 text-primary-600 text-xs px-2 py-0.5 rounded-full">{(tab as { badge?: number }).badge}</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </nav>
+
+                {user.role !== 'host' && (
+                  <div className="mt-6 p-4 bg-gradient-to-br from-primary-50 to-primary-100/50 rounded-xl">
+                    <Trophy className="w-8 h-8 text-primary-600 mb-2" />
+                    <h4 className="font-semibold text-sm text-gray-900 mb-1">{t('dash.becomeHost')}</h4>
+                    <p className="text-xs text-gray-600 mb-3">{t('dash.earnByListing')}</p>
+                    <Link href="/auth/register?role=host" className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                      {t('dash.becomeHost')} <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                )}
+
+                <button
+                  onClick={logout}
+                  className="w-full mt-4 flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  {t('dash.signOut')}
+                </button>
+              </div>
+            </aside>
+
+            {/* Main content */}
+            <div className="flex-1 min-w-0">
+              {/* Overview tab */}
+              {activeTab === 'overview' && (
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-6">
+                    {t('dash.welcome')} {user.name.split(' ')[0]}
+                  </h1>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+                    {[
+                      { label: t('dash.totalBookings'), value: bookings.length, Icon: CalendarDays, color: 'bg-blue-50 text-blue-600' },
+                      { label: t('dash.confirmed'), value: bookings.filter(b => b.status === 'confirmed').length, Icon: CheckCircle2, color: 'bg-green-50 text-green-600' },
+                      { label: t('dash.completed'), value: bookings.filter(b => b.status === 'completed').length, Icon: BookOpen, color: 'bg-purple-50 text-purple-600' },
+                      { label: t('dash.wishlisted'), value: user.wishlist?.length || 0, Icon: Heart, color: 'bg-rose-50 text-rose-600' },
+                    ].map((stat) => (
+                      <div key={stat.label} className="bg-white rounded-2xl shadow-card p-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${stat.color}`}>
+                          <stat.Icon className="w-5 h-5" />
+                        </div>
+                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Recent bookings */}
+                  <div className="bg-white rounded-2xl shadow-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-semibold text-gray-900">{t('dash.recentBookings')}</h3>
+                      {bookings.length > 0 && (
+                        <button onClick={() => setActiveTab('bookings')} className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+                          {t('dash.viewAll')} <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {dataLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
+                      </div>
+                    ) : bookings.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CalendarDays className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <p className="text-sm text-gray-500 mb-3">{t('dash.noBookings')}</p>
+                        <Link href="/listings" className="text-sm text-primary-600 font-medium hover:text-primary-700">{t('dash.findStay')}</Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookings.slice(0, 5).map((booking) => (
+                          <div key={booking._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{booking.property?.title}</p>
+                              <p className="text-xs text-gray-500">{formatDate(booking.checkIn)} &ndash; {formatDate(booking.checkOut)}</p>
                             </div>
                             <span className={`badge text-xs font-medium flex items-center gap-1 ${statusColors[booking.status]}`}>
                               <StatusIcon status={booking.status} />
@@ -262,7 +390,6 @@ export default function DashboardPage() {
                         </span>
                       </div>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[
                         { label: t('dash.fullName'), value: user.name },
@@ -276,7 +403,6 @@ export default function DashboardPage() {
                         </div>
                       ))}
                     </div>
-
                     <div className="mt-6 flex flex-col sm:flex-row gap-3">
                       <button className="btn-primary flex items-center justify-center gap-2 text-sm sm:text-base">
                         <Settings className="w-4 h-4" />
