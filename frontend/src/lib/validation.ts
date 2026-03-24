@@ -5,7 +5,7 @@ import { z } from 'zod';
  * Ensures all user input is validated before processing.
  */
 
-// ── Auth Schemas ──
+// ââ Auth Schemas ââ
 
 export const registerSchema = z.object({
   name: z.string()
@@ -22,7 +22,7 @@ export const registerSchema = z.object({
     .max(128, 'Password is too long'),
   phone: z.string()
     .max(20, 'Phone number is too long')
-    .regex(/^[+\d\s()-]*$/, 'Invalid phone number format')
+    .regex(/^[+\d\s()\u0660-\u0669-]*$/, 'Invalid phone number format')
     .optional()
     .or(z.literal('')),
   role: z.enum(['guest', 'host'], {
@@ -64,13 +64,13 @@ export const profileUpdateSchema = z.object({
     .optional(),
   phone: z.string()
     .max(20)
-    .regex(/^[+\d\s()-]*$/, 'Invalid phone number format')
+    .regex(/^[+\d\s()\u0660-\u0669-]*$/, 'Invalid phone number format')
     .optional()
     .or(z.literal('')),
   avatar: z.string().url('Invalid avatar URL').optional().or(z.literal('')),
 });
 
-// ── Booking Schemas ──
+// ââ Booking Schemas ââ
 
 export const bookingSchema = z.object({
   propertyId: z.string()
@@ -95,7 +95,7 @@ export const bookingSchema = z.object({
   // All pricing is calculated server-side from property database records
 });
 
-// ── Payment Schemas ──
+// ââ Payment Schemas ââ
 
 export const initiatePaymentSchema = z.object({
   bookingId: z.string()
@@ -112,7 +112,7 @@ export const verifyPaymentSchema = z.object({
     .max(100),
 });
 
-// ── Property Schemas ──
+// ââ Property Schemas ââ
 
 const validPropertyTypes = ['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel'] as const;
 const validAmenities = ['wifi', 'pool', 'parking', 'ac', 'kitchen', 'tv', 'washer', 'dryer', 'heating', 'workspace', 'gym', 'hot_tub', 'bbq', 'garden', 'security', 'elevator', 'balcony', 'sea_view', 'mountain_view', 'playground'] as const;
@@ -160,7 +160,7 @@ export const createPropertySchema = z.object({
   tags: z.array(z.string().max(50)).max(20).optional(),
 });
 
-// ── Review Schemas ──
+// ââ Review Schemas ââ
 
 export const createReviewSchema = z.object({
   propertyId: z.string()
@@ -177,7 +177,7 @@ export const createReviewSchema = z.object({
     .trim(),
 });
 
-// ── Admin Schemas ──
+// ââ Admin Schemas ââ
 
 export const adminUserActionSchema = z.object({
   action: z.enum(['ban', 'unban', 'suspend', 'activate'], {
@@ -198,7 +198,7 @@ export const moderatePropertySchema = z.object({
     }),
 });
 
-// ── Webhook Schema ──
+// ââ Webhook Schema ââ
 
 export const webhookPayloadSchema = z.object({
   id: z.string().optional(),
@@ -209,7 +209,7 @@ export const webhookPayloadSchema = z.object({
   { message: 'Missing payment ID in webhook payload' }
 );
 
-// ── Search/Query Schemas ──
+// ââ Search/Query Schemas ââ
 
 export const propertySearchSchema = z.object({
   city: z.string().max(100).trim().optional(),
