@@ -7,14 +7,14 @@ import { format } from 'date-fns';
 import { useLanguage } from '@/context/LanguageContext';
 
 const CITIES = [
-  { value: 'Riyadh', en: 'Riyadh', ar: 'Ø§ÙØ±ÙØ§Ø¶' },
-  { value: 'Jeddah', en: 'Jeddah', ar: 'Ø¬Ø¯Ø©' },
-  { value: 'Abha', en: 'Abha', ar: 'Ø£Ø¨ÙØ§' },
-  { value: 'Khobar', en: 'Khobar', ar: 'Ø§ÙØ®Ø¨Ø±' },
-  { value: 'Taif', en: 'Taif', ar: 'Ø§ÙØ·Ø§Ø¦Ù' },
-  { value: 'Al Ula', en: 'Al Ula', ar: 'Ø§ÙØ¹ÙØ§' },
-  { value: 'Hail', en: 'Hail', ar: 'Ø­Ø§Ø¦Ù' },
-  { value: 'Mecca', en: 'Mecca', ar: 'ÙÙØ© Ø§ÙÙÙØ±ÙØ©' },
+  { value: 'Riyadh', en: 'Riyadh', ar: 'الرياض' },
+  { value: 'Jeddah', en: 'Jeddah', ar: 'جدة' },
+  { value: 'Abha', en: 'Abha', ar: 'أبها' },
+  { value: 'Khobar', en: 'Khobar', ar: 'الخبر' },
+  { value: 'Taif', en: 'Taif', ar: 'الطائف' },
+  { value: 'Al Ula', en: 'Al Ula', ar: 'العلا' },
+  { value: 'Hail', en: 'Hail', ar: 'حائل' },
+  { value: 'Mecca', en: 'Mecca', ar: 'مكة المكرمة' },
 ];
 
 export default function HeroSearch() {
