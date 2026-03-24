@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   LayoutDashboard,
   Building2,
@@ -27,23 +28,24 @@ interface HostSidebarProps {
   onMobileClose: () => void;
 }
 
-const navItems = [
-  { href: '/host', label: 'Overview', icon: LayoutDashboard },
-  { href: '/host/listings', label: 'Listings', icon: Building2 },
-  { href: '/host/bookings', label: 'Bookings', icon: BookOpen },
-  { href: '/host/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/host/earnings', label: 'Earnings', icon: DollarSign },
-  { href: '/host/reviews', label: 'Reviews', icon: Star },
-  { href: '/host/messages', label: 'Messages', icon: MessageSquare },
-];
-
-const bottomNavItems = [
-  { href: '/host/settings', label: 'Settings', icon: Settings },
-];
-
 export default function HostSidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: HostSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { href: '/host', label: t('host.overview'), icon: LayoutDashboard },
+    { href: '/host/listings', label: t('host.listings'), icon: Building2 },
+    { href: '/host/bookings', label: t('host.bookings'), icon: BookOpen },
+    { href: '/host/calendar', label: t('host.calendar'), icon: CalendarDays },
+    { href: '/host/earnings', label: t('host.earnings'), icon: DollarSign },
+    { href: '/host/reviews', label: t('host.reviews'), icon: Star },
+    { href: '/host/messages', label: t('host.messages'), icon: MessageSquare },
+  ];
+
+  const bottomNavItems = [
+    { href: '/host/settings', label: t('host.settings'), icon: Settings },
+  ];
 
   const isActive = (href: string) => {
     if (href === '/host') return pathname === '/host';
@@ -62,7 +64,7 @@ export default function HostSidebar({ collapsed, onToggle, mobileOpen, onMobileC
             <div>
               <span className="text-lg font-bold text-gray-900">Hostn</span>
               <span className="block text-[10px] font-semibold text-primary-600 uppercase tracking-wider -mt-0.5">
-                Business
+                {t('host.business')}
               </span>
             </div>
           )}
@@ -138,7 +140,7 @@ export default function HostSidebar({ collapsed, onToggle, mobileOpen, onMobileC
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
         >
           <ArrowLeft className="w-[18px] h-[18px] flex-shrink-0" />
-          {!collapsed && <span>Back to site</span>}
+          {!collapsed && <span>{t('host.backToSite')}</span>}
         </Link>
 
         {/* User */}
