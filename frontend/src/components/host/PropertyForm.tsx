@@ -820,16 +820,6 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
                   <p className="text-lg font-bold text-gray-900">{form.maxGuests}</p>
                   <p className="text-[10px] text-gray-500">{isAr ? 'ضيوف' : 'Guests'}</p>
                 </div>
-               )}
-
-            <div className="p-6 space-y-5">
-              {/* Quick summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
-                  <Users className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-900">{form.maxGuests}</p>
-                  <p className="text-[10px] text-gray-500">{isAr ? 'ضيوف' : 'Guests'}</p>
-                </div>
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <BedDouble className="w-4 h-4 text-gray-400 mx-auto mb-1" />
                   <p className="text-lg font-bold text-gray-900">{form.bedrooms}</p>
