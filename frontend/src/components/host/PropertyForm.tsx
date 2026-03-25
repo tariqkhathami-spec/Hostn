@@ -217,7 +217,8 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
       try {
         const fd = new FormData();
         fd.append('file', file);
-        const res = await fetch('/api/upload/image', { method: 'POST', body: fd });
+        const token = typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : null;
+        const res = await fetch('/api/upload/image', { method: 'POST', body: fd, headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
         const data = await res.json();
         if (data.success && data.url) {
           setForm((f) => ({ ...f, images: [...f.images, { url: data.url, caption: '', isPrimary: f.images.length === 0 }] }));
