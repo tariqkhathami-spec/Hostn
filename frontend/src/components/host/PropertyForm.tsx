@@ -34,28 +34,28 @@ import {
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/context/LanguageContext';
 
-// âââ Bilingual helpers ââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Bilingual helpers ──────────────────────────────────────────────
 function getPropTypes(isAr: boolean): { label: string; value: PropertyType; icon: string; desc: string }[] {
   return [
-    { label: isAr ? 'شاليه' : 'Chalet', value: 'chalet', icon: 'ðï¸', desc: isAr ? 'استراحة في الطبيعة' : 'Mountain or nature retreat' },
-    { label: isAr ? 'شقة' : 'Apartment', value: 'apartment', icon: 'ð¢', desc: isAr ? 'شقة في المدينة' : 'City or urban flat' },
-    { label: isAr ? 'فيلا' : 'Villa', value: 'villa', icon: 'ð¡', desc: isAr ? 'منزل خاص واسع' : 'Spacious private home' },
-    { label: isAr ? 'استوديو' : 'Studio', value: 'studio', icon: 'ð ', desc: isAr ? 'وحدة غرفة واحدة' : 'Compact one-room unit' },
-    { label: isAr ? 'مزرعة' : 'Farm', value: 'farm', icon: 'ð¾', desc: isAr ? 'إقامة ريفية' : 'Rural farm stay' },
-    { label: isAr ? 'مخيم' : 'Camp', value: 'camp', icon: 'âº', desc: isAr ? 'تخييم أو تخييم فاخر' : 'Camping or glamping site' },
-    { label: isAr ? 'غرفة فندقية' : 'Hotel Room', value: 'hotel', icon: 'ð¨', desc: isAr ? 'إقامة فندقية' : 'Hotel-style accommodation' },
+    { label: isAr ? 'شاليه' : 'Chalet', value: 'chalet', icon: '🏔️', desc: isAr ? 'استراحة في الطبيعة' : 'Mountain or nature retreat' },
+    { label: isAr ? 'شقة' : 'Apartment', value: 'apartment', icon: '🏢', desc: isAr ? 'شقة في المدينة' : 'City or urban flat' },
+    { label: isAr ? 'فيلا' : 'Villa', value: 'villa', icon: '🏡', desc: isAr ? 'منزل خاص واسع' : 'Spacious private home' },
+    { label: isAr ? 'استوديو' : 'Studio', value: 'studio', icon: '🏠', desc: isAr ? 'وحدة غرفة واحدة' : 'Compact one-room unit' },
+    { label: isAr ? 'مزرعة' : 'Farm', value: 'farm', icon: '🌾', desc: isAr ? 'إقامة ريفية' : 'Rural farm stay' },
+    { label: isAr ? 'مخيم' : 'Camp', value: 'camp', icon: '⛺', desc: isAr ? 'تخييم أو تخييم فاخر' : 'Camping or glamping site' },
+    { label: isAr ? 'غرفة فندقية' : 'Hotel Room', value: 'hotel', icon: '🏨', desc: isAr ? 'إقامة فندقية' : 'Hotel-style accommodation' },
   ];
 }
 
-// âââ Constants ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Constants ──────────────────────────────────────────────────────
 const PROPERTY_TYPES: { label: string; value: PropertyType; icon: string; desc: string }[] = [
-  { label: 'Chalet', value: 'chalet', icon: 'ðï¸', desc: 'Mountain or nature retreat' },
-  { label: 'Apartment', value: 'apartment', icon: 'ð¢', desc: 'City or urban flat' },
-  { label: 'Villa', value: 'villa', icon: 'ð¡', desc: 'Spacious private home' },
-  { label: 'Studio', value: 'studio', icon: 'ð ', desc: 'Compact one-room unit' },
-  { label: 'Farm', value: 'farm', icon: 'ð¾', desc: 'Rural farm stay' },
-  { label: 'Camp', value: 'camp', icon: 'âº', desc: 'Camping or glamping site' },
-  { label: 'Hotel Room', value: 'hotel', icon: 'ð¨', desc: 'Hotel-style accommodation' },
+  { label: 'Chalet', value: 'chalet', icon: '🏔️', desc: 'Mountain or nature retreat' },
+  { label: 'Apartment', value: 'apartment', icon: '🏢', desc: 'City or urban flat' },
+  { label: 'Villa', value: 'villa', icon: '🏡', desc: 'Spacious private home' },
+  { label: 'Studio', value: 'studio', icon: '🏠', desc: 'Compact one-room unit' },
+  { label: 'Farm', value: 'farm', icon: '🌾', desc: 'Rural farm stay' },
+  { label: 'Camp', value: 'camp', icon: '⛺', desc: 'Camping or glamping site' },
+  { label: 'Hotel Room', value: 'hotel', icon: '🏨', desc: 'Hotel-style accommodation' },
 ];
 
 const CITIES_AR: Record<string, string> = {
@@ -88,7 +88,7 @@ const AMENITY_CATEGORIES_AR: Record<string, string> = {
   'Guest Policies': 'سياسات الضيوف',
 };
 
-// âââ Step definitions âââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Step definitions ───────────────────────────────────────────────
 function getSteps(isAr: boolean) {
   return [
     { num: 1, label: isAr ? 'نوع العقار' : 'Property Type', desc: isAr ? 'ما نوع العقار؟' : 'What kind of property?', icon: Building2 },
@@ -105,8 +105,7 @@ function getSteps(isAr: boolean) {
 const STEPS = [
   { num: 1, label: 'Property Type', desc: 'What kind of property?', icon: Building2 },
   { num: 2, label: 'Location', desc: 'Where is it?', icon: MapPin },
-  { num: 3, label: 'Details', desc: 'Rooms & capacity', icon: Users },
-  { num: 4, label: 'Pricing', desc: 'Set your rates', icon: DollarSign },
+  { num: 3, label: 'Details', desc: 'Rooms & capacity', icon: Users },   { num: 4, label: 'Pricing', desc: 'Set your rates', icon: DollarSign },
   { num: 5, label: 'Amenities', desc: 'What you offer', icon: Sparkles },
   { num: 6, label: 'Images', desc: 'Show it off', icon: ImagePlus },
   { num: 7, label: 'Rules', desc: 'House rules', icon: Shield },
@@ -234,7 +233,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // âââ Validation per step ââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Validation per step ──────────────────────────────────────────
   const validateStep = (step: number): boolean => {
     const errs: Record<string, string> = {};
     switch (step) {
@@ -274,7 +273,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
     }
   };
 
-  // âââ Submit âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Submit ───────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.city || form.perNight <= 0) {
       toast.error('Please complete all required fields');
@@ -324,7 +323,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
     }
   };
 
-  // âââ Number stepper helper ââââââââââââââââââââââââââââââââââââââââ
+  // ─── Number stepper helper ────────────────────────────────────────
   const NumberStepper = ({ label, value, min, max, field, icon: Icon }: { label: string; value: number; min: number; max: number; field: string; icon?: React.ElementType }) => (
     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
       <div className="flex items-center gap-3">
@@ -353,7 +352,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
     </div>
   );
 
-  // âââ Toggle helper ââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Toggle helper ────────────────────────────────────────────────
   const ToggleSwitch = ({ label, field, desc }: { label: string; field: string; desc?: string }) => (
     <label className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
       <div>
@@ -372,7 +371,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
     </label>
   );
 
-  // âââ Completion percentage ââââââââââââââââââââââââââââââââââââââââ
+  // ─── Completion percentage ────────────────────────────────────────
   const completionPct = Math.round(((currentStep - 1) / (steps.length - 1)) * 100);
 
   return (
@@ -423,7 +422,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
         })}
       </div>
 
-      {/* âââ STEP 1: Property Type âââ */}
+      {/* ═══ STEP 1: Property Type ═══ */}
       {currentStep === 1 && (
         <div className="space-y-6">
           <div>
@@ -479,7 +478,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
         </div>
       )}
 
-      {/* âââ STEP 2: Location âââ */}
+      {/* ═══ STEP 2: Location ═══ */}
       {currentStep === 2 && (
         <div className="space-y-6">
           <div>
@@ -528,7 +527,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
         </div>
       )}
 
-      {/* âââ STEP 3: Details âââ */}
+      {/* ═══ STEP 3: Details ═══ */}
       {currentStep === 3 && (
         <div className="space-y-6">
           <div>
@@ -546,7 +545,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
         </div>
       )}
 
-      {/* âââ STEP 4: Pricing âââ */}
+      {/* ═══ STEP 4: Pricing ═══ */}
       {currentStep === 4 && (
         <div className="space-y-6">
           <div>
@@ -654,7 +653,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
         </div>
       )}
 
-      {/* âââ STEP 5: Amenities âââ */}
+      {/* ═══ STEP 5: Amenities ═══ */}
       {currentStep === 5 && (
         <div className="space-y-6">
           <div>
@@ -693,7 +692,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
         </div>
       )}
 
-      {/* âââ STEP 6: Images âââ */}
+      {/* ═══ STEP 6: Images ═══ */}
       {currentStep === 6 && (
         <div className="space-y-6">
           <div>
@@ -773,255 +772,4 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
                       className="absolute top-3 right-3 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
                     >
                       <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-
-                {/* Other photos grid */}
-                {form.images.filter(img => !img.isPrimary).length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {form.images.map((img, i) => {
-                      if (img.isPrimary) return null;
-                      return (
-                        <div key={i} className="relative group rounded-xl overflow-hidden border border-gray-200">
-                          <div className="aspect-square relative">
-                            <img src={img.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                            <button
-                              onClick={() => setPrimaryImage(i)}
-                              className="bg-white text-gray-700 text-xs font-medium px-2 py-1.5 rounded-lg hover:bg-gray-100"
-                            >
-                              {isAr ? 'تعيين كغلاف' : 'Set as cover'}
-                            </button>
-                            <button
-                              onClick={() => removeImage(i)}
-                              className="bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
-                <ImagePlus className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 font-medium">{isAr ? 'لا توجد صور بعد' : 'No photos yet'}</p>
-                <p className="text-xs text-gray-400 mt-1">{isAr ? 'الصق رابطاً أعلاه لإضافة أول صورة' : 'Paste a URL above to add your first photo'}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* âââ STEP 7: Rules âââ */}
-      {currentStep === 7 && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">{isAr ? 'حدد قواعد المنزل' : 'Set your house rules'}</h2>
-            <p className="text-sm text-gray-500">{isAr ? 'أخبر الضيوف بما يتوقعونه.' : 'Let guests know what to expect.'}</p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{isAr ? 'تسجيل الدخول' : 'Check-in'}</label>
-                <input type="time" value={form.checkInTime} onChange={(e) => update('checkInTime', e.target.value)} className="input-base" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{isAr ? 'تسجيل الخروج' : 'Check-out'}</label>
-                <input type="time" value={form.checkOutTime} onChange={(e) => update('checkOutTime', e.target.value)} className="input-base" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{isAr ? 'الحد الأدنى للّيالي' : 'Min Nights'}</label>
-                <input type="number" min="1" value={form.minNights} onChange={(e) => update('minNights', parseInt(e.target.value) || 1)} className="input-base" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{isAr ? 'الحد الأقصى للّيالي' : 'Max Nights'}</label>
-                <input type="number" min="1" value={form.maxNights} onChange={(e) => update('maxNights', parseInt(e.target.value) || 30)} className="input-base" />
-              </div>
-            </div>
-
-            <hr className="border-gray-100" />
-
-            <div className="space-y-2">
-              <ToggleSwitch label={isAr ? 'التدخين مسموح' : 'Smoking allowed'} field="smokingAllowed" desc={isAr ? 'يمكن للضيوف التدخين في العقار' : 'Guests may smoke on the property'} />
-              <ToggleSwitch label={isAr ? 'الحيوانات الأليفة مسموحة' : 'Pets allowed'} field="petsAllowed" desc={isAr ? 'يمكن للضيوف إحضار حيواناتهم' : 'Guests may bring pets'} />
-              <ToggleSwitch label={isAr ? 'الحفلات والمناسبات' : 'Parties & events'} field="partiesAllowed" desc={isAr ? 'الحفلات أو التجمعات الكبيرة مسموحة' : 'Parties or large gatherings are permitted'} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* âââ STEP 8: Review âââ */}
-      {currentStep === 8 && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">{isAr ? 'راجع إعلانك' : 'Review your listing'}</h2>
-            <p className="text-sm text-gray-500">{isAr ? 'تأكد من أن كل شيء يبدو جيداً قبل النشر.' : 'Make sure everything looks good before publishing.'}</p>
-          </div>
-
-          {/* Preview card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {form.images.length > 0 && (
-              <div className="relative h-56 sm:h-72">
-                <img
-                  src={form.images.find(i => i.isPrimary)?.url || form.images[0]?.url}
-                  alt={form.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <div className="absolute bottom-4 left-5 right-5 text-white">
-                  <span className="text-xs font-semibold bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                    {PROPERTY_TYPES.find(t => t.value === form.type)?.label || form.type}
-                  </span>
-                  <h3 className="text-xl font-bold mt-2">{form.title || (isAr ? 'عقار بدون عنوان' : 'Untitled Property')}</h3>
-                  <p className="text-sm opacity-80 flex items-center gap-1 mt-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {form.district && `${form.district}, `}{form.city ? (isAr ? (CITIES_AR[form.city] || form.city) : form.city) : (isAr ? 'لم يتم اختيار مدينة' : 'No city selected')}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="p-6 space-y-5">
-              {/* Quick summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
-                  <Users className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-900">{form.maxGuests}</p>
-                  <p className="text-[10px] text-gray-500">{isAr ? 'ضيوف' : 'Guests'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
-                  <BedDouble className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-900">{form.bedrooms}</p>
-                  <p className="text-[10px] text-gray-500">{isAr ? 'غرف نوم' : 'Bedrooms'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-3 text-center">
-                  <Bath className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-gray-900">{form.bathrooms}</p>
-                  <p className="text-[10px] text-gray-500">{isAr ? 'حمامات' : 'Bathrooms'}</p>
-                </div>
-                <div className="bg-primary-50 rounded-xl p-3 text-center">
-                  <DollarSign className="w-4 h-4 text-primary-400 mx-auto mb-1" />
-                  <p className="text-lg font-bold text-primary-700">{formatPrice(form.perNight)}</p>
-                  <p className="text-[10px] text-primary-500">{isAr ? '/ ليلة' : '/ night'}</p>
-                </div>
-              </div>
-
-              {form.description && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-1">{isAr ? 'الوصف' : 'Description'}</h4>
-                  <p className="text-sm text-gray-600 leading-relaxed line-clamp-4">{form.description}</p>
-                </div>
-              )}
-
-              {form.amenities.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2">{isAr ? `المرافق (${form.amenities.length})` : `Amenities (${form.amenities.length})`}</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {form.amenities.map((a) => (
-                      <span key={a} className="text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-lg">
-                        {getAmenityIcon(a)} {getAmenityLabel(a)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-2">{isAr ? 'قواعد المنزل' : 'House Rules'}</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-600">
-                  <span className="bg-gray-50 px-3 py-2 rounded-lg">{isAr ? 'الدخول:' : 'Check-in:'} {form.checkInTime}</span>
-                  <span className="bg-gray-50 px-3 py-2 rounded-lg">{isAr ? 'الخروج:' : 'Check-out:'} {form.checkOutTime}</span>
-                  <span className="bg-gray-50 px-3 py-2 rounded-lg">{isAr ? `أدنى ${form.minNights} ليلة` : `Min ${form.minNights} night${form.minNights !== 1 ? 's' : ''}`}</span>
-                  <span className="bg-gray-50 px-3 py-2 rounded-lg">{isAr ? `أقصى ${form.maxNights} ليلة` : `Max ${form.maxNights} nights`}</span>
-                </div>
-                <div className="flex gap-2 mt-2 text-xs">
-                  {form.smokingAllowed && <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-lg">{isAr ? 'التدخين مسموح' : 'Smoking OK'}</span>}
-                  {form.petsAllowed && <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-lg">{isAr ? 'حيوانات مسموحة' : 'Pets OK'}</span>}
-                  {form.partiesAllowed && <span className="bg-green-50 text-green-700 px-2.5 py-1 rounded-lg">{isAr ? 'حفلات مسموحة' : 'Parties OK'}</span>}
-                  {!form.smokingAllowed && <span className="bg-red-50 text-red-600 px-2.5 py-1 rounded-lg">{isAr ? 'ممنوع التدخين' : 'No smoking'}</span>}
-                  {!form.petsAllowed && <span className="bg-red-50 text-red-600 px-2.5 py-1 rounded-lg">{isAr ? 'ممنوع الحيوانات' : 'No pets'}</span>}
-                  {!form.partiesAllowed && <span className="bg-red-50 text-red-600 px-2.5 py-1 rounded-lg">{isAr ? 'ممنوع الحفلات' : 'No parties'}</span>}
-                </div>
-              </div>
-
-              {/* Images preview row */}
-              {form.images.length > 1 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2">{isAr ? `الصور (${form.images.length})` : `Photos (${form.images.length})`}</h4>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {form.images.map((img, i) => (
-                      <div key={i} className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
-                        <img src={img.url} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Checklist */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h4 className="text-sm font-bold text-gray-900 mb-3">{isAr ? 'قائمة التحقق قبل النشر' : 'Pre-publish checklist'}</h4>
-            <div className="space-y-2">
-              {[
-                { ok: !!form.title, label: isAr ? 'تمت إضافة عنوان العقار' : 'Property title added' },
-                { ok: !!form.type, label: isAr ? 'تم اختيار نوع العقار' : 'Property type selected' },
-                { ok: !!form.city, label: isAr ? 'تم تحديد الموقع' : 'Location set' },
-                { ok: form.perNight > 0, label: isAr ? 'تم تحديد السعر' : 'Pricing configured' },
-                { ok: form.images.length > 0, label: isAr ? 'صورة واحدة على الأقل' : 'At least 1 photo' },
-                { ok: form.amenities.length > 0, label: isAr ? 'تم اختيار المرافق' : 'Amenities selected' },
-                { ok: !!form.description, label: isAr ? 'تمت كتابة الوصف' : 'Description written' },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-2">
-                  <div className={cn(
-                    'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0',
-                    item.ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                  )}>
-                    {item.ok ? <Check className="w-3 h-3" /> : <span className="w-1.5 h-1.5 bg-gray-300 rounded-full" />}
-                  </div>
-                  <span className={cn('text-sm', item.ok ? 'text-gray-700' : 'text-gray-400')}>{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* âââ Navigation ââââââââââââââââââââââââââââââââââââââââââââââââ */}
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-        <button
-          onClick={prevStep}
-          disabled={currentStep === 1}
-          className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" /> {isAr ? 'السابق' : 'Previous'}
-        </button>
-
-        <div className="flex gap-3">
-          {currentStep < steps.length ? (
-            <Button onClick={nextStep} rightIcon={<ChevronRight className="w-4 h-4" />}>
-              {isAr ? 'التالي' : 'Continue'}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
-              isLoading={saving}
-              leftIcon={<Save className="w-4 h-4" />}
-              size="lg"
-            >
-              {isEditing ? (isAr ? 'تحديث العقار' : 'Update Property') : (isAr ? 'نشر العقار' : 'Publish Listing')}
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+  
