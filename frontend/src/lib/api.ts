@@ -84,7 +84,7 @@ export const hostApi = {
   getRecentBookings: (limit?: number) =>
     api.get('/host/recent-bookings', { params: { limit } }),
   getNotifications: () => api.get('/host/notifications'),
-  getEarnings: (Year?: number) =>
+  getEarnings: (year?: number) =>
     api.get('/host/earnings', { params: { year } }),
   getCalendar: (propertyId: string, startDate?: string, endDate?: string) =>
     api.get(`/host/calendar/${propertyId}`, { params: { startDate, endDate } }),
