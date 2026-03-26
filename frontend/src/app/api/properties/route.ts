@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
-import Property from 'A/lib/models/Property';
+import Property from '@/lib/models/Property';
 import User from '@/lib/models/User';
 import ActivityLog from '@/lib/models/ActivityLog';
 import { extractToken, verifyToken } from '@/lib/auth-helpers';
-import { escapeRegex, sanitizeText } from 'A/lib/sanitize';
+import { escapeRegex, sanitizeText } from '@/lib/sanitize';
 import { createPropertySchema } from '@/lib/validation';
 
 /**
@@ -132,7 +132,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Only hosts can create properties' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+
+    // Normalize: accept both nested format (old frontend) and flat format (new frontend)
+    const body = {
+      ...rawBody,
+      // Flatten nested location object if present
+      ...(rawBody.location && {
+        city: rawBody.city || rawBody.location.city,
+        district: rawBody.district || rawBody.location.district,
+        address: rawBody.address || rawBody.location.address,
+      }),
+      // Flatten nested pricing object if present
+      ...(rawBody.pricing && {
+        perNight: rawBody.perNight ?? rawBody.pricing.perNight,
+        cleaningFee: rawBody.cleaningFee ?? rawBody.pricing.cleaningFee,
+        discountPercent: rawBody.discountPercent ?? rawBody.pricing.discountPercent,
+        weeklyDiscount: rawBody.weeklyDiscount ?? rawBody.pricing.weeklyDiscount,
+      }),
+      // Flatten nested capacity object if present
+      ...(rawBody.capacity && {
+        maxGuests: rawBody.maxGuests ?? rawBody.capacity.maxGuests,
+        bedrooms: rawBody.bedrooms ?? rawBody.capacity.bedrooms,
+        bathrooms: rawBody.bathrooms ?? rawBody.capacity.bathrooms,
+        beds: rawBody.beds ?? rawBody.capacity.beds,
+      }),
+    };
+    // Remove nested objects so Zod doesn't complain about extra keys
+    delete body.location;
+    delete body.pricing;
+    delete body.capacity;
 
     // Validate input with Zod
     const parsed = createPropertySchema.safeParse(body);
