@@ -85,6 +85,10 @@ export const authApi = {
   toggleWishlist: (propertyId: string) =>
     api.post(`/auth/wishlist/${propertyId}`),
   upgradeToHost: () => api.put('/auth/upgrade-to-host'),
+  forgotPassword: (data: { email: string }) =>
+    api.post('/auth/forgot-password', data),
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post('/auth/reset-password', data),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -143,8 +147,8 @@ export const hostApi = {
 // REVIEWS
 // ═══════════════════════════════════════════════════════════════════════════════
 export const reviewsApi = {
-  getPropertyReviews: (propertyId: string) =>
-    api.get(`/reviews/property/${propertyId}`),
+  getPropertyReviews: (propertyId: string, params?: Record<string, unknown>) =>
+    api.get(`/reviews/property/${propertyId}`, { params }),
   create: (data: Record<string, unknown>) => api.post('/reviews', data),
   update: (id: string, data: Record<string, unknown>) => api.put(`/reviews/${id}`, data),
   delete: (id: string) => api.delete(`/reviews/${id}`),

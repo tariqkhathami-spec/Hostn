@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -20,6 +20,14 @@ interface Property {
 }
 
 export default function ListingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary-600" /></div>}>
+      <ListingsContent />
+    </Suspense>
+  );
+}
+
+function ListingsContent() {
   const searchParams = useSearchParams();
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';

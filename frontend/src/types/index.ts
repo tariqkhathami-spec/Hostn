@@ -211,6 +211,97 @@ export interface ApiResponse<T> {
   user?: User;
 }
 
+// ─── Report & Support Types ──────────────────────────────────────────────────
+
+export type ReportTargetType = 'property' | 'user' | 'review';
+export type ReportReason = 'inappropriate_content' | 'spam' | 'harassment' | 'fraud' | 'safety_concern' | 'misleading_listing' | 'discrimination' | 'property_damage' | 'noise_violation' | 'cancellation_abuse' | 'policy_violation' | 'other';
+export type ReportAction = 'none' | 'warning' | 'suspension' | 'listing_removed' | 'account_banned';
+
+export interface Report {
+  _id: string;
+  reporter: User | string;
+  targetType: 'property' | 'user' | 'review';
+  targetId: string;
+  reason: string;
+  description: string;
+  relatedBooking?: string;
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  adminNotes?: string;
+  actionTaken?: ReportAction;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TicketCategory = 'payment' | 'booking' | 'complaint' | 'technical' | 'account' | 'other';
+export type TicketPriority = 'low' | 'medium' | 'high';
+
+export interface TicketMessage {
+  _id: string;
+  sender: User | string;
+  senderRole: 'user' | 'admin';
+  content: string;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  _id: string;
+  user: User | string;
+  subject: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  messages: TicketMessage[];
+  assignedTo?: string;
+  relatedBooking?: string;
+  relatedProperty?: string;
+  resolvedAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Messaging Types ─────────────────────────────────────────────────────────
+
+export interface Message {
+  _id: string;
+  conversation: string;
+  sender: User | string;
+  content: string;
+  messageType: 'text' | 'system' | 'booking_update';
+  readBy: { user: string; readAt: string }[];
+  isDeleted: boolean;
+  metadata?: { bookingId?: string; propertyId?: string };
+  createdAt: string;
+}
+
+export interface Conversation {
+  _id: string;
+  participants: User[];
+  booking?: string;
+  property?: Property | string;
+  lastMessage: { content: string; sender: string; timestamp: string };
+  unreadCount: Record<string, number>;
+  isBlocked: boolean;
+  blockedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Notification Types ──────────────────────────────────────────────────────
+
+export interface Notification {
+  _id: string;
+  user: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  data?: Record<string, unknown>;
+  createdAt: string;
+}
+
 // ─── Host Dashboard Types ─────────────────────────────────────────────────────
 
 export interface HostDashboardStats {

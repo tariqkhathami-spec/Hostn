@@ -13,9 +13,11 @@ const reasonLabels: Record<ReportReason, string> = {
   misleading_listing: 'Misleading Listing',
   safety_concern: 'Safety Concern',
   discrimination: 'Discrimination',
+  spam: 'Spam',
   property_damage: 'Property Damage',
   noise_violation: 'Noise Violation',
   cancellation_abuse: 'Cancellation Abuse',
+  policy_violation: 'Policy Violation',
   other: 'Other',
 };
 
