@@ -16,7 +16,7 @@
 
 Hostn is a curated vacation rental marketplace built for the Saudi and MENA market. The platform connects travelers with premium chalets, villas, apartments, farms, studios, and desert camps across Saudi Arabia — with a focus on trust, quality, and a seamless booking experience.
 
-The system is fully operational with role-based access for three user types (Guest, Host, Admin), a complete booking pipeline, a property moderation workflow, and an admin operations center that provides real-time platform control.
+The system is fully operational with role-based access for three user types (Guest, Host, Admin), a complete booking-to-payment pipeline, property moderation workflow, real-time notification system, and an admin operations center with full platform control.
 
 **Live:** [hostn.co](https://hostn.co)
 
@@ -26,66 +26,88 @@ The system is fully operational with role-based access for three user types (Gue
 
 ### Marketplace
 
-- **Property Search & Discovery** — Filter by city, property type, dates, guest count, and price range. Full-text search across 6 Saudi cities (Riyadh, Jeddah, Abha, Khobar, Taif, Al Ula) and 6 property types.
+- **Property Search & Discovery** — Filter by city, property type, dates, guest count, and price range. Full-text search across 6 Saudi cities (Riyadh, Jeddah, Abha, Khobar, Taif, Al Ula) and 7 property types.
 - **Property Detail Pages** — Image galleries, amenity lists, house rules, location info, and guest reviews with category-level ratings (Cleanliness, Accuracy, Communication, Location, Value).
-- **Booking Flow** — End-to-end booking with per-night pricing, cleaning fees, service fees, discount calculation, and availability validation. Blocked dates are enforced.
+- **Booking Flow** — End-to-end booking with per-night pricing, cleaning fees, service fees, discount calculation, and availability validation. Blocked dates and capacity limits enforced.
+- **Payment System** — Moyasar payment gateway integration (Saudi-focused). Supports credit/debit cards (Visa, Mastercard, mada), Apple Pay, and STC Pay. Payments verified server-side before booking confirmation.
 - **Reviews & Ratings** — Guests leave detailed reviews. Hosts can respond. Ratings are aggregated per-property and displayed publicly.
 - **Wishlist** — Guests save properties to a personal wishlist, persisted across sessions.
+
+### Payment System
+
+- **Moyasar Gateway** — Saudi Arabia's leading payment gateway, supporting mada (local debit), Visa, Mastercard, Apple Pay, and STC Pay.
+- **Server-Side Verification** — Payments are verified via Moyasar's API before booking confirmation. Amount and currency validation prevents manipulation.
+- **Payment Lifecycle** — Initiate → Process → Verify → Complete/Fail. Failed payments can be retried. Completed payments can be refunded by admins.
+- **Webhook Support** — Real-time payment status updates from Moyasar via webhook endpoint.
+- **Mobile-Ready** — Backend API endpoints designed for iOS app integration. Payment initiation returns Moyasar publishable key and callback URL for in-app payment forms.
+
+### Notification System
+
+- **Real-Time Notifications** — Triggered on booking created, confirmed, rejected, cancelled, completed; payment success/failure; review received; listing approved/rejected.
+- **APNs-Ready Structure** — Notification model includes push notification fields (device token, platform, send status) ready for Apple Push Notification service integration.
+- **Unread Tracking** — Badge count API for mobile apps. Mark individual or all notifications as read.
+- **Device Token Registration** — API endpoint for iOS/Android apps to register push notification tokens.
 
 ### Authentication & Authorization
 
 - **Three-Tier Role System** — Guest, Host, and Admin roles with distinct permissions enforced at middleware, API, and UI levels.
-- **JWT Authentication** — Token-based auth with automatic 401 handling. Tokens are attached to all API requests via Axios interceptors.
-- **Route Protection** — Server-side middleware validates tokens and redirects unauthorized users. Guests cannot access Host or Admin routes. Non-admins cannot access the admin panel.
+- **JWT Authentication** — Token-based auth with 7-day expiry. Tokens attached to all API requests via interceptors.
+- **Route Protection** — Server-side middleware validates tokens and role-based authorization. Suspended users blocked from login.
 
 ### Host Dashboard
 
 - **Overview** — Earnings, active listings, booking stats, occupancy rate, and notifications.
-- **Listings Management** — Add, edit, activate/deactivate properties with photo uploads via Cloudinary. Grid and table views with search and filtering.
+- **Listings Management** — Add, edit, activate/deactivate properties. Grid and table views with search and filtering.
 - **Booking Management** — View incoming bookings. Accept or reject pending reservations.
 - **Calendar** — Per-property availability calendar with date blocking/unblocking.
-- **Earnings** — Monthly revenue breakdown, top properties by revenue, payout history.
+- **Earnings** — Monthly revenue breakdown, top properties by revenue.
 - **Reviews** — View and respond to guest reviews. Rating distribution and category breakdowns.
 - **Settings** — Profile management, notification preferences, security settings.
-- **Language Toggle** — Full Arabic/English switching in sidebar and top navigation, shared with the guest-facing language context.
 
 ### Admin Operations Center
 
-- **Dashboard** — Real-time platform metrics: total users (17), properties (24), bookings (8), revenue (SAR 53,296), reviews (40). Booking status breakdown and property type distribution. Moderation queue alerts for items requiring attention.
-- **Property Moderation** — Approve or reject listings. Rejected properties are immediately hidden from all public-facing APIs. New host-submitted properties enter a "pending" state and require admin approval before going live.
-- **User Management** — View all users with role badges, booking counts, and total spend. Ban/unban users — banned users are blocked from logging in and creating bookings.
-- **Host Management** — Suspend/activate host accounts. Suspended hosts' properties are hidden from public listings and the host is blocked from login.
-- **Booking Oversight** — View all bookings with guest, property, and payment details. Cancel bookings — cancellation updates booking status and payment status in real-time.
-- **Payment Records** — Platform-wide revenue tracking, payment status overview, and financial summaries.
-- **Activity Logs** — Every admin action is permanently recorded with timestamp, performer, target, and description. Supports filtering by action type. Actions logged: property approvals/rejections, user bans/unbans, host suspensions/activations, booking cancellations.
+- **Dashboard** — Real-time platform metrics: users, properties, bookings, revenue, reviews. Monthly revenue chart. Moderation queue alerts.
+- **Property Moderation** — Approve or reject listings with reasons. Rejected properties hidden from public. Hosts notified of moderation decisions.
+- **User Management** — View all users with role badges. Suspend/activate, change roles, verify accounts.
+- **Host Management** — Full host profiles with property count, earnings, and booking history. Suspend/activate.
+- **Booking Oversight** — View all bookings with guest, property, and payment details. Cancel bookings with status updates.
+- **Payment Management** — Platform-wide payment records with filtering. Process refunds through Moyasar.
+- **Activity Logs** — Every action logged with timestamp, actor, target, and description. Filter by action type.
 
 ### UI & Localization
 
-- **Responsive Design** — Mobile-first layout using Tailwind CSS. Sidebar navigation collapses on mobile.
+- **Responsive Design** — Mobile-first layout using Tailwind CSS. Sidebar collapses on mobile.
 - **Arabic & English** — Bilingual interface with RTL support and language toggle. Arabic is the primary language for the Saudi market.
+
+### Native iOS Apps (SwiftUI)
+
+- **Hostn Guest App** — Property browsing, search, booking, payment, trip management, reviews, wishlist, and profile.
+- **Hostn Host App** — Dashboard with stats, listings management, booking accept/reject, earnings tracking, and settings.
+- **Shared Architecture** — Common models, services, and utilities shared between both apps. Actor-based async API client with JWT auth.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    Frontend                          │
-│          Next.js 14 (App Router) + TypeScript        │
-│              Tailwind CSS + Axios                    │
-├─────────────────────────────────────────────────────┤
-│                   API Layer                          │
-│         Next.js API Routes (/app/api/)               │
-│     In-Memory Seed Data (24 properties, 17 users)    │
-├─────────────────────────────────────────────────────┤
-│               Auth & Middleware                       │
-│        JWT Tokens + Next.js Middleware                │
-│     Role-based route protection (Guest/Host/Admin)   │
-├─────────────────────────────────────────────────────┤
-│               Backend (Express)                      │
-│          Node.js + Express + MongoDB                 │
-│         Mongoose ODM + bcrypt + JWT                  │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                     Clients                              │
+│  Web (Next.js)  │  iOS Guest (SwiftUI)  │  iOS Host     │
+├─────────────────────────────────────────────────────────┤
+│                    API Layer                              │
+│  Next.js API Routes ──┐    Express REST API ──┐          │
+│  (Web frontend)       │    (Mobile + backend)  │          │
+├───────────────────────┴────────────────────────┤         │
+│              Shared MongoDB Atlas                         │
+│         (Users, Properties, Bookings,                     │
+│          Payments, Notifications, Reviews,                │
+│          ActivityLogs)                                    │
+├─────────────────────────────────────────────────────────┤
+│              External Services                            │
+│  Moyasar (Payments)  │  Cloudinary (Images)              │
+│  APNs (Push Notifs)  │  Vercel (Frontend)                │
+│  Railway (Backend)                                       │
+└─────────────────────────────────────────────────────────┘
 ```
 
 | Layer      | Technology                         |
@@ -94,13 +116,13 @@ The system is fully operational with role-based access for three user types (Gue
 | Styling    | Tailwind CSS                       |
 | State      | React Context API (AuthContext, LanguageContext) |
 | HTTP       | Axios with interceptors            |
-| API Routes | Next.js API Routes (in-memory seed data) |
-| Backend    | Node.js + Express (MongoDB mode)   |
-| Database   | MongoDB + Mongoose                 |
-| Auth       | JWT (base64 dev tokens / jsonwebtoken production) |
-| Deployment | Vercel (frontend + API routes)     |
-
-> **Current deployment mode:** The live site at hostn.co runs on Next.js API routes with in-memory seed data. The Express + MongoDB backend is available for production use with a persistent database.
+| Backend    | Node.js + Express                  |
+| Database   | MongoDB Atlas + Mongoose           |
+| Auth       | JWT (jsonwebtoken, bcryptjs)        |
+| Payments   | Moyasar (Saudi gateway — mada, Visa, MC, Apple Pay, STC Pay) |
+| Images     | Cloudinary                         |
+| iOS Apps   | SwiftUI (iOS 17+), MVVM pattern    |
+| Deployment | Vercel (frontend), Railway (backend) |
 
 ---
 
@@ -108,77 +130,77 @@ The system is fully operational with role-based access for three user types (Gue
 
 ### Guest
 
-- Browse and search properties across 6 cities
+- Browse and search properties across Saudi cities
 - View property details, photos, amenities, and reviews
 - Book properties with full pricing breakdown
+- Pay via Moyasar (credit/debit, mada, Apple Pay, STC Pay)
 - Manage bookings from a personal dashboard
 - Save properties to a wishlist
 - Leave reviews after completed stays
+- Receive notifications on booking and payment updates
 
 ### Host
 
-- Submit new property listings (enter moderation queue as "pending")
+- Submit new property listings (enter moderation queue)
 - Manage existing listings (activate, deactivate, edit)
 - View and respond to incoming bookings (accept/reject)
 - Track earnings with monthly breakdowns
 - Manage availability calendar with date blocking
 - Respond to guest reviews
-- Configure notification and account settings
+- Receive notifications on new bookings, payments, and reviews
+- Configure account and notification settings
 
 ### Admin
 
 - View platform-wide statistics and health metrics
 - Moderate property listings (approve/reject with reasons)
-- Ban/unban user accounts (blocks login and booking creation)
-- Suspend/activate host accounts (hides all host properties)
-- Cancel bookings with status and payment updates
-- Monitor platform payments and revenue
-- Review complete activity log of all admin actions
+- Suspend/activate user and host accounts
+- Monitor and cancel bookings with status updates
+- Process payment refunds via Moyasar
+- View complete activity log of all admin actions
+- Manage platform-wide payment records
 
 **Enforcement summary:**
 
 | Rule | Where Enforced |
 |------|----------------|
-| Only approved properties appear publicly | `GET /api/properties` and `GET /api/properties/[id]` |
-| Banned users cannot login | `POST /api/auth/login` returns 403 |
-| Banned users cannot book | `POST /api/bookings` returns 403 |
-| Suspended hosts' properties are hidden | `GET /api/properties` filters by host status |
-| Guests cannot access /host routes | Next.js middleware redirects to /dashboard |
-| Non-admins cannot access /admin | Admin layout + API `requireAdmin()` guard |
-| All admin actions are logged | `addActivityLog()` called on every mutation |
+| Only approved properties appear publicly | Property query filters |
+| Suspended users cannot login | Auth middleware checks `isSuspended` |
+| Booking requires valid payment | Payment verification before confirmation |
+| Guests cannot access /host routes | Middleware + role authorization |
+| Non-admins cannot access /admin | `authorize('admin')` middleware |
+| All admin actions are logged | ActivityLog created on every mutation |
+| Notifications sent on state changes | Notification.createNotification() triggers |
 
 ---
 
-## Admin System
-
-The admin system is the operational backbone of Hostn. It is not a cosmetic dashboard — every action connects to real data and produces real consequences across the platform.
-
-### Moderation Workflow
+## Payment Flow
 
 ```
-Host submits property → Status: PENDING
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               │               ▼
-         APPROVED             │           REJECTED
-    (visible to public)       │     (hidden from all APIs)
-              │               │               │
-              ▼               │               ▼
-    Bookable by guests        │    Reason stored in record
-                              │    Host can resubmit
+Guest selects dates → Creates booking (status: pending, payment: unpaid)
+                           │
+                    POST /api/payments/initiate
+                           │
+                    Returns Moyasar config + publishable key
+                           │
+                    Moyasar payment form (credit card / mada / Apple Pay)
+                           │
+                    Moyasar processes payment
+                           │
+              ┌────────────┼────────────┐
+              ▼                         ▼
+        Payment Success           Payment Failed
+              │                         │
+   POST /api/payments/verify    Payment status: failed
+              │                  Guest can retry
+   Server verifies with Moyasar API
+              │
+   Amount + Currency validated
+              │
+   Booking confirmed + Payment marked paid
+              │
+   Notifications sent to guest + host
 ```
-
-### Module Summary
-
-| Module | Endpoint | Records |
-|--------|----------|---------|
-| Dashboard | `GET /api/admin/stats` | Aggregated metrics + moderation queue |
-| Properties | `GET/POST /api/admin/properties` | 24 properties with moderation status |
-| Users | `GET/PATCH /api/admin/users/[id]` | 17 users with ban/suspend actions |
-| Hosts | `GET/PATCH /api/admin/hosts/[id]` | 5 hosts with suspend/activate |
-| Bookings | `GET/PATCH /api/admin/bookings/[id]` | 8 bookings with cancel action |
-| Payments | `GET /api/admin/payments` | Revenue totals and payment records |
-| Activity Logs | `GET /api/admin/logs` | All admin actions with timestamps |
 
 ---
 
@@ -193,50 +215,158 @@ hostn/
 │   │   │   │   ├── admin/           # Admin endpoints (stats, properties, users, hosts, bookings, payments, logs)
 │   │   │   │   ├── auth/            # Login, register, profile, wishlist
 │   │   │   │   ├── bookings/        # Booking CRUD + host bookings
-│   │   │   │   ├── host/            # Host dashboard APIs (stats, earnings, calendar, reviews)
+│   │   │   │   ├── host/            # Host dashboard APIs
+│   │   │   │   ├── payments/        # Payment initiate, verify, webhook
 │   │   │   │   ├── properties/      # Property CRUD, search, cities, availability
 │   │   │   │   └── reviews/         # Review CRUD + host responses
-│   │   │   ├── admin/               # Admin panel pages (7 modules)
+│   │   │   ├── admin/               # Admin panel pages
 │   │   │   ├── auth/                # Login + registration pages
-│   │   │   ├── booking/             # Booking confirmation flow
+│   │   │   ├── booking/             # Booking + payment flow
 │   │   │   ├── dashboard/           # Guest dashboard
 │   │   │   ├── host/                # Host dashboard (8 sub-pages)
 │   │   │   └── listings/            # Property search + detail pages
 │   │   ├── components/              # Reusable UI components
-│   │   │   ├── admin/               # Admin sidebar, nav, tables
-│   │   │   ├── home/                # Hero, search, featured listings, city browse
-│   │   │   ├── host/                # Host sidebar, nav, action banners
-│   │   │   ├── layout/              # Header, footer
-│   │   │   ├── listings/            # Search filters, property cards
-│   │   │   └── ui/                  # Skeletons, error states, error boundary
 │   │   ├── context/                 # AuthContext, LanguageContext
 │   │   ├── lib/
-│   │   │   ├── data/                # Seed data (24 properties, 17 users, 8 bookings, 40 reviews)
-│   │   │   ├── admin-helpers.ts     # Moderation state, ban/suspend logic, activity logging
-│   │   │   ├── auth-helpers.ts      # Token generation, verification, extraction
-│   │   │   ├── api.ts               # Axios client with interceptors
-│   │   │   ├── translations.ts      # Arabic/English translations
-│   │   │   └── utils.ts             # Formatting utilities
-│   │   ├── types/                   # TypeScript interfaces
-│   │   └── middleware.ts            # Route protection + role enforcement
-│   ├── next.config.js
-│   ├── tailwind.config.js
+│   │   │   ├── models/              # Mongoose models (Payment, Notification, ActivityLog, etc.)
+│   │   │   ├── payment/             # Moyasar payment provider implementation
+│   │   │   ├── api.ts               # Axios client (authApi, bookingsApi, paymentsApi, adminApi, etc.)
+│   │   │   └── translations.ts      # Arabic/English translations
+│   │   └── types/                   # TypeScript interfaces
 │   └── package.json
 │
-├── backend/                         # Express API (MongoDB mode)
+├── backend/                         # Express API (for mobile apps + production)
 │   ├── src/
 │   │   ├── config/                  # Database connection
-│   │   ├── middleware/              # Auth + error handling
+│   │   ├── middleware/              # Auth (JWT + role), validation, error handling
 │   │   ├── models/                  # Mongoose schemas
-│   │   ├── routes/                  # REST endpoints
-│   │   ├── controllers/            # Business logic
-│   │   └── server.js               # Entry point
-│   ├── scripts/
-│   │   └── seed.js                 # Database seeder
+│   │   │   ├── User.js             # Users with roles, suspension, device tokens
+│   │   │   ├── Property.js         # Properties with moderation, approval status
+│   │   │   ├── Booking.js          # Bookings with payment status tracking
+│   │   │   ├── Payment.js          # Payments with Moyasar integration
+│   │   │   ├── Review.js           # Reviews with host responses
+│   │   │   ├── Notification.js     # Notifications with APNs push fields
+│   │   │   └── ActivityLog.js      # Admin activity audit trail
+│   │   ├── controllers/
+│   │   │   ├── authController.js
+│   │   │   ├── propertyController.js
+│   │   │   ├── bookingController.js  # With notification triggers
+│   │   │   ├── paymentController.js  # Moyasar initiate, verify, webhook, refund
+│   │   │   ├── notificationController.js  # CRUD + device token registration
+│   │   │   ├── adminController.js    # Stats, user/host/property/booking management, logs
+│   │   │   ├── hostController.js
+│   │   │   └── reviewController.js
+│   │   ├── routes/
+│   │   │   ├── auth.js
+│   │   │   ├── properties.js
+│   │   │   ├── bookings.js
+│   │   │   ├── payments.js          # Payment initiate, verify, webhook, refund
+│   │   │   ├── notifications.js     # Notification CRUD + device tokens
+│   │   │   ├── admin.js             # Admin dashboard, moderation, user management
+│   │   │   ├── host.js
+│   │   │   ├── reviews.js
+│   │   │   └── upload.js
+│   │   └── server.js               # Entry point with all routes mounted
 │   └── package.json
+│
+├── ios/                             # Native iOS Apps (SwiftUI)
+│   ├── Shared/                      # Shared code between both apps
+│   │   ├── Models/                  # Codable structs (User, Property, Booking, etc.)
+│   │   ├── Services/                # API client, auth, property, booking, review services
+│   │   └── Utils/                   # Color theme, date/price formatters, UI modifiers
+│   ├── HostnGuest/                  # Guest iOS App
+│   │   └── Views/                   # Auth, Home, Property, Booking, Profile, Wishlist
+│   └── HostnHost/                   # Host iOS App
+│       └── Views/                   # Auth, Dashboard, Listings, Bookings, Earnings, Settings
 │
 └── README.md
 ```
+
+---
+
+## API Endpoints
+
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login |
+| GET | `/api/auth/me` | Get current user |
+| PUT | `/api/auth/profile` | Update profile |
+| PUT | `/api/auth/change-password` | Change password |
+| POST | `/api/auth/wishlist/:propertyId` | Toggle wishlist |
+
+### Properties
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/properties` | Search properties (city, type, dates, guests, price) |
+| GET | `/api/properties/:id` | Get property detail |
+| POST | `/api/properties` | Create property (host) |
+| GET | `/api/properties/:id/availability` | Check availability |
+| GET | `/api/properties/cities` | Get available cities |
+
+### Bookings
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/bookings` | Create booking |
+| GET | `/api/bookings/my-bookings` | Get user's bookings |
+| GET | `/api/bookings/host-bookings` | Get host's received bookings |
+| GET | `/api/bookings/:id` | Get booking detail |
+| PUT | `/api/bookings/:id/status` | Update status (host: confirm/reject) |
+| PUT | `/api/bookings/:id/cancel` | Cancel booking (guest) |
+
+### Payments
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/payments/initiate` | Initiate payment for booking |
+| POST | `/api/payments/verify` | Verify payment with Moyasar |
+| POST | `/api/payments/webhook` | Moyasar webhook (public) |
+| GET | `/api/payments/my-payments` | Get user's payments |
+| GET | `/api/payments/:id` | Get payment detail |
+| GET | `/api/payments` | Get all payments (admin) |
+| POST | `/api/payments/:id/refund` | Refund payment (admin) |
+
+### Notifications
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/notifications` | Get user's notifications |
+| GET | `/api/notifications/unread-count` | Get unread count |
+| PUT | `/api/notifications/read-all` | Mark all as read |
+| PUT | `/api/notifications/:id/read` | Mark one as read |
+| POST | `/api/notifications/device-token` | Register push token |
+
+### Admin
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/stats` | Platform statistics |
+| GET | `/api/admin/users` | List users (with search/filter) |
+| GET | `/api/admin/users/:id` | User detail with stats |
+| PATCH | `/api/admin/users/:id` | User actions (suspend, activate, role change) |
+| GET | `/api/admin/hosts/:id` | Host detail with properties and earnings |
+| GET | `/api/admin/properties` | List properties (with moderation filter) |
+| POST | `/api/admin/properties/:id/moderate` | Approve/reject listing |
+| GET | `/api/admin/bookings` | List all bookings |
+| PATCH | `/api/admin/bookings/:id` | Admin booking actions (cancel, confirm, complete) |
+| GET | `/api/admin/logs` | Activity logs |
+
+### Host Dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/host/stats` | Dashboard statistics |
+| GET | `/api/host/recent-bookings` | Recent bookings |
+| GET | `/api/host/notifications` | Host notifications |
+| GET | `/api/host/earnings` | Monthly earnings |
+| GET | `/api/host/calendar/:propertyId` | Property calendar |
+| PUT | `/api/host/calendar/:propertyId/block` | Block/unblock dates |
+| GET | `/api/host/reviews` | Host's reviews |
+| PUT | `/api/host/properties/:id/toggle` | Toggle property status |
+
+### Reviews
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/reviews/property/:propertyId` | Get property reviews |
+| POST | `/api/reviews` | Create review |
+| POST | `/api/reviews/:id/respond` | Host respond to review |
 
 ---
 
@@ -246,7 +376,7 @@ hostn/
 
 - Node.js 18+
 - npm or yarn
-- MongoDB (required only for Express backend mode)
+- MongoDB Atlas account (or local MongoDB)
 
 ### 1. Clone the repository
 
@@ -255,9 +385,7 @@ git clone https://github.com/tariqkhathami-spec/Hostn.git
 cd Hostn
 ```
 
-### 2. Frontend Setup (Next.js API Routes mode)
-
-This is the default mode used by the live site. No database required.
+### 2. Frontend Setup
 
 ```bash
 cd frontend
@@ -270,17 +398,17 @@ Create `.env.local`:
 NEXT_PUBLIC_API_URL=/api
 NEXT_PUBLIC_APP_NAME=Hostn
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+MOYASAR_PUBLISHABLE_KEY=pk_test_...
+MOYASAR_SECRET_KEY=sk_test_...
+MONGODB_URI=mongodb+srv://...
+JWT_SECRET=your_jwt_secret
 ```
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The app runs with in-memory seed data — no database needed.
-
-### 3. Backend Setup (Express + MongoDB mode)
-
-For production use with persistent data:
+### 3. Backend Setup
 
 ```bash
 cd backend
@@ -293,70 +421,43 @@ Configure `.env`:
 ```env
 PORT=5000
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/hostn
+MONGODB_URI=mongodb+srv://...
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:3000
+MOYASAR_SECRET_KEY=sk_test_...
+MOYASAR_PUBLISHABLE_KEY=pk_test_...
 ```
 
 ```bash
-npm run seed    # Populate database with sample data
-npm run dev     # Start with hot-reload
+npm run dev
 ```
 
-Update frontend `.env.local` to point to the Express backend:
+### 4. iOS Apps
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
+Open the Xcode projects in `ios/HostnGuest/` and `ios/HostnHost/`. Both apps connect to the Express backend at `https://hostn-backend-production.up.railway.app/api`.
 
 ---
 
 ## Test Accounts
 
-Any password works for all seed accounts in the Next.js API Routes mode.
-
 | Role  | Email                            | Name              |
 |-------|----------------------------------|-------------------|
 | Admin | admin@hostn.co                   | Tariq Al-Khathami |
-| Admin | system@hostn.co                  | System Admin      |
 | Host  | fatima.ahmad@email.com           | Fatima Al-Ahmad   |
 | Host  | mohammed.ali@email.com           | Mohammed Ali      |
-| Host  | nora.alkhalifa@email.com         | Nora Al-Khalifa   |
-| Host  | khaled.alatoubi@email.com        | Khaled Al-Ateibi  |
-| Host  | layla.alzahrani@email.com        | Layla Al-Zahrani  |
 | Guest | abdulrahman.mohammad@email.com   | Abdulrahman Mohammed |
 | Guest | sarah.ahmad@email.com            | Sarah Ahmad       |
-| Guest | ahmad.ali@email.com              | Ahmad Ali         |
 
 ---
 
 ## Deployment
 
-The production stack uses **Vercel** for the Next.js frontend and **Railway** for the Express backend API, both with automatic deployments from the `main` branch.
-
 ```
-GitHub (main branch) → Vercel Auto-Deploy  → hostn.co (frontend)
-GitHub (main branch) → Railway Auto-Deploy → API server (backend)
+GitHub (main) → Vercel (frontend at hostn.co)
+              → Railway (backend API)
+              → MongoDB Atlas (shared database)
 ```
-
-Every push to `main` triggers deployments on both platforms. The site is typically live within 1-2 minutes of a push.
-
----
-
-## Roadmap
-
-Planned improvements for production readiness:
-
-- [x] **Persistent database** — MongoDB Atlas for production data storage
-- [x] **Image upload** — Host property photo uploads via Cloudinary
-- [x] **Bilingual host dashboard** — Full Arabic/English language toggle for the host panel
-- [ ] **Payment integration** — Stripe or PayTabs for real transactions
-- [ ] **Email notifications** — Booking confirmations, host alerts, admin actions via SendGrid/Resend
-- [ ] **Real-time messaging** — Guest-host chat via WebSocket
-- [ ] **Map view** — Property locations on an interactive map
-- [ ] **Mobile apps** — Native iOS apps for guests and hosts (Swift/SwiftUI)
-- [ ] **Analytics dashboard** — Revenue trends, occupancy metrics, conversion tracking
 
 ---
 

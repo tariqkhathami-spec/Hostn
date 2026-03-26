@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
+      match: [/^S+@S+.S+$/, 'Please enter a valid email'],
     },
     password: {
       type: String,
@@ -46,22 +46,29 @@ const userSchema = new mongoose.Schema(
         ref: 'Property',
       },
     ],
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+    deviceTokens: [
+      {
+        token: String,
+        platform: { type: String, enum: ['ios', 'android', 'web'], default: 'ios' },
+        updatedAt: Date,
+      },
+    ],
   },
   { timestamps: true }
 );
 
-// ── Indexes ───────────────────────────────────────────────────────────────────
-// email already has unique:true which creates an index
-userSchema.index({ role: 1 }); // admin queries by role
+userSchema.index({ role: 1 });
 
-// Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };

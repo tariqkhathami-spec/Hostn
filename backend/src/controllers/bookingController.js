@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
+const Notification = require('../models/Notification');
+const ActivityLog = require('../models/ActivityLog');
 
-// @desc    Create a booking
-// @route   POST /api/bookings
-// @access  Private
+// Create a booking
 exports.createBooking = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -12,7 +12,6 @@ exports.createBooking = async (req, res, next) => {
   try {
     const { propertyId, checkIn, checkOut, guests, specialRequests } = req.body;
 
-    // ── Input validation ──────────────────────────────────────────────
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 
@@ -41,14 +40,12 @@ exports.createBooking = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    // Check if user is trying to book their own property
     if (property.host.toString() === req.user._id.toString()) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({ success: false, message: 'Cannot book your own property' });
     }
 
-    // ── Guest count validation ────────────────────────────────────────
     const totalGuests = (guests?.adults || 0) + (guests?.children || 0);
     if (!guests?.adults || guests.adults < 1) {
       await session.abortTransaction();
@@ -60,11 +57,10 @@ exports.createBooking = async (req, res, next) => {
       session.endSession();
       return res.status(400).json({
         success: false,
-        message: `Exceeds max capacity of ${property.capacity.maxGuests} guests`,
+        message: 'Exceeds max capacity of ' + property.capacity.maxGuests + ' guests',
       });
     }
 
-    // ── Atomic availability check (inside transaction) ────────────────
     const conflicting = await Booking.findOne({
       property: propertyId,
       status: { $in: ['pending', 'confirmed'] },
@@ -81,7 +77,6 @@ exports.createBooking = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Property not available for selected dates' });
     }
 
-    // ── Check blocked dates ───────────────────────────────────────────
     const blockedConflict = property.unavailableDates?.some((range) => {
       const start = new Date(range.start);
       const end = new Date(range.end);
@@ -94,7 +89,6 @@ exports.createBooking = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Property is blocked for selected dates' });
     }
 
-    // ── Night count validation ────────────────────────────────────────
     const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
 
     if (property.rules?.minNights && nights < property.rules.minNights) {
@@ -102,7 +96,7 @@ exports.createBooking = async (req, res, next) => {
       session.endSession();
       return res.status(400).json({
         success: false,
-        message: `Minimum stay is ${property.rules.minNights} nights`,
+        message: 'Minimum stay is ' + property.rules.minNights + ' nights',
       });
     }
     if (property.rules?.maxNights && nights > property.rules.maxNights) {
@@ -110,21 +104,19 @@ exports.createBooking = async (req, res, next) => {
       session.endSession();
       return res.status(400).json({
         success: false,
-        message: `Maximum stay is ${property.rules.maxNights} nights`,
+        message: 'Maximum stay is ' + property.rules.maxNights + ' nights',
       });
     }
 
-    // ── Calculate pricing (discount now correctly subtracted) ─────────
     const perNight = property.discountedPrice || property.pricing.perNight;
     const subtotal = perNight * nights;
     const cleaningFee = property.pricing.cleaningFee || 0;
-    const serviceFee = Math.round(subtotal * 0.1); // 10% service fee
+    const serviceFee = Math.round(subtotal * 0.1);
     const discount = property.pricing.discountPercent > 0
       ? Math.round(subtotal * (property.pricing.discountPercent / 100))
       : 0;
     const total = subtotal + cleaningFee + serviceFee - discount;
 
-    // ── Create booking inside transaction ─────────────────────────────
     const [booking] = await Booking.create(
       [
         {
@@ -146,6 +138,22 @@ exports.createBooking = async (req, res, next) => {
     await booking.populate('property', 'title images location');
     await booking.populate('guest', 'name email');
 
+    await Notification.createNotification({
+      user: property.host,
+      type: 'booking_created',
+      title: 'New Booking Request',
+      message: req.user.name + ' requested to book "' + property.title + '" for ' + nights + ' nights',
+      data: { bookingId: booking._id, propertyId: property._id },
+    });
+
+    await ActivityLog.create({
+      actor: req.user._id,
+      action: 'booking_created',
+      target: { type: 'Booking', id: booking._id },
+      details: 'Booking created for "' + property.title + '" — ' + total + ' SAR',
+      ip: req.ip,
+    });
+
     res.status(201).json({ success: true, data: booking });
   } catch (error) {
     await session.abortTransaction();
@@ -154,9 +162,7 @@ exports.createBooking = async (req, res, next) => {
   }
 };
 
-// @desc    Get user's bookings
-// @route   GET /api/bookings/my-bookings
-// @access  Private
+// Get user's bookings
 exports.getMyBookings = async (req, res, next) => {
   try {
     const bookings = await Booking.find({ guest: req.user._id })
@@ -169,9 +175,7 @@ exports.getMyBookings = async (req, res, next) => {
   }
 };
 
-// @desc    Get host's received bookings
-// @route   GET /api/bookings/host-bookings
-// @access  Private (Host)
+// Get host's received bookings
 exports.getHostBookings = async (req, res, next) => {
   try {
     const hostProperties = await Property.find({ host: req.user._id }).select('_id');
@@ -188,9 +192,7 @@ exports.getHostBookings = async (req, res, next) => {
   }
 };
 
-// @desc    Get single booking
-// @route   GET /api/bookings/:id
-// @access  Private
+// Get single booking
 exports.getBooking = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id)
@@ -201,7 +203,6 @@ exports.getBooking = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    // Only the guest, host, or admin can view
     const isGuest = booking.guest._id.toString() === req.user._id.toString();
     const property = await Property.findById(booking.property._id);
     const isHost = property && property.host.toString() === req.user._id.toString();
@@ -216,18 +217,15 @@ exports.getBooking = async (req, res, next) => {
   }
 };
 
-// Valid state transitions — prevents impossible states like cancelled → confirmed
 const VALID_TRANSITIONS = {
   pending: ['confirmed', 'rejected', 'cancelled'],
   confirmed: ['completed', 'cancelled'],
-  completed: [],    // terminal state
-  cancelled: [],    // terminal state
-  rejected: [],     // terminal state
+  completed: [],
+  cancelled: [],
+  rejected: [],
 };
 
-// @desc    Update booking status (host confirm/reject)
-// @route   PUT /api/bookings/:id/status
-// @access  Private (Host)
+// Update booking status
 exports.updateBookingStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -247,12 +245,11 @@ exports.updateBookingStatus = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Enforce valid state transitions
     const allowed = VALID_TRANSITIONS[booking.status] || [];
     if (!allowed.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: `Cannot change status from "${booking.status}" to "${status}"`,
+        message: 'Cannot change status from "' + booking.status + '" to "' + status + '"',
       });
     }
 
@@ -262,15 +259,40 @@ exports.updateBookingStatus = async (req, res, next) => {
     if (status === 'rejected') booking.cancelledAt = new Date();
 
     await booking.save();
+
+    const notifType =
+      status === 'confirmed' ? 'booking_confirmed' :
+      status === 'rejected' ? 'booking_rejected' :
+      status === 'completed' ? 'booking_completed' : 'booking_cancelled';
+
+    const notifTitle =
+      status === 'confirmed' ? 'Booking Confirmed' :
+      status === 'rejected' ? 'Booking Rejected' :
+      status === 'completed' ? 'Booking Completed' : 'Booking Cancelled';
+
+    await Notification.createNotification({
+      user: booking.guest,
+      type: notifType,
+      title: notifTitle,
+      message: 'Your booking at "' + property.title + '" has been ' + status,
+      data: { bookingId: booking._id, propertyId: booking.property },
+    });
+
+    await ActivityLog.create({
+      actor: req.user._id,
+      action: 'booking_' + status,
+      target: { type: 'Booking', id: booking._id },
+      details: 'Booking status changed to ' + status,
+      ip: req.ip,
+    });
+
     res.json({ success: true, data: booking });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Cancel booking (guest)
-// @route   PUT /api/bookings/:id/cancel
-// @access  Private (Guest)
+// Cancel booking
 exports.cancelBooking = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id);

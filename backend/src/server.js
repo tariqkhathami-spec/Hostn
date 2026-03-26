@@ -12,14 +12,16 @@ const bookingRoutes = require('./routes/bookings');
 const reviewRoutes = require('./routes/reviews');
 const hostRoutes = require('./routes/host');
 const uploadRoutes = require('./routes/upload');
+const paymentRoutes = require('./routes/payments');
+const notificationRoutes = require('./routes/notifications');
+const adminRoutes = require('./routes/admin');
 
 // Connect to database
 connectDB();
 
 const app = express();
 
-// ── Security headers ──────────────────────────────────────────────────────────
-// Inline helmet-like headers (helmet is not in package.json, so we set them manually)
+// Security headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -32,7 +34,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── CORS (whitelist-based) ────────────────────────────────────────────────────
+// CORS (whitelist-based)
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
   : [process.env.CLIENT_URL || 'http://localhost:3000'];
@@ -40,7 +42,6 @@ const allowedOrigins = process.env.CORS_ORIGINS
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, server-to-server)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -52,16 +53,14 @@ app.use(
   })
 );
 
-// ── Body parsing with size limits ─────────────────────────────────────────────
+// Body parsing with size limits
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// ── Rate limiting ─────────────────────────────────────────────────────────────
-// Simple in-memory rate limiter (no extra dependency needed)
+// Rate limiting
 const rateLimitStore = new Map();
 
 function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
-  // Cleanup old entries every 5 minutes
   setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of rateLimitStore) {
@@ -70,7 +69,7 @@ function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many r
   }, 5 * 60 * 1000).unref();
 
   return (req, res, next) => {
-    const key = `${req.ip}:${req.baseUrl || req.path}`;
+    const key = req.ip + ':' + (req.baseUrl || req.path);
     const now = Date.now();
     const entry = rateLimitStore.get(key);
 
@@ -87,26 +86,23 @@ function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many r
   };
 }
 
-// Strict limits on auth endpoints (prevent brute force)
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many login attempts, try again in 15 minutes' });
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: 'Too many accounts created, try again later' });
-
-// General API limiter
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 
-// ── Logging ───────────────────────────────────────────────────────────────────
+// Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
-// ── Health check ──────────────────────────────────────────────────────────────
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Hostn API is running', timestamp: new Date() });
 });
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// Routes
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', registerLimiter);
 app.use('/api', apiLimiter);
@@ -117,21 +113,24 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/host', hostRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));
 
-// ── 404 handler ───────────────────────────────────────────────────────────────
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// ── Error handler ─────────────────────────────────────────────────────────────
+// Error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Hostn API running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log('Hostn API running on port ' + PORT + ' in ' + (process.env.NODE_ENV || 'development') + ' mode');
 });
 
 module.exports = app;
