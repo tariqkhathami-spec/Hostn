@@ -33,7 +33,7 @@ export async function GET(
   { params }: { params: { propertyId: string } }
 ) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
     const { payload } = auth;
 

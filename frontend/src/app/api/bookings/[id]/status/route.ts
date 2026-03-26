@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   try {
     await dbConnect();
 
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
 
     // Validate ID format
@@ -76,8 +76,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     booking.status = status;
 
     if (status === 'confirmed') {
-      // Don't auto-set paymentStatus to 'paid' — payment verification handles that.
-      // Only set confirmedAt for host/admin manual confirmations.
+      // SECURITY: Prevent confirming bookings that haven't been paid
+      if (booking.paymentStatus !== 'paid') {
+        return NextResponse.json(
+          { success: false, message: 'Cannot confirm booking: payment has not been verified' },
+          { status: 400 }
+        );
+      }
       booking.confirmedAt = new Date();
     } else if (status === 'cancelled') {
       booking.cancelledAt = new Date();

@@ -21,7 +21,7 @@ interface HostNotification {
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
     const { payload } = auth;
 

@@ -36,7 +36,7 @@ interface EarningsData {
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
     const { payload } = auth;
 
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate monthly earnings
-    const monthlyMap = new Map<number, { earnings: number; bookings: number }>();
+    const monthlyMap = new Map();
 
     for (let i = 0; i < 12; i++) {
       monthlyMap.set(i, { earnings: 0, bookings: 0 });
@@ -75,22 +75,9 @@ export async function GET(request: NextRequest) {
       monthlyMap.set(month, current);
     });
 
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-    const monthly: MonthlyEarning[] = Array.from(monthlyMap.entries()).map(([month, data]) => ({
+    const monthly = Array.from(monthlyMap.entries()).map(([month, data]) => ({
       month: month + 1,
       monthName: monthNames[month],
       earnings: data.earnings,
@@ -98,45 +85,29 @@ export async function GET(request: NextRequest) {
       avgPerBooking: data.bookings > 0 ? Math.round(data.earnings / data.bookings) : 0,
     }));
 
-    // Calculate by property type
-    const byTypeMap = new Map<string, { earnings: number; bookings: number }>();
-
+    const byTypeMap = new Map();
     completedBookingsForYear.forEach((booking) => {
       const property = hostProperties.find((p) => p._id.equals(booking.property));
       const type = property?.type || 'unknown';
-
       const current = byTypeMap.get(type) || { earnings: 0, bookings: 0 };
       current.earnings += booking.pricing.total;
       current.bookings += 1;
       byTypeMap.set(type, current);
     });
-
     const byPropertyType = Object.fromEntries(byTypeMap);
 
-    // Get top 5 properties by earnings
-    const topPropertiesMap = new Map<
-      string,
-      { title: string; type: string; earnings: number; bookings: number }
-    >();
-
+    const topPropertiesMap = new Map();
     completedBookingsForYear.forEach((booking) => {
       const property = hostProperties.find((p) => p._id.equals(booking.property));
-
       if (property) {
         const propId = property._id.toString();
-        const current = topPropertiesMap.get(propId) || {
-          title: property.title,
-          type: property.type,
-          earnings: 0,
-          bookings: 0,
-        };
+        const current = topPropertiesMap.get(propId) || { title: property.title, type: property.type, earnings: 0, bookings: 0 };
         current.earnings += booking.pricing.total;
         current.bookings += 1;
         topPropertiesMap.set(propId, current);
       }
     });
-
-    const topProperties: PropertyEarning[] = Array.from(topPropertiesMap.entries())
+    const topProperties = Array.from(topPropertiesMap.entries())
       .map(([propertyId, data]) => ({ propertyId, ...data }))
       .sort((a, b) => b.earnings - a.earnings)
       .slice(0, 5);
@@ -144,7 +115,7 @@ export async function GET(request: NextRequest) {
     const totalEarnings = completedBookingsForYear.reduce((sum, b) => sum + b.pricing.total, 0);
     const totalBookings = completedBookingsForYear.length;
 
-    const data: EarningsData = {
+    const data = {
       year,
       totalEarnings,
       totalBookings,
@@ -154,10 +125,7 @@ export async function GET(request: NextRequest) {
       topProperties,
     };
 
-    return NextResponse.json({
-      success: true,
-      data,
-    });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Error fetching earnings:', error);
     return NextResponse.json({ success: false, message: 'Failed to fetch earnings' }, { status: 500 });

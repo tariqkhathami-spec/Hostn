@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
+import dbConnect from '@/lib/db';
+import User from '@/lib/models/User';
 
 // SECURITY: JWT_SECRET is REQUIRED in ALL environments at RUNTIME.
 // Deferred to runtime so that next build (static analysis) doesn't crash
@@ -101,13 +103,26 @@ export function requireAdmin(request: Request): { payload: TokenPayload } | { er
 }
 
 /**
- * Require host or admin role
+ * Require host role - extracts token and verifies host or admin role.
+ * Also checks if host is suspended in the database (covers pre-suspension tokens).
+ * Host routes are also accessible by admins for management purposes.
  */
-export function requireHost(request: Request): { payload: TokenPayload } | { error: NextResponse } {
+export async function requireHost(request: Request): Promise<{ payload: TokenPayload } | { error: NextResponse }> {
   const auth = requireAuth(request);
   if ('error' in auth) return auth;
   if (auth.payload.role !== 'host' && auth.payload.role !== 'admin') {
     return { error: NextResponse.json({ success: false, message: 'Host access required' }, { status: 403 }) };
+  }
+  // SECURITY: Check suspension status from DB to catch tokens issued before suspension
+  if (auth.payload.role === 'host') {
+    await dbConnect();
+    const user = await User.findById(auth.payload.userId).select('isSuspended isBanned').lean();
+    if (!user) {
+      return { error: NextResponse.json({ success: false, message: 'User not found' }, { status: 401 }) };
+    }
+    if ((user as any).isSuspended || (user as any).isBanned) {
+      return { error: NextResponse.json({ success: false, message: 'Your account has been suspended' }, { status: 403 }) };
+    }
   }
   return auth;
 }

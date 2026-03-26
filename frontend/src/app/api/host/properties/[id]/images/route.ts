@@ -18,7 +18,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
 
     await dbConnect();
@@ -137,7 +137,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
 
     await dbConnect();

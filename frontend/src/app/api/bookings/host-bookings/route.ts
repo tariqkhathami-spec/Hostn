@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
 
     // Get properties owned by this host

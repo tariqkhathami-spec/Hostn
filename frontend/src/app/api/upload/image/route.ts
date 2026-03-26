@@ -12,7 +12,7 @@ import { uploadImage, validateImage } from '@/lib/cloudinary';
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
 
     const formData = await request.formData();

@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
  */
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const auth = requireHost(request);
+    const auth = await requireHost(request);
     if ('error' in auth) return auth.error;
     const { payload } = auth;
 
