@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -12,6 +13,16 @@ const bookingRoutes = require('./routes/bookings');
 const reviewRoutes = require('./routes/reviews');
 const hostRoutes = require('./routes/host');
 const uploadRoutes = require('./routes/upload');
+const paymentRoutes = require('./routes/payments');
+const notificationRoutes = require('./routes/notifications');
+const adminRoutes = require('./routes/admin');
+const messageRoutes = require('./routes/messageRoutes');
+const supportRoutes = require('./routes/supportRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const otpRoutes = require('./routes/otpRoutes');
+const walletRoutes = require('./routes/wallet');
+const paymentMethodRoutes = require('./routes/paymentMethods');
+const couponRoutes = require('./routes/coupons');
 
 // Connect to database
 connectDB();
@@ -19,7 +30,6 @@ connectDB();
 const app = express();
 
 // ── Security headers ──────────────────────────────────────────────────────────
-// Inline helmet-like headers (helmet is not in package.json, so we set them manually)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -32,7 +42,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── CORS (whitelist-based) ────────────────────────────────────────────────────
+// ── CORS (whitelist-based, allows mobile apps with no origin) ─────────────────
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
   : [process.env.CLIENT_URL || 'http://localhost:3000'];
@@ -52,16 +62,17 @@ app.use(
   })
 );
 
+// Cookie parser (required for HttpOnly cookie auth on web)
+app.use(cookieParser());
+
 // ── Body parsing with size limits ─────────────────────────────────────────────
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-// Simple in-memory rate limiter (no extra dependency needed)
 const rateLimitStore = new Map();
 
 function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
-  // Cleanup old entries every 5 minutes
   setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of rateLimitStore) {
@@ -87,11 +98,9 @@ function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many r
   };
 }
 
-// Strict limits on auth endpoints (prevent brute force)
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many login attempts, try again in 15 minutes' });
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: 'Too many accounts created, try again later' });
-
-// General API limiter
+const messageLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: 'Too many messages sent, please slow down' });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 
 // ── Logging ───────────────────────────────────────────────────────────────────
@@ -112,11 +121,21 @@ app.use('/api/auth/register', registerLimiter);
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', otpRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/host', hostRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageLimiter, messageRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/wallet', walletRoutes);
+app.use('/api/payment-methods', paymentMethodRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));

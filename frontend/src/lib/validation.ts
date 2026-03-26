@@ -144,6 +144,8 @@ export const createPropertySchema = z.object({
     .min(1, 'Price per night must be at least 1')
     .max(100000, 'Price per night cannot exceed 100,000'),
   cleaningFee: z.number().min(0).max(10000).default(0),
+  discountPercent: z.number().min(0).max(100).default(0),
+  weeklyDiscount: z.number().min(0).max(100).default(0),
   maxGuests: z.number().int().min(1).max(100).default(4),
   bedrooms: z.number().int().min(0).max(50).default(1),
   bathrooms: z.number().int().min(0).max(50).default(1),
@@ -221,10 +223,4 @@ export const propertySearchSchema = z.object({
   search: z.string().max(200).trim().optional(),
   sort: z.enum(['rating', 'price_asc', 'price_desc', 'newest']).optional(),
   limit: z.string().regex(/^\d+$/).optional(),
-  page: z.string().regex(/^\d+$/).optional(),
-});
-
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
-export type BookingInput = z.infer<typeof bookingSchema>;
-export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
+  page: z.string().regex(/^\d+$/).optional(),

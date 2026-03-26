@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
+const Notification = require('../models/Notification');
+const ActivityLog = require('../models/ActivityLog');
 
 // @desc    Create a booking
 // @route   POST /api/bookings
@@ -146,6 +148,24 @@ exports.createBooking = async (req, res, next) => {
     await booking.populate('property', 'title images location');
     await booking.populate('guest', 'name email');
 
+    // Notify host about new booking
+    await Notification.createNotification({
+      user: property.host,
+      type: 'booking_created',
+      title: 'New Booking Request',
+      message: `${req.user.name} requested to book "${property.title}" for ${nights} nights`,
+      data: { bookingId: booking._id, propertyId: property._id },
+    });
+
+    // Log activity
+    await ActivityLog.create({
+      actor: req.user._id,
+      action: 'booking_created',
+      target: { type: 'Booking', id: booking._id },
+      details: `Booking created for "${property.title}" — ${total} SAR`,
+      ip: req.ip,
+    });
+
     res.status(201).json({ success: true, data: booking });
   } catch (error) {
     await session.abortTransaction();
@@ -262,6 +282,34 @@ exports.updateBookingStatus = async (req, res, next) => {
     if (status === 'rejected') booking.cancelledAt = new Date();
 
     await booking.save();
+
+    // Notify guest about status change
+    const notifType =
+      status === 'confirmed' ? 'booking_confirmed' :
+      status === 'rejected' ? 'booking_rejected' :
+      status === 'completed' ? 'booking_completed' : 'booking_cancelled';
+
+    const notifTitle =
+      status === 'confirmed' ? 'Booking Confirmed' :
+      status === 'rejected' ? 'Booking Rejected' :
+      status === 'completed' ? 'Booking Completed' : 'Booking Cancelled';
+
+    await Notification.createNotification({
+      user: booking.guest,
+      type: notifType,
+      title: notifTitle,
+      message: `Your booking at "${property.title}" has been ${status}`,
+      data: { bookingId: booking._id, propertyId: booking.property },
+    });
+
+    await ActivityLog.create({
+      actor: req.user._id,
+      action: `booking_${status}`,
+      target: { type: 'Booking', id: booking._id },
+      details: `Booking status changed to ${status}`,
+      ip: req.ip,
+    });
+
     res.json({ success: true, data: booking });
   } catch (error) {
     next(error);

@@ -2,7 +2,6 @@ const Property = require('../models/Property');
 const { escapeRegex } = require('../middleware/validate');
 
 // Fields a host is allowed to update on their own property.
-// Notably excludes: host, ratings, isFeatured, isActive, tags, createdAt
 const ALLOWED_UPDATE_FIELDS = [
   'title',
   'description',
@@ -60,7 +59,6 @@ exports.getProperties = async (req, res, next) => {
       query.$text = { $search: search };
     }
 
-    // Filter out unavailable dates
     if (checkIn && checkOut) {
       const checkInDate = new Date(checkIn);
       const checkOutDate = new Date(checkOut);
@@ -101,6 +99,53 @@ exports.getProperties = async (req, res, next) => {
   }
 };
 
+// @desc    Get home feed data (aggregated for mobile)
+// @route   GET /api/properties/home-feed
+// @access  Public
+exports.getHomeFeed = async (req, res, next) => {
+  try {
+    const [featured, cities, luxury, families, business, topRated] = await Promise.all([
+      Property.find({ isActive: true, isFeatured: true })
+        .populate('host', 'name avatar')
+        .sort('-ratings.average')
+        .limit(6),
+      Property.distinct('location.city', { isActive: true }),
+      Property.find({ isActive: true, tags: { $in: ['luxury'] } })
+        .populate('host', 'name avatar')
+        .sort('-ratings.average')
+        .limit(6),
+      Property.find({ isActive: true, tags: { $in: ['family', 'families'] } })
+        .populate('host', 'name avatar')
+        .sort('-ratings.average')
+        .limit(6),
+      Property.find({ isActive: true, tags: { $in: ['business'] } })
+        .populate('host', 'name avatar')
+        .sort('-ratings.average')
+        .limit(6),
+      Property.find({ isActive: true, 'ratings.count': { $gte: 1 } })
+        .populate('host', 'name avatar')
+        .sort('-ratings.average')
+        .limit(6),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        featured,
+        cities,
+        categories: {
+          luxury,
+          families,
+          business,
+          topRated,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get single property
 // @route   GET /api/properties/:id
 // @access  Public
@@ -124,7 +169,6 @@ exports.getProperty = async (req, res, next) => {
 // @access  Private (Host only)
 exports.createProperty = async (req, res, next) => {
   try {
-    // Whitelist: only allow known safe fields during creation
     const sanitizedBody = { host: req.user._id };
     for (const field of ALLOWED_UPDATE_FIELDS) {
       if (req.body[field] !== undefined) {
@@ -154,10 +198,9 @@ exports.updateProperty = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Whitelist: only allow known safe fields to be updated
     const sanitizedBody = {};
     const allowedFields = req.user.role === 'admin'
-      ? [...ALLOWED_UPDATE_FIELDS, 'isActive', 'isFeatured', 'tags'] // admins get extra fields
+      ? [...ALLOWED_UPDATE_FIELDS, 'isActive', 'isFeatured', 'tags']
       : ALLOWED_UPDATE_FIELDS;
 
     for (const field of allowedFields) {
@@ -196,7 +239,6 @@ exports.deleteProperty = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Soft delete
     property.isActive = false;
     await property.save();
 

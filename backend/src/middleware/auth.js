@@ -5,8 +5,11 @@ exports.protect = async (req, res, next) => {
   try {
     let token;
 
+    // Check Authorization header first (mobile + web), then fall back to HttpOnly cookie (web)
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.hostn_token) {
+      token = req.cookies.hostn_token;
     }
 
     if (!token) {
@@ -18,6 +21,14 @@ exports.protect = async (req, res, next) => {
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
+    }
+
+    // Block suspended users
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Contact support for assistance.',
+      });
     }
 
     req.user = user;

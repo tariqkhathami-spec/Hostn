@@ -338,6 +338,98 @@ export interface AdminBooking extends Booking {
   propertyTitle?: string;
 }
 
+// ── Messaging Types ──
+export interface ConversationLastMessage {
+  content: string;
+  sender: string;
+  createdAt: string;
+}
+
+export interface Conversation {
+  _id: string;
+  participants: Array<{ _id: string; name: string; avatar?: string }>;
+  property?: { _id: string; title: string; images?: string[] };
+  booking?: string;
+  lastMessage?: ConversationLastMessage;
+  unreadCount: Record<string, number>;
+  blocked: { isBlocked: boolean; blockedBy?: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Message {
+  _id: string;
+  conversation: string;
+  sender: { _id: string; name: string; avatar?: string } | string;
+  content: string;
+  messageType: 'text' | 'system' | 'image';
+  readBy: string[];
+  createdAt: string;
+}
+
+// ── Support Ticket Types ──
+export type TicketCategory = 'booking' | 'payment' | 'property' | 'account' | 'technical' | 'other';
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_on_customer' | 'resolved' | 'closed';
+
+export interface TicketMessage {
+  sender: { _id: string; name: string; role: string };
+  message: string;
+  createdAt: string;
+}
+
+export interface SupportTicket {
+  _id: string;
+  user: { _id: string; name: string; email: string };
+  subject: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  messages: TicketMessage[];
+  assignedTo?: { _id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Report Types ──
+export type ReportTargetType = 'property' | 'user' | 'review';
+export type ReportReason = 'inappropriate_content' | 'spam' | 'fraud' | 'harassment' | 'safety_concern' | 'misleading_listing' | 'discrimination' | 'property_damage' | 'policy_violation' | 'other';
+export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'dismissed';
+export type ReportAction = 'warning' | 'suspension' | 'listing_removed' | 'account_banned';
+
+export interface Report {
+  _id: string;
+  reporter: { _id: string; name: string; email: string };
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: ReportReason;
+  description: string;
+  status: ReportStatus;
+  adminAction?: {
+    action: ReportAction;
+    note: string;
+    takenBy: { _id: string; name: string };
+    takenAt: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Notification Types ──
+export type NotificationType = 'booking_created' | 'booking_confirmed' | 'booking_rejected' | 'booking_cancelled' | 'booking_completed' | 'payment_success' | 'payment_failed' | 'review_received' | 'listing_approved' | 'listing_rejected' | 'new_message' | 'support_reply' | 'report_update' | 'system';
+
+export interface AppNotification {
+  _id: string;
+  user: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data: Record<string, string>;
+  isRead: boolean;
+  readAt?: string;
+  createdAt: string;
+}
+
 export interface PaymentRecord {
   _id: string;
   bookingId: string;

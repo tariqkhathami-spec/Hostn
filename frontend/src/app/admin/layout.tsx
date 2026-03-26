@@ -12,6 +12,8 @@ const navItems = [
   { href: '/admin/bookings', label: 'Bookings', icon: '📅' },
   { href: '/admin/payments', label: 'Payments', icon: '💳' },
   { href: '/admin/logs', label: 'Activity Logs', icon: '📋' },
+  { href: '/admin/support', label: 'Support Tickets', icon: '🎫' },
+  { href: '/admin/reports', label: 'Reports', icon: '🚩' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

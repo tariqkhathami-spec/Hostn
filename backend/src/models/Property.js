@@ -92,6 +92,8 @@ const propertySchema = new mongoose.Schema(
       count: { type: Number, default: 0 },
     },
     isActive: { type: Boolean, default: true },
+    isApproved: { type: Boolean, default: true },
+    moderationNote: { type: String },
     isFeatured: { type: Boolean, default: false },
     tags: [String],
     unavailableDates: [

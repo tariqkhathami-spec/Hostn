@@ -154,6 +154,8 @@ export async function POST(request: NextRequest) {
       amenities,
       perNight,
       cleaningFee,
+      discountPercent,
+      weeklyDiscount,
       maxGuests,
       bedrooms,
       bathrooms,
@@ -182,8 +184,8 @@ export async function POST(request: NextRequest) {
       pricing: {
         perNight,
         cleaningFee: cleaningFee || 0,
-        discountPercent: 0,
-        weeklyDiscount: 0,
+        discountPercent: discountPercent || 0,
+        weeklyDiscount: weeklyDiscount || 0,
       },
       capacity: {
         maxGuests: maxGuests || 4,

@@ -156,4 +156,58 @@ export const adminApi = {
     api.get('/admin/logs', { params }),
 };
 
+// ── Messaging API ──
+export const messagesApi = {
+  getConversations: () => api.get('/messages/conversations'),
+  createConversation: (data: { participantId: string; propertyId?: string; bookingId?: string }) =>
+    api.post('/messages/conversations', data),
+  getMessages: (conversationId: string, params?: { page?: number; limit?: number }) =>
+    api.get(`/messages/${conversationId}`, { params }),
+  sendMessage: (conversationId: string, data: { content: string; messageType?: string }) =>
+    api.post(`/messages/${conversationId}/messages`, data),
+  toggleBlock: (conversationId: string) =>
+    api.put(`/messages/${conversationId}/block`),
+  getUnreadCount: () => api.get('/messages/unread-count'),
+};
+
+// ── Support API ──
+export const supportApi = {
+  createTicket: (data: { subject: string; category: string; priority?: string; message: string }) =>
+    api.post('/support', data),
+  getMyTickets: (params?: { status?: string; page?: number }) =>
+    api.get('/support', { params }),
+  getTicket: (id: string) => api.get(`/support/${id}`),
+  replyToTicket: (id: string, data: { message: string }) =>
+    api.post(`/support/${id}/reply`, data),
+  // Admin
+  getAllTickets: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/support/admin/all', { params }),
+  updateTicketStatus: (id: string, data: { status: string }) =>
+    api.put(`/support/admin/${id}/status`, data),
+  assignTicket: (id: string, data: { assignedTo: string }) =>
+    api.put(`/support/admin/${id}/assign`, data),
+};
+
+// ── Reports API ──
+export const reportsApi = {
+  createReport: (data: { targetType: string; targetId: string; reason: string; description: string }) =>
+    api.post('/reports', data),
+  getMyReports: () => api.get('/reports/my'),
+  // Admin
+  getAllReports: (params?: Record<string, string | number | boolean | undefined>) =>
+    api.get('/reports/admin/all', { params }),
+  getReport: (id: string) => api.get(`/reports/admin/${id}`),
+  takeAction: (id: string, data: { action: string; note: string }) =>
+    api.put(`/reports/admin/${id}/action`, data),
+};
+
+// ── Notifications API ──
+export const notificationsApi = {
+  getAll: (params?: { page?: number; isRead?: boolean }) =>
+    api.get('/notifications', { params }),
+  markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+};
+
 export default api;

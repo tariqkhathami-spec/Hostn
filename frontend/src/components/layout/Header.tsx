@@ -171,6 +171,22 @@ export default function Header() {
                           {t('nav.wishlist')}
                         </Link>
                         <Link
+                      href="/dashboard/messages"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Messages
+                    </Link>
+                    <Link
+                      href="/dashboard/support"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Support
+                    </Link>
+                    <Link
                           href="/dashboard/settings"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-sm text-gray-700 transition-colors"
