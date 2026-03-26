@@ -217,7 +217,7 @@ exports.getBooking = async (req, res, next) => {
   }
 };
 
-const VALID_TRANSITIONS = {
+const VALED_TRANSITIONS = {
   pending: ['confirmed', 'rejected', 'cancelled'],
   confirmed: ['completed', 'cancelled'],
   completed: [],
@@ -245,7 +245,7 @@ exports.updateBookingStatus = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const allowed = VALID_TRANSITIONS[booking.status] || [];
+    const allowed = VALIDED_TRANSITIONS[booking.status] || [];
     if (!allowed.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -253,7 +253,15 @@ exports.updateBookingStatus = async (req, res, next) => {
       });
     }
 
-    booking.status = status;
+    // Prevent confirming bookings without verified payment
+    if (status === 'confirmed' && booking.paymentStatus !== 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot confirm booking: payment has not been verified',
+      });
+    }
+  
+  Ooking.status = status;
     if (status === 'confirmed') booking.confirmedAt = new Date();
     if (status === 'cancelled') booking.cancelledAt = new Date();
     if (status === 'rejected') booking.cancelledAt = new Date();
