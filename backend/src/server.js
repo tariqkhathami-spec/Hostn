@@ -1,1 +1,152 @@
-cmVxdWlyZSgnZG90ZW52JykuY29uZmlnKCk7CmNvbnN0IGV4cHJlc3MgPSByZXF1aXJlKCdleHByZXNzJyk7CmNvbnN0IGNvcnMgPSByZXF1aXJlKCdjb3JzJyk7CmNvbnN0IG1vcmdhbiA9IHJlcXVpcmUoJ21vcmdhbicpOwpjb25zdCBjb29raWVQYXJzZXIgPSByZXF1aXJlKCdjb29raWUtcGFyc2VyJyk7CmNvbnN0IHJhdGVMaW1pdCA9IHJlcXVpcmUoJ2V4cHJlc3MtcmF0ZS1saW1pdCcpOwpjb25zdCBjb25uZWN0REIgPSByZXF1aXJlKCcuL2NvbmZpZy9kYXRhYmFzZScpOwpjb25zdCBlcnJvckhhbmRsZXIgPSByZXF1aXJlKCcuL21pZGRsZXdhcmUvZXJyb3JIYW5kbGVyJyk7CgovLyBSb3V0ZSBpbXBvcnRzCmNvbnN0IGF1dGhSb3V0ZXMgPSByZXF1aXJlKCcuL3JvdXRlcy9hdXRoJyk7CmNvbnN0IHByb3BlcnR5Um91dGVzID0gcmVxdWlyZSgnLi9yb3V0ZXMvcHJvcGVydGllcycpOwpjb25zdCBib29raW5nUm91dGVzID0gcmVxdWlyZSgnLi9yb3V0ZXMvYm9va2luZ3MnKTsKY29uc3QgcmV2aWV3Um91dGVzID0gcmVxdWlyZSgnLi9yb3V0ZXMvcmV2aWV3cycpOwpjb25zdCBob3N0Um91dGVzID0gcmVxdWlyZSgnLi9yb3V0ZXMvaG9zdCcpOwpjb25zdCB1cGxvYWRSb3V0ZXMgPSByZXF1aXJlKCcuL3JvdXRlcy91cGxvYWQnKTsKY29uc3QgcGF5bWVudFJvdXRlcyA9IHJlcXVpcmUoJy4vcm91dGVzL3BheW1lbnRzJyk7CmNvbnN0IG5vdGlmaWNhdGlvblJvdXRlcyA9IHJlcXVpcmUoJy4vcm91dGVzL25vdGlmaWNhdGlvbnMnKTsKY29uc3QgYWRtaW5Sb3V0ZXMgPSByZXF1aXJlKCcuL3JvdXRlcy9hZG1pbicpOwoKLy8gQ29ubmVjdCB0byBkYXRhYmFzZQpjb25uZWN0REIoKTsKCmNvbnN0IGFwcCA9IGV4cHJlc3MoKTsKCi8vIFNlY3VyaXR5IGhlYWRlcnMKYXBwLnVzZSgocmVxLCByZXMsIG5leHQpID0+IHsKICByZXMuc2V0SGVhZGVyKCdYLUNvbnRlbnQtVHlwZS1PcHRpb25zJywgJ25vc25pZmYnKTsKICByZXMuc2V0SGVhZGVyKCdYLUZyYW1lLU9wdGlvbnMnLCAnREVOWScpOwogIHJlcy5zZXRIZWFkZXIoJ1gtWFNTLVByb3RlY3Rpb24nLCAnMTsgbW9kZT1ibG9jaycpOwogIHJlcy5zZXRIZWFkZXIoJ1JlZmVycmVyLVBvbGljeScsICdzdHJpY3Qtb3JpZ2luLXdoZW4tY3Jvc3Mtb3JpZ2luJyk7CiAgcmVzLnNldEhlYWRlcignUGVybWlzc2lvbnMtUG9saWN5JywgJ2NhbWVyYT0oKSwgbWljcm9waG9uZT0oKSwgZ2VvbG9jYXRpb249KCknKTsKICBpZiAocHJvY2Vzcy5lbnYuTk9ERV9FTlYgPT09ICdwcm9kdWN0aW9uJykgewogICAgcmVzLnNldEhlYWRlcignU3RyaWN0LVRyYW5zcG9ydC1TZWN1cml0eScsICdtYXgtYWdlPTMxNTM2MDAwOyBpbmNsdWRlU3ViRG9tYWlucycpOwogIH0KICBOZXH0KCk7Cn0pOwoKLy8gQ09SUyAod2hpdGVsaXN0LWJhc2VkKQpjb25zdCBhbGxvd2VkT3JpZ2lucyA9IHByb2Nlc3MuZW52LkNPUlNfT1JJR0lOUwogID8gcHJvY2Vzcy5lbnYuQ09SU19PUklHSU5TLnNwbGl0KCcsJykubWFwKChvKSA9PiBvLnRyaW0oKSkKICA6IFtwcm9jZXNzLmVudi5DTElFTlRfVVJMIHx8ICdodHRwOi8vbG9jYWxob3N0OjMwMDAnXTsKCmFwcC51c2UoCiAgY29ycyh7CiAgICBvcmlnaW46IChvcmlnaW4sIGNhbGxiYWNrKSA9PiB7CiAgICAgIGlmICghb3JpZ2luIHx8IGFsbG93ZWRPcmlnaW5zLmluY2x1ZGVzKG9yaWdpbikpIHsKICAgICAgICBjYWxsYmFjayhudWxsLCB0cnVlKTsKICAgICAgfSBlbHNlIHsKICAgICAgICBjYWxsYmFjayhuZXcgRXJyb3IoJ05vdCBhbGxvd2VkIGJ5IENPUlMnKSk7CiAgICAgIH0KICAgIH0sCiAgICBjcmVkZW50aWFsczogdHJ1ZSwKICAgIG1heEFnZTogMzYwMCwKICB9KQopOwoKLy8gQ29va2llIHBhcnNlciAocmVxdWlyZWQgZm9yIEh0dHBPbmx5IGNvb2tpZSBhdXRoKQphcHAudXNlKGNvb2tpZVBhcnNlcigpKTsKCi8vIEJvZHkgcGFyc2luZyB3aXRoIHNpemUgbGltaXRzCmFwcC51c2UoZXhwcmVzcy5qc29uKHsgbGltaXQ6ICcybWInIH0pKTsKYXBwLnVzZShleHByZXNzLnVybGVuY29kZWQoeyBleHRlbmRlZDogdHJ1ZSwgbGltaXQ6ICcybWInIH0pKTsKCi8vIFJhdGUgbGltaXRpbmcgKHByb2R1Y3Rpb24tcmVhZHkgd2l0aCBleHByZXNzLXJhdGUtbGltaXQpCmNvbnN0IGF1dGhMaW1pdGVyID0gcmF0ZUxpbWl0KHsKICB3aW5kb3dNczogMTUgKiA2MCAqIDEwMDAsCiAgbWF4OiAxMCwKICBtZXNzYWdlOiB7IHN1Y2Nlc3M6IGZhbHNlLCBtZXNzYWdlOiAnVG9vIG1hbnkgbG9naW4gYXR0ZW1wdHMsIHRyeSBhZ2FpbiBpbiAxNSBtaW51dGVzJyB9LAogIHN0YW5kYXJkSGVhZGVyczogdHJ1ZSwKICBsZWdhY3lIZWFkZXJzOiBmYWxzZSwKfSk7Cgpjb25zdCByZWdpc3RlckxpbWl0ZXIgPSByYXRlTGltaXQoewogIHdpbmRvd01zOiA2MCAqIDYwICogMTAwMCwKICBtYXg6IDUsCiAgbWVzc2FnZTogeyBzdWNjZXNzOiBmYWxzZSwgbWVzc2FnZTogJ1RvbyBtYW55IGFjY291bnRzIGNyZWF0ZWQsIHRyeSBhZ2FpbiBsYXRlcicgfSwKICBzdGFuZGFyZEhlYWRlcnM6IHRydWUsCiAgbGVnYWN5SGVhZGVyczogZmFsc2UsCn0pOwoKY29uc3QgYXBpTGltaXRlciA9IHJhdGVMaW1pdCh7CiAgd2luZG93TXM6IDE1ICogNjAgKiAxMDAwLAogIG1heDogMjAwLAogIG1lc3NhZ2U6IHsgc3VjY2VzczogZmFsc2UsIG1lc3NhZ2U6ICdUb28gbWFueSByZXF1ZXN0cycgfSwKICBzdGFuZGFyZEhlYWRlcnM6IHRydWUsCiAgbGVnYWN5SGVhZGVyczogZmFsc2UsCn0pOwoKLy8gTG9nZ2luZwppZiAocHJvY2Vzcy5lbnYuTk9ERV9FTlYgPT09ICdkZXZlbG9wbWVudCcpIHsKICBhcHAudXNlKG1vcmdhbignZGV2JykpOwp9IGVsc2UgewogIGFwcC51c2UobW9yZ2FuKCdjb21iaW5lZCcpKTsKfQoKLy8gSGVhbHRoIGNoZWNrCmFwcC5nZXQoJy9hcGkvaGVhbHRoJywgKHJlcSwgcmVzKSA9PiB7CiAgcmVzLmpzb24oeyBzdWNjZXNzOiB0cnVlLCBtZXNzYWdlOiAnSG9zdG4gQVBJIGlzIHJ1bm5pbmcnLCB0aW1lc3RhbXA6IG5ldyBEYXRlKCkgfSk7Cn0pOwoKLy8gUm91dGVzCmFwcC51c2UoJy9hcGkvYXV0aC9sb2dpbicsIGF1dGhMaW1pdGVyKTsKYXBwLnVzZSgnL2FwaS9hdXRoL3JlZ2lzdGVyJywgcmVnaXN0ZXJMaW1pdGVyKTsKYXBwLnVzZSgnL2FwaScsIGFwaUxpbWl0ZXIpOwoKYXBwLnVzZSgnL2FwaS9hdXRoJywgYXV0aFJvdXRlcyk7CmFwcC51c2UoJy9hcGkvcHJvcGVydGllcycsIHByb3BlcnR5Um91dGVzKTsKYXBwLnVzZSgnL2FwaS9ib29raW5ncycsIGJvb2tpbmdSb3V0ZXMpOwphcHAudXNlKCcvYXBpL3Jldmlld3MnLCByZXZpZXdSb3V0ZXMpOwphcHAudXNlKCcvYXBpL2hvc3QnLCBob3N0Um91dGVzKTsKYXBwLnVzZSgnL2FwaS91cGxvYWQnLCB1cGxvYWRSb3V0ZXMpOwphcHAudXNlKCcvYXBpL3BheW1lbnRzJywgcGF5bWVudFJvdXRlcyk7CmFwcC51c2UoJy9hcGkvbm90aWZpY2F0aW9ucycsIG5vdGlmaWNhdGlvblJvdXRlcyk7CmFwcC51c2UoJy9hcGkvYWRtaW4nLCBhZG1pblJvdXRlcyk7CgovLyBTZXJ2ZSB1cGxvYWRlZCBmaWxlcyBzdGF0aWNhbGx5CmFwcC51c2UoJy91cGxvYWRzJywgZXhwcmVzcy5zdGF0aWMoJ3VwbG9hZHMnKSk7CgovLyA0MDQgaGFuZGxlcgphcHAudXNlKCcqJywgKHJlcSwgcmVzKSA9PiB7CiAgcmVzLnN0YXR1cyg0MDQpLmpzb24oeyBzdWNjZXNzOiBmYWxzZSwgbWVzc2FnZTogJ1JvdXRlIG5vdCBmb3VuZCcgfSk7Cn0pOwoKLy8gRXJyb3IgaGFuZGxlcgphcHAudXNlKGVycm9ySGFuZGxlcik7Cgpjb25zdCBQT1JUID0gcHJvY2Vzcy5lbnYuUE9SVCB8fCA1MDAwOwphcHAubGlzdGVuKFBPUlQsICgpID0+IHsKICBjb25zb2xlLmxvZyhgSG9zdG4gQVBJIHJ1bm5pbmcgb24gcG9ydCAke1BPUlR9IGluICR7cHJvY2Vzcy5lbnYuTk9ERV9FTlYgfHwgJ2RldmVsb3BtZW50J30gbW9kZWApOwp9KTsKCm1vZHVsZS5leHBvcnRzID0gYXBwOw==
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const connectDB = require('./config/database');
+const errorHandler = require('./middleware/errorHandler');
+
+// Route imports
+const authRoutes = require('./routes/auth');
+const propertyRoutes = require('./routes/properties');
+const bookingRoutes = require('./routes/bookings');
+const reviewRoutes = require('./routes/reviews');
+const hostRoutes = require('./routes/host');
+const uploadRoutes = require('./routes/upload');
+const paymentRoutes = require('./routes/payments');
+const notificationRoutes = require('./routes/notifications');
+const adminRoutes = require('./routes/admin');
+const messageRoutes = require('./routes/messageRoutes');
+const supportRoutes = require('./routes/supportRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+
+// Connect to database
+connectDB();
+
+const app = express();
+
+// ── Security headers ──────────────────────────────────────────────────────────
+// Inline helmet-like headers (helmet is not in package.json, so we set them manually)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// ── CORS (whitelist-based) ────────────────────────────────────────────────────
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+  : [process.env.CLIENT_URL || 'http://localhost:3000'];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    maxAge: 3600,
+  })
+);
+
+// ── Body parsing with size limits ─────────────────────────────────────────────
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+// Simple in-memory rate limiter (no extra dependency needed)
+const rateLimitStore = new Map();
+
+function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
+  // Cleanup old entries every 5 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore) {
+      if (now - entry.start > windowMs) rateLimitStore.delete(key);
+    }
+  }, 5 * 60 * 1000).unref();
+
+  return (req, res, next) => {
+    const key = `${req.ip}:${req.baseUrl || req.path}`;
+    const now = Date.now();
+    const entry = rateLimitStore.get(key);
+
+    if (!entry || now - entry.start > windowMs) {
+      rateLimitStore.set(key, { start: now, count: 1 });
+      return next();
+    }
+
+    entry.count++;
+    if (entry.count > max) {
+      return res.status(429).json({ success: false, message });
+    }
+    next();
+  };
+}
+
+// Strict limits on auth endpoints (prevent brute force)
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many login attempts, try again in 15 minutes' });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: 'Too many accounts created, try again later' });
+
+// Message rate limiter
+const messageLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: 'Too many messages sent, please slow down' });
+
+// General API limiter
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
+
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, message: 'Hostn API is running', timestamp: new Date() });
+});
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', registerLimiter);
+app.use('/api', apiLimiter);
+
+app.use('/api/auth', authRoutes);
+app.use('/api/properties', propertyRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/host', hostRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageLimiter, messageRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/reports', reportRoutes);
+
+// Serve uploaded files statically
+app.use('/uploads', express.static('uploads'));
+
+// ── 404 handler ───────────────────────────────────────────────────────────────
+app.use('*', (req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
+
+// ── Error handler ─────────────────────────────────────────────────────────────
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Hostn API running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+});
+
+module.exports = app;

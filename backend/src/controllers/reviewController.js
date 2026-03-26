@@ -1,6 +1,7 @@
 const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
+const Notification = require('../models/Notification');
 
 // @desc    Get reviews for a property
 // @route   GET /api/reviews/property/:propertyId
@@ -37,31 +38,57 @@ exports.createReview = async (req, res, next) => {
   try {
     const { propertyId, bookingId, ratings, comment } = req.body;
 
-    // Verify the booking exists and belongs to this user
-    if (bookingId) {
-      const booking = await Booking.findById(bookingId);
-      if (!booking || booking.guest.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ success: false, message: 'Not authorized' });
-      }
-      if (booking.status !== 'completed') {
-        return res.status(400).json({ success: false, message: 'Can only review completed bookings' });
-      }
+    // Booking ID is required
+    if (!bookingId) {
+      return res.status(400).json({ success: false, message: 'Booking ID is required to leave a review' });
     }
 
-    const existingReview = await Review.findOne({ property: propertyId, guest: req.user._id });
-    if (existingReview) {
-      return res.status(400).json({ success: false, message: 'Already reviewed this property' });
+    // Verify the booking exists and belongs to this user
+    const booking = await Booking.findById(bookingId);
+    if (!booking || booking.guest.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
+    if (booking.status !== 'completed') {
+      return res.status(400).json({ success: false, message: 'Can only review completed bookings' });
+    }
+
+    // 24-hour post-checkout delay enforcement
+    const checkoutDate = booking.checkOut || booking.updatedAt;
+    const hoursSinceCheckout = (Date.now() - new Date(checkoutDate).getTime()) / (1000 * 60 * 60);
+    if (hoursSinceCheckout < 24) {
+      return res.status(400).json({ success: false, message: 'Reviews can only be submitted 24 hours after checkout' });
+    }
+
+    // One review per booking (not per property)
+    const existingReview = await Review.findOne({ booking: bookingId, guest: req.user._id });
+    if (existingReview) {
+      return res.status(400).json({ success: false, message: 'You have already reviewed this booking' });
+    }
+
+    // Sanitize comment (strip HTML tags)
+    const sanitizedComment = comment ? comment.replace(/<[^>]*>/g, '').trim() : '';
 
     const review = await Review.create({
       property: propertyId,
       guest: req.user._id,
       booking: bookingId,
       ratings,
-      comment,
+      comment: sanitizedComment,
     });
 
     await review.populate('guest', 'name avatar');
+
+    // Notify the host about the new review
+    const property = await Property.findById(propertyId);
+    if (property && property.host) {
+      await Notification.createNotification({
+        user: property.host,
+        type: 'review_received',
+        title: 'New Review',
+        message: `A guest has left a review on your property "${property.title}"`,
+        data: { propertyId: property._id, reviewId: review._id },
+      });
+    }
 
     res.status(201).json({ success: true, data: review });
   } catch (error) {
