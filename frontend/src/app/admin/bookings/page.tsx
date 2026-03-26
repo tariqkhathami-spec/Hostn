@@ -1,257 +1,146 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface AdminBooking {
+interface BookingItem {
   _id: string;
+  guest?: { name: string };
+  guestName?: string;
+  property?: { title: string };
+  propertyTitle?: string;
   checkIn: string;
   checkOut: string;
   status: string;
-  paymentStatus: string;
-  pricing: { total: number; perNight: number; nights: number; subtotal: number; cleaningFee: number; serviceFee: number };
-  guests: { adults: number; children: number };
-  guestName: string;
-  guestEmail: string;
-  propertyTitle: string;
-  propertyCity: string;
-  hostName: string;
-  createdAt: string;
+  totalPrice: number;
 }
 
-const statusColors: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#fef9c3', text: '#854d0e' },
-  confirmed: { bg: '#dbeafe', text: '#1e40af' },
-  completed: { bg: '#dcfce7', text: '#166534' },
-  cancelled: { bg: '#fee2e2', text: '#991b1b' },
-  rejected: { bg: '#fce7f3', text: '#9d174d' },
-};
-
-const paymentColors: Record<string, { bg: string; text: string }> = {
-  paid: { bg: '#dcfce7', text: '#166534' },
-  unpaid: { bg: '#fef9c3', text: '#854d0e' },
-  refunded: { bg: '#f3e8ff', text: '#6b21a8' },
+const statusColors: Record<string, string> = {
+  confirmed: 'bg-green-50 text-green-700',
+  pending: 'bg-yellow-50 text-yellow-700',
+  cancelled: 'bg-red-50 text-red-700',
+  completed: 'bg-blue-50 text-blue-700',
 };
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<AdminBooking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [paymentFilter, setPaymentFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
-  const [selectedBooking, setSelectedBooking] = useState<AdminBooking | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState<AdminBooking | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
-  const fetchBookings = async (page = 1) => {
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const loadBookings = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await adminApi.getBookings({
-        page,
-        limit: 20,
-        ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(paymentFilter !== 'all' && { paymentStatus: paymentFilter }),
-        ...(search && { search }),
-      });
-      if (response.data?.success) {
-        setBookings(response.data.data || []);
-        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
-      } else {
-        setError(response.data?.message || 'Failed to load bookings');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setError(message);
-      console.error('Fetch bookings error:', err);
+      const res = await adminApi.getBookings({ page });
+      const data = res.data;
+      setBookings(data.data || data.bookings || []);
+      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' : 'Failed to load bookings');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, isAr]);
 
-  useEffect(() => { fetchBookings(); }, [statusFilter, paymentFilter]);
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
-  const handleCancel = async (bookingId: string) => {
-    try {
-      setActionLoading(true);
-      setActionError(null);
-      const response = await adminApi.updateBooking(bookingId, 'cancel');
-      if (response.data?.success) {
-        fetchBookings(pagination.page);
-        setConfirmCancel(null);
-      } else {
-        setActionError(response.data?.message || 'Failed to cancel booking');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setActionError(message);
-      console.error('Cancel booking error:', err);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchBookings(1); };
+  const statusLabels: Record<string, string> = isAr
+    ? { confirmed: '\u0645\u0624\u0643\u062f', pending: '\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631', cancelled: '\u0645\u0644\u063a\u064a', completed: '\u0645\u0643\u062a\u0645\u0644' }
+    : { confirmed: 'Confirmed', pending: 'Pending', cancelled: 'Cancelled', completed: 'Completed' };
 
   return (
     <div>
-      {/* Error Alert */}
-      {error && (
-        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
-          <input type="text" placeholder="Search bookings..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, width: 240, outline: 'none' }} />
-          <button type="submit" style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Search</button>
-        </form>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select value={paymentFilter} onChange={e => setPaymentFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
-          <option value="all">All Payments</option>
-          <option value="paid">Paid</option>
-          <option value="unpaid">Unpaid</option>
-          <option value="refunded">Refunded</option>
-        </select>
-        <span style={{ fontSize: 13, color: '#64748b', marginLeft: 'auto' }}>{pagination.total} bookings</span>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isAr ? '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' : 'Booking Oversight'}
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {isAr ? '\u0639\u0631\u0636 \u062c\u0645\u064a\u0639 \u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' : 'View all bookings'}
+        </p>
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Booking</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Guest</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Property</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Dates</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#475569' }}>Total</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Status</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Payment</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading...</td></tr>
-            ) : bookings.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No bookings found</td></tr>
-            ) : bookings.map(b => {
-              const sc = statusColors[b.status] || statusColors.pending;
-              const pc = paymentColors[b.paymentStatus] || paymentColors.unpaid;
-              return (
-                <tr key={b._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 500, color: '#0f172a', fontSize: 12 }}>#{b._id.slice(-8)}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(b.createdAt).toLocaleDateString()}</div>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontWeight: 500, color: '#0f172a' }}>{b.guestName}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{b.guestEmail}</div>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#0f172a' }}>{b.propertyTitle}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{b.propertyCity} · Host: {b.hostName}</div>
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, color: '#475569' }}>
-                    {new Date(b.checkIn).toLocaleDateString()} → {new Date(b.checkOut).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>SAR {b.pricing?.total?.toLocaleString()}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.text }}>{b.status}</span>
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: pc.bg, color: pc.text }}>{b.paymentStatus}</span>
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                      <button onClick={() => setSelectedBooking(b)} style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#475569' }}>View</button>
-                      {b.status !== 'cancelled' && b.status !== 'completed' && (
-                        <button onClick={() => setConfirmCancel(b)} style={{ padding: '4px 10px', border: 'none', borderRadius: 6, background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-                      )}
-                    </div>
-                  </td>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            {isAr ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u062d\u062c\u0648\u0632\u0627\u062a' : 'No bookings found'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0631\u0642\u0645 \u0627\u0644\u062d\u062c\u0632' : 'Booking ID'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0636\u064a\u0641' : 'Guest'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0639\u0642\u0627\u0631' : 'Property'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644' : 'Check-in'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c' : 'Check-out'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a' : 'Total'}</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {bookings.map((b) => (
+                  <tr key={b._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                      {b._id.slice(-8).toUpperCase()}
+                    </td>
+                    <td className="px-4 py-3 text-gray-900">
+                      {b.guest?.name || b.guestName || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {b.property?.title || b.propertyTitle || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(b.checkIn).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(b.checkOut).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[b.status] || 'bg-gray-50 text-gray-700'}`}>
+                        {statusLabels[b.status] || b.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {b.totalPrice?.toLocaleString()} {isAr ? '\u0631.\u0633' : 'SAR'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-          {Array.from({ length: pagination.pages }, (_, i) => (
-            <button key={i} onClick={() => fetchBookings(i + 1)} style={{
-              padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, cursor: 'pointer',
-              background: pagination.page === i + 1 ? '#3b82f6' : '#fff', color: pagination.page === i + 1 ? '#fff' : '#475569',
-            }}>{i + 1}</button>
-          ))}
-        </div>
-      )}
-
-      {/* Booking Detail Modal */}
-      {selectedBooking && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setSelectedBooking(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Booking #{selectedBooking._id.slice(-8)}</h2>
-              <button onClick={() => setSelectedBooking(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8' }}>✕</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
-              <div><span style={{ color: '#64748b' }}>Guest:</span> <strong>{selectedBooking.guestName}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Host:</span> <strong>{selectedBooking.hostName}</strong></div>
-              <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b' }}>Property:</span> <strong>{selectedBooking.propertyTitle}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Check-in:</span> <strong>{new Date(selectedBooking.checkIn).toLocaleDateString()}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Check-out:</span> <strong>{new Date(selectedBooking.checkOut).toLocaleDateString()}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Nights:</span> <strong>{selectedBooking.pricing?.nights}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Guests:</span> <strong>{selectedBooking.guests?.adults} adults, {selectedBooking.guests?.children} children</strong></div>
-            </div>
-            <div style={{ marginTop: 16, padding: 16, background: '#f8fafc', borderRadius: 8, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span>Subtotal ({selectedBooking.pricing?.nights} nights × SAR {selectedBooking.pricing?.perNight})</span> <strong>SAR {selectedBooking.pricing?.subtotal?.toLocaleString()}</strong></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span>Cleaning Fee</span> <strong>SAR {selectedBooking.pricing?.cleaningFee?.toLocaleString()}</strong></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}><span>Service Fee</span> <strong>SAR {selectedBooking.pricing?.serviceFee?.toLocaleString()}</strong></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid #e2e8f0', fontWeight: 700, fontSize: 15 }}><span>Total</span> <span>SAR {selectedBooking.pricing?.total?.toLocaleString()}</span></div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-              <button onClick={() => setSelectedBooking(null)} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cancel Confirm Modal */}
-      {confirmCancel && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 400 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#ef4444' }}>Cancel Booking</h3>
-            {actionError && (
-              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
-                {actionError}
-              </div>
-            )}
-            <p style={{ fontSize: 14, color: '#475569', margin: '0 0 20px' }}>
-              Are you sure you want to cancel booking <strong>#{confirmCancel._id.slice(-8)}</strong> for <strong>{confirmCancel.guestName}</strong>? This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setConfirmCancel(null); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Keep Booking</button>
-              <button onClick={() => handleCancel(confirmCancel._id)} disabled={actionLoading}
-                style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
-                {actionLoading ? 'Cancelling...' : 'Cancel Booking'}
-              </button>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+          </button>
         </div>
       )}
     </div>

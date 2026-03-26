@@ -1,7 +1,7 @@
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <>{children}</>;
+'use client';
+
+import DashboardShell from '@/components/layout/DashboardShell';
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return <DashboardShell role="guest">{children}</DashboardShell>;
 }

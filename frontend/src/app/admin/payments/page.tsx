@@ -1,263 +1,169 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
-import { PaymentRecord, PaymentStatus } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
+import { Loader2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface Summary {
-  totalRevenue: number;
-  pendingAmount: number;
-  failedCount: number;
-  totalTransactions: number;
+interface PaymentItem {
+  _id: string;
+  user?: { name: string };
+  userName?: string;
+  amount: number;
+  status: string;
+  createdAt: string;
 }
 
-const statusColors: Record<PaymentStatus, { bg: string; text: string }> = {
-  paid: { bg: '#dcfce7', text: '#166534' },
-  pending: { bg: '#fef9c3', text: '#854d0e' },
-  processing: { bg: '#dbeafe', text: '#0c4a6e' },
-  failed: { bg: '#fee2e2', text: '#991b1b' },
-  refunded: { bg: '#f3e8ff', text: '#6b21a8' },
-  cancelled: { bg: '#f1f5f9', text: '#334155' },
+const statusColors: Record<string, string> = {
+  paid: 'bg-green-50 text-green-700',
+  pending: 'bg-yellow-50 text-yellow-700',
+  refunded: 'bg-blue-50 text-blue-700',
+  failed: 'bg-red-50 text-red-700',
 };
 
 export default function AdminPaymentsPage() {
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
-  const fetchPayments = async (page = 1) => {
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+
+  const loadPayments = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await adminApi.getPayments({
-        page,
-        limit: 20,
-        ...(statusFilter !== 'all' && { status: statusFilter }),
-        ...(searchQuery && { search: searchQuery }),
-      });
-      if (response.data?.success) {
-        setPayments(response.data.data || []);
-        setSummary(response.data.summary || calculateSummary(response.data.data || []));
-        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
-      } else {
-        setError(response.data?.message || 'Failed to load payments');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setError(message);
-      console.error('Fetch payments error:', err);
+      const res = await adminApi.getPayments({ page });
+      const data = res.data;
+      setPayments(data.data || data.payments || []);
+      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0627\u062a' : 'Failed to load payments');
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculateSummary = (data: PaymentRecord[]): Summary => {
-    return {
-      totalRevenue: data.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
-      pendingAmount: data.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
-      failedCount: data.filter(p => p.status === 'failed').length,
-      totalTransactions: data.length,
-    };
-  };
+  }, [page, isAr]);
 
   useEffect(() => {
-    fetchPayments();
-  }, [statusFilter, searchQuery]);
+    loadPayments();
+  }, [loadPayments]);
 
-  const formatPaymentMethod = (payment: PaymentRecord) => {
-    if (payment.cardBrand && payment.cardLast4) {
-      return `${payment.cardBrand} ••••${payment.cardLast4}`;
+  const refund = async (id: string) => {
+    const reason = prompt(isAr ? '\u0633\u0628\u0628 \u0627\u0644\u0627\u0633\u062a\u0631\u062f\u0627\u062f:' : 'Reason for refund:');
+    if (!reason) return;
+
+    setRefundingId(id);
+    try {
+      await adminApi.refundPayment(id, { reason });
+      toast.success(isAr ? '\u062a\u0645 \u0627\u0644\u0627\u0633\u062a\u0631\u062f\u0627\u062f \u0628\u0646\u062c\u0627\u062d' : 'Payment refunded');
+      loadPayments();
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u0627\u0633\u062a\u0631\u062f\u0627\u062f' : 'Refund failed');
+    } finally {
+      setRefundingId(null);
     }
-    return payment.paymentMethod || 'Pending';
   };
 
-  const truncateId = (id: string, length: number = 12) => {
-    return id.length > length ? `${id.substring(0, length)}...` : id;
-  };
+  const statusLabels: Record<string, string> = isAr
+    ? { paid: '\u0645\u062f\u0641\u0648\u0639', pending: '\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631', refunded: '\u0645\u0633\u062a\u0631\u062f', failed: '\u0641\u0627\u0634\u0644' }
+    : { paid: 'Paid', pending: 'Pending', refunded: 'Refunded', failed: 'Failed' };
 
   return (
     <div>
-      {/* Error Alert */}
-      {error && (
-        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Summary Cards */}
-      {summary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', border: '1px solid #e2e8f0', borderLeft: '4px solid #10b981' }}>
-            <div style={{ fontSize: 13, color: '#64748b' }}>Total Revenue</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#10b981' }}>SAR {summary.totalRevenue.toLocaleString()}</div>
-          </div>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b' }}>
-            <div style={{ fontSize: 13, color: '#64748b' }}>Pending Payments</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#f59e0b' }}>SAR {summary.pendingAmount.toLocaleString()}</div>
-          </div>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', border: '1px solid #e2e8f0', borderLeft: '4px solid #ef4444' }}>
-            <div style={{ fontSize: 13, color: '#64748b' }}>Failed Payments</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#ef4444' }}>{summary.failedCount}</div>
-          </div>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 24px', border: '1px solid #e2e8f0', borderLeft: '4px solid #3b82f6' }}>
-            <div style={{ fontSize: 13, color: '#64748b' }}>Total Transactions</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{summary.totalTransactions}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Filter Bar */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value as PaymentStatus | 'all')}
-          style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}
-        >
-          <option value="all">All Status</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
-          <option value="failed">Failed</option>
-          <option value="refunded">Refunded</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-
-        <input
-          type="text"
-          placeholder="Search by guest name or property..."
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          style={{
-            padding: '8px 14px',
-            border: '1px solid #d1d5db',
-            borderRadius: 8,
-            fontSize: 13,
-            width: 250,
-            background: '#fff',
-          }}
-        />
-
-        <span style={{ fontSize: 13, color: '#64748b', marginLeft: 'auto' }}>
-          {pagination.total} transactions
-        </span>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isAr ? '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0627\u062a' : 'Payment Oversight'}
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {isAr ? '\u0639\u0631\u0636 \u0648\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0627\u062a' : 'View and manage payments'}
+        </p>
       </div>
 
-      {/* Payments Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Payment ID</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Guest Name</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Property</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#475569' }}>Amount</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Status</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Payment Method</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Provider TX ID</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Date</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                  Loading...
-                </td>
-              </tr>
-            ) : payments.length === 0 ? (
-              <tr>
-                <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                  No payments found
-                </td>
-              </tr>
-            ) : (
-              payments.map(payment => {
-                const sc = statusColors[payment.status as PaymentStatus] || statusColors.pending;
-                return (
-                  <tr key={payment._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 500, color: '#0f172a', fontSize: 12 }}>
-                        {truncateId(payment.providerPaymentId || payment._id)}
-                      </div>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+          </div>
+        ) : payments.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            {isAr ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u062f\u0641\u0648\u0639\u0627\u062a' : 'No payments found'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0631\u0642\u0645 \u0627\u0644\u062f\u0641\u0639' : 'Payment ID'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0636\u064a\u0641' : 'Guest'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0645\u0628\u0644\u063a' : 'Amount'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062a\u0627\u0631\u064a\u062e' : 'Date'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0625\u062c\u0631\u0627\u0621' : 'Action'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {payments.map((p) => (
+                  <tr key={p._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                      {p._id.slice(-8).toUpperCase()}
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 500, color: '#0f172a' }}>{payment.guestName}</div>
-                      {payment.guestEmail && (
-                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{payment.guestEmail}</div>
-                      )}
+                    <td className="px-4 py-3 text-gray-900">
+                      {p.user?.name || p.userName || '-'}
                     </td>
-                    <td style={{ padding: '12px 16px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#475569' }}>
-                      {payment.propertyTitle}
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {p.amount?.toLocaleString()} {isAr ? '\u0631.\u0633' : 'SAR'}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: 14 }}>
-                      SAR {payment.amount.toLocaleString()}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.text }}>
-                        {payment.status}
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[p.status] || 'bg-gray-50 text-gray-700'}`}>
+                        {statusLabels[p.status] || p.status}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#475569', fontSize: 12 }}>
-                      {formatPaymentMethod(payment)}
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(p.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 11 }}>
-                      {payment.providerPaymentId ? truncateId(payment.providerPaymentId, 8) : '-'}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
-                      {new Date(payment.createdAt).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <button
-                        onClick={() => {
-                          /* Handle view details action */
-                        }}
-                        style={{
-                          padding: '4px 12px',
-                          background: '#3b82f6',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          cursor: 'pointer',
-                          fontWeight: 500,
-                        }}
-                      >
-                        View
-                      </button>
+                    <td className="px-4 py-3">
+                      {p.status === 'paid' && (
+                        <button
+                          onClick={() => refund(p._id)}
+                          disabled={refundingId === p._id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+                        >
+                          {refundingId === p._id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-3 h-3" />
+                          )}
+                          {isAr ? '\u0627\u0633\u062a\u0631\u062f\u0627\u062f' : 'Refund'}
+                        </button>
+                      )}
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-          {Array.from({ length: pagination.pages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => fetchPayments(i + 1)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 6,
-                border: '1px solid #d1d5db',
-                fontSize: 13,
-                cursor: 'pointer',
-                background: pagination.page === i + 1 ? '#3b82f6' : '#fff',
-                color: pagination.page === i + 1 ? '#fff' : '#475569',
-              }}
-            >
-              {i + 1}
-            </button>
-          ))}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+          </button>
         </div>
       )}
     </div>

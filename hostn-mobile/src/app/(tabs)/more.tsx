@@ -47,7 +47,28 @@ const QUICK_LINKS: QuickLink[] = [
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, upgradeToHost } = useAuthStore();
+
+  const handleBecomeHost = () => {
+    Alert.alert(
+      'Become a Host',
+      'Upgrade your account to start listing properties and earning.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Upgrade',
+          onPress: async () => {
+            try {
+              await upgradeToHost();
+              Alert.alert('Success', 'You are now a host! The app will switch to host mode.');
+            } catch {
+              Alert.alert('Error', 'Failed to upgrade. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const initial = (user?.name ?? '?').charAt(0).toUpperCase();
 
@@ -118,6 +139,18 @@ export default function MoreScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Become a Host CTA */}
+        {user?.role === 'guest' && (
+          <TouchableOpacity style={styles.hostCta} onPress={handleBecomeHost}>
+            <Ionicons name="home-outline" size={24} color="#059669" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.hostCtaTitle}>Become a Host</Text>
+              <Text style={styles.hostCtaSubtitle}>List your property and start earning</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#059669" />
+          </TouchableOpacity>
+        )}
 
         {/* Menu Items */}
         <View style={[styles.menuContainer, Shadows.card]}>
@@ -224,6 +257,28 @@ const styles = StyleSheet.create({
   quickLinkLabel: {
     ...Typography.caption,
     color: Colors.textPrimary,
+  },
+  hostCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: '#ecfdf5',
+    marginHorizontal: Spacing.base,
+    borderRadius: Radius.card,
+    padding: Spacing.base,
+    marginBottom: Spacing.base,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  hostCtaTitle: {
+    ...Typography.body,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  hostCtaSubtitle: {
+    ...Typography.caption,
+    color: '#6ee7b7',
+    marginTop: 2,
   },
   menuContainer: {
     backgroundColor: Colors.background,

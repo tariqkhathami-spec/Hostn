@@ -1,5 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
+import DashboardShell from '@/components/layout/DashboardShell';
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <DashboardShell role="admin">{children}</DashboardShell>;
+}

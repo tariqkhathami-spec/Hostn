@@ -74,6 +74,28 @@ const translations: Record<string, Record<Language, string>> = {
   'account.language': { en: 'Language', ar: 'اللغة' },
   'account.helpCenter': { en: 'Help Center', ar: 'مركز المساعدة' },
 
+  // Host tabs
+  'host.dashboard': { en: 'Dashboard', ar: 'لوحة التحكم' },
+  'host.listings': { en: 'My Listings', ar: 'عقاراتي' },
+  'host.bookings': { en: 'Bookings', ar: 'الحجوزات' },
+  'host.messages': { en: 'Messages', ar: 'الرسائل' },
+  'host.more': { en: 'More', ar: 'المزيد' },
+  'host.earnings': { en: 'Earnings', ar: 'الأرباح' },
+  'host.reviews': { en: 'Reviews', ar: 'التقييمات' },
+  'host.addListing': { en: 'Add Listing', ar: 'إضافة عقار' },
+  'host.properties': { en: 'Properties', ar: 'العقارات' },
+  'host.activeBookings': { en: 'Active Bookings', ar: 'الحجوزات النشطة' },
+  'host.totalEarnings': { en: 'Total Earnings', ar: 'إجمالي الأرباح' },
+  'host.avgRating': { en: 'Avg Rating', ar: 'متوسط التقييم' },
+  'host.becomeHost': { en: 'Become a Host', ar: 'كن مضيفاً' },
+  'host.becomeHostDesc': { en: 'List your property and start earning', ar: 'أدرج عقارك وابدأ بالكسب' },
+
+  // Role selection
+  'role.selectTitle': { en: 'How would you like to continue?', ar: 'اختر كيف تريد المتابعة' },
+  'role.guest': { en: 'Guest', ar: 'ضيف' },
+  'role.host': { en: 'Host', ar: 'مضيف' },
+  'role.admin': { en: 'Admin', ar: 'مشرف' },
+
   // Common
   'common.save': { en: 'Save', ar: 'حفظ' },
   'common.cancel': { en: 'Cancel', ar: 'إلغاء' },

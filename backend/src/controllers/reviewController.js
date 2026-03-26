@@ -2,6 +2,7 @@ const Review = require('../models/Review');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
 const Notification = require('../models/Notification');
+const { sanitizeHtml } = require('../utils/sanitize');
 
 // @desc    Get reviews for a property
 // @route   GET /api/reviews/property/:propertyId
@@ -65,8 +66,8 @@ exports.createReview = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'You have already reviewed this booking' });
     }
 
-    // Sanitize comment (strip HTML tags)
-    const sanitizedComment = comment ? comment.replace(/<[^>]*>/g, '').trim() : '';
+    // Sanitize comment (DOMPurify — handles all XSS vectors, not just tags)
+    const sanitizedComment = comment ? sanitizeHtml(comment) : '';
 
     const review = await Review.create({
       property: propertyId,
@@ -156,7 +157,7 @@ exports.respondToReview = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    review.hostResponse = { comment: req.body.comment, respondedAt: new Date() };
+    review.hostResponse = { comment: sanitizeHtml(req.body.comment), respondedAt: new Date() };
     await review.save();
 
     res.json({ success: true, data: review });

@@ -5,7 +5,7 @@ exports.protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check Authorization header first (mobile + web), then fall back to HttpOnly cookie (web)
+    // Check Authorization header first (mobile), then fall back to HttpOnly cookie (web)
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     } else if (req.cookies && req.cookies.hostn_token) {
@@ -23,6 +23,11 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'User not found' });
     }
 
+    // Check tokenVersion — rejects tokens issued before password change / logout-all
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+      return res.status(401).json({ success: false, message: 'Token revoked — please log in again' });
+    }
+
     // Block suspended users
     if (user.isSuspended) {
       return res.status(403).json({
@@ -34,6 +39,9 @@ exports.protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
     return res.status(401).json({ success: false, message: 'Token invalid or expired' });
   }
 };

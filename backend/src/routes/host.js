@@ -9,9 +9,12 @@ const {
   blockDates,
   getHostReviews,
   togglePropertyStatus,
+  addPropertyImage,
+  removePropertyImage,
 } = require('../controllers/hostController');
 const { protect, authorize } = require('../middleware/auth');
 const { blockDatesRules, mongoIdParam } = require('../middleware/validate');
+const { uploadSingle } = require('../middleware/upload');
 
 // All routes require host or admin role
 router.use(protect);
@@ -25,5 +28,7 @@ router.get('/calendar/:propertyId', mongoIdParam('propertyId'), getCalendar);
 router.put('/calendar/:propertyId/block', mongoIdParam('propertyId'), blockDatesRules, blockDates);
 router.get('/reviews', getHostReviews);
 router.put('/properties/:id/toggle', mongoIdParam(), togglePropertyStatus);
+router.post('/properties/:id/images', mongoIdParam(), uploadSingle, addPropertyImage);
+router.delete('/properties/:id/images', mongoIdParam(), removePropertyImage);
 
 module.exports = router;

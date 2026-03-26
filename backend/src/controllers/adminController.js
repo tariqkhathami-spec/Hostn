@@ -3,6 +3,7 @@ const Property = require('../models/Property');
 const Booking = require('../models/Booking');
 const Payment = require('../models/Payment');
 const Review = require('../models/Review');
+const { escapeRegex } = require('../utils/sanitize');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 
@@ -102,8 +103,8 @@ exports.getUsers = async (req, res, next) => {
     if (role) query.role = role;
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: escapeRegex(search), $options: 'i' } },
+        { email: { $regex: escapeRegex(search), $options: 'i' } },
       ];
     }
 
@@ -284,8 +285,8 @@ exports.getProperties = async (req, res, next) => {
     if (status === 'pending') query.isApproved = false;
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { 'location.city': { $regex: search, $options: 'i' } },
+        { title: { $regex: escapeRegex(search), $options: 'i' } },
+        { 'location.city': { $regex: escapeRegex(search), $options: 'i' } },
       ];
     }
 

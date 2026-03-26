@@ -13,6 +13,15 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (user: User) => void;
   toggleWishlist: (propertyId: string) => Promise<void>;
+  upgradeToHost: () => Promise<void>;
+}
+
+export function getRoleRedirect(role?: string): string {
+  switch (role) {
+    case 'host': return '/host';
+    case 'admin': return '/admin';
+    default: return '/dashboard';
+  }
 }
 
 interface RegisterData {
@@ -82,6 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateUser(updatedUser);
   };
 
+  const upgradeToHost = async () => {
+    const res = await authApi.upgradeToHost();
+    saveAuth(res.data.user);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -93,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         updateUser,
         toggleWishlist,
+        upgradeToHost,
       }}
     >
       {children}

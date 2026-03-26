@@ -1,13 +1,14 @@
 const jwt = require('jsonwebtoken');
 const OTP = require('../models/OTP');
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
 const { sendOTPMessage } = require('../services/sms');
 
-const generateToken = (user) => {
+const generateAccessToken = (user) => {
   return jwt.sign(
-    { id: user._id, phone: user.phone, role: user.role },
+    { id: user._id, phone: user.phone, role: user.role, tokenVersion: user.tokenVersion },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: '15m' }
   );
 };
 
@@ -39,7 +40,7 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
-    // Create OTP
+    // Create OTP (rate limited inside OTP model)
     const otp = await OTP.createOTP(phone, countryCode);
 
     // Send SMS
@@ -48,9 +49,13 @@ exports.sendOTP = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'OTP sent successfully',
-      expiresIn: 300, // 5 minutes in seconds
+      expiresIn: 300,
     });
   } catch (error) {
+    // Handle OTP rate limit error from model
+    if (error.message && error.message.includes('Too many OTP requests')) {
+      return res.status(429).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -92,15 +97,40 @@ exports.verifyOTP = async (req, res, next) => {
       await user.save();
     }
 
-    // Generate JWT token
-    const token = generateToken(user);
+    // Generate access token
+    const token = generateAccessToken(user);
+
+    // Generate refresh token
+    const deviceInfo = {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+      platform: req.headers['x-platform'] || 'mobile',
+    };
+    const { rawToken: refreshToken } = await RefreshToken.createToken(user._id, deviceInfo);
 
     const userObj = user.toObject ? user.toObject() : user;
     delete userObj.password;
 
+    // Set cookies for web clients
+    res.cookie('hostn_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+      path: '/',
+    });
+    res.cookie('hostn_refresh', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: '/api/auth',
+    });
+
     res.status(200).json({
       success: true,
       token,
+      refreshToken,
       user: userObj,
       isNewUser,
     });

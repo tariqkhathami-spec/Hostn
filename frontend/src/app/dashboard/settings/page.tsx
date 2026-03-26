@@ -1,226 +1,296 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import { User, Lock, Bell, Globe, Mail, Phone, Shield } from 'lucide-react';
+import { authApi } from '@/lib/api';
 import toast from 'react-hot-toast';
-
-const tabs = [
-  { key: 'profile', iconEn: User, labelEn: 'Profile', labelAr: 'الملف الشخصي' },
-  { key: 'security', iconEn: Lock, labelEn: 'Security', labelAr: 'الأمان' },
-  { key: 'notifications', iconEn: Bell, labelEn: 'Notifications', labelAr: 'الإشعارات' },
-  { key: 'language', iconEn: Globe, labelEn: 'Language', labelAr: 'اللغة' },
-];
+import {
+  User, Lock, Crown, Loader2, Save, Eye, EyeOff,
+} from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
-  const { language, toggleLanguage, t } = useLanguage();
-  const isAr = language === 'ar';
-  const [activeTab, setActiveTab] = useState('profile');
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading, updateUser, upgradeToHost } = useAuth();
+  const { language } = useLanguage();
+  const lang = language as 'en' | 'ar';
+
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-  });
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
 
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+  const [upgrading, setUpgrading] = useState(false);
 
-  const handleProfileSave = async () => {
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setPhone(user.phone || '');
+    }
+  }, [user]);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error(lang === 'ar' ? '\u0627\u0644\u0627\u0633\u0645 \u0645\u0637\u0644\u0648\u0628' : 'Name is required');
+      return;
+    }
     setSaving(true);
     try {
-      const res = await fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileForm),
-      });
-      if (res.ok) {
-        toast.success(isAr ? 'تم حفظ الملف الشخصي' : 'Profile saved successfully');
-      } else {
-        toast.error(isAr ? 'فشل الحفظ' : 'Failed to save');
-      }
+      const res = await authApi.updateProfile({ name: name.trim(), phone: phone.trim() });
+      updateUser(res.data.user || res.data.data || { ...user!, name: name.trim(), phone: phone.trim() });
+      toast.success(lang === 'ar' ? '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062e\u0635\u064a' : 'Profile updated');
     } catch {
-      toast.error(isAr ? 'حدث خطأ' : 'An error occurred');
+      toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u062d\u062f\u064a\u062b' : 'Failed to update profile');
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error(isAr ? 'كلمات المرور غير متطابقة' : 'Passwords do not match');
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword) {
+      toast.error(lang === 'ar' ? '\u062c\u0645\u064a\u0639 \u0627\u0644\u062d\u0642\u0648\u0644 \u0645\u0637\u0644\u0648\u0628\u0629' : 'All fields are required');
       return;
     }
-    if (passwordForm.newPassword.length < 8) {
-      toast.error(isAr ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters');
+    if (newPassword.length < 6) {
+      toast.error(lang === 'ar' ? '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 6 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644' : 'Password must be at least 6 characters');
       return;
     }
-    setSaving(true);
+    if (newPassword !== confirmPassword) {
+      toast.error(lang === 'ar' ? '\u0643\u0644\u0645\u062a\u0627 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0645\u062a\u0637\u0627\u0628\u0642\u062a\u064a\u0646' : 'Passwords do not match');
+      return;
+    }
+    setChangingPassword(true);
     try {
-      const res = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
-      });
-      if (res.ok) {
-        toast.success(isAr ? 'تم تغيير كلمة المرور' : 'Password changed successfully');
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      } else {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data.message || (isAr ? 'فشل تغيير كلمة المرور' : 'Failed to change password'));
-      }
+      await authApi.changePassword({ currentPassword, newPassword });
+      toast.success(lang === 'ar' ? '\u062a\u0645 \u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch {
-      toast.error(isAr ? 'حدث خطأ' : 'An error occurred');
+      toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Failed to change password');
     } finally {
-      setSaving(false);
+      setChangingPassword(false);
     }
   };
+
+  const handleUpgrade = async () => {
+    setUpgrading(true);
+    try {
+      await upgradeToHost();
+      toast.success(lang === 'ar' ? '\u062a\u0645 \u0627\u0644\u062a\u0631\u0642\u064a\u0629 \u0628\u0646\u062c\u0627\u062d!' : 'Upgraded to host!');
+      router.push('/host');
+    } catch {
+      toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u0631\u0642\u064a\u0629' : 'Failed to upgrade');
+      setUpgrading(false);
+    }
+  };
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
+
+  const inputClass =
+    'w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-colors text-sm';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">{isAr ? 'الإعدادات' : 'Settings'}</h1>
-        <p className="text-sm text-gray-500 mb-8">{isAr ? 'إدارة حسابك وتفضيلاتك' : 'Manage your account and preferences'}</p>
+    <div className="space-y-8 max-w-2xl">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {lang === 'ar' ? '\u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a' : 'Settings'}
+        </h1>
+        <p className="text-gray-500 mt-1">
+          {lang === 'ar' ? '\u0625\u062f\u0627\u0631\u0629 \u062d\u0633\u0627\u0628\u0643 \u0648\u062a\u0641\u0636\u064a\u0644\u0627\u062a\u0643' : 'Manage your account and preferences'}
+        </p>
+      </div>
 
-        <div className="flex flex-col sm:flex-row gap-6">
-          {/* Sidebar tabs */}
-          <div className="sm:w-56 flex-shrink-0">
-            <nav className="flex sm:flex-col gap-1 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0">
-              {tabs.map((tab) => {
-                const Icon = tab.iconEn;
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeTab === tab.key
-                        ? 'bg-primary-50 text-primary-700 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {isAr ? tab.labelAr : tab.labelEn}
-                  </button>
-                );
-              })}
-            </nav>
+      {/* Profile Section */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
+            <User className="w-5 h-5 text-primary-600" />
           </div>
-
-          {/* Content */}
-          <div className="flex-1 bg-white rounded-2xl border border-gray-200 p-6 sm:p-8">
-            {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-bold text-gray-900">{isAr ? 'معلومات الملف الشخصي' : 'Profile Information'}</h2>
-                <Input
-                  label={isAr ? 'الاسم الكامل' : 'Full Name'}
-                  type="text"
-                  value={profileForm.name}
-                  onChange={(e) => setProfileForm(f => ({ ...f, name: e.target.value }))}
-                  leftIcon={<User className="w-4 h-4" />}
-                />
-                <Input
-                  label={isAr ? 'البريد الإلكتروني' : 'Email'}
-                  type="email"
-                  value={profileForm.email}
-                  onChange={(e) => setProfileForm(f => ({ ...f, email: e.target.value }))}
-                  leftIcon={<Mail className="w-4 h-4" />}
-                />
-                <Input
-                  label={isAr ? 'رقم الجوال' : 'Phone Number'}
-                  type="tel"
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm(f => ({ ...f, phone: e.target.value }))}
-                  leftIcon={<Phone className="w-4 h-4" />}
-                />
-                <Button onClick={handleProfileSave} isLoading={saving}>
-                  {isAr ? 'حفظ التغييرات' : 'Save Changes'}
-                </Button>
-              </div>
-            )}
-
-            {activeTab === 'security' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-bold text-gray-900">{isAr ? 'تغيير كلمة المرور' : 'Change Password'}</h2>
-                <Input
-                  label={isAr ? 'كلمة المرور الحالية' : 'Current Password'}
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm(f => ({ ...f, currentPassword: e.target.value }))}
-                  leftIcon={<Lock className="w-4 h-4" />}
-                />
-                <Input
-                  label={isAr ? 'كلمة المرور الجديدة' : 'New Password'}
-                  type="password"
-                  value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
-                  leftIcon={<Shield className="w-4 h-4" />}
-                />
-                <Input
-                  label={isAr ? 'تأكيد كلمة المرور الجديدة' : 'Confirm New Password'}
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
-                  leftIcon={<Shield className="w-4 h-4" />}
-                />
-                <Button onClick={handlePasswordChange} isLoading={saving}>
-                  {isAr ? 'تحديث كلمة المرور' : 'Update Password'}
-                </Button>
-              </div>
-            )}
-
-            {activeTab === 'notifications' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-bold text-gray-900">{isAr ? 'تفضيلات الإشعارات' : 'Notification Preferences'}</h2>
-                <p className="text-sm text-gray-500">{isAr ? 'تحكم في الإشعارات التي تتلقاها' : 'Control what notifications you receive'}</p>
-                {[
-                  { labelEn: 'Booking confirmations', labelAr: 'تأكيدات الحجز', defaultOn: true },
-                  { labelEn: 'Promotional emails', labelAr: 'رسائل ترويجية', defaultOn: false },
-                  { labelEn: 'Price alerts', labelAr: 'تنبيهات الأسعار', defaultOn: true },
-                ].map((item, i) => (
-                  <label key={i} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                    <span className="text-sm text-gray-700">{isAr ? item.labelAr : item.labelEn}</span>
-                    <input type="checkbox" defaultChecked={item.defaultOn} className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500" />
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {activeTab === 'language' && (
-              <div className="space-y-6">
-                <h2 className="text-lg font-bold text-gray-900">{isAr ? 'إعدادات اللغة' : 'Language Settings'}</h2>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { if (language !== 'ar') toggleLanguage(); }}
-                    className={`flex-1 py-4 rounded-xl border-2 text-center font-semibold transition-all ${
-                      language === 'ar' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    العربية
-                  </button>
-                  <button
-                    onClick={() => { if (language !== 'en') toggleLanguage(); }}
-                    className={`flex-1 py-4 rounded-xl border-2 text-center font-semibold transition-all ${
-                      language === 'en' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    English
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {lang === 'ar' ? '\u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062e\u0635\u064a' : 'Profile'}
+          </h2>
         </div>
+
+        <form onSubmit={handleUpdateProfile} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {lang === 'ar' ? '\u0627\u0644\u0627\u0633\u0645' : 'Name'}
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              placeholder={lang === 'ar' ? '\u0627\u062f\u062e\u0644 \u0627\u0633\u0645\u0643' : 'Enter your name'}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {lang === 'ar' ? '\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a' : 'Email'}
+            </label>
+            <input
+              type="email"
+              value={user.email}
+              disabled
+              className={`${inputClass} bg-gray-50 text-gray-500 cursor-not-allowed`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {lang === 'ar' ? '\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062a\u0641' : 'Phone'}
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputClass}
+              placeholder={lang === 'ar' ? '\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062a\u0641' : 'Phone number'}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {lang === 'ar' ? '\u062d\u0641\u0638 \u0627\u0644\u062a\u063a\u064a\u064a\u0631\u0627\u062a' : 'Update Profile'}
+          </button>
+        </form>
+      </div>
+
+      {/* Become a Host Section */}
+      {user.role === 'guest' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-gold-50 flex items-center justify-center">
+              <Crown className="w-5 h-5 text-gold-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {lang === 'ar' ? '\u0643\u0646 \u0645\u0636\u064a\u0641\u0627\u064b' : 'Become a Host'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {lang === 'ar'
+                  ? '\u0642\u0645 \u0628\u062a\u0631\u0642\u064a\u0629 \u062d\u0633\u0627\u0628\u0643 \u0644\u0625\u062f\u0631\u0627\u062c \u0639\u0642\u0627\u0631\u0627\u062a\u0643'
+                  : 'Upgrade your account to list your properties'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleUpgrade}
+            disabled={upgrading}
+            className="flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white px-5 py-2.5 rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all disabled:opacity-50"
+          >
+            {upgrading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {lang === 'ar' ? '\u062a\u0631\u0642\u064a\u0629 \u0627\u0644\u0622\u0646' : 'Upgrade Now'}
+          </button>
+        </div>
+      )}
+
+      {/* Change Password Section */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-gray-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {lang === 'ar' ? '\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Change Password'}
+          </h2>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {lang === 'ar' ? '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062d\u0627\u0644\u064a\u0629' : 'Current Password'}
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className={`${inputClass} pe-10`}
+                placeholder="********"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {lang === 'ar' ? '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062c\u062f\u064a\u062f\u0629' : 'New Password'}
+            </label>
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className={`${inputClass} pe-10`}
+                placeholder="********"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              {lang === 'ar' ? '\u062a\u0623\u0643\u064a\u062f \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Confirm Password'}
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={inputClass}
+              placeholder="********"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={changingPassword}
+            className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+            {lang === 'ar' ? '\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Change Password'}
+          </button>
+        </form>
       </div>
     </div>
   );

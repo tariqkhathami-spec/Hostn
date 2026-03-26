@@ -19,7 +19,7 @@ import { APP_CONFIG } from '../../constants/config';
 
 export default function OTPVerifyScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState<number>(APP_CONFIG.otpResendSeconds);
@@ -44,12 +44,12 @@ export default function OTPVerifyScreen() {
     setOtp(newOtp);
     setError('');
 
-    if (digit && index < 3) {
+    if (digit && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
     // Auto-submit when all 4 digits entered
-    if (digit && index === 3 && newOtp.every((d) => d)) {
+    if (digit && index === 5 && newOtp.every((d) => d)) {
       handleVerify(newOtp.join(''));
     }
   };
@@ -62,8 +62,8 @@ export default function OTPVerifyScreen() {
 
   const handleVerify = async (code?: string) => {
     const otpCode = code || otp.join('');
-    if (otpCode.length !== 4) {
-      setError('Please enter the 4-digit code');
+    if (otpCode.length !== 6) {
+      setError('Please enter the 6-digit code');
       return;
     }
     setLoading(true);
@@ -71,12 +71,12 @@ export default function OTPVerifyScreen() {
 
     try {
       const result = await authService.verifyOTP(phone!, otpCode);
-      setAuth(result.token, result.user);
+      setAuth(result.token, result.user, result.refreshToken);
       router.replace('/(tabs)');
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Invalid OTP. Please try again.';
       setError(message);
-      setOtp(['', '', '', '']);
+      setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ export default function OTPVerifyScreen() {
         <View style={styles.content}>
           <Text style={styles.heading}>Enter verification code</Text>
           <Text style={styles.subtitle}>
-            We sent a 4-digit code to{'\n'}
+            We sent a 6-digit code to{'\n'}
             <Text style={styles.phoneText}>{formatPhone(phone || '')}</Text>
           </Text>
 
@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   otpInput: {
-    width: 60,
-    height: 60,
+    width: 48,
+    height: 56,
     borderWidth: 2,
     borderColor: Colors.border,
     borderRadius: Radius.md,

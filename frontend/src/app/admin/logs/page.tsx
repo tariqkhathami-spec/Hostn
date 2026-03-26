@@ -1,147 +1,128 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface ActivityLog {
+interface LogItem {
   _id: string;
+  user?: { name: string; email: string };
+  userName?: string;
   action: string;
-  performedBy: string;
-  performerName: string;
-  targetType: string;
-  targetId: string;
-  details: string;
+  details?: string;
+  ip?: string;
   createdAt: string;
 }
 
-const actionColors: Record<string, { bg: string; text: string }> = {
-  property_approved: { bg: '#dcfce7', text: '#166534' },
-  property_rejected: { bg: '#fee2e2', text: '#991b1b' },
-  user_banned: { bg: '#fee2e2', text: '#991b1b' },
-  user_unbanned: { bg: '#dbeafe', text: '#1e40af' },
-  booking_cancelled: { bg: '#fef9c3', text: '#854d0e' },
-  host_suspended: { bg: '#fee2e2', text: '#991b1b' },
-  host_activated: { bg: '#dcfce7', text: '#166534' },
-  property_created: { bg: '#dbeafe', text: '#1e40af' },
-  booking_created: { bg: '#f3e8ff', text: '#6b21a8' },
-  review_created: { bg: '#e0e7ff', text: '#3730a3' },
-};
-
-const actionLabels: Record<string, string> = {
-  property_approved: 'Property Approved',
-  property_rejected: 'Property Rejected',
-  user_banned: 'User Banned',
-  user_unbanned: 'User Unbanned',
-  booking_cancelled: 'Booking Cancelled',
-  host_suspended: 'Host Suspended',
-  host_activated: 'Host Activated',
-  property_created: 'Property Created',
-  booking_created: 'Booking Created',
-  review_created: 'Review Created',
-};
-
 export default function AdminLogsPage() {
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [actionFilter, setActionFilter] = useState('all');
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
-  const fetchLogs = async (page = 1) => {
+  const [logs, setLogs] = useState<LogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await adminApi.getLogs({
-        page,
-        limit: 30,
-        ...(actionFilter !== 'all' && { action: actionFilter }),
-      });
-      if (response.data?.success) {
-        setLogs(response.data.data || []);
-        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
-      } else {
-        setError(response.data?.message || 'Failed to load logs');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setError(message);
-      console.error('Fetch logs error:', err);
+      const res = await adminApi.getLogs({ page });
+      const data = res.data;
+      setLogs(data.data || data.logs || []);
+      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 20) || 1);
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0633\u062c\u0644\u0627\u062a' : 'Failed to load logs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, isAr]);
 
-  useEffect(() => { fetchLogs(); }, [actionFilter]);
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   return (
     <div>
-      {/* Error Alert */}
-      {error && (
-        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Filter */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
-        <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
-          <option value="all">All Actions</option>
-          <option value="property_approved">Property Approved</option>
-          <option value="property_rejected">Property Rejected</option>
-          <option value="property_created">Property Created</option>
-          <option value="user_banned">User Banned</option>
-          <option value="user_unbanned">User Unbanned</option>
-          <option value="host_suspended">Host Suspended</option>
-          <option value="host_activated">Host Activated</option>
-          <option value="booking_created">Booking Created</option>
-          <option value="booking_cancelled">Booking Cancelled</option>
-          <option value="review_created">Review Created</option>
-        </select>
-        <span style={{ fontSize: 13, color: '#64748b', marginLeft: 'auto' }}>{pagination.total} logs</span>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isAr ? '\u0633\u062c\u0644 \u0627\u0644\u0646\u0634\u0627\u0637\u0627\u062a' : 'Activity Logs'}
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {isAr ? '\u0633\u062c\u0644 \u0627\u0644\u0623\u0646\u0634\u0637\u0629 \u0639\u0644\u0649 \u0627\u0644\u0645\u0646\u0635\u0629' : 'Platform activity history'}
+        </p>
       </div>
 
-      {/* Logs List */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading...</div>
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+          </div>
         ) : logs.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No activity logs found</div>
+          <div className="text-center py-20 text-gray-500">
+            {isAr ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u0633\u062c\u0644\u0627\u062a' : 'No logs found'}
+          </div>
         ) : (
-          <div>
-            {logs.map((log, idx) => {
-              const ac = actionColors[log.action] || { bg: '#f1f5f9', text: '#475569' };
-              return (
-                <div key={log._id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: idx < logs.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: ac.text, flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: ac.bg, color: ac.text }}>
-                        {actionLabels[log.action] || log.action}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0648\u0642\u062a' : 'Timestamp'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645' : 'User'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0625\u062c\u0631\u0627\u0621' : 'Action'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062a\u0641\u0627\u0635\u064a\u0644' : 'Details'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">IP</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {logs.map((log) => (
+                  <tr key={log._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      {new Date(log.createdAt).toLocaleString(isAr ? 'ar-SA' : 'en-US', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-gray-900">
+                      {log.user?.name || log.userName || '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700">
+                        {log.action}
                       </span>
-                      <span style={{ fontSize: 12, color: '#94a3b8' }}>by {log.performerName}</span>
-                    </div>
-                    <div style={{ fontSize: 13, color: '#475569' }}>{log.details}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{new Date(log.createdAt).toLocaleDateString()}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(log.createdAt).toLocaleTimeString()}</div>
-                  </div>
-                </div>
-              );
-            })}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
+                      {log.details || '-'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                      {log.ip || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-          {Array.from({ length: pagination.pages }, (_, i) => (
-            <button key={i} onClick={() => fetchLogs(i + 1)} style={{
-              padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, cursor: 'pointer',
-              background: pagination.page === i + 1 ? '#3b82f6' : '#fff', color: pagination.page === i + 1 ? '#fff' : '#475569',
-            }}>{i + 1}</button>
-          ))}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+          </button>
         </div>
       )}
     </div>

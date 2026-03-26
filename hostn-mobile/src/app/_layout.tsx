@@ -25,8 +25,9 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  const { initialize, isLoading, isAuthenticated, hasCompletedOnboarding } = useAuthStore();
+  const { initialize, isLoading, isAuthenticated, hasCompletedOnboarding, user } = useAuthStore();
   useNotifications();
+  const isHost = user?.role === 'host';
 
   useEffect(() => {
     const init = async () => {
@@ -48,6 +49,20 @@ export default function RootLayout() {
               <Stack.Screen name="(auth)/onboarding" />
             ) : !isAuthenticated ? (
               <Stack.Screen name="(auth)" />
+            ) : isHost ? (
+              <>
+                <Stack.Screen name="(host-tabs)" />
+                <Stack.Screen name="host/earnings" />
+                <Stack.Screen name="host/add-listing" />
+                <Stack.Screen name="listing/[id]" />
+                <Stack.Screen name="chat/[conversationId]" />
+                <Stack.Screen name="account/profile" />
+                <Stack.Screen name="account/wallet" />
+                <Stack.Screen name="account/notifications" />
+                <Stack.Screen name="account/faq" />
+                <Stack.Screen name="account/terms" />
+                <Stack.Screen name="account/privacy" />
+              </>
             ) : (
               <>
                 <Stack.Screen name="(tabs)" />

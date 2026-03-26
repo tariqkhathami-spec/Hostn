@@ -1,5 +1,6 @@
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
+const { sanitizeHtml } = require('../utils/sanitize');
 
 // @desc    Create a support ticket
 // @route   POST /api/support
@@ -15,8 +16,8 @@ exports.createTicket = async (req, res) => {
       });
     }
 
-    const sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();
-    const sanitizedSubject = subject.replace(/<[^>]*>/g, '').trim();
+    const sanitizedMessage = sanitizeHtml(message);
+    const sanitizedSubject = sanitizeHtml(subject);
 
     const ticket = await SupportTicket.create({
       user: req.user._id,
@@ -113,7 +114,7 @@ exports.getTicket = async (req, res) => {
 // @access  Private
 exports.replyToTicket = async (req, res) => {
   try {
-    const { message } = req.body;
+    const message = sanitizeHtml(req.body.message);
 
     if (!message || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Message is required' });

@@ -1,0 +1,121 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useLanguage } from '@/context/LanguageContext';
+import {
+  LayoutDashboard, Calendar, Home, MessageSquare, Settings,
+  CreditCard, Star, BarChart3, Users, Building, BookOpen,
+  FileText, Shield, LogOut, ChevronRight,
+} from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+
+type NavItem = {
+  href: string;
+  icon: React.ElementType;
+  label: { en: string; ar: string };
+};
+
+const guestNav: NavItem[] = [
+  { href: '/dashboard', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
+  { href: '/dashboard/bookings', icon: BookOpen, label: { en: 'My Bookings', ar: 'حجوزاتي' } },
+  { href: '/dashboard/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' } },
+  { href: '/dashboard/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' } },
+  { href: '/dashboard/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
+];
+
+const hostNav: NavItem[] = [
+  { href: '/host', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
+  { href: '/host/listings', icon: Building, label: { en: 'My Listings', ar: 'عقاراتي' } },
+  { href: '/host/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' } },
+  { href: '/host/calendar', icon: Calendar, label: { en: 'Calendar', ar: 'التقويم' } },
+  { href: '/host/earnings', icon: CreditCard, label: { en: 'Earnings', ar: 'الأرباح' } },
+  { href: '/host/reviews', icon: Star, label: { en: 'Reviews', ar: 'التقييمات' } },
+  { href: '/host/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' } },
+  { href: '/host/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
+];
+
+const adminNav: NavItem[] = [
+  { href: '/admin', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
+  { href: '/admin/users', icon: Users, label: { en: 'Users', ar: 'المستخدمون' } },
+  { href: '/admin/properties', icon: Building, label: { en: 'Properties', ar: 'العقارات' } },
+  { href: '/admin/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' } },
+  { href: '/admin/payments', icon: CreditCard, label: { en: 'Payments', ar: 'المدفوعات' } },
+  { href: '/admin/reports', icon: Shield, label: { en: 'Reports', ar: 'البلاغات' } },
+  { href: '/admin/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' } },
+  { href: '/admin/logs', icon: BarChart3, label: { en: 'Activity Logs', ar: 'سجل النشاط' } },
+];
+
+const NAV_MAP: Record<string, NavItem[]> = {
+  guest: guestNav,
+  host: hostNav,
+  admin: adminNav,
+};
+
+const ROLE_LABELS: Record<string, { en: string; ar: string }> = {
+  guest: { en: 'Guest', ar: 'ضيف' },
+  host: { en: 'Host', ar: 'مضيف' },
+  admin: { en: 'Admin', ar: 'مشرف' },
+};
+
+interface SidebarProps {
+  role: 'guest' | 'host' | 'admin';
+}
+
+export default function Sidebar({ role }: SidebarProps) {
+  const pathname = usePathname();
+  const { language } = useLanguage();
+  const { logout, user } = useAuth();
+  const lang = language as 'en' | 'ar';
+  const nav = NAV_MAP[role] || guestNav;
+
+  const isActive = (href: string) => {
+    if (href === '/host' || href === '/admin' || href === '/dashboard') {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <aside className="w-64 bg-white border-e border-gray-200 min-h-screen flex flex-col">
+      {/* Logo + Role badge */}
+      <div className="p-6 border-b border-gray-100">
+        <Link href="/" className="text-xl font-bold text-gray-900">Hostn</Link>
+        <span className="ms-2 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">
+          {ROLE_LABELS[role]?.[lang] || role}
+        </span>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 p-4 space-y-1">
+        {nav.map(({ href, icon: Icon, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              isActive(href)
+                ? 'bg-primary-50 text-primary-700'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <Icon className="w-5 h-5" />
+            <span className="flex-1">{label[lang]}</span>
+            {isActive(href) && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
+          </Link>
+        ))}
+      </nav>
+
+      {/* User + Logout */}
+      <div className="p-4 border-t border-gray-100">
+        <div className="text-sm text-gray-600 mb-3 truncate px-3">{user?.name || user?.email}</div>
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 w-full transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          {lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+        </button>
+      </div>
+    </aside>
+  );
+}

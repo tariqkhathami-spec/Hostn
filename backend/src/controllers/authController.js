@@ -1,1 +1,299 @@
-Y29uc3Qgand0ID0gcmVxdWlyZSgnanNvbndlYnRva2VuJyk7CmNvbnN0IFVzZXIgPSByZXF1aXJlKCcuLi9tb2RlbHMvVXNlcicpOwoKY29uc3QgZ2VuZXJhdGVUb2tlbiA9ICh1c2VyKSA9PiB7CiAgcmV0dXJuIGp3dC5zaWduKAogICAgeyBpZDogdXNlci5faWQsIGVtYWlsOiB1c2VyLmVtYWlsLCByb2xlOiB1c2VyLnJvbGUgfSwKICAgIHByb2Nlc3MuZW52LkpXVF9TRUNSRVQsCiAgICB7IGV4cGlyZXNJbjogcHJvY2Vzcy5lbnYuSldUX0VYUElSRVNfSU4gfHwgJzdkJyB9CiAgKTsKfTsKCmNvbnN0IHNlbmRUb2tlblJlc3BvbnNlID0gKHVzZXIsIHN0YXR1c0NvZGUsIHJlcykgPT4gewogIGNvbnN0IHRva2VuID0gZ2VuZXJhdGVUb2tlbih1c2VyKTsKICBjb25zdCB1c2VyT2JqID0gdXNlci50b09iamVjdCA/IHVzZXIudG9PYmplY3QoKSA6IHVzZXI7CiAgZGVsZXRlIHVzZXJPYmoucGFzc3dvcmQ7CgogIC8vIFNldCBIdHRwT25seSBjb29raWUgZm9yIHNlY3VyZSB0b2tlbiB0cmFuc3BvcnQKICBjb25zdCBtYXhBZ2UgPSA3ICogMjQgKiA2MCAqIDYwICogMTAwMDsgLy8gNyBkYXlzCiAgcmVzLmNvb2tpZSgnaG9zdG5fdG9rZW4nLCB0b2tlbiwgewogICAgaHR0cE9ubHk6IHRydWUsCiAgICBzZWN1cmU6IHByb2Nlc3MuZW52Lk5PREVfRU5WID09PSAncHJvZHVjdGlvbicsCiAgICBzYW1lU2l0ZTogJ2xheCcsCiAgICBtYXhBZ2UsCiAgICBwYXRoOiAnLycsCiAgfSk7CgogIHJlcy5zdGF0dXMoc3RhdHVzQ29kZSkuanNvbih7CiAgICBzdWNjZXNzOiB0cnVlLAogICAgdG9rZW4sCiAgICB1c2VyOiB1c2VyT2JqLAogIH0pOwp9OwoKLy8gQGRlc2MgICAgUmVnaXN0ZXIgdXNlcgovLyBAcm91dGUgICBQT1NUIC9hcGkvYXV0aC9yZWdpc3RlcgovLyBAYWNjZXNzICBQdWJsaWMKZXhwb3J0cy5yZWdpc3RlciA9IGFzeW5jIChyZXEsIHJlcywgbmV4dCkgPT4gewogIHRyeSB7CiAgICBjb25zdCB7IG5hbWUsIGVtYWlsLCBwYXNzd29yZCwgcGhvbmUsIHJvbGUgfSA9IHJlcS5ib2R5OwoKICAgIGNvbnN0IGV4aXN0aW5nVXNlciA9IGF3YWl0IFVzZXIuZmluZE9uZSh7IGVtYWlsIH0pOwogICAgaWYgKGV4aXN0aW5nVXNlcikgewogICAgICByZXR1cm4gcmVzLnN0YXR1cyg0MDApLmpzb24oeyBzdWNjZXNzOiBmYWxzZSwgbWVzc2FnZTogJ0VtYWlsIGFscmVhZHkgcmVnaXN0ZXJlZCcgfSk7CiAgICB9CgogICAgY29uc3QgdXNlciA9IGF3YWl0IFVzZXIuY3JlYXRlKHsKICAgICAgbmFtZSwKICAgICAgZW1haWwsCiAgICAgIHBhc3N3b3JkLAogICAgICBwaG9uZSwKICAgICAgcm9sZTogcm9sZSA9PT0gJ2hvc3QnID8gJ2hvc3QnIDogJ2d1ZXN0JywKICAgIH0pOwoKICAgIHNlbmRUb2tlblJlc3BvbnNlKHVzZXIsIDIwMSwgcmVzKTsKICB9IGNhdGNoIChlcnJvcikgewogICAgbmV4dChlcnJvcik7CiAgfQp9OwoKLy8gQGRlc2MgICAgTG9naW4gdXNlcgovLyBAcm91dGUgICBQT1NUIC9hcGkvYXV0aC9sb2dpbgovLyBAYWNjZXNzICBQdWJsaWMKZXhwb3J0cy5sb2dpbiA9IGFzeW5jIChyZXEsIHJlcywgbmV4dCkgPT4gewogIHRyeSB7CiAgICBjb25zdCB7IGVtYWlsLCBwYXNzd29yZCB9ID0gcmVxLmJvZHk7CgogICAgaWYgKCFlbWFpbCB8fCAhcGFzc3dvcmQpIHsKICAgICAgcmV0dXJuIHJlcy5zdGF0dXMoNDAwKS5qc29uKHsgc3VjY2VzczogZmFsc2UsIG1lc3NhZ2U6ICdQbGVhc2UgcHJvdmlkZSBlbWFpbCBhbmQgcGFzc3dvcmQnIH0pOwogICAgfQoKICAgIGNvbnN0IHVzZXIgPSBhd2FpdCBVc2VyLmZpbmRPbmUoeyBlbWFpbCB9KS5zZWxlY3QoJytwYXNzd29yZCcpOwogICAgaWYgKCF1c2VyKSB7CiAgICAgIHJldHVybiByZXMuc3RhdHVzKDQwMSkuanNvbih7IHN1Y2Nlc3M6IGZhbHNlLCBtZXNzYWdlOiAnSW52YWxpZCBjcmVkZW50aWFscycgfSk7CiAgICB9CgogICAgY29uc3QgaXNNYXRjaCA9IGF3YWl0IHVzZXIuY29tcGFyZVBhc3N3b3JkKHBhc3N3b3JkKTsKICAgIGlmICghaXNNYXRjaCkgewogICAgICByZXR1cm4gcmVzLnN0YXR1cyg0MDEpLmpzb24oeyBzdWNjZXNzOiBmYWxzZSwgbWVzc2FnZTogJ0ludmFsaWQgY3JlZGVudGlhbHMnIH0pOwogICAgfQoKICAgIC8vIEJsb2NrIHN1c3BlbmRlZCB1c2VycyBhdCBsb2dpbgogICAgaWYgKHVzZXIuaXNTdXNwZW5kZWQpIHsKICAgICAgcmV0dXJuIHJlcy5zdGF0dXMoNDAzKS5qc29uKHsKICAgICAgICBzdWNjZXNzOiBmYWxzZSwKICAgICAgICBtZXNzYWdlOiAnWW91ciBhY2NvdW50IGhhcyBiZWVuIHN1c3BlbmRlZC4gQ29udGFjdCBzdXBwb3J0IGZvciBhc3Npc3RhbmNlLicsCiAgICAgIH0pOwogICAgfQoKICAgIHNlbmRUb2tlblJlc3BvbnNlKHVzZXIsIDIwMCwgcmVzKTsKICB9IGNhdGNoIChlcnJvcikgewogICAgbmV4dChlcnJvcik7CiAgfQp9OwoKLy8gQGRlc2MgICAgR2V0IGN1cnJlbnQgdXNlcgovLyBAcm91dGUgICBHRVQgL2FwaS9hdXRoL21lCi8vIEBhY2Nlc3MgIFByaXZhdGUKZXhwb3J0cy5nZXRNZSA9IGFzeW5jIChyZXEsIHJlcywgbmV4dCkgPT4gewogIHRyeSB7CiAgICBjb25zdCB1c2VyID0gYXdhaXQgVXNlci5maW5kQnlJZChyZXEudXNlci5faWQpLnBvcHVsYXRlKCd3aXNobGlzdCcsICd0aXRsZSBpbWFnZXMgbG9jYXRpb24gcHJpY2luZyByYXRpbmdzJyk7CiAgICByZXMuanNvbih7IHN1Y2Nlc3M6IHRydWUsIHVzZXIgfSk7CiAgfSBjYXRjaCAoZXJyb3IpIHsKICAgIG5leHQoZXJyb3IpOwogIH0KfTsKCi8vIEBkZXNjICAgIFVwZGF0ZSBwcm9maWxlCi8vIEByb3V0ZSAgIFBVVCAvYXBpL2F1dGgvcHJvZmlsZQovLyBAYWNjZXNzICBQcml2YXRlCmV4cG9ydHMudXBkYXRlUHJvZmlsZSA9IGFzeW5jIChyZXEsIHJlcywgbmV4dCkgPT4gewogIHRyeSB7CiAgICBjb25zdCB7IG5hbWUsIHBob25lLCBhdmF0YXIgfSA9IHJlcS5ib2R5OwogICAgY29uc3QgdXNlciA9IGF3YWl0IFVzZXIuZmluZEJ5SWRBbmRVcGRhdGUoCiAgICAgIHJlcS51c2VyLl9pZCwKICAgICAgeyBuYW1lLCBwaG9uZSwgYXZhdGFyIH0sCiAgICAgIHsgbmV3OiB0cnVlLCBydW5WYWxpZGF0b3JzOiB0cnVlIH0KICAgICk7CiAgICByZXMuanNvbih7IHN1Y2Nlc3M6IHRydWUsIHVzZXIgfSk7CiAgfSBjYXRjaCAoZXJyb3IpIHsKICAgIG5leHQoZXJyb3IpOwogIH0KfTsKCi8vIEBkZXNjICAgIENoYW5nZSBwYXNzd29yZAovLyBAcm91dGUgICBQVVQgL2FwaS9hdXRoL2NoYW5nZS1wYXNzd29yZAovLyBAYWNjZXNzICBQcml2YXRlCmV4cG9ydHMuY2hhbmdlUGFzc3dvcmQgPSBhc3luYyAocmVxLCByZXMsIG5leHQpID0+IHsKICB0cnkgewogICAgY29uc3QgeyBjdXJyZW50UGFzc3dvcmQsIG5ld1Bhc3N3b3JkIH0gPSByZXEuYm9keTsKCiAgICBjb25zdCB1c2VyID0gYXdhaXQgVXNlci5maW5kQnlJZChyZXEudXNlci5faWQpLnNlbGVjdCgnK3Bhc3N3b3JkJyk7CiAgICBjb25zdCBpc01hdGNoID0gYXdhaXQgdXNlci5jb21wYXJlUGFzc3dvcmQoY3VycmVudFBhc3N3b3JkKTsKCiAgICBpZiAoIWlzTWF0Y2gpIHsKICAgICAgcmV0dXJuIHJlcy5zdGF0dXMoNDAwKS5qc29uKHsgc3VjY2VzczogZmFsc2UsIG1lc3NhZ2U6ICdDdXJyZW50IHBhc3N3b3JkIGlzIGluY29ycmVjdCcgfSk7CiAgICB9CgogICAgdXNlci5wYXNzd29yZCA9IG5ld1Bhc3N3b3JkOwogICAgYXdhaXQgdXNlci5zYXZlKCk7CgogICAgc2VuZFRva2VuUmVzcG9uc2UodXNlciwgMjAwLCByZXMpOwogIH0gY2F0Y2ggKGVycm9yKSB7CiAgICBuZXh0KGVycm9yKTsKICB9Cn07CgovLyBAZGVzYyAgICBUb2dnbGUgd2lzaGxpc3QKLy8gQHJvdXRlICAgUE9TVCAvYXBpL2F1dGgvd2lzaGxpc3QvOnByb3BlcnR5SWQKLy8gQGFjY2VzcyAgUHJpdmF0ZQpleHBvcnRzLnRvZ2dsZVdpc2hsaXN0ID0gYXN5bmMgKHJlcSwgcmVzLCBuZXh0KSA9PiB7CiAgdHJ5IHsKICAgIGNvbnN0IHVzZXIgPSBhd2FpdCBVc2VyLmZpbmRCeUlkKHJlcS51c2VyLl9pZCk7CiAgICBjb25zdCBwcm9wZXJ0eUlkID0gcmVxLnBhcmFtcy5wcm9wZXJ0eUlkOwoKICAgIGNvbnN0IGluZGV4ID0gdXNlci53aXNobGlzdC5pbmRleE9mKHByb3BlcnR5SWQpOwogICAgaWYgKGluZGV4ID4gLTEpIHsKICAgICAgdXNlci53aXNobGlzdC5zcGxpY2UoaW5kZXgsIDEpOwogICAgfSBlbHNlIHsKICAgICAgdXNlci53aXNobGlzdC5wdXNoKHByb3BlcnR5SWQpOwogICAgfQoKICAgIGF3YWl0IHVzZXIuc2F2ZSgpOwogICAgcmVzLmpzb24oeyBzdWNjZXNzOiB0cnVlLCB3aXNobGlzdDogdXNlci53aXNobGlzdCB9KTsKICB9IGNhdGNoIChlcnJvcikgewogICAgbmV4dChlcnJvcik7CiAgfQp9Owo=
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
+
+// Short-lived access token (15 min)
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    { id: user._id, email: user.email, role: user.role, tokenVersion: user.tokenVersion },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+};
+
+// Cookie options
+const ACCESS_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 15 * 60 * 1000, // 15 min
+  path: '/',
+};
+
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  path: '/api/auth', // Only sent to auth endpoints
+};
+
+/**
+ * Send access + refresh tokens.
+ * Web: tokens set as HttpOnly cookies.
+ * Mobile: tokens also returned in JSON body (client stores in SecureStore).
+ */
+const sendAuthResponse = async (user, statusCode, res, req) => {
+  const accessToken = generateAccessToken(user);
+
+  const deviceInfo = {
+    userAgent: req.headers['user-agent'],
+    ip: req.ip,
+    platform: req.headers['x-platform'] || 'web',
+  };
+
+  const { rawToken: refreshToken } = await RefreshToken.createToken(user._id, deviceInfo);
+
+  const userObj = user.toObject ? user.toObject() : { ...user };
+  delete userObj.password;
+
+  // Set cookies (web)
+  res.cookie('hostn_token', accessToken, ACCESS_COOKIE_OPTIONS);
+  res.cookie('hostn_refresh', refreshToken, REFRESH_COOKIE_OPTIONS);
+
+  res.status(statusCode).json({
+    success: true,
+    token: accessToken,
+    refreshToken,
+    user: userObj,
+  });
+};
+
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
+exports.register = async (req, res, next) => {
+  try {
+    const { name, email, password, phone, role } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Email already registered' });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      phone,
+      role: role === 'host' ? 'host' : 'guest',
+    });
+
+    await sendAuthResponse(user, 201, res, req);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
+exports.login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
+
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (user.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Contact support for assistance.',
+      });
+    }
+
+    await sendAuthResponse(user, 200, res, req);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh
+// @access  Public (requires valid refresh token)
+exports.refresh = async (req, res, next) => {
+  try {
+    // Get refresh token from cookie (web) or body (mobile)
+    const rawToken = req.cookies?.hostn_refresh || req.body?.refreshToken;
+
+    if (!rawToken) {
+      return res.status(401).json({ success: false, message: 'No refresh token provided' });
+    }
+
+    const result = await RefreshToken.rotateToken(rawToken);
+
+    if (!result.valid) {
+      // Clear cookies on invalid token
+      res.cookie('hostn_token', '', { ...ACCESS_COOKIE_OPTIONS, expires: new Date(0) });
+      res.cookie('hostn_refresh', '', { ...REFRESH_COOKIE_OPTIONS, expires: new Date(0) });
+      return res.status(401).json({ success: false, message: result.reason });
+    }
+
+    const user = await User.findById(result.userId);
+    if (!user || user.isSuspended) {
+      return res.status(401).json({ success: false, message: 'User not found or suspended' });
+    }
+
+    const accessToken = generateAccessToken(user);
+
+    // Set new cookies
+    res.cookie('hostn_token', accessToken, ACCESS_COOKIE_OPTIONS);
+    res.cookie('hostn_refresh', result.rawToken, REFRESH_COOKIE_OPTIONS);
+
+    res.json({
+      success: true,
+      token: accessToken,
+      refreshToken: result.rawToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Logout (revoke refresh token, clear cookies)
+// @route   POST /api/auth/logout
+// @access  Public
+exports.logout = async (req, res) => {
+  const rawToken = req.cookies?.hostn_refresh || req.body?.refreshToken;
+  if (rawToken) {
+    await RefreshToken.revokeToken(rawToken);
+  }
+
+  res.cookie('hostn_token', '', { ...ACCESS_COOKIE_OPTIONS, expires: new Date(0) });
+  res.cookie('hostn_refresh', '', { ...REFRESH_COOKIE_OPTIONS, expires: new Date(0) });
+  res.json({ success: true, message: 'Logged out successfully' });
+};
+
+// @desc    Logout all sessions
+// @route   POST /api/auth/logout-all
+// @access  Private
+exports.logoutAll = async (req, res, next) => {
+  try {
+    await RefreshToken.revokeAllForUser(req.user._id);
+
+    // Increment tokenVersion to invalidate all existing access tokens
+    await User.findByIdAndUpdate(req.user._id, { $inc: { tokenVersion: 1 } });
+
+    res.cookie('hostn_token', '', { ...ACCESS_COOKIE_OPTIONS, expires: new Date(0) });
+    res.cookie('hostn_refresh', '', { ...REFRESH_COOKIE_OPTIONS, expires: new Date(0) });
+    res.json({ success: true, message: 'All sessions revoked' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get current user
+// @route   GET /api/auth/me
+// @access  Private
+exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).populate('wishlist', 'title images location pricing ratings');
+    res.json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name, phone, avatar } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, phone, avatar },
+      { new: true, runValidators: true }
+    );
+    res.json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Change password
+// @route   PUT /api/auth/change-password
+// @access  Private
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id).select('+password');
+    const isMatch = await user.comparePassword(currentPassword);
+
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    user.password = newPassword;
+    user.tokenVersion += 1; // Invalidate all existing access tokens
+    await user.save();
+
+    // Revoke all refresh tokens (force re-login on other devices)
+    await RefreshToken.revokeAllForUser(user._id);
+
+    // Issue fresh tokens for current session
+    await sendAuthResponse(user, 200, res, req);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Upgrade guest account to host
+// @route   PUT /api/auth/upgrade-to-host
+// @access  Private
+exports.upgradeToHost = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (user.role !== 'guest') {
+      return res.status(400).json({
+        success: false,
+        message: user.role === 'host' ? 'You are already a host' : 'Role upgrade not available',
+      });
+    }
+
+    user.role = 'host';
+    user.tokenVersion += 1;
+    await user.save();
+
+    // Revoke old refresh tokens and issue fresh ones with new role
+    await RefreshToken.revokeAllForUser(user._id);
+    await sendAuthResponse(user, 200, res, req);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle wishlist
+// @route   POST /api/auth/wishlist/:propertyId
+// @access  Private
+exports.toggleWishlist = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const propertyId = req.params.propertyId;
+
+    const index = user.wishlist.indexOf(propertyId);
+    if (index > -1) {
+      user.wishlist.splice(index, 1);
+    } else {
+      user.wishlist.push(propertyId);
+    }
+
+    await user.save();
+    res.json({ success: true, wishlist: user.wishlist });
+  } catch (error) {
+    next(error);
+  }
+};

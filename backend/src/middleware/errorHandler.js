@@ -1,3 +1,5 @@
+const logger = require('../config/logger');
+
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
@@ -33,9 +35,18 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 401;
   }
 
+  // Log all errors with structured logger
+  logger.error(err.message, {
+    statusCode,
+    path: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userId: req.user?._id,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  });
+
   // In production, never leak internal error details for 500s
   if (process.env.NODE_ENV === 'production' && statusCode === 500) {
-    console.error('[ERROR]', err.message, err.stack);
     message = 'An unexpected error occurred';
   }
 

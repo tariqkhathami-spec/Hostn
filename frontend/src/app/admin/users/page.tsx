@@ -1,257 +1,196 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
+import { Search, Loader2, ShieldOff, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface AdminUser {
+interface UserItem {
   _id: string;
   name: string;
   email: string;
-  phone?: string;
-  avatar?: string;
   role: string;
-  isVerified: boolean;
-  isBanned: boolean;
-  bookingsCount: number;
-  totalSpent: number;
+  isSuspended?: boolean;
   createdAt: string;
 }
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{ userId: string; action: string; name: string } | null>(null);
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
-  const fetchUsers = async (page = 1) => {
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await adminApi.getUsers({
-        page,
-        limit: 20,
-        ...(roleFilter !== 'all' && { role: roleFilter }),
-        ...(search && { search }),
-      });
-      if (response.data?.success) {
-        setUsers(response.data.data || []);
-        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
-      } else {
-        setError(response.data?.message || 'Failed to load users');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setError(message);
-      console.error('Fetch users error:', err);
+      const res = await adminApi.getUsers({ search: search || undefined, page });
+      const data = res.data;
+      setUsers(data.data || data.users || []);
+      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646' : 'Failed to load users');
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, page, isAr]);
 
-  useEffect(() => { fetchUsers(); }, [roleFilter]);
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
-  const handleAction = async (userId: string, action: string) => {
+  const toggleSuspend = async (user: UserItem) => {
+    setToggling(user._id);
     try {
-      setActionLoading(true);
-      setActionError(null);
-      const response = await adminApi.updateUser(userId, action);
-      if (response.data?.success) {
-        fetchUsers(pagination.page);
-        setConfirmAction(null);
-      } else {
-        setActionError(response.data?.message || 'Action failed');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setActionError(message);
-      console.error('Action error:', err);
+      await adminApi.updateUser(user._id, { isSuspended: !user.isSuspended });
+      toast.success(
+        user.isSuspended
+          ? (isAr ? '\u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u062a\u0639\u0644\u064a\u0642' : 'User unsuspended')
+          : (isAr ? '\u062a\u0645 \u062a\u0639\u0644\u064a\u0642 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645' : 'User suspended')
+      );
+      loadUsers();
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645' : 'Failed to update user');
     } finally {
-      setActionLoading(false);
+      setToggling(null);
     }
   };
 
-  const fetchUserDetail = async (userId: string) => {
-    try {
-      const response = await adminApi.getUserDetail(userId);
-      if (response.data?.success) {
-        setSelectedUser(response.data.data);
-      } else {
-        setActionError(response.data?.message || 'Failed to load user details');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'Failed to load user details';
-      setActionError(message);
-      console.error('Fetch user detail error:', err);
-    }
-  };
-
-  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchUsers(1); };
-
-  const roleColors: Record<string, { bg: string; text: string }> = {
-    admin: { bg: '#f3e8ff', text: '#6b21a8' },
-    host: { bg: '#dbeafe', text: '#1e40af' },
-    guest: { bg: '#f1f5f9', text: '#475569' },
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    loadUsers();
   };
 
   return (
     <div>
-      {/* Error Alert */}
-      {error && (
-        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
-          <input type="text" placeholder="Search by name or email..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, width: 260, outline: 'none' }} />
-          <button type="submit" style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Search</button>
-        </form>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
-          <option value="all">All Roles</option>
-          <option value="guest">Guests</option>
-          <option value="host">Hosts</option>
-          <option value="admin">Admins</option>
-        </select>
-        <span style={{ fontSize: 13, color: '#64748b', marginLeft: 'auto' }}>{pagination.total} users</span>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isAr ? '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646' : 'User Management'}
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {isAr ? '\u0639\u0631\u0636 \u0648\u0625\u062f\u0627\u0631\u0629 \u062c\u0645\u064a\u0639 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646' : 'View and manage all users'}
+        </p>
       </div>
+
+      {/* Search */}
+      <form onSubmit={handleSearch} className="mb-4">
+        <div className="relative max-w-md">
+          <Search className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={isAr ? '\u0628\u062d\u062b \u0628\u0627\u0644\u0627\u0633\u0645 \u0623\u0648 \u0627\u0644\u0628\u0631\u064a\u062f...' : 'Search by name or email...'}
+            className="w-full ps-10 pe-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+          />
+        </div>
+      </form>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>User</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Email</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Role</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Bookings</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#475569' }}>Total Spent</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Status</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Joined</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading...</td></tr>
-            ) : users.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No users found</td></tr>
-            ) : users.map(u => {
-              const rc = roleColors[u.role] || roleColors.guest;
-              return (
-                <tr key={u._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {u.avatar && <img src={u.avatar} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />}
-                      <div>
-                        <div style={{ fontWeight: 500, color: '#0f172a' }}>{u.name}</div>
-                        {u.phone && <div style={{ fontSize: 11, color: '#94a3b8' }}>{u.phone}</div>}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px 16px', color: '#475569' }}>{u.email}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: rc.bg, color: rc.text }}>{u.role}</span>
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#475569' }}>{u.bookingsCount}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>SAR {u.totalSpent?.toLocaleString()}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    {u.isBanned ? (
-                      <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fee2e2', color: '#991b1b' }}>Banned</span>
-                    ) : (
-                      <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#dcfce7', color: '#166534' }}>Active</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                      <button onClick={() => fetchUserDetail(u._id)} style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#475569' }}>View</button>
-                      {u.role !== 'admin' && (
-                        u.isBanned ? (
-                          <button onClick={() => setConfirmAction({ userId: u._id, action: 'unban', name: u.name })} style={{ padding: '4px 10px', border: 'none', borderRadius: 6, background: '#10b981', color: '#fff', fontSize: 12, cursor: 'pointer' }}>Unban</button>
-                        ) : (
-                          <button onClick={() => setConfirmAction({ userId: u._id, action: 'ban', name: u.name })} style={{ padding: '4px 10px', border: 'none', borderRadius: 6, background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer' }}>Ban</button>
-                        )
-                      )}
-                    </div>
-                  </td>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            {isAr ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646' : 'No users found'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0627\u0633\u0645' : 'Name'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0628\u0631\u064a\u062f' : 'Email'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062f\u0648\u0631' : 'Role'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645' : 'Joined'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0625\u062c\u0631\u0627\u0621' : 'Action'}</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {users.map((user) => (
+                  <tr key={user._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700 capitalize">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                          user.isSuspended
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-green-50 text-green-700'
+                        }`}
+                      >
+                        {user.isSuspended
+                          ? (isAr ? '\u0645\u0639\u0644\u0642' : 'Suspended')
+                          : (isAr ? '\u0646\u0634\u0637' : 'Active')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(user.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => toggleSuspend(user)}
+                        disabled={toggling === user._id}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${
+                          user.isSuspended
+                            ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                            : 'bg-red-50 text-red-700 hover:bg-red-100'
+                        }`}
+                      >
+                        {toggling === user._id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : user.isSuspended ? (
+                          <ShieldCheck className="w-3 h-3" />
+                        ) : (
+                          <ShieldOff className="w-3 h-3" />
+                        )}
+                        {user.isSuspended
+                          ? (isAr ? '\u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u062a\u0639\u0644\u064a\u0642' : 'Unsuspend')
+                          : (isAr ? '\u062a\u0639\u0644\u064a\u0642' : 'Suspend')}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Confirm Modal */}
-      {confirmAction && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 400 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#0f172a' }}>
-              {confirmAction.action === 'ban' ? 'Ban User' : 'Unban User'}
-            </h3>
-            {actionError && (
-              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
-                {actionError}
-              </div>
-            )}
-            <p style={{ fontSize: 14, color: '#475569', margin: '0 0 20px' }}>
-              Are you sure you want to {confirmAction.action} <strong>{confirmAction.name}</strong>?
-              {confirmAction.action === 'ban' && ' They will not be able to access the platform.'}
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setConfirmAction(null); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleAction(confirmAction.userId, confirmAction.action)} disabled={actionLoading}
-                style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: confirmAction.action === 'ban' ? '#ef4444' : '#10b981', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
-                {actionLoading ? '...' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* User Detail Modal */}
-      {selectedUser && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setSelectedUser(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 560, maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {selectedUser.avatar && <img src={selectedUser.avatar} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }} />}
-                <div>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#0f172a' }}>{selectedUser.name}</h2>
-                  <span style={{ fontSize: 13, color: '#64748b' }}>{selectedUser.email}</span>
-                </div>
-              </div>
-              <button onClick={() => setSelectedUser(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8' }}>✕</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13 }}>
-              <div><span style={{ color: '#64748b' }}>Role:</span> <strong style={{ textTransform: 'capitalize' }}>{selectedUser.role}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Phone:</span> <strong>{selectedUser.phone || 'N/A'}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Verified:</span> <strong>{selectedUser.isVerified ? 'Yes' : 'No'}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Status:</span> <strong style={{ color: selectedUser.isBanned ? '#ef4444' : '#10b981' }}>{selectedUser.isBanned ? 'Banned' : 'Active'}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Bookings:</span> <strong>{selectedUser.bookingsCount}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Total Spent:</span> <strong>SAR {selectedUser.totalSpent?.toLocaleString()}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Joined:</span> <strong>{new Date(selectedUser.createdAt).toLocaleDateString()}</strong></div>
-            </div>
-            {selectedUser.properties?.length > 0 && (
-              <div style={{ marginTop: 20 }}>
-                <h4 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 8px' }}>Properties ({selectedUser.properties.length})</h4>
-                {selectedUser.properties.slice(0, 5).map((p: any) => (
-                  <div key={p._id} style={{ fontSize: 13, color: '#475569', padding: '4px 0' }}>• {p.title}</div>
-                ))}
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-              <button onClick={() => setSelectedUser(null)} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Close</button>
-            </div>
-          </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <span className="text-sm text-gray-600">
+            {page} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+          </button>
         </div>
       )}
     </div>

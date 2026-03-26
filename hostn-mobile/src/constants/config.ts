@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://hostn-backend-production.up.railway.app/api';
+  process.env.EXPO_PUBLIC_API_URL || 'https://api.hostn.co/api/v1';
 
 export const APP_CONFIG = {
   name: 'Hostn',
@@ -7,7 +7,7 @@ export const APP_CONFIG = {
   countryCode: '+966',
   currency: 'SAR',
   locale: 'en',
-  otpLength: 4,
+  otpLength: 6,
   otpResendSeconds: 120,
   chatPollInterval: 5000,
   maxImages: 10,

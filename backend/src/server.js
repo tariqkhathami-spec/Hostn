@@ -1,10 +1,18 @@
 require('dotenv').config();
+const validateEnv = require('./config/env');
+validateEnv();
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
+const helmet = require('helmet');
+const mongoose = require('mongoose');
 const connectDB = require('./config/database');
+const { connectRedis, disconnectRedis } = require('./config/redis');
 const errorHandler = require('./middleware/errorHandler');
+const healthRoutes = require('./routes/health');
 
 // Route imports
 const authRoutes = require('./routes/auth');
@@ -24,21 +32,37 @@ const walletRoutes = require('./routes/wallet');
 const paymentMethodRoutes = require('./routes/paymentMethods');
 const couponRoutes = require('./routes/coupons');
 
-// Connect to database
-connectDB();
+// ── Initialize infrastructure ────────────────────────────────────────────────
+async function bootstrap() {
+  await connectDB();
+  await connectRedis();
+}
+bootstrap();
 
 const app = express();
 
-// ── Security headers ──────────────────────────────────────────────────────────
+// ── Trust proxy (required behind load balancers for correct IP detection) ────
+app.set('trust proxy', 1);
+
+// ── Security headers (Helmet) ─────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow cross-origin images
+  hsts: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
+}));
 app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
   next();
 });
 
@@ -69,7 +93,10 @@ app.use(cookieParser());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// ── Rate limiting ─────────────────────────────────────────────────────────────
+// ── NoSQL injection protection ───────────────────────────────────────────────
+app.use(mongoSanitize({ replaceWith: '_' }));
+
+// ── Rate limiting (in-memory — will be replaced with Redis in Phase 6) ───────
 const rateLimitStore = new Map();
 
 function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
@@ -110,32 +137,37 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// ── Health check ──────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Hostn API is running', timestamp: new Date() });
+// ── Health check routes (no rate limiting, no auth) ──────────────────────────
+app.use('/health', healthRoutes);
+
+// ── Routes (versioned: /api/v1/) ──────────────────────────────────────────────
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', registerLimiter);
+app.use('/api/v1', apiLimiter);
+
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', otpRoutes);
+app.use('/api/v1/properties', propertyRoutes);
+app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/reviews', reviewRoutes);
+app.use('/api/v1/host', hostRoutes);
+app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/messages', messageLimiter, messageRoutes);
+app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/wallet', walletRoutes);
+app.use('/api/v1/payment-methods', paymentMethodRoutes);
+app.use('/api/v1/coupons', couponRoutes);
+
+// Backwards compatibility: /api/* redirects to /api/v1/*
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/v1/')) return next('route');
+  req.url = `/v1${req.url}`;
+  app.handle(req, res, next);
 });
-
-// ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', registerLimiter);
-app.use('/api', apiLimiter);
-
-app.use('/api/auth', authRoutes);
-app.use('/api/auth', otpRoutes);
-app.use('/api/properties', propertyRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/host', hostRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/messages', messageLimiter, messageRoutes);
-app.use('/api/support', supportRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/payment-methods', paymentMethodRoutes);
-app.use('/api/coupons', couponRoutes);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));
@@ -148,9 +180,58 @@ app.use('*', (req, res) => {
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
+// ── Start server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Hostn API running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+});
+
+// ── Graceful shutdown ────────────────────────────────────────────────────────
+const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
+
+async function gracefulShutdown(signal) {
+  console.log(`\n[SHUTDOWN] Received ${signal}. Starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(async () => {
+    console.log('[SHUTDOWN] HTTP server closed.');
+
+    try {
+      // Close MongoDB
+      await mongoose.connection.close();
+      console.log('[SHUTDOWN] MongoDB connection closed.');
+
+      // Close Redis
+      await disconnectRedis();
+      console.log('[SHUTDOWN] Redis connection closed.');
+
+      console.log('[SHUTDOWN] Graceful shutdown complete.');
+      process.exit(0);
+    } catch (err) {
+      console.error('[SHUTDOWN] Error during cleanup:', err);
+      process.exit(1);
+    }
+  });
+
+  // Force exit after timeout
+  setTimeout(() => {
+    console.error('[SHUTDOWN] Forced shutdown after timeout.');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// ── Unhandled error handlers ─────────────────────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled Promise Rejection:', reason);
+  gracefulShutdown('unhandledRejection');
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err);
+  gracefulShutdown('uncaughtException');
 });
 
 module.exports = app;

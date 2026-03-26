@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
@@ -6,6 +7,21 @@ const ActivityLog = require('../models/ActivityLog');
 // Moyasar API config
 const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
 const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
+const MOYASAR_WEBHOOK_SECRET = process.env.MOYASAR_WEBHOOK_SECRET;
+
+// Valid payment state transitions
+const VALID_TRANSITIONS = {
+  pending: ['processing', 'completed', 'failed', 'cancelled'],
+  processing: ['completed', 'failed'],
+  completed: ['refunded'],
+  failed: ['pending'], // Allow retry
+  refunded: [],
+  cancelled: [],
+};
+
+function isValidTransition(from, to) {
+  return VALID_TRANSITIONS[from]?.includes(to) ?? false;
+}
 
 async function moyasarRequest(method, path, data = null) {
   const fetch = (await import('node-fetch')).default;
@@ -46,10 +62,10 @@ exports.initiatePayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Booking already paid' });
     }
 
-    // Check if there's already a pending payment
+    // Idempotency: check for existing pending payment
     const existingPayment = await Payment.findOne({
       booking: bookingId,
-      status: 'pending',
+      status: { $in: ['pending', 'processing'] },
     });
 
     if (existingPayment) {
@@ -60,15 +76,20 @@ exports.initiatePayment = async (req, res, next) => {
       });
     }
 
+    // Server-side amount calculation (NEVER trust client amount)
+    const serverAmount = booking.pricing.total;
+    const idempotencyKey = `pay_${bookingId}_${req.user._id}_${Date.now()}`;
+
     // Create payment record
     const payment = await Payment.create({
       booking: bookingId,
       user: req.user._id,
-      amount: booking.pricing.total,
+      amount: serverAmount,
       currency: 'SAR',
       provider: 'moyasar',
       status: 'pending',
       moyasarStatus: 'initiated',
+      idempotencyKey,
     });
 
     // Log activity
@@ -120,25 +141,50 @@ exports.verifyPayment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Verify with Moyasar API
-    let moyasarPayment;
-    if (MOYASAR_SECRET_KEY) {
-      moyasarPayment = await moyasarRequest('GET', `/payments/${moyasarPaymentId}`);
+    // ALWAYS verify with Moyasar API — never trust client-side callback alone
+    if (!MOYASAR_SECRET_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: 'Payment verification is unavailable. Server misconfiguration.',
+      });
+    }
+
+    const moyasarPayment = await moyasarRequest('GET', `/payments/${moyasarPaymentId}`);
+
+    if (!moyasarPayment || moyasarPayment.type === 'api_error') {
+      return res.status(502).json({
+        success: false,
+        message: 'Could not verify payment with payment gateway',
+      });
+    }
+
+    // Verify amount matches to prevent partial-payment fraud
+    const expectedAmountHalalas = Math.round(payment.amount * 100);
+    if (moyasarPayment.amount !== expectedAmountHalalas) {
+      await ActivityLog.create({
+        actor: req.user._id,
+        action: 'payment_amount_mismatch',
+        target: { type: 'Payment', id: payment._id },
+        details: `Amount mismatch: expected ${expectedAmountHalalas} halalas, got ${moyasarPayment.amount}`,
+        ip: req.ip,
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Payment amount mismatch',
+      });
     }
 
     const isPaid =
-      moyasarPayment?.status === 'paid' ||
-      moyasarPayment?.status === 'captured' ||
-      // In test mode without secret key, trust the frontend callback
-      (!MOYASAR_SECRET_KEY && moyasarPaymentId);
+      moyasarPayment.status === 'paid' ||
+      moyasarPayment.status === 'captured';
 
     if (isPaid) {
       // Update payment
       payment.status = 'completed';
       payment.moyasarPaymentId = moyasarPaymentId;
-      payment.moyasarStatus = moyasarPayment?.status || 'paid';
+      payment.moyasarStatus = moyasarPayment.status;
       payment.paidAt = new Date();
-      if (moyasarPayment?.source) {
+      if (moyasarPayment.source) {
         payment.source = {
           type: moyasarPayment.source.type,
           company: moyasarPayment.source.company,
@@ -192,8 +238,8 @@ exports.verifyPayment = async (req, res, next) => {
       // Payment failed
       payment.status = 'failed';
       payment.moyasarPaymentId = moyasarPaymentId;
-      payment.moyasarStatus = moyasarPayment?.status || 'failed';
-      payment.failureReason = moyasarPayment?.source?.message || 'Payment declined';
+      payment.moyasarStatus = moyasarPayment.status;
+      payment.failureReason = moyasarPayment.source?.message || 'Payment declined';
       await payment.save();
 
       // Notify guest
@@ -224,24 +270,93 @@ exports.verifyPayment = async (req, res, next) => {
   }
 };
 
+// @desc    Verify Moyasar webhook signature (HMAC-SHA256)
+function verifyWebhookSignature(rawBody, signatureHeader) {
+  if (!MOYASAR_WEBHOOK_SECRET) {
+    console.error('[WEBHOOK] MOYASAR_WEBHOOK_SECRET not configured — rejecting all webhooks');
+    return false;
+  }
+  if (!signatureHeader) return false;
+
+  const expectedSignature = crypto
+    .createHmac('sha256', MOYASAR_WEBHOOK_SECRET)
+    .update(rawBody)
+    .digest('hex');
+
+  // Constant-time comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signatureHeader, 'utf8'),
+      Buffer.from(expectedSignature, 'utf8')
+    );
+  } catch {
+    return false;
+  }
+}
+
 // @desc    Moyasar webhook handler
 // @route   POST /api/payments/webhook
 // @access  Public (verified by Moyasar signature)
 exports.webhook = async (req, res, next) => {
   try {
+    // Step 1: Verify webhook signature
+    const signature = req.headers['x-moyasar-signature'] || req.headers['x-signature'];
+    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+
+    if (!verifyWebhookSignature(rawBody, signature)) {
+      console.error('[WEBHOOK] Signature verification failed');
+      await ActivityLog.create({
+        action: 'webhook_signature_failed',
+        details: `Rejected webhook with invalid signature from IP: ${req.ip}`,
+        ip: req.ip,
+      });
+      return res.status(403).json({ success: false, message: 'Invalid webhook signature' });
+    }
+
+    // Step 2: Parse and validate payload
     const { id, status, amount, source, metadata } = req.body;
 
-    if (!id) {
+    if (!id || !status) {
       return res.status(400).json({ success: false, message: 'Invalid webhook payload' });
     }
 
+    // Step 3: Idempotency — check if we already processed this event
+    const idempotencyKey = `webhook_${id}_${status}`;
+    const existingLog = await ActivityLog.findOne({
+      action: 'webhook_processed',
+      'details': { $regex: idempotencyKey },
+    });
+    if (existingLog) {
+      return res.status(200).json({ success: true, message: 'Already processed' });
+    }
+
+    // Step 4: Find payment
     const payment = await Payment.findOne({ moyasarPaymentId: id });
     if (!payment) {
-      // Could be a payment we haven't linked yet — just acknowledge
+      // Acknowledge but log — could be a payment we haven't linked yet
+      await ActivityLog.create({
+        action: 'webhook_unlinked',
+        details: `Webhook for unknown moyasarPaymentId: ${id}, status: ${status}`,
+        ip: req.ip,
+      });
       return res.status(200).json({ success: true, message: 'Payment not found, acknowledged' });
     }
 
-    // Update status based on webhook
+    // Step 5: Validate amount matches (prevent amount tampering)
+    if (amount) {
+      const expectedAmountHalalas = Math.round(payment.amount * 100);
+      if (status !== 'refunded' && amount !== expectedAmountHalalas) {
+        await ActivityLog.create({
+          action: 'webhook_amount_mismatch',
+          target: { type: 'Payment', id: payment._id },
+          details: `Webhook amount mismatch: expected ${expectedAmountHalalas}, got ${amount}. ${idempotencyKey}`,
+          ip: req.ip,
+        });
+        return res.status(400).json({ success: false, message: 'Amount mismatch' });
+      }
+    }
+
+    // Step 6: Update payment status
     if (status === 'paid' || status === 'captured') {
       payment.status = 'completed';
       payment.moyasarStatus = status;
@@ -269,12 +384,20 @@ exports.webhook = async (req, res, next) => {
 
     await payment.save();
 
-    // Update booking if payment is completed
+    // Step 7: Update booking
     if (payment.status === 'completed') {
       await Booking.findByIdAndUpdate(payment.booking, { paymentStatus: 'paid' });
     } else if (payment.status === 'refunded') {
       await Booking.findByIdAndUpdate(payment.booking, { paymentStatus: 'refunded' });
     }
+
+    // Step 8: Log successful processing (with idempotency key)
+    await ActivityLog.create({
+      action: 'webhook_processed',
+      target: { type: 'Payment', id: payment._id },
+      details: `${idempotencyKey} — status updated to ${payment.status}`,
+      ip: req.ip,
+    });
 
     res.status(200).json({ success: true, message: 'Webhook processed' });
   } catch (error) {

@@ -3,6 +3,7 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
+const { sanitizeHtml } = require('../utils/sanitize');
 const Notification = require('../models/Notification');
 
 // @desc    Get all conversations for current user
@@ -171,7 +172,8 @@ exports.getMessages = async (req, res) => {
 exports.sendMessage = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { content } = req.body;
+    const rawContent = req.body.content;
+    const content = sanitizeHtml(rawContent);
     const userId = req.user._id.toString();
 
     if (!content || !content.trim()) {

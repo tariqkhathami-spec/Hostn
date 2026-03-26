@@ -1,305 +1,214 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
+import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface AdminProperty {
+interface PropertyItem {
   _id: string;
   title: string;
-  type: string;
-  location: { city: string; district?: string };
-  pricing: { perNight: number };
-  capacity: { maxGuests: number; bedrooms: number };
-  ratings: { average: number; count: number };
-  images: { url: string; isPrimary: boolean }[];
-  host: { _id: string; name: string; email: string } | string;
-  isActive: boolean;
-  moderationStatus: 'pending' | 'approved' | 'rejected';
-  rejectionReason?: string;
-  moderatedAt?: string;
+  host?: { name: string };
+  hostName?: string;
+  city: string;
+  status: string;
   createdAt: string;
 }
 
-const statusColors: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#fef9c3', text: '#854d0e' },
-  approved: { bg: '#dcfce7', text: '#166534' },
-  rejected: { bg: '#fee2e2', text: '#991b1b' },
+const statusColors: Record<string, string> = {
+  active: 'bg-green-50 text-green-700',
+  flagged: 'bg-yellow-50 text-yellow-700',
+  removed: 'bg-red-50 text-red-700',
+  pending: 'bg-blue-50 text-blue-700',
 };
 
 export default function AdminPropertiesPage() {
-  const [properties, setProperties] = useState<AdminProperty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
-  const [selectedProperty, setSelectedProperty] = useState<AdminProperty | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
-  const fetchProperties = async (page = 1) => {
+  const [properties, setProperties] = useState<PropertyItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [actionId, setActionId] = useState<string | null>(null);
+
+  const loadProperties = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      const response = await adminApi.getProperties({
+      const res = await adminApi.getProperties({
+        search: search || undefined,
+        status: statusFilter || undefined,
         page,
-        limit: 15,
-        ...(filter !== 'all' && { status: filter }),
-        ...(typeFilter !== 'all' && { type: typeFilter }),
-        ...(search && { search }),
       });
-      if (response.data?.success) {
-        setProperties(response.data.data || []);
-        setPagination(response.data.pagination || { total: 0, page: 1, pages: 1 });
-      } else {
-        setError(response.data?.message || 'Failed to load properties');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setError(message);
-      console.error('Fetch properties error:', err);
+      const data = res.data;
+      setProperties(data.data || data.properties || []);
+      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a' : 'Failed to load properties');
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, statusFilter, page, isAr]);
 
-  useEffect(() => { fetchProperties(); }, [filter, typeFilter]);
+  useEffect(() => {
+    loadProperties();
+  }, [loadProperties]);
 
-  const handleModerate = async (propertyId: string, action: 'approve' | 'reject', reason?: string) => {
+  const moderate = async (id: string, status: string) => {
+    const reason = status === 'removed' ? prompt(isAr ? '\u0633\u0628\u0628 \u0627\u0644\u0625\u0632\u0627\u0644\u0629:' : 'Reason for removal:') : undefined;
+    if (status === 'removed' && !reason) return;
+
+    setActionId(id);
     try {
-      setActionLoading(true);
-      setActionError(null);
-      const response = await adminApi.moderateProperty(propertyId, action, reason);
-      if (response.data?.success) {
-        fetchProperties(pagination.page);
-        setSelectedProperty(null);
-        setShowRejectModal(false);
-        setRejectReason('');
-      } else {
-        setActionError(response.data?.message || 'Moderation action failed');
-      }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || 'An error occurred';
-      setActionError(message);
-      console.error('Moderation error:', err);
+      await adminApi.moderateProperty(id, { status, reason: reason || '' });
+      toast.success(
+        status === 'active'
+          ? (isAr ? '\u062a\u0645 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629' : 'Property approved')
+          : (isAr ? '\u062a\u0645 \u0627\u0644\u0625\u0632\u0627\u0644\u0629' : 'Property removed')
+      );
+      loadProperties();
+    } catch {
+      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u062d\u062f\u064a\u062b' : 'Failed to update');
     } finally {
-      setActionLoading(false);
+      setActionId(null);
     }
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchProperties(1);
+    setPage(1);
+    loadProperties();
   };
+
+  const statusLabels: Record<string, string> = isAr
+    ? { active: '\u0646\u0634\u0637', flagged: '\u0645\u0628\u0644\u063a \u0639\u0646\u0647', removed: '\u0645\u062d\u0630\u0648\u0641', pending: '\u0642\u064a\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629' }
+    : { active: 'Active', flagged: 'Flagged', removed: 'Removed', pending: 'Pending' };
 
   return (
     <div>
-      {/* Error Alert */}
-      {error && (
-        <div style={{ marginBottom: 20, padding: 16, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, color: '#991b1b', fontSize: 14 }}>
-          {error}
-        </div>
-      )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isAr ? '\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a' : 'Property Moderation'}
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          {isAr ? '\u0645\u0631\u0627\u062c\u0639\u0629 \u0648\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a' : 'Review and moderate properties'}
+        </p>
+      </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <form onSubmit={handleSearch} className="relative flex-1 max-w-md">
+          <Search className="absolute top-1/2 -translate-y-1/2 ltr:left-3 rtl:right-3 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search properties..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, width: 240, outline: 'none' }}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={isAr ? '\u0628\u062d\u062b \u0628\u0627\u0644\u0639\u0646\u0648\u0627\u0646...' : 'Search by title...'}
+            className="w-full ps-10 pe-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
           />
-          <button type="submit" style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Search</button>
         </form>
-
-        <select value={filter} onChange={e => setFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+        >
+          <option value="">{isAr ? '\u0627\u0644\u0643\u0644' : 'All Statuses'}</option>
+          {Object.entries(statusLabels).map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
         </select>
-
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{ padding: '8px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, background: '#fff' }}>
-          <option value="all">All Types</option>
-          <option value="villa">Villa</option>
-          <option value="chalet">Chalet</option>
-          <option value="apartment">Apartment</option>
-          <option value="studio">Studio</option>
-          <option value="farm">Farm</option>
-          <option value="camp">Camp</option>
-          <option value="hotel">Hotel</option>
-        </select>
-
-        <span style={{ fontSize: 13, color: '#64748b', marginLeft: 'auto' }}>{pagination.total} properties</span>
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Property</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Type</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>City</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Host</th>
-              <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#475569' }}>Price/Night</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Rating</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Status</th>
-              <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Loading...</td></tr>
-            ) : properties.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No properties found</td></tr>
-            ) : properties.map(p => {
-              const sc = statusColors[p.moderationStatus] || statusColors.pending;
-              const hostName = typeof p.host === 'object' ? p.host.name : 'Unknown';
-              const primaryImage = p.images?.find(i => i.isPrimary)?.url || p.images?.[0]?.url;
-              return (
-                <tr key={p._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {primaryImage && <img src={primaryImage} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />}
-                      <div>
-                        <div style={{ fontWeight: 500, color: '#0f172a', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
-                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{p._id.slice(-8)}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '12px 16px', textTransform: 'capitalize', color: '#475569' }}>{p.type}</td>
-                  <td style={{ padding: '12px 16px', color: '#475569' }}>{typeof p.location === 'object' ? p.location.city : ''}</td>
-                  <td style={{ padding: '12px 16px', color: '#475569' }}>{hostName}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#0f172a' }}>SAR {p.pricing?.perNight?.toLocaleString()}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <span style={{ color: '#f59e0b' }}>★</span> {p.ratings?.average?.toFixed(1)} <span style={{ color: '#94a3b8' }}>({p.ratings?.count})</span>
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <span style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.text }}>
-                      {p.moderationStatus}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                      <button onClick={() => setSelectedProperty(p)} style={{ padding: '4px 10px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', fontSize: 12, cursor: 'pointer', color: '#475569' }}>View</button>
-                      {p.moderationStatus !== 'approved' && (
-                        <button onClick={() => handleModerate(p._id, 'approve')} disabled={actionLoading} style={{ padding: '4px 10px', border: 'none', borderRadius: 6, background: '#10b981', color: '#fff', fontSize: 12, cursor: 'pointer' }}>Approve</button>
-                      )}
-                      {p.moderationStatus !== 'rejected' && (
-                        <button onClick={() => { setSelectedProperty(p); setShowRejectModal(true); }} style={{ padding: '4px 10px', border: 'none', borderRadius: 6, background: '#ef4444', color: '#fff', fontSize: 12, cursor: 'pointer' }}>Reject</button>
-                      )}
-                    </div>
-                  </td>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+          </div>
+        ) : properties.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            {isAr ? '\u0644\u0627 \u064a\u0648\u062c\u062f \u0639\u0642\u0627\u0631\u0627\u062a' : 'No properties found'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0639\u0646\u0648\u0627\u0646' : 'Title'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0645\u0636\u064a\u0641' : 'Host'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0645\u062f\u064a\u0646\u0629' : 'City'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0625\u0646\u0634\u0627\u0621' : 'Created'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0625\u062c\u0631\u0627\u0621\u0627\u062a' : 'Actions'}</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {properties.map((prop) => (
+                  <tr key={prop._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{prop.title}</td>
+                    <td className="px-4 py-3 text-gray-600">{prop.host?.name || prop.hostName || '-'}</td>
+                    <td className="px-4 py-3 text-gray-600">{prop.city}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[prop.status] || 'bg-gray-50 text-gray-700'}`}>
+                        {statusLabels[prop.status] || prop.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(prop.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {prop.status !== 'active' && (
+                          <button
+                            onClick={() => moderate(prop._id, 'active')}
+                            disabled={actionId === prop._id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
+                          >
+                            {actionId === prop._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                            {isAr ? '\u0645\u0648\u0627\u0641\u0642\u0629' : 'Approve'}
+                          </button>
+                        )}
+                        {prop.status !== 'removed' && (
+                          <button
+                            onClick={() => moderate(prop._id, 'removed')}
+                            disabled={actionId === prop._id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          >
+                            {actionId === prop._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+                            {isAr ? '\u0625\u0632\u0627\u0644\u0629' : 'Remove'}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-          {Array.from({ length: pagination.pages }, (_, i) => (
-            <button key={i} onClick={() => fetchProperties(i + 1)} style={{
-              padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, cursor: 'pointer',
-              background: pagination.page === i + 1 ? '#3b82f6' : '#fff',
-              color: pagination.page === i + 1 ? '#fff' : '#475569',
-            }}>{i + 1}</button>
-          ))}
-        </div>
-      )}
-
-      {/* Property Detail Modal */}
-      {selectedProperty && !showRejectModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setSelectedProperty(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 640, maxHeight: '85vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 4px' }}>{selectedProperty.title}</h2>
-                <span style={{ fontSize: 13, color: '#64748b' }}>{typeof selectedProperty.location === 'object' ? `${selectedProperty.location.city}${selectedProperty.location.district ? ', ' + selectedProperty.location.district : ''}` : ''}</span>
-              </div>
-              <button onClick={() => setSelectedProperty(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8' }}>✕</button>
-            </div>
-
-            {/* Images */}
-            {selectedProperty.images?.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto' }}>
-                {selectedProperty.images.slice(0, 4).map((img, i) => (
-                  <img key={i} src={img.url} alt="" style={{ width: 140, height: 100, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-                ))}
-              </div>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 13 }}>
-              <div><span style={{ color: '#64748b' }}>Type:</span> <strong style={{ textTransform: 'capitalize' }}>{selectedProperty.type}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Price/Night:</span> <strong>SAR {selectedProperty.pricing?.perNight?.toLocaleString()}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Guests:</span> <strong>{selectedProperty.capacity?.maxGuests}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Bedrooms:</span> <strong>{selectedProperty.capacity?.bedrooms}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Rating:</span> <strong>★ {selectedProperty.ratings?.average?.toFixed(1)} ({selectedProperty.ratings?.count})</strong></div>
-              <div><span style={{ color: '#64748b' }}>Host:</span> <strong>{typeof selectedProperty.host === 'object' ? selectedProperty.host.name : 'Unknown'}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Created:</span> <strong>{new Date(selectedProperty.createdAt).toLocaleDateString()}</strong></div>
-              <div><span style={{ color: '#64748b' }}>Active:</span> <strong>{selectedProperty.isActive ? 'Yes' : 'No'}</strong></div>
-            </div>
-
-            {selectedProperty.rejectionReason && (
-              <div style={{ marginTop: 16, padding: 12, background: '#fee2e2', borderRadius: 8, fontSize: 13, color: '#991b1b' }}>
-                <strong>Rejection Reason:</strong> {selectedProperty.rejectionReason}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end' }}>
-              {selectedProperty.moderationStatus !== 'approved' && (
-                <button onClick={() => handleModerate(selectedProperty._id, 'approve')} disabled={actionLoading} style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: '#10b981', color: '#fff', fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
-                  {actionLoading ? '...' : 'Approve'}
-                </button>
-              )}
-              {selectedProperty.moderationStatus !== 'rejected' && (
-                <button onClick={() => setShowRejectModal(true)} style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
-                  Reject
-                </button>
-              )}
-              <button onClick={() => setSelectedProperty(null)} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', color: '#475569', fontSize: 14, cursor: 'pointer' }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reject Modal */}
-      {showRejectModal && selectedProperty && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110 }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '90%', maxWidth: 480 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Reject Property</h3>
-            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>"{selectedProperty.title}"</p>
-            {actionError && (
-              <div style={{ padding: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b', fontSize: 12, marginBottom: 12 }}>
-                {actionError}
-              </div>
-            )}
-            <textarea
-              placeholder="Enter rejection reason (required)..."
-              value={rejectReason}
-              onChange={e => setRejectReason(e.target.value)}
-              rows={4}
-              style={{ width: '100%', padding: 12, border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
-            />
-            <div style={{ display: 'flex', gap: 12, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowRejectModal(false); setRejectReason(''); setActionError(null); }} style={{ padding: '8px 20px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button
-                onClick={() => handleModerate(selectedProperty._id, 'reject', rejectReason)}
-                disabled={!rejectReason.trim() || actionLoading}
-                style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: rejectReason.trim() ? '#ef4444' : '#fca5a5', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
-              >
-                {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
-              </button>
-            </div>
-          </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
+          </button>
+          <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+          >
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
+          </button>
         </div>
       )}
     </div>

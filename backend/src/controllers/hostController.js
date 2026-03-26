@@ -480,3 +480,90 @@ exports.togglePropertyStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+const MAX_IMAGES_PER_PROPERTY = 20;
+
+// @desc    Add image to property
+// @route   POST /api/host/properties/:id/images
+// @access  Private (Host)
+exports.addPropertyImage = async (req, res, next) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    if (property.host.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    if (property.images && property.images.length >= MAX_IMAGES_PER_PROPERTY) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum ${MAX_IMAGES_PER_PROPERTY} images per property`,
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file provided' });
+    }
+
+    const isPrimary = req.body.isPrimary === 'true';
+    const caption = req.body.caption || undefined;
+
+    // If setting as primary, unset all existing
+    if (isPrimary && property.images) {
+      property.images.forEach((img) => {
+        img.isPrimary = false;
+      });
+    }
+
+    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    const newImage = {
+      url: imageUrl,
+      caption,
+      isPrimary: isPrimary || (!property.images || property.images.length === 0),
+    };
+
+    property.images.push(newImage);
+    await property.save();
+
+    res.status(201).json({
+      success: true,
+      data: { image: newImage, totalImages: property.images.length },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Remove image from property
+// @route   DELETE /api/host/properties/:id/images
+// @access  Private (Host)
+exports.removePropertyImage = async (req, res, next) => {
+  try {
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, message: 'imageUrl is required' });
+    }
+
+    const property = await Property.findById(req.params.id);
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+    if (property.host.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    const imageIndex = property.images.findIndex((img) => img.url === imageUrl);
+    if (imageIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Image not found on this property' });
+    }
+
+    property.images.splice(imageIndex, 1);
+    await property.save();
+
+    res.json({ success: true, message: 'Image removed', totalImages: property.images.length });
+  } catch (error) {
+    next(error);
+  }
+};
