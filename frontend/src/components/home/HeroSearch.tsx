@@ -22,10 +22,17 @@ export default function HeroSearch() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const [city, setCity] = useState('');
+  const [citySearch, setCitySearch] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [propertyType, setPropertyType] = useState('');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
+
+  const filteredCities = CITIES.filter((c) => {
+    const q = citySearch.toLowerCase();
+    return !q || c.en.toLowerCase().includes(q) || c.ar.includes(q);
+  });
 
   const PROPERTY_TYPES = [
     { label: t('hero.allTypes'), value: '' },
@@ -113,19 +120,38 @@ export default function HeroSearch() {
                 </label>
                 <div className="relative">
                   <MapPin className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 appearance-none cursor-pointer transition-all duration-200"
-                  >
-                    <option value="">{t('hero.selectCity')}</option>
-                    {CITIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {language === 'ar' ? c.ar : c.en}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={citySearch}
+                    onChange={(e) => {
+                      setCitySearch(e.target.value);
+                      setCity('');
+                      setShowCityDropdown(true);
+                    }}
+                    onFocus={() => setShowCityDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
+                    placeholder={t('hero.selectCity')}
+                    className="w-full ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8 py-3 border border-gray-100 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 bg-gray-50/50 transition-all duration-200"
+                  />
+                  {showCityDropdown && filteredCities.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 z-50 max-h-48 overflow-y-auto">
+                      {filteredCities.map((c) => (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setCity(c.value);
+                            setCitySearch(language === 'ar' ? c.ar : c.en);
+                            setShowCityDropdown(false);
+                          }}
+                          className="w-full text-start px-4 py-2.5 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                        >
+                          {language === 'ar' ? c.ar : c.en}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

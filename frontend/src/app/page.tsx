@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import FeaturedListings from '@/components/home/FeaturedListings';
 import { useLanguage } from '@/context/LanguageContext';
 import { Search, Shield, Star, Headphones, Home, Building, TreePine, Tent, Hotel, Users, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -116,6 +117,12 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Featured Listings */}
+      <FeaturedListings
+        title={lang === 'ar' ? 'إقامات مميزة' : 'Featured Stays'}
+        subtitle={lang === 'ar' ? 'عقارات مختارة لعطلتك القادمة' : 'Handpicked properties for your next getaway'}
+      />
+
       {/* Why Hostn */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -142,7 +149,7 @@ export default function HomePage() {
       </section>
 
       {/* Platform Stats */}
-      {stats && (
+      {stats && stats.properties >= 10 && (
         <section className="py-14 bg-white">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">

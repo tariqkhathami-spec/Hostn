@@ -122,10 +122,10 @@ export default function AdminUsersPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0627\u0633\u0645' : 'Name'}</th>
-                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0628\u0631\u064a\u062f' : 'Email'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600 hidden md:table-cell">{isAr ? '\u0627\u0644\u0628\u0631\u064a\u062f' : 'Email'}</th>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062f\u0648\u0631' : 'Role'}</th>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
-                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645' : 'Joined'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600 hidden lg:table-cell">{isAr ? '\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645' : 'Joined'}</th>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0625\u062c\u0631\u0627\u0621' : 'Action'}</th>
                 </tr>
               </thead>
@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
                 {users.map((user) => (
                   <tr key={user._id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{user.email}</td>
                     <td className="px-4 py-3">
                       <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700 capitalize">
                         {user.role}
@@ -165,7 +165,7 @@ export default function AdminUsersPage() {
                           : (isAr ? '\u0646\u0634\u0637' : 'Active')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
                       {new Date(user.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">

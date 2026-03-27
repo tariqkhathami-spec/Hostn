@@ -189,6 +189,14 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
             error={errors.password}
           />
 
+          {isLogin && (
+            <div className="text-right rtl:text-left -mt-2">
+              <Link href="/auth/forgot-password" className={`text-sm ${accent.text} hover:underline`}>
+                {lang === 'ar' ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
+              </Link>
+            </div>
+          )}
+
           {!isLogin && (
             <Input
               label={lang === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone (optional)'}
