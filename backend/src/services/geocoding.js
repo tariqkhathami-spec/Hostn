@@ -4,8 +4,6 @@
  * Swap the implementation to Mapbox/OSM without changing callers.
  */
 
-const axios = require('axios');
-
 const GOOGLE_MAPS_SERVER_KEY = process.env.GOOGLE_MAPS_SERVER_KEY;
 const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
@@ -28,15 +26,14 @@ async function geocodeAddress(address) {
   }
 
   try {
-    const { data } = await axios.get(GEOCODE_URL, {
-      params: {
-        address,
-        key: GOOGLE_MAPS_SERVER_KEY,
-        region: 'sa', // Bias toward Saudi Arabia
-        language: 'en',
-      },
-      timeout: 5000,
+    const params = new URLSearchParams({
+      address,
+      key: GOOGLE_MAPS_SERVER_KEY,
+      region: 'sa',
+      language: 'en',
     });
+    const resp = await fetch(`${GEOCODE_URL}?${params}`, { signal: AbortSignal.timeout(5000) });
+    const data = await resp.json();
 
     if (data.status !== 'OK' || !data.results?.length) {
       return null;
@@ -67,14 +64,13 @@ async function reverseGeocode(lat, lng) {
   }
 
   try {
-    const { data } = await axios.get(GEOCODE_URL, {
-      params: {
-        latlng: `${lat},${lng}`,
-        key: GOOGLE_MAPS_SERVER_KEY,
-        language: 'en',
-      },
-      timeout: 5000,
+    const params = new URLSearchParams({
+      latlng: `${lat},${lng}`,
+      key: GOOGLE_MAPS_SERVER_KEY,
+      language: 'en',
     });
+    const resp = await fetch(`${GEOCODE_URL}?${params}`, { signal: AbortSignal.timeout(5000) });
+    const data = await resp.json();
 
     if (data.status !== 'OK' || !data.results?.length) {
       return null;

@@ -384,8 +384,10 @@ exports.getNearby = async (req, res, next) => {
 
     res.json({ success: true, data: properties });
   } catch (error) {
-    // Handle missing 2dsphere index gracefully
-    if (error.code === 27 || error.codeName === 'IndexNotFound') {
+    // Handle geospatial query errors gracefully (missing/incompatible index, no geo data)
+    if (error.name === 'MongoServerError' || error.code === 27 || error.codeName === 'IndexNotFound') {
+      const logger = require('../config/logger');
+      logger.warn('Nearby search failed — likely 2dsphere index issue', { error: error.message });
       return res.json({ success: true, data: [] });
     }
     next(error);
