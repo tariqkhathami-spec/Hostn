@@ -6,6 +6,7 @@ const Review = require('../models/Review');
 const { escapeRegex } = require('../utils/sanitize');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
+const { hasPermission, PERMISSIONS } = require('../config/permissions');
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
@@ -14,25 +15,12 @@ const ActivityLog = require('../models/ActivityLog');
 // @access  Private (Admin)
 exports.getStats = async (req, res, next) => {
   try {
-    const [
-      totalUsers,
-      totalHosts,
-      totalGuests,
-      totalProperties,
-      activeProperties,
-      pendingProperties,
-      totalBookings,
-      pendingBookings,
-      confirmedBookings,
-      completedBookings,
-      cancelledBookings,
-      totalPayments,
-      totalRevenue,
-      totalReviews,
-    ] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ role: 'host' }),
-      User.countDocuments({ role: 'guest' }),
+    const adminRole = req.user.adminRole || 'super';
+    const canViewUsers = hasPermission(req.user, PERMISSIONS.VIEW_USERS);
+    const canViewPayments = hasPermission(req.user, PERMISSIONS.VIEW_PAYMENTS);
+
+    // Base queries — all admin sub-roles can see these
+    const baseQueries = [
       Property.countDocuments(),
       Property.countDocuments({ isActive: true }),
       Property.countDocuments({ isApproved: false }),
@@ -41,50 +29,66 @@ exports.getStats = async (req, res, next) => {
       Booking.countDocuments({ status: 'confirmed' }),
       Booking.countDocuments({ status: 'completed' }),
       Booking.countDocuments({ status: 'cancelled' }),
-      Payment.countDocuments({ status: 'completed' }),
-      Payment.aggregate([
-        { $match: { status: 'completed' } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]),
       Review.countDocuments(),
-    ]);
+    ];
 
-    // Monthly revenue for last 6 months
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const [
+      totalProperties, activeProperties, pendingProperties,
+      totalBookings, pendingBookings, confirmedBookings, completedBookings, cancelledBookings,
+      totalReviews,
+    ] = await Promise.all(baseQueries);
 
-    const monthlyRevenue = await Payment.aggregate([
-      { $match: { status: 'completed', paidAt: { $gte: sixMonthsAgo } } },
-      {
-        $group: {
-          _id: { year: { $year: '$paidAt' }, month: { $month: '$paidAt' } },
-          total: { $sum: '$amount' },
-          count: { $sum: 1 },
-        },
+    const data = {
+      properties: { total: totalProperties, active: activeProperties, pending: pendingProperties },
+      bookings: {
+        total: totalBookings,
+        pending: pendingBookings,
+        confirmed: confirmedBookings,
+        completed: completedBookings,
+        cancelled: cancelledBookings,
       },
-      { $sort: { '_id.year': 1, '_id.month': 1 } },
-    ]);
+      reviews: { total: totalReviews },
+      adminRole,
+    };
 
-    res.json({
-      success: true,
-      data: {
-        users: { total: totalUsers, hosts: totalHosts, guests: totalGuests },
-        properties: { total: totalProperties, active: activeProperties, pending: pendingProperties },
-        bookings: {
-          total: totalBookings,
-          pending: pendingBookings,
-          confirmed: confirmedBookings,
-          completed: completedBookings,
-          cancelled: cancelledBookings,
-        },
-        payments: {
-          total: totalPayments,
-          revenue: totalRevenue[0]?.total || 0,
-        },
-        reviews: { total: totalReviews },
-        monthlyRevenue,
-      },
-    });
+    // User stats — super + support only
+    if (canViewUsers) {
+      const [totalUsers, totalHosts, totalGuests] = await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ role: 'host' }),
+        User.countDocuments({ role: 'guest' }),
+      ]);
+      data.users = { total: totalUsers, hosts: totalHosts, guests: totalGuests };
+    }
+
+    // Payment/revenue stats — super + finance only
+    if (canViewPayments) {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const [totalPayments, totalRevenue, monthlyRevenue] = await Promise.all([
+        Payment.countDocuments({ status: 'completed' }),
+        Payment.aggregate([
+          { $match: { status: 'completed' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
+        Payment.aggregate([
+          { $match: { status: 'completed', paidAt: { $gte: sixMonthsAgo } } },
+          {
+            $group: {
+              _id: { year: { $year: '$paidAt' }, month: { $month: '$paidAt' } },
+              total: { $sum: '$amount' },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { '_id.year': 1, '_id.month': 1 } },
+        ]),
+      ]);
+      data.payments = { total: totalPayments, revenue: totalRevenue[0]?.total || 0 };
+      data.monthlyRevenue = monthlyRevenue;
+    }
+
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -192,8 +196,27 @@ exports.updateUser = async (req, res, next) => {
         break;
       case 'make_admin':
         user.role = 'admin';
-        details = `Changed role to admin for ${user.email}`;
+        user.adminRole = 'super';
+        details = `Changed role to admin (super) for ${user.email}`;
         break;
+      case 'set_admin_role': {
+        const { adminRole } = req.body;
+        if (!['super', 'support', 'finance'].includes(adminRole)) {
+          return res.status(400).json({ success: false, message: 'Invalid admin role. Must be: super, support, or finance' });
+        }
+        // Only super admins can change admin roles
+        if ((req.user.adminRole || 'super') !== 'super') {
+          return res.status(403).json({ success: false, message: 'Only super admins can change admin roles' });
+        }
+        if (user.role !== 'admin') {
+          return res.status(400).json({ success: false, message: 'User must be an admin to set admin role' });
+        }
+        const oldRole = user.adminRole || 'super';
+        user.adminRole = adminRole;
+        logAction = 'admin_role_changed';
+        details = `Changed admin role from ${oldRole} to ${adminRole} for ${user.email}`;
+        break;
+      }
       case 'verify':
         user.isVerified = true;
         details = `Verified user ${user.email}`;
@@ -206,6 +229,8 @@ exports.updateUser = async (req, res, next) => {
 
     await ActivityLog.create({
       actor: req.user._id,
+      actorRole: req.user.role,
+      actorAdminRole: req.user.adminRole || null,
       action: logAction,
       target: { type: 'User', id: user._id },
       details,
@@ -335,6 +360,8 @@ exports.moderateProperty = async (req, res, next) => {
 
       await ActivityLog.create({
         actor: req.user._id,
+        actorRole: req.user.role,
+        actorAdminRole: req.user.adminRole || null,
         action: 'property_approved',
         target: { type: 'Property', id: property._id },
         details: `Approved listing "${property.title}"`,
@@ -355,6 +382,8 @@ exports.moderateProperty = async (req, res, next) => {
 
       await ActivityLog.create({
         actor: req.user._id,
+        actorRole: req.user.role,
+        actorAdminRole: req.user.adminRole || null,
         action: 'property_rejected',
         target: { type: 'Property', id: property._id },
         details: `Rejected listing "${property.title}" — ${reason || 'No reason'}`,
@@ -434,6 +463,8 @@ exports.updateBooking = async (req, res, next) => {
 
     await ActivityLog.create({
       actor: req.user._id,
+      actorRole: req.user.role,
+      actorAdminRole: req.user.adminRole || null,
       action: `booking_${action === 'cancel' ? 'cancelled' : action === 'confirm' ? 'confirmed' : 'completed'}`,
       target: { type: 'Booking', id: booking._id },
       details: `Admin ${action}ed booking`,
@@ -453,12 +484,18 @@ exports.updateBooking = async (req, res, next) => {
 // @access  Private (Admin)
 exports.getLogs = async (req, res, next) => {
   try {
-    const { action, page = 1, limit = 50 } = req.query;
+    const { action, actorAdminRole, from, to, page = 1, limit = 50 } = req.query;
     const query = {};
     if (action) query.action = action;
+    if (actorAdminRole) query.actorAdminRole = actorAdminRole;
+    if (from || to) {
+      query.createdAt = {};
+      if (from) query.createdAt.$gte = new Date(from);
+      if (to) query.createdAt.$lte = new Date(to);
+    }
 
     const logs = await ActivityLog.find(query)
-      .populate('actor', 'name email role')
+      .populate('actor', 'name email role adminRole')
       .sort('-createdAt')
       .skip((page - 1) * limit)
       .limit(Number(limit));

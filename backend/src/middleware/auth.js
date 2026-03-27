@@ -57,3 +57,24 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+/**
+ * Granular permission check for admin sub-roles.
+ * Must be used after protect + authorize('admin').
+ * Admin users without adminRole default to 'super' (backward compat).
+ */
+exports.authorizePermission = (...requiredPermissions) => {
+  const { hasPermission } = require('../config/permissions');
+  return (req, res, next) => {
+    for (const perm of requiredPermissions) {
+      if (!hasPermission(req.user, perm)) {
+        return res.status(403).json({
+          success: false,
+          message: `Permission '${perm}' is required for this action`,
+          requiredPermission: perm,
+        });
+      }
+    }
+    next();
+  };
+};

@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema(
       enum: ['guest', 'host', 'admin'],
       default: 'guest',
     },
+    adminRole: {
+      type: String,
+      enum: ['super', 'support', 'finance'],
+      default: null,
+    },
     isVerified: {
       type: Boolean,
       default: false,

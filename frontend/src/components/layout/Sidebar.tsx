@@ -14,6 +14,7 @@ type NavItem = {
   href: string;
   icon: React.ElementType;
   label: { en: string; ar: string };
+  adminRoles?: ('super' | 'support' | 'finance')[];
 };
 
 const guestNav: NavItem[] = [
@@ -37,13 +38,13 @@ const hostNav: NavItem[] = [
 
 const adminNav: NavItem[] = [
   { href: '/admin', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
-  { href: '/admin/users', icon: Users, label: { en: 'Users', ar: 'المستخدمون' } },
-  { href: '/admin/properties', icon: Building, label: { en: 'Properties', ar: 'العقارات' } },
-  { href: '/admin/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' } },
-  { href: '/admin/payments', icon: CreditCard, label: { en: 'Payments', ar: 'المدفوعات' } },
-  { href: '/admin/reports', icon: Shield, label: { en: 'Reports', ar: 'البلاغات' } },
-  { href: '/admin/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' } },
-  { href: '/admin/logs', icon: BarChart3, label: { en: 'Activity Logs', ar: 'سجل النشاط' } },
+  { href: '/admin/users', icon: Users, label: { en: 'Users', ar: 'المستخدمون' }, adminRoles: ['super', 'support'] },
+  { href: '/admin/properties', icon: Building, label: { en: 'Properties', ar: 'العقارات' }, adminRoles: ['super', 'support'] },
+  { href: '/admin/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' }, adminRoles: ['super', 'support', 'finance'] },
+  { href: '/admin/payments', icon: CreditCard, label: { en: 'Payments', ar: 'المدفوعات' }, adminRoles: ['super', 'finance'] },
+  { href: '/admin/reports', icon: Shield, label: { en: 'Reports', ar: 'البلاغات' }, adminRoles: ['super', 'support'] },
+  { href: '/admin/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' }, adminRoles: ['super', 'support'] },
+  { href: '/admin/logs', icon: BarChart3, label: { en: 'Activity Logs', ar: 'سجل النشاط' }, adminRoles: ['super', 'support', 'finance'] },
 ];
 
 const NAV_MAP: Record<string, NavItem[]> = {
@@ -58,6 +59,12 @@ const ROLE_LABELS: Record<string, { en: string; ar: string }> = {
   admin: { en: 'Admin', ar: 'مشرف' },
 };
 
+const ADMIN_ROLE_LABELS: Record<string, { en: string; ar: string }> = {
+  super: { en: 'Super Admin', ar: 'مشرف عام' },
+  support: { en: 'Support Admin', ar: 'مشرف دعم' },
+  finance: { en: 'Finance Admin', ar: 'مشرف مالي' },
+};
+
 interface SidebarProps {
   role: 'guest' | 'host' | 'admin';
 }
@@ -67,7 +74,13 @@ export default function Sidebar({ role }: SidebarProps) {
   const { language } = useLanguage();
   const { logout, user } = useAuth();
   const lang = language as 'en' | 'ar';
-  const nav = NAV_MAP[role] || guestNav;
+  const rawNav = NAV_MAP[role] || guestNav;
+
+  // Filter admin nav items by admin sub-role
+  const adminRole = (user?.adminRole || 'super') as 'super' | 'support' | 'finance';
+  const nav = role === 'admin'
+    ? rawNav.filter(item => !item.adminRoles || item.adminRoles.includes(adminRole))
+    : rawNav;
 
   const isActive = (href: string) => {
     if (href === '/host' || href === '/admin' || href === '/dashboard') {
@@ -82,7 +95,9 @@ export default function Sidebar({ role }: SidebarProps) {
       <div className="p-6 border-b border-gray-100">
         <Link href="/" className="text-xl font-bold text-gray-900">Hostn</Link>
         <span className="ms-2 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">
-          {ROLE_LABELS[role]?.[lang] || role}
+          {role === 'admin' && user?.adminRole
+            ? ADMIN_ROLE_LABELS[user.adminRole]?.[lang] || ROLE_LABELS[role]?.[lang]
+            : ROLE_LABELS[role]?.[lang] || role}
         </span>
       </div>
 

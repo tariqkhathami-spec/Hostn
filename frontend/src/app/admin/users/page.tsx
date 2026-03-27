@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { Search, Loader2, ShieldOff, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -11,13 +12,16 @@ interface UserItem {
   name: string;
   email: string;
   role: string;
+  adminRole?: string | null;
   isSuspended?: boolean;
   createdAt: string;
 }
 
 export default function AdminUsersPage() {
   const { language } = useLanguage();
+  const { user: currentUser } = useAuth();
   const isAr = language === 'ar';
+  const isSuperAdmin = currentUser?.role === 'admin' && (currentUser?.adminRole || 'super') === 'super';
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +62,16 @@ export default function AdminUsersPage() {
       toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645' : 'Failed to update user');
     } finally {
       setToggling(null);
+    }
+  };
+
+  const changeAdminRole = async (userId: string, adminRole: string) => {
+    try {
+      await adminApi.updateUser(userId, { action: 'set_admin_role', adminRole });
+      toast.success(isAr ? 'تم تغيير دور المشرف' : `Admin role changed to ${adminRole}`);
+      loadUsers();
+    } catch {
+      toast.error(isAr ? 'فشل في تغيير الدور' : 'Failed to change admin role');
     }
   };
 
@@ -124,6 +138,19 @@ export default function AdminUsersPage() {
                       <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700 capitalize">
                         {user.role}
                       </span>
+                      {user.role === 'admin' && isSuperAdmin && user._id !== currentUser?._id ? (
+                        <select
+                          value={user.adminRole || 'super'}
+                          onChange={(e) => changeAdminRole(user._id, e.target.value)}
+                          className="ms-2 text-xs border border-gray-200 rounded px-1 py-0.5"
+                        >
+                          <option value="super">Super</option>
+                          <option value="support">Support</option>
+                          <option value="finance">Finance</option>
+                        </select>
+                      ) : user.role === 'admin' && user.adminRole ? (
+                        <span className="ms-2 text-xs text-gray-500">({user.adminRole})</span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <span

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, authorizePermission } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const {
   initiatePayment,
   verifyPayment,
@@ -22,8 +23,8 @@ router.post('/verify', verifyPayment);
 router.get('/my-payments', getMyPayments);
 router.get('/:id', getPayment);
 
-// Admin routes
-router.get('/', authorize('admin'), getAllPayments);
-router.post('/:id/refund', authorize('admin'), refundPayment);
+// Admin routes — super + finance
+router.get('/', authorize('admin'), authorizePermission(PERMISSIONS.VIEW_PAYMENTS), getAllPayments);
+router.post('/:id/refund', authorize('admin'), authorizePermission(PERMISSIONS.PROCESS_REFUNDS), refundPayment);
 
 module.exports = router;

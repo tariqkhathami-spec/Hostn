@@ -5,6 +5,7 @@ export interface User {
   phone?: string;
   avatar?: string;
   role: 'guest' | 'host' | 'admin';
+  adminRole?: 'super' | 'support' | 'finance' | null;
   isVerified: boolean;
   wishlist: string[];
   createdAt: string;

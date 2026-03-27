@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, authorizePermission } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const {
   getStats,
   getUsers,
@@ -19,27 +20,27 @@ const {
 router.use(protect);
 router.use(authorize('admin'));
 
-// Dashboard
-router.get('/stats', getStats);
+// Dashboard — all admin sub-roles
+router.get('/stats', authorizePermission(PERMISSIONS.VIEW_DASHBOARD), getStats);
 
-// Users
-router.get('/users', getUsers);
-router.get('/users/:id', getUserDetail);
-router.patch('/users/:id', updateUser);
+// Users — super + support (view), super only (manage)
+router.get('/users', authorizePermission(PERMISSIONS.VIEW_USERS), getUsers);
+router.get('/users/:id', authorizePermission(PERMISSIONS.VIEW_USERS), getUserDetail);
+router.patch('/users/:id', authorizePermission(PERMISSIONS.MANAGE_USERS), updateUser);
 
-// Hosts
-router.get('/hosts/:id', getHostDetail);
-router.patch('/hosts/:id', updateHost);
+// Hosts — super + support
+router.get('/hosts/:id', authorizePermission(PERMISSIONS.VIEW_USERS), getHostDetail);
+router.patch('/hosts/:id', authorizePermission(PERMISSIONS.MANAGE_USERS), updateHost);
 
-// Properties
-router.get('/properties', getProperties);
-router.post('/properties/:id/moderate', moderateProperty);
+// Properties — super + support
+router.get('/properties', authorizePermission(PERMISSIONS.VIEW_PROPERTIES), getProperties);
+router.post('/properties/:id/moderate', authorizePermission(PERMISSIONS.MODERATE_PROPERTIES), moderateProperty);
 
-// Bookings
-router.get('/bookings', getBookings);
-router.patch('/bookings/:id', updateBooking);
+// Bookings — super + support + finance (view), super + support (manage)
+router.get('/bookings', authorizePermission(PERMISSIONS.VIEW_BOOKINGS), getBookings);
+router.patch('/bookings/:id', authorizePermission(PERMISSIONS.MANAGE_BOOKINGS), updateBooking);
 
-// Activity Logs
-router.get('/logs', getLogs);
+// Activity Logs — super + support + finance
+router.get('/logs', authorizePermission(PERMISSIONS.VIEW_LOGS), getLogs);
 
 module.exports = router;

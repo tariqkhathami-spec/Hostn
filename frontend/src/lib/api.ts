@@ -228,14 +228,14 @@ export const adminApi = {
   // Users
   getUsers: (params?: Record<string, unknown>) => api.get('/admin/users', { params }),
   getUser: (id: string) => api.get(`/admin/users/${id}`),
-  updateUser: (id: string, data: Record<string, unknown>) => api.put(`/admin/users/${id}`, data),
+  updateUser: (id: string, data: Record<string, unknown>) => api.patch(`/admin/users/${id}`, data),
   // Properties
   getProperties: (params?: Record<string, unknown>) => api.get('/admin/properties', { params }),
   moderateProperty: (id: string, data: Record<string, unknown>) =>
-    api.put(`/admin/properties/${id}/moderate`, data),
+    api.post(`/admin/properties/${id}/moderate`, data),
   // Bookings
   getBookings: (params?: Record<string, unknown>) => api.get('/admin/bookings', { params }),
-  updateBooking: (id: string, data: Record<string, unknown>) => api.put(`/admin/bookings/${id}`, data),
+  updateBooking: (id: string, data: Record<string, unknown>) => api.patch(`/admin/bookings/${id}`, data),
   // Payments
   getPayments: (params?: Record<string, unknown>) => api.get('/admin/payments', { params }),
   refundPayment: (id: string, data: { reason: string }) => api.post(`/admin/payments/${id}/refund`, data),
