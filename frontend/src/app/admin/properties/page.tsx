@@ -61,9 +61,10 @@ export default function AdminPropertiesPage() {
     const reason = status === 'removed' ? prompt(isAr ? '\u0633\u0628\u0628 \u0627\u0644\u0625\u0632\u0627\u0644\u0629:' : 'Reason for removal:') : undefined;
     if (status === 'removed' && !reason) return;
 
+    const action = status === 'active' ? 'approve' : 'reject';
     setActionId(id);
     try {
-      await adminApi.moderateProperty(id, { status, reason: reason || '' });
+      await adminApi.moderateProperty(id, { action, reason: reason || '' });
       toast.success(
         status === 'active'
           ? (isAr ? '\u062a\u0645 \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629' : 'Property approved')
