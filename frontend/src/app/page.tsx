@@ -4,10 +4,10 @@ import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FeaturedListings from '@/components/home/FeaturedListings';
+import HeroSearch from '@/components/home/HeroSearch';
 import { useLanguage } from '@/context/LanguageContext';
 import { Search, Shield, Star, Headphones, Home, Building, TreePine, Tent, Hotel, Users, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { propertiesApi } from '@/lib/api';
 
 const PROPERTY_TYPES = [
@@ -21,9 +21,7 @@ const PROPERTY_TYPES = [
 
 export default function HomePage() {
   const { language, t } = useLanguage();
-  const router = useRouter();
   const lang = language as 'en' | 'ar';
-  const [searchCity, setSearchCity] = useState('');
   const [stats, setStats] = useState<{ properties: number; hosts: number; completedBookings: number; reviews: number } | null>(null);
 
   useEffect(() => {
@@ -32,69 +30,12 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (searchCity) params.set('city', searchCity);
-    router.push(`/listings?${params.toString()}`);
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 text-white py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm mb-6">
-            <Star className="w-4 h-4 text-gold-400" />
-            {t('hero.badge')}
-          </div>
-
-          <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
-            {t('hero.title1')}<br />
-            <span className="text-gold-400">{t('hero.title2')}</span>
-          </h1>
-
-          <p className="text-lg text-primary-200 max-w-2xl mx-auto mb-10">
-            {t('hero.subtitle')}
-          </p>
-
-          {/* Search Bar */}
-          <div className="max-w-xl mx-auto flex gap-3">
-            <input
-              type="text"
-              placeholder={lang === 'ar' ? 'ابحث عن مدينة...' : 'Search by city...'}
-              value={searchCity}
-              onChange={(e) => setSearchCity(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-5 py-3.5 rounded-xl text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-gold-400"
-            />
-            <button
-              onClick={handleSearch}
-              className="bg-gold-500 hover:bg-gold-400 text-primary-950 px-6 py-3.5 rounded-xl font-bold transition-colors flex items-center gap-2"
-            >
-              <Search className="w-5 h-5" />
-              {t('hero.search')}
-            </button>
-          </div>
-
-          {/* Trust badges */}
-          <div className="flex justify-center gap-8 mt-10 text-sm text-primary-200">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-gold-400" />
-              {t('hero.verified')}
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-gold-400" />
-              {t('hero.rating')}
-            </div>
-            <div className="flex items-center gap-2">
-              <Headphones className="w-4 h-4 text-gold-400" />
-              {t('hero.support')}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section with Search */}
+      <HeroSearch />
 
       {/* Property Types */}
       <section className="py-16 bg-white">
