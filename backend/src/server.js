@@ -32,14 +32,13 @@ const walletRoutes = require('./routes/wallet');
 const paymentMethodRoutes = require('./routes/paymentMethods');
 const couponRoutes = require('./routes/coupons');
 
-// ── Initialize infrastructure ────────────────────────────────────────────────
-async function bootstrap() {
-  await connectDB();
-  await connectRedis();
-}
-bootstrap();
-
+// ── App setup ────────────────────────────────────────────────────────────────
 const app = express();
+
+// Bootstrapped flag — health probes check this to avoid false positives
+let bootstrapped = false;
+function isBootstrapped() { return bootstrapped; }
+module.exports = { app, isBootstrapped };
 
 // ── Trust proxy (required behind load balancers for correct IP detection) ────
 app.set('trust proxy', 1);
@@ -96,7 +95,7 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // ── NoSQL injection protection ───────────────────────────────────────────────
 app.use(mongoSanitize({ replaceWith: '_' }));
 
-// ── Rate limiting (in-memory — will be replaced with Redis in Phase 6) ───────
+// ── Rate limiting (in-memory — will be replaced with Redis in Phase 39) ──────
 const rateLimitStore = new Map();
 
 function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many requests' } = {}) {
@@ -180,58 +179,71 @@ app.use('*', (req, res) => {
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start server ─────────────────────────────────────────────────────────────
+// ── Start server (await infrastructure before binding port) ──────────────────
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`Hostn API running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-});
+let server;
 
-// ── Graceful shutdown ────────────────────────────────────────────────────────
-const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
+async function startServer() {
+  try {
+    // Connect to infrastructure BEFORE accepting traffic
+    await connectDB();
+    await connectRedis();
+    bootstrapped = true;
+    console.log('[BOOTSTRAP] All infrastructure connected successfully.');
 
-async function gracefulShutdown(signal) {
-  console.log(`\n[SHUTDOWN] Received ${signal}. Starting graceful shutdown...`);
+    server = app.listen(PORT, () => {
+      console.log(`Hostn API running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+    });
 
-  // Stop accepting new connections
-  server.close(async () => {
-    console.log('[SHUTDOWN] HTTP server closed.');
+    // ── Graceful shutdown ──────────────────────────────────────────────────
+    const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 
-    try {
-      // Close MongoDB
-      await mongoose.connection.close();
-      console.log('[SHUTDOWN] MongoDB connection closed.');
+    async function gracefulShutdown(signal) {
+      console.log(`\n[SHUTDOWN] Received ${signal}. Starting graceful shutdown...`);
 
-      // Close Redis
-      await disconnectRedis();
-      console.log('[SHUTDOWN] Redis connection closed.');
+      // Stop accepting new connections
+      server.close(async () => {
+        console.log('[SHUTDOWN] HTTP server closed.');
 
-      console.log('[SHUTDOWN] Graceful shutdown complete.');
-      process.exit(0);
-    } catch (err) {
-      console.error('[SHUTDOWN] Error during cleanup:', err);
-      process.exit(1);
+        try {
+          await mongoose.connection.close();
+          console.log('[SHUTDOWN] MongoDB connection closed.');
+
+          await disconnectRedis();
+          console.log('[SHUTDOWN] Redis connection closed.');
+
+          console.log('[SHUTDOWN] Graceful shutdown complete.');
+          process.exit(0);
+        } catch (err) {
+          console.error('[SHUTDOWN] Error during cleanup:', err);
+          process.exit(1);
+        }
+      });
+
+      // Force exit after timeout
+      setTimeout(() => {
+        console.error('[SHUTDOWN] Forced shutdown after timeout.');
+        process.exit(1);
+      }, SHUTDOWN_TIMEOUT).unref();
     }
-  });
 
-  // Force exit after timeout
-  setTimeout(() => {
-    console.error('[SHUTDOWN] Forced shutdown after timeout.');
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  } catch (err) {
+    console.error('[FATAL] Failed to start server:', err.message);
     process.exit(1);
-  }, SHUTDOWN_TIMEOUT).unref();
+  }
 }
-
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // ── Unhandled error handlers ─────────────────────────────────────────────────
 process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Unhandled Promise Rejection:', reason);
-  gracefulShutdown('unhandledRejection');
+  process.exit(1);
 });
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err);
-  gracefulShutdown('uncaughtException');
+  process.exit(1);
 });
 
-module.exports = app;
+startServer();

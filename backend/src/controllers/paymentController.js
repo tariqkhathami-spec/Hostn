@@ -5,7 +5,7 @@ const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 
 // Moyasar API config
-const MOYASAR_API_URL = 'https://api.moyasar.com/v1';
+const MOYASAR_API_URL = process.env.MOYASAR_API_URL || 'https://api.moyasar.com/v1';
 const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
 const MOYASAR_WEBHOOK_SECRET = process.env.MOYASAR_WEBHOOK_SECRET;
 

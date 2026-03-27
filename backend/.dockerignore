@@ -1,9 +1,14 @@
 node_modules
-npm-debug.log
+npm-debug.log*
 .env
-.env.local
+.env.*
+!.env.example
 uploads/*
 !uploads/.gitkeep
 .git
 .gitignore
 *.md
+__tests__
+jest.config.js
+.vscode
+.idea

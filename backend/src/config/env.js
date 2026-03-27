@@ -14,6 +14,12 @@ const warnInProduction = [
   'MOYASAR_WEBHOOK_SECRET',
 ];
 
+const optionalWithWarning = [
+  { key: 'CLIENT_URL', description: 'CORS origin for web frontend' },
+  { key: 'REDIS_URL', description: 'Redis connection (rate limiting, caching)' },
+  { key: 'GOOGLE_MAPS_SERVER_KEY', description: 'Geocoding and maps (Phase 27+)' },
+];
+
 function validateEnv() {
   const missing = [];
 
@@ -42,9 +48,26 @@ function validateEnv() {
     }
   }
 
+  // Warn about missing optional vars
+  const missingOptional = optionalWithWarning.filter(
+    ({ key }) => !process.env[key] || process.env[key].trim() === ''
+  );
+  if (missingOptional.length > 0) {
+    console.warn('[CONFIG] Optional environment variables not set:');
+    missingOptional.forEach(({ key, description }) =>
+      console.warn(`  - ${key}: ${description}`)
+    );
+  }
+
   // Warn about weak JWT secret
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
     console.warn('[SECURITY WARNING] JWT_SECRET is shorter than 32 characters. Use a strong secret in production.');
+  }
+
+  // Default NODE_ENV
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = 'development';
+    console.warn('[CONFIG] NODE_ENV not set, defaulting to "development".');
   }
 }
 

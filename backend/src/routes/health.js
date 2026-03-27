@@ -3,9 +3,14 @@ const mongoose = require('mongoose');
 const { isRedisConnected } = require('../config/redis');
 const router = express.Router();
 
-// @desc    Liveness probe — is the process running?
+// @desc    Liveness probe — is the process running and bootstrapped?
 // @route   GET /health/live
 router.get('/live', (req, res) => {
+  // Lazy-require to avoid circular dependency (server.js exports isBootstrapped)
+  const { isBootstrapped } = require('../server');
+  if (!isBootstrapped()) {
+    return res.status(503).json({ status: 'starting', timestamp: new Date().toISOString() });
+  }
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
