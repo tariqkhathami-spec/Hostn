@@ -11,6 +11,8 @@ const {
   changePassword,
   upgradeToHost,
   toggleWishlist,
+  forgotPassword,
+  resetPassword,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const {
@@ -23,6 +25,8 @@ const {
 
 router.post('/register', registerRules, register);
 router.post('/login', loginRules, login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 router.post('/refresh', refresh);
 router.post('/logout', logout);
 router.post('/logout-all', protect, logoutAll);

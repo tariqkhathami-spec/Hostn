@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 
@@ -293,6 +294,97 @@ exports.toggleWishlist = async (req, res, next) => {
 
     await user.save();
     res.json({ success: true, wishlist: user.wishlist });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Forgot password — generate reset token
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'If that email exists, a reset link has been generated' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Store hashed token and expiry directly on user document
+    await User.collection.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          passwordResetToken: resetTokenHash,
+          passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        },
+      }
+    );
+
+    // In production, this would send an email. For now, return the token in response.
+    const resetUrl = `${process.env.CLIENT_URL || 'https://hostn.co'}/auth/reset-password?token=${resetToken}`;
+
+    res.json({
+      success: true,
+      message: 'Password reset link generated',
+      resetUrl,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset password with token
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    // Hash the incoming token and find matching user
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.collection.findOne({
+      passwordResetToken: tokenHash,
+      passwordResetExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    // Hash new password and update
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    await User.collection.updateOne(
+      { _id: user._id },
+      {
+        $set: { password: hashedPassword },
+        $unset: { passwordResetToken: '', passwordResetExpires: '' },
+        $inc: { tokenVersion: 1 },
+      }
+    );
+
+    res.json({ success: true, message: 'Password reset successful. You can now log in.' });
   } catch (error) {
     next(error);
   }
