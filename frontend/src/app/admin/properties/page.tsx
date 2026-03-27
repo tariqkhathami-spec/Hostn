@@ -6,6 +6,19 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+interface PropertyRaw {
+  _id: string;
+  title: string;
+  host?: { name: string };
+  hostName?: string;
+  location?: { city?: string };
+  city?: string;
+  isActive?: boolean;
+  isApproved?: boolean;
+  status?: string;
+  createdAt: string;
+}
+
 interface PropertyItem {
   _id: string;
   title: string;
@@ -14,6 +27,13 @@ interface PropertyItem {
   city: string;
   status: string;
   createdAt: string;
+}
+
+function deriveStatus(p: PropertyRaw): string {
+  if (p.status) return p.status;
+  if (p.isApproved === false) return 'pending';
+  if (p.isActive === false) return 'removed';
+  return 'active';
 }
 
 const statusColors: Record<string, string> = {
@@ -44,8 +64,17 @@ export default function AdminPropertiesPage() {
         page,
       });
       const data = res.data;
-      setProperties(data.data || data.properties || []);
-      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+      const raw: PropertyRaw[] = data.data || data.properties || [];
+      setProperties(raw.map((p) => ({
+        _id: p._id,
+        title: p.title,
+        host: p.host,
+        hostName: p.hostName,
+        city: p.location?.city || p.city || '-',
+        status: deriveStatus(p),
+        createdAt: p.createdAt,
+      })));
+      setTotalPages(data.pagination?.pages || data.totalPages || Math.ceil((data.total || 0) / 20) || 1);
     } catch {
       toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a' : 'Failed to load properties');
     } finally {
