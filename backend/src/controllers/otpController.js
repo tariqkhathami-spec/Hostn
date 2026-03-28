@@ -109,7 +109,7 @@ exports.verifyOTP = async (req, res, next) => {
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
       ip: req.ip,
-      platform: req.headers['x-platform'] || 'mobile',
+      platform: req.headers['x-platform'] || 'android',
     };
     const { rawToken: refreshToken } = await RefreshToken.createToken(user._id, deviceInfo);
 
