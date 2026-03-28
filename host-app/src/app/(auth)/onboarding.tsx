@@ -76,14 +76,14 @@ export default function OnboardingScreen() {
   const handleFinishOnboarding = async () => {
     setLoading(true);
     try {
-      await authService.completeOnboarding();
+      // Try to notify backend, but don't block on failure
+      await authService.completeOnboarding().catch(() => {});
       setOnboardingCompleted();
       router.replace('/(tabs)/dashboard');
-    } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        'حدث خطأ، حاول مرة أخرى';
-      Alert.alert(t('common.error'), message);
+    } catch {
+      // Even if API fails, complete onboarding locally and proceed
+      setOnboardingCompleted();
+      router.replace('/(tabs)/dashboard');
     } finally {
       setLoading(false);
     }

@@ -35,8 +35,9 @@ export default function Index() {
               router.replace('/(tabs)/dashboard');
             }
           } catch {
-            // Token invalid or API error -- send to login
-            router.replace('/(auth)/phone-entry');
+            // If onboarding status fails (e.g. guest role), go to onboarding
+            // rather than kicking back to login since we have a valid token
+            router.replace('/(auth)/onboarding');
           }
         } else {
           router.replace('/(auth)/phone-entry');
