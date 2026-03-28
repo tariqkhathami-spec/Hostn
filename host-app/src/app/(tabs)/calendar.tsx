@@ -6,7 +6,9 @@ import {
   Switch,
   ScrollView,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -148,6 +150,7 @@ const miniStyles = StyleSheet.create({
 // ── Main Screen ────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
+  const router = useRouter();
   const now = new Date();
   const [currentMonth] = React.useState(now.getMonth());
   const [currentYear] = React.useState(now.getFullYear());
@@ -186,7 +189,12 @@ export default function CalendarScreen() {
       >
         <View style={styles.unitsGrid}>
           {MOCK_UNITS.map((unit) => (
-            <View key={unit.id} style={styles.unitCard}>
+            <TouchableOpacity
+              key={unit.id}
+              style={styles.unitCard}
+              activeOpacity={0.7}
+              onPress={() => router.push(`/property/unit/${unit.id}` as any)}
+            >
               <MiniCalendar
                 year={currentYear}
                 month={currentMonth}
@@ -195,7 +203,7 @@ export default function CalendarScreen() {
               <Text style={styles.unitName} numberOfLines={2}>
                 {unit.name}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
