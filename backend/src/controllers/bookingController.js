@@ -8,10 +8,15 @@ const ActivityLog = require('../models/ActivityLog');
 // @route   POST /api/bookings
 // @access  Private
 exports.createBooking = async (req, res, next) => {
+  // Use a MongoDB session/transaction to ensure atomic availability check + booking creation.
+  // This prevents race conditions where two concurrent requests could both pass
+  // the availability check before either creates a booking (double-booking).
+  const session = await mongoose.startSession();
+
   try {
     const { propertyId, checkIn, checkOut, guests, specialRequests } = req.body;
 
-    // ── Input validation ──────────────────────────────────────────────
+    // ── Input validation (no DB needed) ─────────────────────────────
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 
@@ -49,22 +54,7 @@ exports.createBooking = async (req, res, next) => {
       });
     }
 
-    // ── Availability check ──────────────────────────────────────────
-    const conflicting = await Booking.findOne({
-      property: propertyId,
-      status: { $in: ['pending', 'confirmed'] },
-      $or: [
-        { checkIn: { $lt: checkOutDate, $gte: checkInDate } },
-        { checkOut: { $gt: checkInDate, $lte: checkOutDate } },
-        { checkIn: { $lte: checkInDate }, checkOut: { $gte: checkOutDate } },
-      ],
-    });
-
-    if (conflicting) {
-      return res.status(400).json({ success: false, message: 'Property not available for selected dates' });
-    }
-
-    // ── Check blocked dates ───────────────────────────────────────────
+    // ── Check blocked dates (no session needed) ──────────────────────
     const blockedConflict = property.unavailableDates?.some((range) => {
       const start = new Date(range.start);
       const end = new Date(range.end);
@@ -91,31 +81,55 @@ exports.createBooking = async (req, res, next) => {
       });
     }
 
-    // ── Calculate pricing (discount now correctly subtracted) ─────────
+    // ── Calculate pricing ────────────────────────────────────────────
     const perNight = property.discountedPrice || property.pricing.perNight;
     const subtotal = perNight * nights;
     const cleaningFee = property.pricing.cleaningFee || 0;
-    const serviceFee = Math.round(subtotal * 0.1); // 10% service fee
+    const serviceFee = Math.round(subtotal * 0.1);
     const discount = property.pricing.discountPercent > 0
       ? Math.round(subtotal * (property.pricing.discountPercent / 100))
       : 0;
     const total = subtotal + cleaningFee + serviceFee - discount;
 
-    // ── Create booking ──────────────────────────────────────────────
-    const booking = await Booking.create({
-      property: propertyId,
-      guest: req.user._id,
-      checkIn: checkInDate,
-      checkOut: checkOutDate,
-      guests,
-      pricing: { perNight, nights, subtotal, cleaningFee, serviceFee, discount, total },
-      specialRequests,
+    // ── ATOMIC: Availability check + booking creation in transaction ──
+    let booking;
+    await session.withTransaction(async () => {
+      // Re-check availability INSIDE the transaction with session lock
+      const conflicting = await Booking.findOne({
+        property: propertyId,
+        status: { $in: ['pending', 'confirmed'] },
+        $or: [
+          { checkIn: { $lt: checkOutDate, $gte: checkInDate } },
+          { checkOut: { $gt: checkInDate, $lte: checkOutDate } },
+          { checkIn: { $lte: checkInDate }, checkOut: { $gte: checkOutDate } },
+        ],
+      }).session(session);
+
+      if (conflicting) {
+        throw new Error('DATES_UNAVAILABLE');
+      }
+
+      // Create booking inside the same transaction
+      const [created] = await Booking.create(
+        [{
+          property: propertyId,
+          guest: req.user._id,
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+          guests,
+          pricing: { perNight, nights, subtotal, cleaningFee, serviceFee, discount, total },
+          specialRequests,
+        }],
+        { session }
+      );
+      booking = created;
     });
 
+    // Transaction committed successfully — booking is now guaranteed unique
     await booking.populate('property', 'title images location');
     await booking.populate('guest', 'name email');
 
-    // Notify host about new booking (non-blocking)
+    // Notify host about new booking (non-blocking, outside transaction)
     Notification.createNotification({
       user: property.host,
       type: 'booking_created',
@@ -135,7 +149,12 @@ exports.createBooking = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: booking });
   } catch (error) {
+    if (error.message === 'DATES_UNAVAILABLE') {
+      return res.status(400).json({ success: false, message: 'Property not available for selected dates' });
+    }
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
