@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const Property = require('../models/Property');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
+const { emitToUser, emitToProperty } = require('../config/socket');
 
 // Helper: overlap query for date-range conflicts
 function overlapQuery(propertyId, checkInDate, checkOutDate) {
@@ -200,6 +201,16 @@ exports.createBooking = async (req, res, next) => {
     await booking.populate('property', 'title images location');
     await booking.populate('guest', 'name email');
 
+    // ── Real-time: push booking to host + update property watchers ──
+    const bookingPayload = booking.toObject();
+    emitToUser(property.host.toString(), 'booking:created', bookingPayload);
+    emitToProperty(propertyId, 'availability:changed', {
+      propertyId,
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
+      status: 'pending',
+    });
+
     // Notify host about new booking (non-blocking)
     Notification.createNotification({
       user: property.host,
@@ -363,6 +374,15 @@ exports.updateBookingStatus = async (req, res, next) => {
       ip: req.ip,
     });
 
+    // ── Real-time: push status change to guest + property watchers ──
+    const bookingObj = booking.toObject();
+    emitToUser(booking.guest.toString(), 'booking:updated', bookingObj);
+    emitToProperty(booking.property.toString(), 'availability:changed', {
+      propertyId: booking.property.toString(),
+      bookingId: booking._id,
+      status,
+    });
+
     res.json({ success: true, data: booking });
   } catch (error) {
     next(error);
@@ -392,6 +412,17 @@ exports.cancelBooking = async (req, res, next) => {
     booking.cancelledAt = new Date();
     booking.cancellationReason = req.body.reason;
     await booking.save();
+
+    // ── Real-time: notify host about cancellation + update property ──
+    const property = await Property.findById(booking.property).select('host');
+    if (property) {
+      emitToUser(property.host.toString(), 'booking:cancelled', booking.toObject());
+      emitToProperty(booking.property.toString(), 'availability:changed', {
+        propertyId: booking.property.toString(),
+        bookingId: booking._id,
+        status: 'cancelled',
+      });
+    }
 
     res.json({ success: true, data: booking });
   } catch (error) {

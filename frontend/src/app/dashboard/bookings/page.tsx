@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { bookingsApi } from '@/lib/api';
+import { useSocketEvent } from '@/lib/useSocket';
 import { Booking } from '@/types';
 import { BookOpen, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -25,20 +26,25 @@ export default function MyBookingsPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  useEffect(() => {
+  const fetchBookings = useCallback(async () => {
     if (!isAuthenticated) return;
-    const fetchBookings = async () => {
-      try {
-        const res = await bookingsApi.getMyBookings();
-        setBookings(res.data.data || res.data || []);
-      } catch {
-        setError(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' : 'Failed to load bookings');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBookings();
+    try {
+      const res = await bookingsApi.getMyBookings();
+      setBookings(res.data.data || res.data || []);
+    } catch {
+      setError(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' : 'Failed to load bookings');
+    } finally {
+      setLoading(false);
+    }
   }, [isAuthenticated, lang]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  // Real-time: auto-refresh when booking status changes
+  useSocketEvent('booking:updated', () => fetchBookings());
+  useSocketEvent('booking:cancelled', () => fetchBookings());
 
   const statusColors: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',

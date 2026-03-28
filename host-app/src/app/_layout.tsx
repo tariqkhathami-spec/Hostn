@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { I18nManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { connectSocket, setQueryClient, disconnectSocket } from '../services/socket';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,6 +16,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// Register queryClient with socket service so events can invalidate caches
+setQueryClient(queryClient);
+
 // Force RTL for Arabic-first app
 if (!I18nManager.isRTL) {
   I18nManager.allowRTL(true);
@@ -22,6 +26,12 @@ if (!I18nManager.isRTL) {
 }
 
 export default function RootLayout() {
+  // Connect socket on mount, disconnect on unmount
+  useEffect(() => {
+    connectSocket();
+    return () => { disconnectSocket(); };
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

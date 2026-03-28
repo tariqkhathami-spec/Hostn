@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { LanguageProvider } from '@/context/LanguageContext';
+import SocketProvider from '@/components/SocketProvider';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <LanguageProvider>
           <AuthProvider>
+            <SocketProvider>
             <Toaster
               position="top-center"
               toastOptions={{
@@ -38,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               }}
             />
             {children}
+            </SocketProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>

@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const mongoose = require('mongoose');
 const connectDB = require('./config/database');
 const { connectRedis, disconnectRedis } = require('./config/redis');
+const { initSocket } = require('./config/socket');
 const errorHandler = require('./middleware/errorHandler');
 const healthRoutes = require('./routes/health');
 
@@ -221,6 +222,9 @@ async function startServer() {
     server = app.listen(PORT, () => {
       console.log(`Hostn API running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
     });
+
+    // Initialize Socket.IO on the same HTTP server
+    initSocket(server);
 
     // ── Graceful shutdown ──────────────────────────────────────────────────
     const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
