@@ -10,7 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 const menuItems = [
   { label: 'more.profile', icon: 'person-outline', route: '/profile' },
   { label: 'more.reviews', icon: 'star-outline', route: '/reviews' },
-  { label: 'more.financial', icon: 'cash-outline', route: '/financial/transactions' },
+  { label: 'more.financial', icon: 'cash-outline', route: '/financial' },
   { label: 'more.permits', icon: 'document-text-outline', route: '/permits' },
   { label: 'more.pricing', icon: 'pricetag-outline', route: '/pricing' },
   { label: 'more.protection', icon: 'shield-checkmark-outline', route: '/protection' },
@@ -20,7 +20,7 @@ const menuItems = [
   { label: 'more.complaints', icon: 'warning-outline', route: '/content/complaints' },
   { label: 'more.changeRequests', icon: 'create-outline', route: '/content/change-requests' },
   { label: 'more.referrals', icon: 'link-outline', route: '/content/referrals' },
-  { label: 'more.onboarding', icon: 'school-outline', route: '/onboarding' },
+  { label: 'more.onboarding', icon: 'school-outline', route: '/(auth)/onboarding' },
   { label: 'more.invoices', icon: 'receipt-outline', route: '/invoices' },
   { label: 'more.terms', icon: 'checkmark-circle-outline', route: '/legal/terms', badge: 'تم التوقيع' },
   { label: 'more.contact', icon: 'call-outline', route: '/legal/contact' },
@@ -34,7 +34,7 @@ export default function MoreScreen() {
   const handleLogout = async () => {
     setLogoutModalVisible(false);
     await logout();
-    router.replace('/(auth)' as any);
+    router.replace('/(auth)/phone-entry' as any);
   };
 
   return (

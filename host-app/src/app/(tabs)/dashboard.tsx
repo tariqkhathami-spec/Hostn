@@ -115,19 +115,19 @@ export default function DashboardScreen() {
       icon: 'card-outline' as const,
       title: t('dashboard.financial'),
       accent: Colors.success,
-      route: '/financial/transactions',
+      route: '/financial',
     },
     {
       icon: 'pricetag-outline' as const,
       title: t('dashboard.pricing'),
       accent: Colors.gold500,
-      route: '/financial/pricing',
+      route: '/pricing',
     },
     {
       icon: 'document-text-outline' as const,
       title: t('dashboard.accountSummary'),
       accent: Colors.primary,
-      route: '/financial/summary',
+      route: '/invoices/summary',
     },
   ];
 
@@ -140,7 +140,7 @@ export default function DashboardScreen() {
       {/* Purple Header - centered title, bell left, headphones right */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.push('/settings/notifications')}
+          onPress={() => router.push('/notifications')}
           style={styles.headerIconWrapper}
         >
           <Ionicons name="notifications-outline" size={24} color={Colors.textWhite} />
@@ -155,7 +155,7 @@ export default function DashboardScreen() {
 
         <Text style={styles.headerTitle}>{t('dashboard.title')}</Text>
 
-        <TouchableOpacity onPress={() => router.push('/settings/messages')}>
+        <TouchableOpacity onPress={() => router.push('/messages/support')}>
           <Ionicons name="headset-outline" size={24} color={Colors.textWhite} />
         </TouchableOpacity>
       </View>
@@ -183,13 +183,13 @@ export default function DashboardScreen() {
         {/* Weekly Report Banner */}
         <TouchableOpacity
           style={styles.weeklyBanner}
-          onPress={() => router.push('/reports/weekly' as any)}
+          onPress={() => router.push('/program' as any)}
           activeOpacity={0.8}
         >
           <View style={styles.weeklyBannerContent}>
             {/* Info icon on far left */}
             <TouchableOpacity
-              onPress={() => router.push('/reports/weekly' as any)}
+              onPress={() => router.push('/program' as any)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons
@@ -216,7 +216,7 @@ export default function DashboardScreen() {
 
         {/* Ambassador Section */}
         <View style={styles.sectionRow}>
-          <TouchableOpacity onPress={() => router.push('/ambassador' as any)}>
+          <TouchableOpacity onPress={() => router.push('/program' as any)}>
             <Text style={styles.sectionLink}>{'\u0627\u0644\u0643\u0644'}</Text>
           </TouchableOpacity>
           <Text style={styles.sectionTitle}>{'\u0633\u0641\u064A\u0631 \u0647\u0648\u0633\u062A\u0646'}</Text>
@@ -224,7 +224,7 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           style={styles.ambassadorCard}
-          onPress={() => router.push('/ambassador' as any)}
+          onPress={() => router.push('/program' as any)}
           activeOpacity={0.85}
         >
           {/* Gradient simulation with overlay */}
@@ -296,7 +296,7 @@ export default function DashboardScreen() {
             <BookingCard
               key={booking.id}
               booking={booking}
-              onPress={() => router.push(`/bookings/${booking.id}` as any)}
+              onPress={() => router.push(`/reservations/${booking.id}` as any)}
             />
           ))
         ) : (
@@ -315,7 +315,7 @@ export default function DashboardScreen() {
             <BookingCard
               key={booking.id}
               booking={booking}
-              onPress={() => router.push(`/bookings/${booking.id}` as any)}
+              onPress={() => router.push(`/reservations/${booking.id}` as any)}
             />
           ))
         ) : (
@@ -325,7 +325,7 @@ export default function DashboardScreen() {
         {/* Recent Transfers */}
         <SectionHeader
           title={t('dashboard.recentTransfers')}
-          onViewAll={() => router.push('/financial/transactions' as any)}
+          onViewAll={() => router.push('/financial' as any)}
         />
         {transfersQuery.isLoading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.base }} />

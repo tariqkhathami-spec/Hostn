@@ -80,7 +80,7 @@ export default function NotificationsScreen() {
         markReadMutation.mutate(notification.id);
       }
       if (notification.bookingId) {
-        router.push(`/bookings/${notification.bookingId}` as any);
+        router.push(`/reservations/${notification.bookingId}` as any);
       }
     },
     [markReadMutation, router],

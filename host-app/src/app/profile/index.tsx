@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     setLogoutModalVisible(false);
     await logout();
-    router.replace('/(auth)' as any);
+    router.replace('/(auth)/phone-entry' as any);
   };
 
   const actionCards: ActionCard[] = [
