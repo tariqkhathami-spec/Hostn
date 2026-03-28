@@ -24,6 +24,7 @@ export default function EditProfileScreen() {
   const { data: profileData, isLoading } = useQuery({
     queryKey: ['hostProfile'],
     queryFn: () => hostService.getProfile(),
+    retry: false,
   });
 
   const profile = profileData?.data;

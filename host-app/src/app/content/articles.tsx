@@ -42,7 +42,7 @@ export default function ArticlesScreen() {
     }, 300);
   }, []);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['articles', category, debouncedSearch],
     queryFn: () =>
       hostService.getArticles({
@@ -131,7 +131,12 @@ export default function ArticlesScreen() {
         </ScrollView>
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
+          <Text style={{ ...Typography.body, color: Colors.textSecondary, marginTop: Spacing.sm }}>حدث خطأ في تحميل المقالات</Text>
+        </View>
+      ) : isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>

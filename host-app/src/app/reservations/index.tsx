@@ -54,6 +54,7 @@ export default function ReservationsScreen() {
     queryKey: ['bookings', statusParam, page],
     queryFn: () => hostService.getBookings({ status: statusParam, page }),
     enabled: activeTab === 'recent',
+    retry: false,
   });
 
   const {
@@ -65,6 +66,7 @@ export default function ReservationsScreen() {
     queryKey: ['upcomingGuests'],
     queryFn: () => hostService.getUpcomingGuests(),
     enabled: activeTab === 'upcoming',
+    retry: false,
   });
 
   const toggleStatus = useCallback((key: string) => {

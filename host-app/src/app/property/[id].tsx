@@ -24,6 +24,7 @@ export default function PropertyDetailScreen() {
     queryKey: ['property', id],
     queryFn: () => hostService.getProperty(id!),
     enabled: !!id,
+    retry: false,
   });
 
   const property = data?.data;

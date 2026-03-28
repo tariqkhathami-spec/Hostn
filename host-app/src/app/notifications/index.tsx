@@ -60,6 +60,7 @@ export default function NotificationsScreen() {
       return hasMore ? allPages.length + 1 : undefined;
     },
     initialPageParam: 1,
+    retry: false,
   });
 
   const notifications: Notification[] =

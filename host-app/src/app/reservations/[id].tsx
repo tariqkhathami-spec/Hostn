@@ -35,6 +35,7 @@ export default function BookingDetailScreen() {
     queryKey: ['bookingDetail', id],
     queryFn: () => hostService.getBookingDetail(id!),
     enabled: !!id,
+    retry: false,
   });
 
   const booking = bookingData?.data;

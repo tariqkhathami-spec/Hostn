@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../../components/ui/Button';
 import { Colors, Spacing } from '../../constants/theme';
@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
           <Button
             title={t('auth.register')}
             onPress={() => {
-              /* Registration flow - future */
+              Alert.alert('التسجيل', 'سيتم إطلاق التسجيل قريباً');
             }}
             variant="primary"
             size="lg"

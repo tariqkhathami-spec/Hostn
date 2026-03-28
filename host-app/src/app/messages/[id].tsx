@@ -33,6 +33,7 @@ export default function ChatScreen() {
     queryKey: ['conversations'],
     queryFn: () => hostService.getConversations(),
     enabled: !!conversationId,
+    retry: false,
   });
 
   const conversation = conversationsData?.data?.find((c: { id: string }) => c.id === conversationId);
@@ -45,6 +46,7 @@ export default function ChatScreen() {
     queryKey: ['conversation-messages', conversationId],
     queryFn: () => hostService.getConversationMessages(conversationId),
     enabled: !!conversationId,
+    retry: false,
   });
 
   const messages: Message[] = data?.data ?? [];

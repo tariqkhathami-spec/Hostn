@@ -28,7 +28,7 @@ const STEPS = [
 export default function ReferralsScreen() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['referral-links'],
     queryFn: () => hostService.getReferralLinks(),
     retry: false,
@@ -84,7 +84,12 @@ export default function ReferralsScreen() {
         {/* Referral Link Section */}
         <Text style={styles.sectionTitle}>رابط الإحالة الخاص بك</Text>
 
-        {isLoading ? (
+        {isError ? (
+          <View style={styles.loadingContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
+            <Text style={{ ...Typography.body, color: Colors.textSecondary, marginTop: Spacing.sm }}>حدث خطأ في تحميل روابط الإحالة</Text>
+          </View>
+        ) : isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>

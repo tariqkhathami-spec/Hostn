@@ -134,9 +134,9 @@ export default function PropertiesScreen() {
 
   const handleUnitPress = useCallback(
     (unitId: string) => {
-      // Navigate to unit detail when available
+      router.push(`/property/unit/${unitId}` as any);
     },
-    [],
+    [router],
   );
 
   const renderUnitItem = useCallback(
