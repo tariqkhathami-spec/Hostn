@@ -34,79 +34,7 @@ const statusFilters: StatusFilter[] = [
   { key: 'no_show', label: t('reservations.noShow'), color: '#6b7280' },
 ];
 
-// Mock data matching the reference screenshot layout
-const MOCK_BOOKINGS: Booking[] = [
-  {
-    id: '1',
-    bookingNumber: '2568975',
-    guestName: 'محمود الرمل',
-    guestPhone: '0501234567',
-    propertyName: 'شاليهات ميفارا Mivara Resorts',
-    unitName: 'شاليه فاخر (وحدة 3)',
-    checkIn: '2023-11-01',
-    checkOut: '2023-11-02',
-    totalAmount: 352,
-    hostAmount: 310,
-    status: 'confirmed',
-    createdAt: '2023-10-25',
-  },
-  {
-    id: '2',
-    bookingNumber: '2568980',
-    guestName: 'سعود الحربي',
-    guestPhone: '0559876543',
-    propertyName: 'شاليهات ميفارا Mivara Resorts',
-    unitName: 'شاليه عائلي (وحدة 5)',
-    checkIn: '2023-11-05',
-    checkOut: '2023-11-07',
-    totalAmount: 680,
-    hostAmount: 600,
-    status: 'in_payment',
-    createdAt: '2023-10-26',
-  },
-  {
-    id: '3',
-    bookingNumber: '2568991',
-    guestName: 'خالد العتيبي',
-    guestPhone: '0512345678',
-    propertyName: 'منتجع الواحة Oasis Resort',
-    unitName: 'جناح ملكي (وحدة 1)',
-    checkIn: '2023-11-10',
-    checkOut: '2023-11-12',
-    totalAmount: 1200,
-    hostAmount: 1050,
-    status: 'waiting',
-    createdAt: '2023-10-27',
-  },
-  {
-    id: '4',
-    bookingNumber: '2569001',
-    guestName: 'فهد الشمري',
-    guestPhone: '0567891234',
-    propertyName: 'شاليهات ميفارا Mivara Resorts',
-    unitName: 'شاليه اقتصادي (وحدة 8)',
-    checkIn: '2023-11-03',
-    checkOut: '2023-11-04',
-    totalAmount: 275,
-    hostAmount: 240,
-    status: 'cancelled',
-    createdAt: '2023-10-24',
-  },
-  {
-    id: '5',
-    bookingNumber: '2569010',
-    guestName: 'عبدالله القحطاني',
-    guestPhone: '0534567890',
-    propertyName: 'منتجع الواحة Oasis Resort',
-    unitName: 'شاليه مطل (وحدة 2)',
-    checkIn: '2023-10-28',
-    checkOut: '2023-10-29',
-    totalAmount: 450,
-    hostAmount: 395,
-    status: 'no_show',
-    createdAt: '2023-10-23',
-  },
-];
+// No more mock bookings - using real API data only
 
 const STATUS_LABEL_MAP: Record<string, string> = {
   confirmed: 'مؤكد',
@@ -164,8 +92,8 @@ export default function ReservationsTabScreen() {
     retry: false,
   });
 
-  // Use API data if available, otherwise fall back to mock data
-  const displayBookings = bookings.length > 0 ? bookings : MOCK_BOOKINGS;
+  // Use real API data only (no mock fallback)
+  const displayBookings = bookings;
 
   const filteredBookings = selectedStatus
     ? displayBookings.filter((b: Booking) => b.status === selectedStatus)

@@ -7,9 +7,13 @@ import {
   ScrollView,
   Dimensions,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { hostService } from '../../services/host.service';
+import type { CalendarProperty, CalendarUnit } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_COLUMNS = 3;
@@ -17,52 +21,6 @@ const CARD_GAP = Spacing.sm;
 const CARD_PADDING = Spacing.base;
 const CARD_WIDTH =
   (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
-
-// ── Mock data ──────────────────────────────────────────────────────────
-const MOCK_UNITS = [
-  {
-    id: '1',
-    name: 'شالية ميفارا (1) Mivara',
-    bookedDays: [3, 4, 5, 10, 11, 18, 19, 20, 25],
-  },
-  {
-    id: '2',
-    name: 'شالية ميفارا (2) Mivara',
-    bookedDays: [1, 2, 7, 8, 14, 15, 22, 23, 28, 29],
-  },
-  {
-    id: '3',
-    name: 'شالية ميفارا (3) Mivara',
-    bookedDays: [5, 6, 12, 13, 19, 20, 26, 27],
-  },
-  {
-    id: '4',
-    name: 'شالية ميفارا (4) Mivara',
-    bookedDays: [2, 3, 9, 10, 16, 17, 23, 24, 30],
-  },
-  {
-    id: '5',
-    name: 'شالية ميفارا (5) Mivara',
-    bookedDays: [1, 7, 8, 14, 15, 21, 22, 28],
-  },
-  {
-    id: '6',
-    name: 'شالية ميفارا (6) Mivara',
-    bookedDays: [4, 5, 11, 12, 18, 19, 25, 26],
-  },
-  {
-    id: '7',
-    name: 'شالية ميفارا (7) Mivara',
-    bookedDays: [3, 10, 17, 24],
-  },
-  {
-    id: '8',
-    name: 'شالية ميفارا (8) Mivara',
-    bookedDays: [6, 7, 13, 14, 20, 21, 27, 28],
-  },
-];
-
-const PROPERTY_NAME = 'شاليهات ميفارا Mivara Resorts';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -156,6 +114,44 @@ export default function CalendarScreen() {
   const [currentYear] = React.useState(now.getFullYear());
   const [listedOnly, setListedOnly] = React.useState(false);
 
+  // Fetch real calendar data from API
+  const { data: calendarData, isLoading } = useQuery({
+    queryKey: ['hostCalendar', currentYear, currentMonth],
+    queryFn: () => hostService.getCalendarData(currentYear, currentMonth),
+    retry: false,
+  });
+
+  // Transform API data into display units
+  const calendarGroups: CalendarProperty[] = calendarData?.data ?? [];
+
+  // Flatten all units from all property groups
+  const allUnits: (CalendarUnit & { propertyName: string })[] = [];
+  calendarGroups.forEach((group) => {
+    (group.units || []).forEach((unit) => {
+      allUnits.push({ ...unit, propertyName: group.propertyName });
+    });
+  });
+
+  // Filter by listed-only toggle
+  const displayUnits = listedOnly ? allUnits.filter((u) => u.isListed) : allUnits;
+
+  // Convert ISO date strings (e.g. "2026-03-19") to day numbers for the mini calendar
+  const getBookedDays = (bookedDates: string[]): number[] => {
+    return (bookedDates || [])
+      .map((d) => {
+        const date = new Date(d);
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          return date.getDate();
+        }
+        return -1;
+      })
+      .filter((d) => d > 0);
+  };
+
+  const propertyName = calendarGroups.length > 0
+    ? calendarGroups[0].propertyName
+    : 'جاري التحميل...';
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -178,35 +174,48 @@ export default function CalendarScreen() {
 
       {/* Property name */}
       <View style={styles.propertyRow}>
-        <Text style={styles.propertyName}>{PROPERTY_NAME}</Text>
+        <Text style={styles.propertyName}>{propertyName}</Text>
       </View>
 
       {/* Unit grid */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.unitsGrid}>
-          {MOCK_UNITS.map((unit) => (
-            <TouchableOpacity
-              key={unit.id}
-              style={styles.unitCard}
-              activeOpacity={0.7}
-              onPress={() => router.push(`/property/unit/${unit.id}` as any)}
-            >
-              <MiniCalendar
-                year={currentYear}
-                month={currentMonth}
-                bookedDays={unit.bookedDays}
-              />
-              <Text style={styles.unitName} numberOfLines={2}>
-                {unit.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>جاري تحميل التقويم...</Text>
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.unitsGrid}>
+            {displayUnits.map((unit) => (
+              <TouchableOpacity
+                key={unit.unitId}
+                style={styles.unitCard}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/property/unit/${unit.unitId}` as any)}
+              >
+                <MiniCalendar
+                  year={currentYear}
+                  month={currentMonth}
+                  bookedDays={getBookedDays(unit.bookedDates)}
+                />
+                <Text style={styles.unitName} numberOfLines={2}>
+                  {unit.unitName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {displayUnits.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>لا توجد وحدات</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -285,5 +294,24 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'center',
     marginTop: Spacing.xs,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    ...Typography.small,
+    color: Colors.textSecondary,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxxl,
+  },
+  emptyText: {
+    ...Typography.body,
+    color: Colors.textTertiary,
   },
 });

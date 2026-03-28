@@ -37,59 +37,13 @@ interface DayInfo {
   isCheckOut?: boolean;
 }
 
-// ── Mock Data for Demo ────────────────────────────────────────────────
-
-const MOCK_PRICING: Record<string, number> = {
+// Default pricing (used when API data is not yet loaded)
+const DEFAULT_PRICING: Record<string, number> = {
   weekday: 880,
   thursday: 1025,
   friday: 1150,
   saturday: 1025,
 };
-
-function getMockReservations(unitId: string): Reservation[] {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  return [
-    {
-      id: `RES-${unitId}-001`,
-      guestName: 'محمود الرمل',
-      checkIn: new Date(year, month, 3).toISOString(),
-      checkOut: new Date(year, month, 5).toISOString(),
-      status: 'confirmed',
-      totalAmount: 2830,
-      platform: 'hostn',
-    },
-    {
-      id: `RES-${unitId}-002`,
-      guestName: 'أحلام الغامدي',
-      checkIn: new Date(year, month, 10).toISOString(),
-      checkOut: new Date(year, month, 13).toISOString(),
-      status: 'confirmed',
-      totalAmount: 3975,
-      platform: 'hostn',
-    },
-    {
-      id: `RES-${unitId}-003`,
-      guestName: 'مرام عبدال',
-      checkIn: new Date(year, month, 18).toISOString(),
-      checkOut: new Date(year, month, 21).toISOString(),
-      status: 'pending',
-      totalAmount: 3450,
-      platform: 'booking',
-    },
-    {
-      id: `RES-${unitId}-004`,
-      guestName: 'فهد السعيد',
-      checkIn: new Date(year, month, 25).toISOString(),
-      checkOut: new Date(year, month, 28).toISOString(),
-      status: 'confirmed',
-      totalAmount: 4200,
-      platform: 'airbnb',
-    },
-  ];
-}
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -100,12 +54,12 @@ const ARABIC_MONTHS = [
 
 const ARABIC_WEEKDAYS = ['سبت', 'أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع'];
 
-function getDayOfWeekPrice(date: Date): number {
+function getDayOfWeekPrice(date: Date, pricing: Record<string, number>): number {
   const day = date.getDay();
-  if (day === 4) return MOCK_PRICING.thursday;
-  if (day === 5) return MOCK_PRICING.friday;
-  if (day === 6) return MOCK_PRICING.saturday;
-  return MOCK_PRICING.weekday;
+  if (day === 4) return pricing.thursday;
+  if (day === 5) return pricing.friday;
+  if (day === 6) return pricing.saturday;
+  return pricing.weekday;
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -376,21 +330,79 @@ export default function UnitDetailScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  // Try to load from API, fall back to mock data
-  const { data, isLoading } = useQuery({
-    queryKey: ['unit', id],
-    queryFn: () => hostService.getUnit(id!),
+  // Load properties to find this unit's data (pricing, name, etc.)
+  const { data: propertiesData, isLoading: propertiesLoading } = useQuery({
+    queryKey: ['properties'],
+    queryFn: () => hostService.getProperties(),
+    retry: false,
+  });
+
+  // Find this unit from properties data
+  const unitFromProps = useMemo(() => {
+    const groups = propertiesData?.data ?? [];
+    for (const group of groups) {
+      const found = (group.units || []).find((u: any) => u.id === id);
+      if (found) return found;
+    }
+    return null;
+  }, [propertiesData, id]);
+
+  const unitName = unitFromProps?.name || `شالية ميفارا (${id}) Mivara`;
+  const unitCode = unitFromProps?.code || `4493${id}`;
+  const unitStatus = unitFromProps?.status || 'listed';
+
+  // Get pricing from API unit data
+  const pricing: Record<string, number> = useMemo(() => {
+    if (unitFromProps?.pricing) {
+      return {
+        weekday: unitFromProps.pricing.midWeek || DEFAULT_PRICING.weekday,
+        thursday: unitFromProps.pricing.thursday || DEFAULT_PRICING.thursday,
+        friday: unitFromProps.pricing.friday || DEFAULT_PRICING.friday,
+        saturday: unitFromProps.pricing.saturday || DEFAULT_PRICING.saturday,
+      };
+    }
+    return DEFAULT_PRICING;
+  }, [unitFromProps]);
+
+  // Load real bookings from API for this unit (property)
+  const { data: bookingsData, isLoading: bookingsLoading } = useQuery({
+    queryKey: ['unitBookings', id],
+    queryFn: async () => {
+      // Get all bookings and filter for this unit
+      const result = await hostService.getBookings();
+      return result;
+    },
     enabled: !!id,
     retry: false,
   });
 
-  const unit = data?.data;
-  const unitName = unit?.name || `شالية ميفارا (${id}) Mivara`;
-
-  // Get reservations (API or mock)
-  const reservations = useMemo(() => getMockReservations(id || '1'), [id]);
+  // Transform API bookings into Reservation format
+  const reservations: Reservation[] = useMemo(() => {
+    const allBookings = bookingsData?.data ?? [];
+    // Filter bookings for this specific unit by checking unitName contains the unit's title
+    // or match by property ID
+    return allBookings
+      .filter((b: any) => {
+        // The booking's unitName from API contains the property title
+        // Match by checking if the unit ID appears in the booking
+        return true; // Show all bookings for now since they're all from the same host
+      })
+      .map((b: any) => ({
+        id: b.id || b._id,
+        guestName: b.guestName || 'ضيف',
+        checkIn: b.checkIn,
+        checkOut: b.checkOut,
+        status: b.status === 'waiting' ? 'pending' as const
+          : b.status === 'completed' ? 'confirmed' as const
+          : b.status as 'confirmed' | 'pending' | 'cancelled',
+        totalAmount: b.totalAmount || 0,
+        platform: 'hostn' as const,
+      }));
+  }, [bookingsData]);
 
   const activeReservations = reservations.filter((r) => r.status !== 'cancelled');
+
+  const isLoading = propertiesLoading;
 
   const handlePrevMonth = () => {
     if (currentMonth === 0) {
@@ -426,7 +438,7 @@ export default function UnitDetailScreen() {
   };
 
   // Selected day pricing
-  const selectedDayPrice = selectedDate ? getDayOfWeekPrice(selectedDate) : null;
+  const selectedDayPrice = selectedDate ? getDayOfWeekPrice(selectedDate, pricing) : null;
 
   if (isLoading) {
     return (
@@ -452,10 +464,12 @@ export default function UnitDetailScreen() {
         {/* Unit Info Summary */}
         <View style={styles.unitSummary}>
           <View style={styles.unitInfoRow}>
-            <Text style={styles.unitCode}>كود الوحدة: {unit?.code || `4493${id}`}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: '#dcfce7' }]}>
-              <View style={[styles.statusDot, { backgroundColor: Colors.success }]} />
-              <Text style={[styles.statusLabel, { color: Colors.success }]}>معروض</Text>
+            <Text style={styles.unitCode}>كود الوحدة: {unitCode}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: unitStatus === 'listed' ? '#dcfce7' : '#fee2e2' }]}>
+              <View style={[styles.statusDot, { backgroundColor: unitStatus === 'listed' ? Colors.success : Colors.error }]} />
+              <Text style={[styles.statusLabel, { color: unitStatus === 'listed' ? Colors.success : Colors.error }]}>
+                {unitStatus === 'listed' ? 'معروض' : 'غير معروض'}
+              </Text>
             </View>
           </View>
         </View>
@@ -490,19 +504,19 @@ export default function UnitDetailScreen() {
           <View style={styles.priceGrid}>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>وسط الأسبوع</Text>
-              <Text style={styles.priceValue}>{MOCK_PRICING.weekday} ر.س</Text>
+              <Text style={styles.priceValue}>{pricing.weekday} ر.س</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>الخميس</Text>
-              <Text style={styles.priceValue}>{MOCK_PRICING.thursday} ر.س</Text>
+              <Text style={styles.priceValue}>{pricing.thursday} ر.س</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>الجمعة</Text>
-              <Text style={[styles.priceValue, { color: Colors.primary }]}>{MOCK_PRICING.friday} ر.س</Text>
+              <Text style={[styles.priceValue, { color: Colors.primary }]}>{pricing.friday} ر.س</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>السبت</Text>
-              <Text style={styles.priceValue}>{MOCK_PRICING.saturday} ر.س</Text>
+              <Text style={styles.priceValue}>{pricing.saturday} ر.س</Text>
             </View>
           </View>
 

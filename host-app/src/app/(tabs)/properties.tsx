@@ -16,86 +16,26 @@ import { t } from '../../utils/i18n';
 import { hostService } from '../../services/host.service';
 import type { Property } from '../../types';
 
-// Mock data matching reference screenshots
-const MOCK_UNITS = [
-  {
-    id: 'u1',
-    nameAr: 'شالية ميفارا (1)',
-    nameEn: 'Mivara',
-    code: '44933',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u2',
-    nameAr: 'شالية ميفارا (2)',
-    nameEn: 'Mivara',
-    code: '44934',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u3',
-    nameAr: 'شالية ميفارا (3)',
-    nameEn: 'Mivara',
-    code: '44935',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u4',
-    nameAr: 'شالية ميفارا (4)',
-    nameEn: 'Mivara',
-    code: '44936',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u5',
-    nameAr: 'شالية ميفارا (5)',
-    nameEn: 'Mivara',
-    code: '44937',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u6',
-    nameAr: 'شالية ميفارا (6)',
-    nameEn: 'Mivara',
-    code: '44938',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u7',
-    nameAr: 'شالية ميفارا (7)',
-    nameEn: 'Mivara',
-    code: '44939',
-    status: 'offline',
-    image: null,
-  },
-  {
-    id: 'u8',
-    nameAr: 'شالية ميفارا (8)',
-    nameEn: 'Mivara',
-    code: '44940',
-    status: 'offline',
-    image: null,
-  },
-];
+// Type for display unit (from API or fallback)
+interface DisplayUnit {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  code: string;
+  status: string;
+  image: string | null;
+}
 
-const MOCK_PROPERTY = {
-  id: 'p1',
-  nameAr: 'شاليهات ميفارا',
-  nameEn: 'Mivara Resorts',
-  status: 'offline',
-  city: 'الدمام',
-  area: 'سيهات، العروبة',
-  unitCount: 8,
-  units: MOCK_UNITS,
-};
-
-type MockUnit = (typeof MOCK_UNITS)[number];
+interface DisplayProperty {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  status: string;
+  city: string;
+  area: string;
+  unitCount: number;
+  units: DisplayUnit[];
+}
 
 export default function PropertiesScreen() {
   const router = useRouter();
@@ -114,21 +54,26 @@ export default function PropertiesScreen() {
 
   const properties: Property[] = data?.data ?? [];
 
-  // Use API data if available, otherwise fall back to mock
-  const useMock = properties.length === 0 && !isLoading;
-
-  const displayProperty = useMock
-    ? MOCK_PROPERTY
-    : properties[0]
+  // Map API property groups to display format
+  const displayProperty: DisplayProperty | null = properties.length > 0
     ? {
         id: properties[0].id,
-        nameAr: properties[0].nameAr || MOCK_PROPERTY.nameAr,
-        nameEn: properties[0].name || MOCK_PROPERTY.nameEn,
-        status: 'offline',
-        city: properties[0].address?.city || MOCK_PROPERTY.city,
-        area: MOCK_PROPERTY.area,
-        unitCount: MOCK_PROPERTY.unitCount,
-        units: MOCK_UNITS,
+        nameAr: properties[0].nameAr || properties[0].name || '',
+        nameEn: properties[0].name || '',
+        status: properties[0].status || 'listed',
+        city: properties[0].address?.city || '',
+        area: properties[0].address?.street
+          ? `${properties[0].address.direction || ''}، ${properties[0].address.street}`
+          : '',
+        unitCount: properties[0].unitCount || properties[0].units?.length || 0,
+        units: (properties[0].units || []).map((u) => ({
+          id: u.id,
+          nameAr: u.name || '',
+          nameEn: '',
+          code: u.code || '',
+          status: u.status || 'listed',
+          image: u.images?.[0] || u.photos?.[0] || null,
+        })),
       }
     : null;
 
@@ -140,40 +85,45 @@ export default function PropertiesScreen() {
   );
 
   const renderUnitItem = useCallback(
-    ({ item }: { item: MockUnit }) => (
-      <TouchableOpacity
-        style={styles.unitRow}
-        activeOpacity={0.7}
-        onPress={() => handleUnitPress(item.id)}
-      >
-        {/* Left arrow for navigation */}
-        <View style={styles.unitArrow}>
-          <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
-        </View>
+    ({ item }: { item: DisplayUnit }) => {
+      const isListed = item.status === 'listed';
+      return (
+        <TouchableOpacity
+          style={styles.unitRow}
+          activeOpacity={0.7}
+          onPress={() => handleUnitPress(item.id)}
+        >
+          {/* Left arrow for navigation */}
+          <View style={styles.unitArrow}>
+            <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
+          </View>
 
-        {/* Unit info - center */}
-        <View style={styles.unitInfo}>
-          <Text style={styles.unitName}>
-            {item.nameAr} {item.nameEn}
-          </Text>
-          <Text style={styles.unitCode}>
-            {'كود الوحدة (' + item.code + ')'}
-          </Text>
-          <Text style={styles.statusOffline}>
-            غير معروض (أوف لاين)
-          </Text>
-        </View>
+          {/* Unit info - center */}
+          <View style={styles.unitInfo}>
+            <Text style={styles.unitName}>
+              {item.nameAr} {item.nameEn}
+            </Text>
+            <Text style={styles.unitCode}>
+              {'كود الوحدة (' + item.code + ')'}
+            </Text>
+            {isListed ? (
+              <Text style={styles.statusOnline}>معروض (أون لاين)</Text>
+            ) : (
+              <Text style={styles.statusOffline}>غير معروض (أوف لاين)</Text>
+            )}
+          </View>
 
-        {/* Thumbnail on the right */}
-        <View style={styles.unitThumbnail}>
-          <Ionicons name="image-outline" size={28} color={Colors.textTertiary} />
-        </View>
-      </TouchableOpacity>
-    ),
+          {/* Thumbnail on the right */}
+          <View style={styles.unitThumbnail}>
+            <Ionicons name="image-outline" size={28} color={Colors.textTertiary} />
+          </View>
+        </TouchableOpacity>
+      );
+    },
     [handleUnitPress],
   );
 
-  const keyExtractor = useCallback((item: MockUnit) => item.id, []);
+  const keyExtractor = useCallback((item: DisplayUnit) => item.id, []);
 
   const ListHeader = useMemo(() => {
     if (!displayProperty) return null;
@@ -185,9 +135,11 @@ export default function PropertiesScreen() {
         </Text>
 
         {/* Status */}
-        <Text style={styles.statusOffline}>
-          غير معروض (أوف لاين)
-        </Text>
+        {displayProperty.status === 'listed' ? (
+          <Text style={styles.statusOnline}>معروض (أون لاين)</Text>
+        ) : (
+          <Text style={styles.statusOffline}>غير معروض (أوف لاين)</Text>
+        )}
 
         {/* Location row */}
         <View style={styles.infoRow}>
@@ -325,6 +277,12 @@ const styles = StyleSheet.create({
   statusOffline: {
     ...Typography.small,
     color: Colors.error,
+    textAlign: 'right',
+    marginBottom: Spacing.sm,
+  },
+  statusOnline: {
+    ...Typography.small,
+    color: Colors.success,
     textAlign: 'right',
     marginBottom: Spacing.sm,
   },
