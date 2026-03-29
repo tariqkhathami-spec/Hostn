@@ -8,6 +8,7 @@ interface HeaderBarProps {
   title: string;
   showBack?: boolean;
   onBack?: () => void;
+  fallbackRoute?: string;
   rightIcon?: keyof typeof Ionicons.glyphMap;
   onRightPress?: () => void;
   backgroundColor?: string;
@@ -18,6 +19,7 @@ export default function HeaderBar({
   title,
   showBack = true,
   onBack,
+  fallbackRoute = '/(tabs)',
   rightIcon,
   onRightPress,
   backgroundColor = Colors.background,
@@ -28,8 +30,10 @@ export default function HeaderBar({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
+    } else if (router.canGoBack()) {
       router.back();
+    } else {
+      router.replace(fallbackRoute as any);
     }
   };
 

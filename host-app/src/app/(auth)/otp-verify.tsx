@@ -7,7 +7,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Button from '../../components/ui/Button';
 import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
@@ -97,6 +99,15 @@ export default function OtpVerifyScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Back button — allows user to correct phone number */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/phone-login' as any)}
+      >
+        <Ionicons name="chevron-forward" size={24} color={Colors.textPrimary} />
+        <Text style={styles.backText}>تغيير الرقم</Text>
+      </TouchableOpacity>
+
       <View style={styles.content}>
         <Text style={styles.title}>{t('auth.otp')}</Text>
         <Text style={styles.subtitle}>
@@ -153,6 +164,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: Spacing.base,
+    gap: Spacing.xs,
+  },
+  backText: {
+    ...Typography.small,
+    color: Colors.primary,
   },
   content: {
     flex: 1,

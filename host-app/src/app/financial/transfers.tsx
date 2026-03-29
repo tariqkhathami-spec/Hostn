@@ -121,7 +121,7 @@ export default function TransfersScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="الحوالات البنكية" showBack />
+      <HeaderBar title="الحوالات البنكية" showBack fallbackRoute="/financial" />
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color={Colors.textTertiary} />

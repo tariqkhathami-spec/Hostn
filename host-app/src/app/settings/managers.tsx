@@ -202,6 +202,7 @@ export default function ManagersScreen() {
       <HeaderBar
         title={'\u0645\u062F\u0631\u0627\u0621 \u0627\u0644\u062D\u062C\u0648\u0632\u0627\u062A'}
         showBack
+        fallbackRoute="/settings"
         rightActions={
           <TouchableOpacity onPress={openAddModal}>
             <Ionicons name="add-circle-outline" size={26} color={Colors.textWhite} />

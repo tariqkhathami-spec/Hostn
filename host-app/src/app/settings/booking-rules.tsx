@@ -144,6 +144,7 @@ export default function BookingRulesScreen() {
       <HeaderBar
         title={'\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062D\u062C\u0632'}
         showBack
+        fallbackRoute="/settings"
         rightActions={
           <TouchableOpacity onPress={() => setModalVisible(true)}>
             <Ionicons name="add-circle-outline" size={26} color={Colors.textWhite} />

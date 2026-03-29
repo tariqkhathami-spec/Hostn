@@ -19,22 +19,21 @@ export default function BookingConfirmationScreen() {
         </View>
 
         {/* Heading */}
-        <Text style={styles.heading}>Booking Confirmed!</Text>
+        <Text style={styles.heading}>تم تأكيد الحجز!</Text>
 
         {/* Subtitle */}
         <Text style={styles.subtitle}>
-          Your reservation has been submitted. You will receive a confirmation notification
-          shortly.
+          تم إرسال طلب الحجز بنجاح. ستصلك إشعار التأكيد قريباً.
         </Text>
 
         {/* Actions */}
         <View style={styles.actions}>
           <Button
-            title="View Bookings"
+            title="عرض حجوزاتي"
             onPress={() => router.replace('/(tabs)/bookings')}
           />
           <Button
-            title="Back to Home"
+            title="العودة للرئيسية"
             variant="text"
             onPress={() => router.replace('/(tabs)')}
           />

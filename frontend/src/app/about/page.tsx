@@ -3,6 +3,7 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useLanguage } from '@/context/LanguageContext';
+import Link from 'next/link';
 import { Shield, Star, Users, Globe } from 'lucide-react';
 
 export default function AboutPage() {
@@ -13,6 +14,9 @@ export default function AboutPage() {
       <Header />
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container-custom max-w-3xl">
+          <Link href="/" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4 transition-colors">
+            {language === 'ar' ? '← الرئيسية' : '← Home'}
+          </Link>
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-gray-900 mb-3">
               {language === 'ar' ? 'عن هوستن' : 'About Hostn'}

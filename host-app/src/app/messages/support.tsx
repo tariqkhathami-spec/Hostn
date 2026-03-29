@@ -110,7 +110,7 @@ export default function SupportChatScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="دعم المضيفين" showBack />
+      <HeaderBar title="دعم المضيفين" showBack fallbackRoute="/messages" />
 
       <KeyboardAvoidingView
         style={styles.flex}

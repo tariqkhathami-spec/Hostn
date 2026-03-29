@@ -180,6 +180,14 @@ function BookingContent() {
       <main className="min-h-screen bg-gray-50">
         <div className="container-custom py-8">
           <div className="max-w-4xl mx-auto">
+            {/* Back to property link */}
+            {step === 1 && (
+              <Link href={`/listings/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4 transition-colors">
+                <ChevronRight className="w-4 h-4 rotate-180" />
+                {isAr ? 'العودة للعقار' : 'Back to property'}
+              </Link>
+            )}
+
             <h1 className="text-2xl font-bold text-gray-900 mb-6">
               {step === 1 && (isAr ? 'مراجعة الحجز' : 'Review your booking')}
               {step === 2 && (isAr ? 'إتمام الدفع' : 'Complete payment')}
@@ -407,8 +415,16 @@ function BookingContent() {
                   )}
 
                   {step === 2 && (
-                    <div className="text-xs text-gray-500 text-center">
-                      <p>{isAr ? 'سيتم تحويلك بعد إتمام الدفع' : 'You will be redirected after payment'}</p>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => setStep(1)}
+                        className="w-full text-sm text-primary-600 hover:text-primary-700 font-medium py-2"
+                      >
+                        {isAr ? '← العودة للمراجعة' : '← Back to review'}
+                      </button>
+                      <div className="text-xs text-gray-500 text-center">
+                        <p>{isAr ? 'سيتم تحويلك بعد إتمام الدفع' : 'You will be redirected after payment'}</p>
+                      </div>
                     </div>
                   )}
 

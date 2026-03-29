@@ -197,7 +197,7 @@ export default function UnitPricingDetailScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="..." showBack />
+        <HeaderBar title="..." showBack fallbackRoute="/pricing" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>{'\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...'}</Text>
@@ -208,7 +208,7 @@ export default function UnitPricingDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={unit?.name ?? '\u0627\u0644\u0623\u0633\u0639\u0627\u0631'} showBack />
+      <HeaderBar title={unit?.name ?? '\u0627\u0644\u0623\u0633\u0639\u0627\u0631'} showBack fallbackRoute="/pricing" />
 
       {/* Segmented Control */}
       <View style={styles.segmentedContainer}>

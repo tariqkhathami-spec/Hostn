@@ -55,7 +55,7 @@ export default function StatementDetailScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper backgroundColor={Colors.primary}>
-        <HeaderBar title="كشف الحساب" showBack />
+        <HeaderBar title="كشف الحساب" showBack fallbackRoute="/invoices/statements" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -66,7 +66,7 @@ export default function StatementDetailScreen() {
   if (isError || !statement) {
     return (
       <ScreenWrapper backgroundColor={Colors.primary}>
-        <HeaderBar title="كشف الحساب" showBack />
+        <HeaderBar title="كشف الحساب" showBack fallbackRoute="/invoices/statements" />
         <View style={styles.centered}>
           <Text style={styles.errorText}>حدث خطأ في تحميل كشف الحساب</Text>
           <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
@@ -79,7 +79,7 @@ export default function StatementDetailScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.primary}>
-      <HeaderBar title={headerTitle} showBack />
+      <HeaderBar title={headerTitle} showBack fallbackRoute="/invoices/statements" />
 
       <ScrollView
         style={styles.scrollContainer}

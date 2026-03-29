@@ -72,7 +72,7 @@ export default function AccountSummaryScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.primary}>
-      <HeaderBar title="ملخص الحسابات" showBack />
+      <HeaderBar title="ملخص الحسابات" showBack fallbackRoute="/invoices" />
 
       <ScrollView
         style={styles.scrollContainer}

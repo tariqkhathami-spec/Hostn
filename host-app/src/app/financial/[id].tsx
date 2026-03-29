@@ -49,7 +49,7 @@ export default function TransferDetailScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="تفاصيل الحوالة" showBack />
+        <HeaderBar title="تفاصيل الحوالة" showBack fallbackRoute="/financial/transfers" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -60,7 +60,7 @@ export default function TransferDetailScreen() {
   if (error || !transfer) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="تفاصيل الحوالة" showBack />
+        <HeaderBar title="تفاصيل الحوالة" showBack fallbackRoute="/financial/transfers" />
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.errorText}>حدث خطأ في تحميل البيانات</Text>
@@ -74,7 +74,7 @@ export default function TransferDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={transfer.transactionId} showBack />
+      <HeaderBar title={transfer.transactionId} showBack fallbackRoute="/financial/transfers" />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Summary Card */}
         <Card style={styles.summaryCard}>

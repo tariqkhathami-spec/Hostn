@@ -107,7 +107,7 @@ export default function VatScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.surface}>
-      <HeaderBar title={'\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629'} showBack />
+      <HeaderBar title={'\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629'} showBack fallbackRoute="/settings" />
 
       {/* Info Banner */}
       <View style={styles.infoBanner}>

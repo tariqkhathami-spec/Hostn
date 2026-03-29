@@ -48,7 +48,7 @@ export default function PropertyDetailScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="..." showBack />
+        <HeaderBar title="..." showBack fallbackRoute="/(tabs)/properties" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>جاري التحميل...</Text>
@@ -60,7 +60,7 @@ export default function PropertyDetailScreen() {
   if (isError || !property) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="خطأ" showBack />
+        <HeaderBar title="خطأ" showBack fallbackRoute="/(tabs)/properties" />
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.errorText}>حدث خطأ في تحميل بيانات العقار</Text>
@@ -71,7 +71,7 @@ export default function PropertyDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={property.nameAr || property.name} showBack />
+      <HeaderBar title={property.nameAr || property.name} showBack fallbackRoute="/(tabs)/properties" />
 
       <FlatList
         data={property.units}

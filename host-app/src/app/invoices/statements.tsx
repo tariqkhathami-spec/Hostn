@@ -85,7 +85,7 @@ export default function StatementsScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.primary}>
-      <HeaderBar title="كشوف الحسابات" showBack />
+      <HeaderBar title="كشوف الحسابات" showBack fallbackRoute="/invoices" />
 
       <View style={styles.listContainer}>
         {isLoading ? (

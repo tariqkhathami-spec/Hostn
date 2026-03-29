@@ -54,7 +54,7 @@ export default function PaymentMethodScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="طريقة الدفع" showBack />
+        <HeaderBar title="طريقة الدفع" showBack fallbackRoute="/financial" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -65,7 +65,7 @@ export default function PaymentMethodScreen() {
   if (error) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="طريقة الدفع" showBack />
+        <HeaderBar title="طريقة الدفع" showBack fallbackRoute="/financial" />
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.errorText}>حدث خطأ في تحميل البيانات</Text>
@@ -76,7 +76,7 @@ export default function PaymentMethodScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="طريقة الدفع" showBack />
+      <HeaderBar title="طريقة الدفع" showBack fallbackRoute="/financial" />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Bank Transfer Card */}
         <Card style={styles.card}>

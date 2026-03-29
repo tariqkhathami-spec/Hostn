@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 interface Props {
   title: string;
   showBack?: boolean;
+  fallbackRoute?: string;
   rightActions?: React.ReactNode;
   backgroundColor?: string;
   textColor?: string;
@@ -15,17 +16,26 @@ interface Props {
 export default function HeaderBar({
   title,
   showBack = false,
+  fallbackRoute = '/(tabs)/dashboard',
   rightActions,
   backgroundColor = Colors.primary,
   textColor = Colors.textWhite,
 }: Props) {
   const router = useRouter();
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(fallbackRoute as any);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.left}>
         {showBack && (
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/dashboard' as any)} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Ionicons name="chevron-forward" size={24} color={textColor} />
           </TouchableOpacity>
         )}

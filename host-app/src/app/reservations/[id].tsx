@@ -43,7 +43,7 @@ export default function BookingDetailScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="تفاصيل الحجز" showBack />
+        <HeaderBar title="تفاصيل الحجز" showBack fallbackRoute="/(tabs)/reservations" />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>{t('common.loading')}</Text>
@@ -55,7 +55,7 @@ export default function BookingDetailScreen() {
   if (isError || !booking) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="تفاصيل الحجز" showBack />
+        <HeaderBar title="تفاصيل الحجز" showBack fallbackRoute="/(tabs)/reservations" />
         <View style={styles.centerContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.errorText}>{t('common.error')}</Text>
@@ -68,7 +68,7 @@ export default function BookingDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="تفاصيل الحجز" showBack />
+      <HeaderBar title="تفاصيل الحجز" showBack fallbackRoute="/(tabs)/reservations" />
 
       <ScrollView
         style={styles.container}

@@ -85,7 +85,7 @@ export default function TransferDurationScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="مدة التحويل" showBack />
+        <HeaderBar title="مدة التحويل" showBack fallbackRoute="/financial" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -96,7 +96,7 @@ export default function TransferDurationScreen() {
   if (error) {
     return (
       <ScreenWrapper>
-        <HeaderBar title="مدة التحويل" showBack />
+        <HeaderBar title="مدة التحويل" showBack fallbackRoute="/financial" />
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
           <Text style={styles.errorText}>حدث خطأ في تحميل البيانات</Text>
@@ -107,7 +107,7 @@ export default function TransferDurationScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="مدة التحويل" showBack />
+      <HeaderBar title="مدة التحويل" showBack fallbackRoute="/financial" />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {durationOptions.map((option) => {
           const isSelected = selectedType === option.type;

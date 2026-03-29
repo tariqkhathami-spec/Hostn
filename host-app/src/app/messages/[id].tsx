@@ -144,7 +144,7 @@ export default function ChatScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={headerTitle} showBack />
+      <HeaderBar title={headerTitle} showBack fallbackRoute="/messages" />
 
       <KeyboardAvoidingView
         style={styles.flex}

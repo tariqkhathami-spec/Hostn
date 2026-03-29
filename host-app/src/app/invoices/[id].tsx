@@ -45,7 +45,7 @@ export default function InvoiceDetailScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper backgroundColor={Colors.primary}>
-        <HeaderBar title="فاتورة ضريبية" showBack />
+        <HeaderBar title="فاتورة ضريبية" showBack fallbackRoute="/invoices" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -56,7 +56,7 @@ export default function InvoiceDetailScreen() {
   if (isError || !invoice) {
     return (
       <ScreenWrapper backgroundColor={Colors.primary}>
-        <HeaderBar title="فاتورة ضريبية" showBack />
+        <HeaderBar title="فاتورة ضريبية" showBack fallbackRoute="/invoices" />
         <View style={styles.centered}>
           <Text style={styles.errorText}>حدث خطأ في تحميل الفاتورة</Text>
           <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
@@ -69,7 +69,7 @@ export default function InvoiceDetailScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.primary}>
-      <HeaderBar title="فاتورة ضريبية" showBack />
+      <HeaderBar title="فاتورة ضريبية" showBack fallbackRoute="/invoices" />
 
       <ScrollView
         style={styles.scrollContainer}

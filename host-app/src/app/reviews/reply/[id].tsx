@@ -96,7 +96,7 @@ export default function ReplyToReviewScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="الرد على التقييم" showBack />
+      <HeaderBar title="الرد على التقييم" showBack fallbackRoute="/reviews" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
