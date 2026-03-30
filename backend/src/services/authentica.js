@@ -7,10 +7,17 @@
  *
  * API Docs: https://authenticasa.docs.apiary.io/#reference
  *
- * Uses node-fetch for maximum compatibility across Node.js versions.
+ * Uses node-fetch + custom HTTPS agent for compatibility with servers
+ * that have SSL certificate mismatches (Authentica's api.authentica.sa
+ * resolves to *.t2.sa cert from some regions).
  */
 
+const https = require('https');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
+
+// Custom HTTPS agent that accepts Authentica's certificate
+// (their API cert is mismatched from some regions/data centers)
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const AUTHENTICA_BASE_URL = 'https://api.authentica.sa/api/v2';
 const API_KEY = process.env.AUTHENTICA_API_KEY;
@@ -43,6 +50,7 @@ async function authenticaRequest(method, endpoint, body = null) {
       'X-Authorization': API_KEY,
     },
     signal: controller.signal,
+    agent: httpsAgent,
   };
 
   if (body) {
