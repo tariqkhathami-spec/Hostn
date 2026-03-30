@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { useAuthStore } from '../../store/authStore';
+import { hostService } from '../../services/host.service';
 
 const menuItems = [
   { label: 'more.profile', icon: 'person-outline', route: '/profile' },
@@ -31,6 +33,27 @@ export default function MoreScreen() {
   const { host, logout } = useAuthStore();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
+  // Fetch real stats from API instead of hardcoded values
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['host-stats'],
+    queryFn: () => hostService.getStats(),
+    retry: false,
+  });
+
+  const { data: propertiesData } = useQuery({
+    queryKey: ['host-properties-count'],
+    queryFn: () => hostService.getProperties(),
+    retry: false,
+  });
+
+  const stats = statsData?.data;
+  const properties = propertiesData?.data;
+  const totalUnits = properties?.reduce((sum: number, p: any) => sum + (p.units?.length || 1), 0) || 0;
+  const activeUnits = properties?.reduce((sum: number, p: any) => {
+    if (p.units?.length) return sum + p.units.filter((u: any) => u.status === 'listed').length;
+    return sum + (p.isActive ? 1 : 0);
+  }, 0) || 0;
+
   const handleLogout = async () => {
     setLogoutModalVisible(false);
     await logout();
@@ -44,8 +67,8 @@ export default function MoreScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.profileRow}>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{host?.name || 'طارق الخثعمي'}</Text>
-              <Text style={styles.profileId}>{host?.phone || '500407888'}</Text>
+              <Text style={styles.profileName}>{host?.name || ''}</Text>
+              <Text style={styles.profileId}>{host?.phone || ''}</Text>
             </View>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>n</Text>
@@ -53,22 +76,36 @@ export default function MoreScreen() {
           </View>
         </View>
 
-        {/* Stats Row */}
+        {/* Stats Row — fetched from API */}
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Ionicons name="cash-outline" size={20} color={Colors.textSecondary} style={styles.statIcon} />
-              <Text style={styles.statValue}>152,834</Text>
+              {statsLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Text style={styles.statValue}>
+                  {stats?.totalRevenue?.toLocaleString('en-SA') ?? '0'}
+                </Text>
+              )}
               <Text style={styles.statLabel}>{'المبيعات'}</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="grid-outline" size={20} color={Colors.textSecondary} style={styles.statIcon} />
-              <Text style={styles.statValue}>218</Text>
+              {statsLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Text style={styles.statValue}>
+                  {stats?.totalBookings ?? '0'}
+                </Text>
+              )}
               <Text style={styles.statLabel}>{'الحجوزات'}</Text>
             </View>
             <View style={styles.statItem}>
               <Ionicons name="home-outline" size={20} color={Colors.textSecondary} style={styles.statIcon} />
-              <Text style={styles.statValue}>10/0</Text>
+              <Text style={styles.statValue}>
+                {`${totalUnits}/${activeUnits}`}
+              </Text>
               <Text style={styles.statLabel}>{'الوحدات'}</Text>
             </View>
           </View>

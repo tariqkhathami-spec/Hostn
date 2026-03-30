@@ -1,4 +1,4 @@
-const RAILWAY_API_URL = 'https://tariqalkhathami-production-f47d.up.railway.app/api/v1';
+const RAILWAY_API_URL = 'https://hostn-production.up.railway.app/api/v1';
 const DEV_API_URL = RAILWAY_API_URL; // Use Railway backend for dev too
 const PROD_API_URL = RAILWAY_API_URL;
 
