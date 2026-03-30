@@ -127,7 +127,7 @@ export default function OtpVerifyScreen() {
             maxLength={APP_CONFIG.otpLength}
             autoFocus
             textAlign="center"
-            placeholder="------"
+            placeholder="----"
             placeholderTextColor={Colors.textTertiary}
           />
         </View>

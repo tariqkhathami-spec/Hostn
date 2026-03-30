@@ -10,7 +10,7 @@ export const APP_CONFIG = {
   supportPhone: '9200 07858',
   supportHours: '10:00 AM - 12:00 AM',
   defaultLocale: 'ar' as const,
-  otpLength: 6,
+  otpLength: 4,
   otpResendCooldown: 30,
   pageSize: 20,
 } as const;

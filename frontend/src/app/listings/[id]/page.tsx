@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ImageGallery from '@/components/property/ImageGallery';
@@ -23,11 +23,24 @@ import BnplWidget from '@/components/payment/BnplWidget';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function PropertyDetailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>}>
+      <PropertyDetailContent />
+    </Suspense>
+  );
+}
+
+function PropertyDetailContent() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const { t, language } = useLanguage();
+
+  // Read dates from URL params (passed from listings search)
+  const initialCheckIn = searchParams.get('checkIn') || '';
+  const initialCheckOut = searchParams.get('checkOut') || '';
   const isAr = language === 'ar';
 
   useEffect(() => {
@@ -271,7 +284,7 @@ export default function PropertyDetailPage() {
 
             {/* Right column – Booking widget + BNPL */}
             <div className="lg:col-span-1">
-              <BookingWidget property={property} />
+              <BookingWidget property={property} initialCheckIn={initialCheckIn} initialCheckOut={initialCheckOut} />
               <BnplWidget total={property.pricing.perNight} />
             </div>
           </div>

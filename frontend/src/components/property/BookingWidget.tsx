@@ -15,13 +15,15 @@ import BnplWidget from '@/components/payment/BnplWidget';
 
 interface BookingWidgetProps {
   property: Property;
+  initialCheckIn?: string;
+  initialCheckOut?: string;
 }
 
-export default function BookingWidget({ property }: BookingWidgetProps) {
+export default function BookingWidget({ property, initialCheckIn = '', initialCheckOut = '' }: BookingWidgetProps) {
   const router = useRouter();
   const { t } = useLanguage();
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const [checkIn, setCheckIn] = useState(initialCheckIn);
+  const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [guests, setGuests] = useState(1);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
