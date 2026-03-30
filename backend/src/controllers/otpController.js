@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const OTP = require('../models/OTP');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
-const authentica = require('../services/authentica');
+const otpService = require('../services/otp');
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -24,7 +24,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-// @desc    Send OTP to phone number via Authentica (SMS or WhatsApp)
+// @desc    Send OTP to phone number via provider manager (Authentica → Twilio fallback)
 // @route   POST /api/v1/auth/send-otp
 // @access  Public
 exports.sendOTP = async (req, res, next) => {
@@ -85,9 +85,8 @@ exports.sendOTP = async (req, res, next) => {
       }
     }
 
-    // Dev bypass: skip Authentica in development if DEV_OTP_BYPASS is enabled
+    // Dev bypass: skip provider in development if DEV_OTP_BYPASS is enabled
     if (process.env.DEV_OTP_BYPASS === 'true' && process.env.NODE_ENV !== 'production') {
-      // Store a local OTP for dev testing (accept 0000)
       await OTP.deleteMany({ phone, countryCode });
       await OTP.create({
         phone,
@@ -107,12 +106,10 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
-    // Send OTP via Authentica
-    const result = await authentica.sendOTP(phone, countryCode, {
+    // Send OTP via provider manager (Authentica → Twilio fallback)
+    const result = await otpService.sendOTP(phone, countryCode, {
       method,
       lang,
-      // If sending via SMS, fallback to WhatsApp; and vice versa
-      fallbackMethod: method === 'sms' ? 'whatsapp' : 'sms',
     });
 
     // Track cooldown
@@ -121,8 +118,8 @@ exports.sendOTP = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: result.message,
-      expiresIn: 300,
-      resendCooldown: 30,
+      expiresIn: result.expiresIn || 300,
+      resendCooldown: result.resendCooldown || 30,
     });
   } catch (error) {
     // Handle rate limit / cooldown errors
@@ -153,8 +150,8 @@ exports.verifyOTP = async (req, res, next) => {
       && otp === '0000';
 
     if (!isDevBypass) {
-      // Verify OTP via Authentica
-      const result = await authentica.verifyOTP(phone, countryCode, otp);
+      // Verify OTP via provider manager
+      const result = await otpService.verifyOTP(phone, countryCode, otp);
       if (!result.valid) {
         return res.status(400).json({ success: false, message: result.message });
       }
@@ -229,4 +226,12 @@ exports.verifyOTP = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// @desc    Get OTP provider health status (admin only)
+// @route   GET /api/v1/auth/otp-health
+// @access  Private/Admin
+exports.getOTPHealth = (req, res) => {
+  const health = otpService.getHealth();
+  res.status(200).json({ success: true, data: health });
 };
