@@ -6,9 +6,9 @@
  * The Authentica API generates, delivers, and verifies OTPs server-side.
  *
  * API Docs: https://authenticasa.docs.apiary.io/#reference
+ *
+ * Uses native fetch (Node.js 20+) — no axios dependency needed.
  */
-
-const axios = require('axios');
 
 const AUTHENTICA_BASE_URL = 'https://api.authentica.sa/api/v2';
 const API_KEY = process.env.AUTHENTICA_API_KEY;
@@ -19,23 +19,41 @@ const API_KEY = process.env.AUTHENTICA_API_KEY;
 const TEMPLATE_ID_AR = 5;
 const TEMPLATE_ID_EN = 6;
 
-const authenticaClient = axios.create({
-  baseURL: AUTHENTICA_BASE_URL,
-  timeout: 15000,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  },
-});
-
-// Attach API key to every request
-authenticaClient.interceptors.request.use((config) => {
+/**
+ * Make an API request to Authentica
+ */
+async function authenticaRequest(method, endpoint, body = null) {
   if (!API_KEY) {
     throw new Error('AUTHENTICA_API_KEY is not configured');
   }
-  config.headers['X-Authorization'] = API_KEY;
-  return config;
-});
+
+  const url = `${AUTHENTICA_BASE_URL}${endpoint}`;
+  const options = {
+    method,
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-Authorization': API_KEY,
+    },
+    signal: AbortSignal.timeout(15000),
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, options);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const err = new Error(data?.message || `Authentica API error: ${response.status}`);
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data;
+}
 
 /**
  * Send OTP to a phone number via SMS or WhatsApp
@@ -66,16 +84,16 @@ async function sendOTP(phone, countryCode = '+966', options = {}) {
   }
 
   try {
-    const response = await authenticaClient.post('/send-otp', payload);
+    const data = await authenticaRequest('POST', '/send-otp', payload);
 
     console.log(`[AUTHENTICA] OTP sent to ${fullPhone} via ${method} (template: ${templateId})`);
 
     return {
       success: true,
-      message: response.data?.message || 'OTP sent successfully',
+      message: data?.message || 'OTP sent successfully',
     };
   } catch (error) {
-    const errMsg = error.response?.data?.message || error.message;
+    const errMsg = error.data?.message || error.message;
     console.error(`[AUTHENTICA] Failed to send OTP to ${fullPhone}:`, errMsg);
 
     // If primary method fails and fallback is available, try fallback
@@ -104,21 +122,21 @@ async function verifyOTP(phone, countryCode = '+966', otp) {
   const fullPhone = `${countryCode}${phone}`;
 
   try {
-    const response = await authenticaClient.post('/verify-otp', {
+    const data = await authenticaRequest('POST', '/verify-otp', {
       phone: fullPhone,
       otp,
     });
 
-    const isValid = response.data?.status === true || response.data?.success === true;
+    const isValid = data?.status === true || data?.success === true;
 
     if (isValid) {
       console.log(`[AUTHENTICA] OTP verified for ${fullPhone}`);
       return { valid: true, message: 'OTP verified successfully' };
     }
 
-    return { valid: false, message: response.data?.message || 'Invalid OTP code' };
+    return { valid: false, message: data?.message || 'Invalid OTP code' };
   } catch (error) {
-    const errMsg = error.response?.data?.message || error.message;
+    const errMsg = error.data?.message || error.message;
     console.error(`[AUTHENTICA] OTP verification failed for ${fullPhone}:`, errMsg);
 
     // Return validation failure (not throw) so the controller can respond gracefully
@@ -132,8 +150,8 @@ async function verifyOTP(phone, countryCode = '+966', otp) {
  */
 async function getBalance() {
   try {
-    const response = await authenticaClient.get('/balance');
-    return { balance: response.data?.data?.balance || 0 };
+    const data = await authenticaRequest('GET', '/balance');
+    return { balance: data?.data?.balance || 0 };
   } catch (error) {
     console.error('[AUTHENTICA] Failed to check balance:', error.message);
     return { balance: -1 };
