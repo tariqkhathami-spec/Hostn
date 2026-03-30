@@ -2,45 +2,104 @@
  * Authentica OTP Service
  * https://authentica.sa — Saudi OTP provider
  *
- * Handles sending and verifying OTPs via SMS and WhatsApp.
- * The Authentica API generates, delivers, and verifies OTPs server-side.
+ * Single OTP provider for Hostn:
+ *   - Send OTP via SMS (primary) with WhatsApp fallback
+ *   - Verify OTP codes
+ *   - Retry logic with backoff
+ *   - Clear error classification for user-facing messages
  *
  * API Docs: https://authenticasa.docs.apiary.io/#reference
- *
- * Uses node-fetch + custom HTTPS agent for compatibility with servers
- * that have SSL certificate mismatches (Authentica's api.authentica.sa
- * resolves to *.t2.sa cert from some regions).
  */
 
 const https = require('https');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 
-// Custom HTTPS agent that accepts Authentica's certificate
-// (their API cert is mismatched from some regions/data centers)
+// Authentica's SSL cert is mismatched from some regions (*.t2.sa instead of *.authentica.sa)
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const AUTHENTICA_BASE_URL = 'https://api.authentica.sa/api/v2';
 const API_KEY = process.env.AUTHENTICA_API_KEY;
 
 // Template IDs (from https://portal.authentica.sa/templates/)
-// Arabic: "الرمز الخاص بك لتسجيل الدخول إلى {{app_name}} هو: {{otp}}. لا تشارك هذا الرمز مع أي شخص."
-// English: "Your code for login to {{app_name}} is: {{otp}}. Do not share this code with anyone."
 const TEMPLATE_ID_AR = 5;
 const TEMPLATE_ID_EN = 6;
 
+const REQUEST_TIMEOUT_MS = 10000; // 10 seconds
+const RETRY_DELAY_MS = 1500;      // 1.5 seconds before retry
+
+// ── Error Classification ──────────────────────────────────────────
+
 /**
- * Make an API request to Authentica
+ * Determine if an error is a transient infrastructure issue (worth retrying / falling back)
+ */
+function isTransientError(error) {
+  if (error.status && error.status >= 500) return true;
+  if (error.name === 'AbortError') return true;
+  const msg = (error.message || '').toLowerCase();
+  return (
+    msg.includes('fetch failed') ||
+    msg.includes('etimedout') ||
+    msg.includes('econnreset') ||
+    msg.includes('econnrefused') ||
+    msg.includes('enotfound') ||
+    msg.includes('socket hang up') ||
+    msg.includes('certificate') ||
+    msg.includes('network')
+  );
+}
+
+/**
+ * Build a user-facing error message based on the failure type
+ */
+function getUserErrorMessage(error, lang = 'ar') {
+  // Rate limit
+  if (error.status === 429 || (error.message && error.message.includes('Too many'))) {
+    return lang === 'ar'
+      ? 'طلبات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.'
+      : 'Too many requests. Please wait before trying again.';
+  }
+
+  // Invalid phone / bad request
+  if (error.status === 400) {
+    return lang === 'ar'
+      ? 'رقم الهاتف غير صالح. تحقق من الرقم وحاول مرة أخرى.'
+      : 'Invalid phone number. Please check and try again.';
+  }
+
+  // Auth issue (API key)
+  if (error.status === 401 || error.status === 403) {
+    console.error('[AUTHENTICA] API key issue — check AUTHENTICA_API_KEY');
+    return lang === 'ar'
+      ? 'خطأ في الخدمة. يرجى المحاولة لاحقاً.'
+      : 'Service error. Please try again later.';
+  }
+
+  // Server / infrastructure issue
+  if (isTransientError(error)) {
+    return lang === 'ar'
+      ? 'خدمة الرسائل غير متاحة حالياً. يرجى المحاولة بعد قليل.'
+      : 'SMS service is temporarily unavailable. Please try again shortly.';
+  }
+
+  // Unknown
+  return lang === 'ar'
+    ? 'تعذر إرسال رمز التحقق. يرجى المحاولة مرة أخرى.'
+    : 'Could not send verification code. Please try again.';
+}
+
+// ── Core API Request ──────────────────────────────────────────────
+
+/**
+ * Make a single API request to Authentica
  */
 async function authenticaRequest(method, endpoint, body = null) {
   if (!API_KEY) {
-    throw new Error('AUTHENTICA_API_KEY is not configured');
+    throw Object.assign(new Error('AUTHENTICA_API_KEY is not configured'), { status: 500 });
   }
 
   const url = `${AUTHENTICA_BASE_URL}${endpoint}`;
-
-  // Create abort controller with manual timeout for Node.js compatibility
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   const options = {
     method,
@@ -74,67 +133,101 @@ async function authenticaRequest(method, endpoint, body = null) {
   }
 }
 
+// ── Send OTP ──────────────────────────────────────────────────────
+
 /**
- * Send OTP to a phone number via SMS or WhatsApp
+ * Send OTP to a phone number.
  *
- * @param {string} phone - Phone number without country code (e.g. "5XXXXXXXX")
- * @param {string} countryCode - Country code with + (e.g. "+966")
+ * Strategy:
+ *   1. Try SMS first
+ *   2. If SMS fails with a transient error → retry SMS once after 1.5s
+ *   3. If SMS still fails → try WhatsApp
+ *   4. If WhatsApp also fails → return clear user-facing error
+ *
+ * @param {string} phone - Phone without country code (e.g. "5XXXXXXXX")
+ * @param {string} countryCode - e.g. "+966"
  * @param {object} options
- * @param {string} options.method - "sms" or "whatsapp" (default: "sms")
- * @param {string} options.lang - "ar" or "en" (default: "ar")
- * @param {string} options.fallbackMethod - Fallback delivery method if primary fails
- * @returns {Promise<{success: boolean, message: string}>}
+ * @param {string} options.method - Requested method: "sms" or "whatsapp"
+ * @param {string} options.lang - "ar" or "en"
+ * @returns {Promise<{success, message, deliveryMethod}>}
  */
 async function sendOTP(phone, countryCode = '+966', options = {}) {
-  const { method = 'sms', lang = 'ar', fallbackMethod = null } = options;
-
+  const { method = 'sms', lang = 'ar' } = options;
   const fullPhone = `${countryCode}${phone}`;
   const templateId = lang === 'en' ? TEMPLATE_ID_EN : TEMPLATE_ID_AR;
 
-  const payload = {
-    method,
-    phone: fullPhone,
-    template_id: templateId,
-  };
+  // If user explicitly requested WhatsApp, try WhatsApp first
+  const primaryMethod = method;
+  const fallbackMethod = method === 'sms' ? 'whatsapp' : 'sms';
 
-  // Add fallback method if specified (e.g. send SMS, fallback to WhatsApp)
-  if (fallbackMethod) {
-    payload.fallback_phone = fullPhone;
+  // ── Attempt 1: Primary method ──
+  try {
+    const result = await _sendViaMethod(fullPhone, primaryMethod, templateId);
+    console.log(`[AUTHENTICA] ✓ OTP sent to ${fullPhone} via ${primaryMethod}`);
+    return { success: true, message: result.message || 'OTP sent successfully', deliveryMethod: primaryMethod };
+  } catch (error) {
+    console.warn(`[AUTHENTICA] ✗ ${primaryMethod} failed for ${fullPhone}: ${error.message}`);
+
+    // If it's NOT a transient error (e.g. bad phone number), don't retry or fallback
+    if (!isTransientError(error)) {
+      throw Object.assign(error, { userMessage: getUserErrorMessage(error, lang) });
+    }
   }
 
+  // ── Attempt 2: Retry primary after backoff ──
+  await _sleep(RETRY_DELAY_MS);
   try {
-    const data = await authenticaRequest('POST', '/send-otp', payload);
-
-    console.log(`[AUTHENTICA] OTP sent to ${fullPhone} via ${method} (template: ${templateId})`);
-
-    return {
-      success: true,
-      message: data?.message || 'OTP sent successfully',
-    };
+    const result = await _sendViaMethod(fullPhone, primaryMethod, templateId);
+    console.log(`[AUTHENTICA] ✓ OTP sent to ${fullPhone} via ${primaryMethod} (retry)`);
+    return { success: true, message: result.message || 'OTP sent successfully', deliveryMethod: primaryMethod };
   } catch (error) {
-    const errMsg = error.data?.message || error.message;
-    console.error(`[AUTHENTICA] Failed to send OTP to ${fullPhone}:`, errMsg);
+    console.warn(`[AUTHENTICA] ✗ ${primaryMethod} retry failed for ${fullPhone}: ${error.message}`);
 
-    // If primary method fails and fallback is available, try fallback
-    if (fallbackMethod && method !== fallbackMethod) {
-      console.log(`[AUTHENTICA] Trying fallback method: ${fallbackMethod}`);
-      return sendOTP(phone, countryCode, {
-        ...options,
-        method: fallbackMethod,
-        fallbackMethod: null, // prevent infinite recursion
-      });
+    if (!isTransientError(error)) {
+      throw Object.assign(error, { userMessage: getUserErrorMessage(error, lang) });
     }
+  }
 
-    throw new Error(`Failed to send OTP: ${errMsg}`);
+  // ── Attempt 3: Fallback to other method ──
+  console.log(`[AUTHENTICA] Falling back to ${fallbackMethod} for ${fullPhone}...`);
+  try {
+    const result = await _sendViaMethod(fullPhone, fallbackMethod, templateId);
+    console.log(`[AUTHENTICA] ✓ OTP sent to ${fullPhone} via ${fallbackMethod} (fallback)`);
+    return { success: true, message: result.message || 'OTP sent successfully', deliveryMethod: fallbackMethod };
+  } catch (error) {
+    console.error(`[AUTHENTICA] ✗ All delivery methods failed for ${fullPhone}: ${error.message}`);
+
+    // All methods failed — return user-friendly error
+    const finalError = new Error(`Failed to send OTP: ${error.message}`);
+    finalError.status = error.status || 503;
+    finalError.userMessage = getUserErrorMessage(error, lang);
+    throw finalError;
   }
 }
 
 /**
- * Verify an OTP code
+ * Send OTP via a specific method (sms or whatsapp)
+ */
+async function _sendViaMethod(fullPhone, method, templateId) {
+  return authenticaRequest('POST', '/send-otp', {
+    method,
+    phone: fullPhone,
+    template_id: templateId,
+  });
+}
+
+function _sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ── Verify OTP ────────────────────────────────────────────────────
+
+/**
+ * Verify an OTP code via Authentica
  *
- * @param {string} phone - Phone number without country code (e.g. "5XXXXXXXX")
- * @param {string} countryCode - Country code with + (e.g. "+966")
- * @param {string} otp - The OTP code entered by the user
+ * @param {string} phone - Phone without country code
+ * @param {string} countryCode
+ * @param {string} otp - The code entered by the user
  * @returns {Promise<{valid: boolean, message: string}>}
  */
 async function verifyOTP(phone, countryCode = '+966', otp) {
@@ -149,24 +242,21 @@ async function verifyOTP(phone, countryCode = '+966', otp) {
     const isValid = data?.status === true || data?.success === true;
 
     if (isValid) {
-      console.log(`[AUTHENTICA] OTP verified for ${fullPhone}`);
+      console.log(`[AUTHENTICA] ✓ OTP verified for ${fullPhone}`);
       return { valid: true, message: 'OTP verified successfully' };
     }
 
+    console.log(`[AUTHENTICA] ✗ OTP invalid for ${fullPhone}`);
     return { valid: false, message: data?.message || 'Invalid OTP code' };
   } catch (error) {
-    const errMsg = error.data?.message || error.message;
-    console.error(`[AUTHENTICA] OTP verification failed for ${fullPhone}:`, errMsg);
-
-    // Return validation failure (not throw) so the controller can respond gracefully
-    return { valid: false, message: errMsg || 'OTP verification failed' };
+    console.error(`[AUTHENTICA] ✗ Verification error for ${fullPhone}:`, error.message);
+    // Return invalid (not throw) so the controller can respond gracefully
+    return { valid: false, message: error.data?.message || error.message || 'OTP verification failed' };
   }
 }
 
-/**
- * Check Authentica account balance
- * @returns {Promise<{balance: number}>}
- */
+// ── Balance Check ─────────────────────────────────────────────────
+
 async function getBalance() {
   try {
     const data = await authenticaRequest('GET', '/balance');
@@ -177,4 +267,4 @@ async function getBalance() {
   }
 }
 
-module.exports = { sendOTP, verifyOTP, getBalance };
+module.exports = { sendOTP, verifyOTP, getBalance, getUserErrorMessage };

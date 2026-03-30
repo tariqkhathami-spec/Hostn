@@ -22,9 +22,6 @@ const warnCloudinary = [
 
 const warnOtp = [
   'AUTHENTICA_API_KEY',
-  'TWILIO_ACCOUNT_SID',
-  'TWILIO_AUTH_TOKEN',
-  'TWILIO_VERIFY_SERVICE_SID',
 ];
 
 const warnBnpl = [
@@ -73,7 +70,7 @@ function validateEnv() {
     if (missingOtp.length > 0) {
       console.warn('=== WARNING: Missing OTP provider environment variables ===');
       missingOtp.forEach((key) => console.warn(`  - ${key}`));
-      console.warn('OTP providers may not work until these are set.');
+      console.warn('OTP via Authentica will not work until these are set.');
     }
 
     const missingBnpl = warnBnpl.filter(

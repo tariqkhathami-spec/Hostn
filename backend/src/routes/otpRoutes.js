@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
-const { sendOTP, verifyOTP, getOTPHealth } = require('../controllers/otpController');
-const { protect, authorize } = require('../middleware/auth');
+const { sendOTP, verifyOTP } = require('../controllers/otpController');
 
 const otpSendLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -22,6 +21,5 @@ const otpVerifyLimiter = rateLimit({
 
 router.post('/send-otp', otpSendLimiter, sendOTP);
 router.post('/verify-otp', otpVerifyLimiter, verifyOTP);
-router.get('/otp-health', protect, authorize('admin'), getOTPHealth);
 
 module.exports = router;

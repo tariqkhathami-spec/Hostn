@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const OTP = require('../models/OTP');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
-const otpService = require('../services/otp');
+const authentica = require('../services/authentica');
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -24,7 +24,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-// @desc    Send OTP to phone number via provider manager (Authentica → Twilio fallback)
+// @desc    Send OTP to phone number via Authentica (SMS → WhatsApp fallback)
 // @route   POST /api/v1/auth/send-otp
 // @access  Public
 exports.sendOTP = async (req, res, next) => {
@@ -85,7 +85,7 @@ exports.sendOTP = async (req, res, next) => {
       }
     }
 
-    // Dev bypass: skip provider in development if DEV_OTP_BYPASS is enabled
+    // Dev bypass: skip Authentica in development if DEV_OTP_BYPASS is enabled
     if (process.env.DEV_OTP_BYPASS === 'true' && process.env.NODE_ENV !== 'production') {
       await OTP.deleteMany({ phone, countryCode });
       await OTP.create({
@@ -106,11 +106,8 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
-    // Send OTP via provider manager (Authentica → Twilio fallback)
-    const result = await otpService.sendOTP(phone, countryCode, {
-      method,
-      lang,
-    });
+    // Send OTP via Authentica (SMS first, WhatsApp fallback on transient errors)
+    const result = await authentica.sendOTP(phone, countryCode, { method, lang });
 
     // Track cooldown
     cooldownMap.set(cooldownKey, Date.now());
@@ -118,14 +115,24 @@ exports.sendOTP = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: result.message,
-      expiresIn: result.expiresIn || 300,
-      resendCooldown: result.resendCooldown || 30,
+      deliveryMethod: result.deliveryMethod,
+      expiresIn: 300,
+      resendCooldown: 30,
     });
   } catch (error) {
+    // Return user-friendly message if Authentica service provided one
+    if (error.userMessage) {
+      return res.status(error.status || 503).json({
+        success: false,
+        message: error.userMessage,
+      });
+    }
+
     // Handle rate limit / cooldown errors
     if (error.message && error.message.includes('Too many')) {
       return res.status(429).json({ success: false, message: error.message });
     }
+
     next(error);
   }
 };
@@ -150,15 +157,14 @@ exports.verifyOTP = async (req, res, next) => {
       && otp === '0000';
 
     if (!isDevBypass) {
-      // Verify OTP via provider manager
-      const result = await otpService.verifyOTP(phone, countryCode, otp);
+      // Verify OTP via Authentica
+      const result = await authentica.verifyOTP(phone, countryCode, otp);
       if (!result.valid) {
         return res.status(400).json({ success: false, message: result.message });
       }
     }
 
     // Find or create user (phone-only registration, no password/email required)
-    // Try multiple phone formats: "542660600", "0542660600", "+966542660600"
     const phoneVariants = [
       phone,                                    // 542660600
       `0${phone}`,                              // 0542660600
@@ -226,12 +232,4 @@ exports.verifyOTP = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
-
-// @desc    Get OTP provider health status (admin only)
-// @route   GET /api/v1/auth/otp-health
-// @access  Private/Admin
-exports.getOTPHealth = (req, res) => {
-  const health = otpService.getHealth();
-  res.status(200).json({ success: true, data: health });
 };
