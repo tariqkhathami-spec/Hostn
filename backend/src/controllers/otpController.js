@@ -87,18 +87,18 @@ exports.sendOTP = async (req, res, next) => {
 
     // Dev bypass: skip Authentica in development if DEV_OTP_BYPASS is enabled
     if (process.env.DEV_OTP_BYPASS === 'true' && process.env.NODE_ENV !== 'production') {
-      // Store a local OTP for dev testing (accept 000000)
+      // Store a local OTP for dev testing (accept 0000)
       await OTP.deleteMany({ phone, countryCode });
       await OTP.create({
         phone,
         countryCode,
-        code: '000000',
+        code: '0000',
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       });
 
       cooldownMap.set(cooldownKey, Date.now());
 
-      console.log(`[DEV] OTP bypass active — use code 000000 for ${countryCode}${phone}`);
+      console.log(`[DEV] OTP bypass active — use code 0000 for ${countryCode}${phone}`);
       return res.status(200).json({
         success: true,
         message: 'OTP sent successfully',
@@ -147,10 +147,10 @@ exports.verifyOTP = async (req, res, next) => {
       });
     }
 
-    // Dev bypass: accept 000000 as valid OTP for testing
+    // Dev bypass: accept 0000 as valid OTP for testing
     const isDevBypass = process.env.DEV_OTP_BYPASS === 'true'
       && process.env.NODE_ENV !== 'production'
-      && otp === '000000';
+      && otp === '0000';
 
     if (!isDevBypass) {
       // Verify OTP via Authentica

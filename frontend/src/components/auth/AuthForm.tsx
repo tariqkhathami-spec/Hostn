@@ -259,8 +259,8 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     {lang === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
                   </label>
-                  <div className="flex gap-2">
-                    <div className="flex items-center px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 font-medium">
+                  <div className="flex gap-2" dir="ltr">
+                    <div className="flex items-center px-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600 font-medium" dir="ltr">
                       +966
                     </div>
                     <Input
@@ -271,6 +271,7 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                       leftIcon={<Phone className="w-4 h-4" />}
                       error={errors.otpPhone}
                       className="flex-1"
+                      dir="ltr"
                     />
                   </div>
                 </div>
@@ -290,17 +291,18 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                   <p className="text-sm text-gray-600">
                     {lang === 'ar' ? `تم إرسال رمز التحقق إلى` : 'Verification code sent to'}
                   </p>
-                  <p className="text-sm font-bold text-gray-900 mt-1 dir-ltr">+966 {otpPhone}</p>
+                  <p className="text-sm font-bold text-gray-900 mt-1" dir="ltr">+966 {otpPhone}</p>
                 </div>
                 <Input
                   label={lang === 'ar' ? 'رمز التحقق' : 'Verification Code'}
                   type="text"
                   inputMode="numeric"
-                  placeholder="000000"
+                  placeholder="0000"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   error={errors.otpCode}
                   className="text-center text-2xl tracking-[0.5em] font-mono"
+                  dir="ltr"
                 />
                 <Button
                   type="submit"
@@ -408,6 +410,7 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 leftIcon={<Phone className="w-4 h-4" />}
+                dir="ltr"
               />
             )}
 

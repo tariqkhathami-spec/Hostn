@@ -12,7 +12,7 @@ export const APP_CONFIG = {
   countryCode: '+966',
   currency: 'SAR',
   locale: 'en',
-  otpLength: 6,
+  otpLength: 4,
   otpResendSeconds: 30,
   chatPollInterval: 5000,
   maxImages: 10,
