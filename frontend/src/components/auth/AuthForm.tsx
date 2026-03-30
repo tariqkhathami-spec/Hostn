@@ -77,7 +77,7 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
   const { login, loginWithOtp, register } = useAuth();
   const { language } = useLanguage();
 
-  // Login method toggle
+  // Login method: phone+OTP for guest/host, email+password only for admin
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>(role === 'admin' ? 'email' : 'phone');
 
   // Email/password fields
@@ -105,9 +105,12 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
   const title = isLogin ? config.loginTitle[lang] : config.registerTitle[lang];
   const subtitle = isLogin ? config.loginSubtitle[lang] : config.registerSubtitle[lang];
 
-  // Start countdown timer
+  // OTP delivery method (SMS or WhatsApp)
+  const [otpMethod, setOtpMethod] = useState<'sms' | 'whatsapp'>('sms');
+
+  // Start countdown timer (30 seconds)
   const startCountdown = () => {
-    setCountdown(60);
+    setCountdown(30);
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) { clearInterval(timer); return 0; }
@@ -117,15 +120,16 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
   };
 
   // Send OTP
-  const handleSendOtp = async () => {
+  const handleSendOtp = async (method: 'sms' | 'whatsapp' = otpMethod) => {
     if (!otpPhone || !/^5\d{8}$/.test(otpPhone)) {
       setErrors({ otpPhone: lang === 'ar' ? 'رقم هاتف سعودي غير صالح (9 أرقام تبدأ بـ 5)' : 'Invalid Saudi phone (9 digits starting with 5)' });
       return;
     }
     setErrors({});
     setOtpLoading(true);
+    setOtpMethod(method);
     try {
-      await authApi.sendOtp({ phone: otpPhone });
+      await authApi.sendOtp({ phone: otpPhone, method, lang });
       setOtpSent(true);
       startCountdown();
       toast.success(lang === 'ar' ? 'تم إرسال رمز التحقق' : 'OTP sent successfully');
@@ -220,8 +224,8 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
           <p className="mt-2 text-gray-500">{subtitle}</p>
         </div>
 
-        {/* Login method toggle (only for login, non-admin) */}
-        {isLogin && role !== 'admin' && (
+        {/* Login method toggle (only for admin — guest/host always use phone) */}
+        {role === 'admin' && isLogin && (
           <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
             <button
               type="button"
@@ -246,8 +250,8 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
           </div>
         )}
 
-        {/* Phone + OTP Login */}
-        {isLogin && loginMethod === 'phone' && role !== 'admin' ? (
+        {/* Phone + OTP (used for all guest/host auth — both login and register) */}
+        {loginMethod === 'phone' && role !== 'admin' ? (
           <form onSubmit={handleOtpLogin} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-5">
             {!otpSent ? (
               <>
@@ -272,7 +276,7 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                 </div>
                 <Button
                   type="button"
-                  onClick={handleSendOtp}
+                  onClick={() => handleSendOtp()}
                   isLoading={otpLoading}
                   className={`w-full ${accent.bg} ${accent.hover} text-white ${accent.ring}`}
                   size="lg"
@@ -319,13 +323,23 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                       {lang === 'ar' ? `إعادة الإرسال (${countdown}ث)` : `Resend (${countdown}s)`}
                     </span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      className={`${accent.text} font-medium hover:underline`}
-                    >
-                      {lang === 'ar' ? 'إعادة إرسال الرمز' : 'Resend code'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSendOtp('sms')}
+                        className={`${accent.text} font-medium hover:underline`}
+                      >
+                        {lang === 'ar' ? 'إعادة عبر SMS' : 'Resend SMS'}
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => handleSendOtp('whatsapp')}
+                        className="text-green-600 font-medium hover:underline"
+                      >
+                        {lang === 'ar' ? 'عبر واتساب' : 'WhatsApp'}
+                      </button>
+                    </div>
                   )}
                 </div>
               </>

@@ -87,13 +87,13 @@ export default function OTPVerifyScreen() {
     }
   };
 
-  const handleResend = async () => {
+  const handleResend = async (method: 'sms' | 'whatsapp' = 'sms') => {
     if (!phone) {
       setError('Phone number missing. Please go back.');
       return;
     }
     try {
-      await authService.sendOTP(phone);
+      await authService.sendOTP(phone, '+966', method);
       setCountdown(APP_CONFIG.otpResendSeconds);
       setError('');
     } catch {
@@ -146,8 +146,12 @@ export default function OTPVerifyScreen() {
             <Text style={styles.countdown}>Resend code in {formatCountdown()}</Text>
           ) : (
             <View style={styles.resendRow}>
-              <TouchableOpacity onPress={handleResend}>
+              <TouchableOpacity onPress={() => handleResend('sms')}>
                 <Text style={styles.resendText}>Resend via SMS</Text>
+              </TouchableOpacity>
+              <Text style={styles.resendDivider}>|</Text>
+              <TouchableOpacity onPress={() => handleResend('whatsapp')}>
+                <Text style={styles.resendWhatsapp}>WhatsApp</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -238,6 +242,16 @@ const styles = StyleSheet.create({
   resendText: {
     ...Typography.small,
     color: Colors.primary,
+    fontWeight: '600',
+  },
+  resendDivider: {
+    ...Typography.small,
+    color: Colors.textTertiary,
+    marginHorizontal: Spacing.sm,
+  },
+  resendWhatsapp: {
+    ...Typography.small,
+    color: '#25D366',
     fontWeight: '600',
   },
   bottom: {

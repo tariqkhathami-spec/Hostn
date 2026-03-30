@@ -77,13 +77,15 @@ export default function OtpVerifyScreen() {
     }
   };
 
-  const handleResend = async () => {
+  const handleResend = async (method: 'sms' | 'whatsapp' = 'sms') => {
     setResendLoading(true);
     try {
-      await authService.sendOtp(phone ?? '');
+      await authService.sendOtp(phone ?? '', method);
       setCountdown(APP_CONFIG.otpResendCooldown);
       setCode('');
-      Alert.alert('', 'تم إرسال رمز التحقق مرة أخرى');
+      Alert.alert('', method === 'whatsapp'
+        ? 'تم إرسال رمز التحقق عبر واتساب'
+        : 'تم إرسال رمز التحقق مرة أخرى');
     } catch (error: unknown) {
       const message =
         (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
@@ -146,13 +148,18 @@ export default function OtpVerifyScreen() {
               {t('auth.resend')} ({countdown}s)
             </Text>
           ) : (
-            <Button
-              title={t('auth.resend')}
-              onPress={handleResend}
-              variant="ghost"
-              size="sm"
-              loading={resendLoading}
-            />
+            <View style={styles.resendButtons}>
+              <Button
+                title="إعادة عبر SMS"
+                onPress={() => handleResend('sms')}
+                variant="ghost"
+                size="sm"
+                loading={resendLoading}
+              />
+              <TouchableOpacity onPress={() => handleResend('whatsapp')} disabled={resendLoading}>
+                <Text style={styles.whatsappText}>عبر واتساب</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>
@@ -220,5 +227,15 @@ const styles = StyleSheet.create({
   countdown: {
     ...Typography.small,
     color: Colors.textTertiary,
+  },
+  resendButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  whatsappText: {
+    ...Typography.small,
+    color: '#25D366',
+    fontWeight: '600',
   },
 });

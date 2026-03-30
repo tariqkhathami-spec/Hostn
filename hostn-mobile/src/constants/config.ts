@@ -13,7 +13,7 @@ export const APP_CONFIG = {
   currency: 'SAR',
   locale: 'en',
   otpLength: 6,
-  otpResendSeconds: 120,
+  otpResendSeconds: 30,
   chatPollInterval: 5000,
   maxImages: 10,
   maxFileSize: 5 * 1024 * 1024, // 5MB

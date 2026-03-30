@@ -20,6 +20,10 @@ const warnCloudinary = [
   'CLOUDINARY_API_SECRET',
 ];
 
+const warnOtp = [
+  'AUTHENTICA_API_KEY',
+];
+
 const warnBnpl = [
   'TABBY_SECRET_KEY',
   'TABBY_PUBLIC_KEY',
@@ -58,6 +62,15 @@ function validateEnv() {
       console.warn('=== WARNING: Missing payment environment variables ===');
       missingPayment.forEach((key) => console.warn(`  - ${key}`));
       console.warn('Payment processing will be disabled until these are set.');
+    }
+
+    const missingOtp = warnOtp.filter(
+      (key) => !process.env[key] || process.env[key].trim() === ''
+    );
+    if (missingOtp.length > 0) {
+      console.warn('=== WARNING: Missing OTP provider environment variables ===');
+      missingOtp.forEach((key) => console.warn(`  - ${key}`));
+      console.warn('OTP via Authentica will not work until these are set.');
     }
 
     const missingBnpl = warnBnpl.filter(

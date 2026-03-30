@@ -11,6 +11,6 @@ export const APP_CONFIG = {
   supportHours: '10:00 AM - 12:00 AM',
   defaultLocale: 'ar' as const,
   otpLength: 6,
-  otpResendCooldown: 60,
+  otpResendCooldown: 30,
   pageSize: 20,
 } as const;

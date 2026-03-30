@@ -2,8 +2,8 @@ import api from './api';
 import type { ApiResponse, User } from '../types';
 
 export const authService = {
-  async sendOTP(phone: string, countryCode: string = '+966') {
-    const { data } = await api.post<ApiResponse<null>>('/auth/send-otp', { phone, countryCode });
+  async sendOTP(phone: string, countryCode: string = '+966', method: 'sms' | 'whatsapp' = 'sms', lang: string = 'ar') {
+    const { data } = await api.post<ApiResponse<null>>('/auth/send-otp', { phone, countryCode, method, lang });
     return data;
   },
 
