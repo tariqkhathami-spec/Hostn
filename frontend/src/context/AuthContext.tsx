@@ -101,6 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.removeItem('hostn_user');
     setUser(null);
+    // Redirect to homepage after logout
+    window.location.href = '/';
   }, []);
 
   const updateUser = (updatedUser: User) => {

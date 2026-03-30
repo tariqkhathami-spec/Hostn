@@ -55,8 +55,10 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
-    // Check if user is suspended
-    const existingUser = await User.findOne({ phone });
+    // Check if user is suspended (try multiple phone formats)
+    const existingUser = await User.findOne({
+      phone: { $in: [phone, `0${phone}`, `${countryCode}${phone}`, phone.replace(/^0+/, '')] },
+    });
     if (existingUser && existingUser.isSuspended) {
       return res.status(403).json({
         success: false,
@@ -159,7 +161,14 @@ exports.verifyOTP = async (req, res, next) => {
     }
 
     // Find or create user (phone-only registration, no password/email required)
-    let user = await User.findOne({ phone });
+    // Try multiple phone formats: "542660600", "0542660600", "+966542660600"
+    const phoneVariants = [
+      phone,                                    // 542660600
+      `0${phone}`,                              // 0542660600
+      `${countryCode}${phone}`,                 // +966542660600
+      phone.replace(/^0+/, ''),                 // strip leading zeros
+    ];
+    let user = await User.findOne({ phone: { $in: phoneVariants } });
     let isNewUser = false;
 
     if (!user) {
@@ -171,6 +180,11 @@ exports.verifyOTP = async (req, res, next) => {
         name: `User ${phone.slice(-4)}`,
       });
     } else {
+      // Normalize phone to the format without leading 0 for consistency
+      if (user.phone !== phone) {
+        console.log(`[OTP] Normalizing phone from "${user.phone}" to "${phone}"`);
+        user.phone = phone;
+      }
       user.phoneVerified = true;
       await user.save();
     }
