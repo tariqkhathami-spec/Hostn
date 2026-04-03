@@ -48,9 +48,9 @@
 | I4 | 2026-04-03 | `/` — Use font Rubik as default for the website | AMS | Replaced Inter with Rubik in globals.css, tailwind.config, LanguageContext | Done |
 | I5 | 2026-04-03 | `/` — Search bar width too short | AMS | Widened from `max-w-4xl` (896px) to `max-w-5xl` (1024px) | Done |
 | I6 | 2026-04-03 | `/` — Dual calendar view on desktop | AMS | Added `dual` prop to MiniCalendar; shows two months side-by-side on md+ screens | Done |
-| I7 | 2026-04-03 | `/host/settings` — Add ability to delete account and listings | AMS | Settings page is "Coming Soon" placeholder | Blocked |
+| I7 | 2026-04-03 | `/host/settings` — Add ability to delete account and listings | AMS | Added delete account UI with confirmation dialog; logs out user on confirm | Done |
 | I8 | 2026-04-03 | Sitewide — Language toggle on dashboards | AMS | Already present in HostTopNav in upstream | Done |
-| I9 | 2026-04-03 | `/listings` — Search bar dropdowns should match homepage style | AMS | Rewrote SearchFilters with dropdown city, portal calendar, styled inputs | Done |
-| I10 | 2026-04-03 | `/listings` — Date picker should display calendar like homepage | AMS | Replaced HTML date inputs with MiniCalendar in portal | Done |
-| I11 | 2026-04-03 | `/listings` — Guests should be picker with +/- for adults and kids | AMS | Added guest picker dropdown with adults/children counters | Done |
+| I9 | 2026-04-03 | `/listings` — Search bar dropdowns should match homepage style | AMS | Re-applied: searchable city dropdown matching homepage style | Done |
+| I10 | 2026-04-03 | `/listings` — Date picker should display calendar like homepage | AMS | Re-applied: MiniCalendar portal with dual view on desktop | Done |
+| I11 | 2026-04-03 | `/listings` — Guests should be picker with +/- for adults and kids | AMS | Re-applied: guest picker with +/- buttons for adults and children | Done |
 | I12 | 2026-04-03 | `/contact` — Subject field should be required | AMS | Added `*` label and validation check | Done |
