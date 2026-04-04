@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "hostn-app",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -26,10 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4B0082"
       },
-      "supportsRTL": true,
-      "permissions": [
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,13 +36,7 @@
       "expo-image",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-notifications",
-      [
-        "expo-av",
-        {
-          "microphonePermission": false
-        }
-      ]
+      "expo-notifications"
     ],
     "extra": {
       "router": {
