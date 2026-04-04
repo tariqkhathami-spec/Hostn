@@ -55,6 +55,21 @@
 | F27 | 2026-04-04 | Sitewide — SAR symbol after number instead of before; color doesn't match text | AMS | Rewrote SarSymbol from Image to inline SVG with fill="currentColor"; flipped to symbol-before-number everywhere | Done |
 | F28 | 2026-04-04 | Footer — Links to /terms and /privacy instead of /terms-of-use and /privacy-policy | AMS | Updated Footer.tsx hrefs | Done |
 | F29 | 2026-04-04 | `/booking/[id]` — Link to /terms instead of /terms-of-use | AMS | Updated terms link in booking page | Done |
+| F30 | 2026-04-04 | `/listings` — Type filter shows emoji icons that don't match design | AMS | Removed icon field from PROPERTY_TYPES and icon render from grid buttons | Done |
+| F31 | 2026-04-04 | `/listings` — City dropdown only shows selected city on reopen | AMS | Clear citySearch on focus so filteredCities shows all; restore label on close; translate on language switch | Done |
+| F32 | 2026-04-04 | `/listings` — Confirm button on wrong side in Arabic (RTL) | AMS | Changed `ltr:justify-end rtl:justify-start` to `justify-end` (right in LTR, left in RTL) | Done |
+| F33 | 2026-04-04 | `/listings/[id]` — BNPL widget price text wraps incorrectly in RTL | AMS | Changed from formatPrice to formatPriceNumber + SarSymbol inside `dir="ltr"` spans | Done |
+| F34 | 2026-04-04 | `/dashboard/settings` — "Profile updated" toast misleading (only name changes) | AMS | Changed toast to "Name updated" and button to "Save Name" | Done |
+| F35 | 2026-04-04 | `/dashboard/settings` — Change password UI present but non-functional | AMS | Removed entire change password section (state, handler, UI) | Done |
+| F36 | 2026-04-04 | Sitewide — Price "/night" text forced LTR along with number | AMS | Moved `dir="ltr"` from outer container to individual price spans; "/night" label now flows with document direction | Done |
+| F37 | 2026-04-04 | Sitewide — Auth redirect loses original page after login | AMS | Middleware now passes `redirect` query param with original pathname+search; auth page already reads and uses it | Done |
+| F38 | 2026-04-04 | `/dashboard/support` — Support tickets not loading (API path mismatch) | AMS | Changed `api.get('/support/my-tickets')` to `api.get('/support')` to match backend route | Done |
+| F39 | 2026-04-04 | `/` — City dropdown same reopen bug as /listings | AMS | Same fix: clear citySearch on focus, restore label on close, translate on language switch | Done |
+| F40 | 2026-04-04 | Header — Sign out icon bright red, too prominent | AMS | Changed from `text-red-500` to `text-gray-400 hover:text-gray-600` | Done |
+| F41 | 2026-04-04 | `/dashboard/messages` — Send button arrow doesn't flip in RTL | AMS | Added `rtl:rotate-180` class to send icon | Done |
+| F42 | 2026-04-04 | `/listings/[id]` — SAR symbol missing from strikethrough old price | AMS | Added SarSymbol inside line-through spans for PropertyCard and BookingWidget | Done |
+| F43 | 2026-04-04 | Sitewide — SAR symbol height doesn't match digit height | AMS | Set SarSymbol to `height: 0.72em` (cap-height) with `verticalAlign: -0.05em` for baseline alignment | Done |
+| F44 | 2026-04-04 | `/listings` and `/` — MiniCalendar confirm button on wrong side in Arabic | AMS | Changed to `justify-end` for correct side in both LTR and RTL | Done |
 
 ## Improvements
 
@@ -95,3 +110,6 @@
 | I33 | 2026-04-04 | `/blog` — Add blog page with categories, posts, and admin CMS (similar to blog.gathern.co) | AMS | Full stack: BlogPost + BlogCategory models, blog controller + routes, frontend listing + detail pages (bilingual), admin CMS, nav links in Header/Footer/Sidebar | Done |
 | I34 | 2026-04-04 | `/listings` — Add Pool filter, Direction filter, Area slider (0-1500+ m²), Rating from 10, Price slider (0-4000+), District dropdown by city | AMS | New filter bubbles: Pool toggle, Direction dropdown, Area range slider, Price range slider, District city-dependent dropdown; backend extended with area/direction/pool/district query support | Done |
 | I35 | 2026-04-04 | `/dashboard/settings` — Phone number change should require OTP verification | AMS | Phone section now read-only with Edit button; sends OTP to new number; verify code to apply change; backend updateProfile requires phoneVerificationCode for phone changes | Done |
+| I36 | 2026-04-04 | `/listings` — Add dropdown arrows to expandable filter bubbles | AMS | Added `hasDropdown` prop to FilterBubble; ChevronDown icon on Type, Bedrooms, Rating, Price, Area, Direction, District filters | Done |
+| I37 | 2026-04-04 | `/listings/[id]` — Guest picker with adults/children split | AMS | Booking widget now has separate Adults (13+, min 1) and Children (0–12, min 0) counters with +/- buttons; total respects maxGuests | Done |
+| I38 | 2026-04-04 | `/` — Search step indicator showing progress through fields | AMS | Added Property step label to step indicator in HeroSearch | Done |
