@@ -210,7 +210,7 @@ export const messagesApi = {
 // SUPPORT
 // ═══════════════════════════════════════════════════════════════════════════════
 export const supportApi = {
-  getMyTickets: () => api.get('/support/my-tickets'),
+  getMyTickets: () => api.get('/support'),
   createTicket: (data: { subject: string; category: string; priority: string; message: string }) =>
     api.post('/support', data),
   getTicket: (id: string) => api.get(`/support/${id}`),

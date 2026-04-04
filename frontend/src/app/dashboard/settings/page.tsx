@@ -7,7 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { authApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
-  User, Lock, Crown, Loader2, Save, Eye, EyeOff, Mail, Check, ChevronDown, Phone,
+  User, Crown, Loader2, Save, Mail, Check, ChevronDown, Phone,
 } from 'lucide-react';
 
 const GCC_COUNTRIES = [
@@ -41,13 +41,6 @@ export default function SettingsPage() {
   const [phoneCode, setPhoneCode] = useState('');
   const [phoneCodeSent, setPhoneCodeSent] = useState(false);
   const [phoneSaving, setPhoneSaving] = useState(false);
-
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
 
   const [upgrading, setUpgrading] = useState(false);
 
@@ -103,39 +96,11 @@ export default function SettingsPage() {
     try {
       const res = await authApi.updateProfile({ name: name.trim() });
       updateUser(res.data.user || res.data.data || { ...user!, name: name.trim() });
-      toast.success(lang === 'ar' ? '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062e\u0635\u064a' : 'Profile updated');
+      toast.success(lang === 'ar' ? '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0627\u0633\u0645' : 'Name updated');
     } catch {
       toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u062d\u062f\u064a\u062b' : 'Failed to update profile');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentPassword || !newPassword) {
-      toast.error(lang === 'ar' ? '\u062c\u0645\u064a\u0639 \u0627\u0644\u062d\u0642\u0648\u0644 \u0645\u0637\u0644\u0648\u0628\u0629' : 'All fields are required');
-      return;
-    }
-    if (newPassword.length < 6) {
-      toast.error(lang === 'ar' ? '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064a\u062c\u0628 \u0623\u0646 \u062a\u0643\u0648\u0646 6 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644' : 'Password must be at least 6 characters');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error(lang === 'ar' ? '\u0643\u0644\u0645\u062a\u0627 \u0627\u0644\u0645\u0631\u0648\u0631 \u063a\u064a\u0631 \u0645\u062a\u0637\u0627\u0628\u0642\u062a\u064a\u0646' : 'Passwords do not match');
-      return;
-    }
-    setChangingPassword(true);
-    try {
-      await authApi.changePassword({ currentPassword, newPassword });
-      toast.success(lang === 'ar' ? '\u062a\u0645 \u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Password changed successfully');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch {
-      toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Failed to change password');
-    } finally {
-      setChangingPassword(false);
     }
   };
 
@@ -521,7 +486,7 @@ export default function SettingsPage() {
             className="flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {lang === 'ar' ? '\u062d\u0641\u0638 \u0627\u0644\u062a\u063a\u064a\u064a\u0631\u0627\u062a' : 'Update Profile'}
+            {lang === 'ar' ? '\u062d\u0641\u0638 \u0627\u0644\u0627\u0633\u0645' : 'Save Name'}
           </button>
         </form>
       </div>
@@ -555,85 +520,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Change Password Section */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-            <Lock className="w-5 h-5 text-gray-600" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            {lang === 'ar' ? '\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Change Password'}
-          </h2>
-        </div>
-
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              {lang === 'ar' ? '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062d\u0627\u0644\u064a\u0629' : 'Current Password'}
-            </label>
-            <div className="relative">
-              <input
-                type={showCurrent ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className={`${inputClass} pe-10`}
-                placeholder="********"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              {lang === 'ar' ? '\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062c\u062f\u064a\u062f\u0629' : 'New Password'}
-            </label>
-            <div className="relative">
-              <input
-                type={showNew ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className={`${inputClass} pe-10`}
-                placeholder="********"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNew(!showNew)}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              {lang === 'ar' ? '\u062a\u0623\u0643\u064a\u062f \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Confirm Password'}
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className={inputClass}
-              placeholder="********"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={changingPassword}
-            className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-          >
-            {changingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-            {lang === 'ar' ? '\u062a\u063a\u064a\u064a\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631' : 'Change Password'}
-          </button>
-        </form>
-      </div>
     </div>
   );
 }

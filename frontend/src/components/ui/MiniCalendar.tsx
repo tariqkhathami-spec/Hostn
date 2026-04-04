@@ -200,7 +200,7 @@ export default function MiniCalendar({
       )}
 
       {onConfirm && checkIn && checkOut && (
-        <div className="px-1 pt-2 pb-1 border-t border-gray-100 mt-2 flex ltr:justify-end rtl:justify-start">
+        <div className="px-1 pt-2 pb-1 border-t border-gray-100 mt-2 flex justify-end">
           <button
             type="button"
             onClick={onConfirm}
