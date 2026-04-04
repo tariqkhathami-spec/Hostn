@@ -103,6 +103,22 @@ export default function HeroSearch() {
     setStep('ready');
   }, [checkIn, today]);
 
+  // Restore city label when dropdown closes without selection
+  useEffect(() => {
+    if (!showCityDropdown && city) {
+      const found = CITIES.find((c) => c.value === city);
+      if (found) setCitySearch(isAr ? found.ar : found.en);
+    }
+  }, [showCityDropdown, city, isAr]);
+
+  // Update city label on language switch
+  useEffect(() => {
+    if (city) {
+      const found = CITIES.find((c) => c.value === city);
+      if (found) setCitySearch(isAr ? found.ar : found.en);
+    }
+  }, [isAr]);
+
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -143,6 +159,7 @@ export default function HeroSearch() {
   // Step indicator dots
   const steps: { key: SearchStep; label: string }[] = [
     { key: 'location', label: t('hero.destination') },
+    { key: 'location', label: t('hero.propertyType') },
     { key: 'dates', label: t('hero.dates') },
     { key: 'ready', label: t('hero.search') },
   ];
@@ -239,6 +256,7 @@ export default function HeroSearch() {
                       setCityHighlight(-1);
                     }}
                     onFocus={() => {
+                      setCitySearch('');
                       setShowCityDropdown(true);
                       setStep('location');
                     }}

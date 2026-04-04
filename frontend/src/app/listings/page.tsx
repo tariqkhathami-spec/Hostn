@@ -29,13 +29,13 @@ export default function ListingsPage() {
 
 // ─── Property types ───────────────────────────────────────────────────────────
 const PROPERTY_TYPES = [
-  { key: 'chalet', icon: '\u{1F3D6}', label: { en: 'Chalets', ar: '\u0634\u0627\u0644\u064A\u0647\u0627\u062A' } },
-  { key: 'villa', icon: '\u{1F3E0}', label: { en: 'Villas', ar: '\u0641\u0644\u0644' } },
-  { key: 'apartment', icon: '\u{1F3E2}', label: { en: 'Apartments', ar: '\u0634\u0642\u0642' } },
-  { key: 'farm', icon: '\u{1F333}', label: { en: 'Farms', ar: '\u0645\u0632\u0627\u0631\u0639' } },
-  { key: 'camp', icon: '\u{26FA}', label: { en: 'Camps', ar: '\u0645\u062E\u064A\u0645\u0627\u062A' } },
-  { key: 'hotel', icon: '\u{1F3E8}', label: { en: 'Hotels', ar: '\u0641\u0646\u0627\u062F\u0642' } },
-  { key: 'studio', icon: '\u{1F3A8}', label: { en: 'Studios', ar: '\u0627\u0633\u062A\u0648\u062F\u064A\u0648' } },
+  { key: 'chalet', label: { en: 'Chalets', ar: '\u0634\u0627\u0644\u064A\u0647\u0627\u062A' } },
+  { key: 'villa', label: { en: 'Villas', ar: '\u0641\u0644\u0644' } },
+  { key: 'apartment', label: { en: 'Apartments', ar: '\u0634\u0642\u0642' } },
+  { key: 'farm', label: { en: 'Farms', ar: '\u0645\u0632\u0627\u0631\u0639' } },
+  { key: 'camp', label: { en: 'Camps', ar: '\u0645\u062E\u064A\u0645\u0627\u062A' } },
+  { key: 'hotel', label: { en: 'Hotels', ar: '\u0641\u0646\u0627\u062F\u0642' } },
+  { key: 'studio', label: { en: 'Studios', ar: '\u0627\u0633\u062A\u0648\u062F\u064A\u0648' } },
 ];
 
 const BEDROOM_OPTIONS = [
@@ -62,12 +62,14 @@ function FilterBubble({
   active,
   onClick,
   onClear,
+  hasDropdown,
 }: {
   icon: React.ElementType;
   label: string;
   active: boolean;
   onClick: () => void;
   onClear?: () => void;
+  hasDropdown?: boolean;
 }) {
   return (
     <button
@@ -81,7 +83,7 @@ function FilterBubble({
     >
       <Icon className="w-3.5 h-3.5" />
       {label}
-      {active && onClear && (
+      {active && onClear ? (
         <span
           role="button"
           onClick={(e) => { e.stopPropagation(); onClear(); }}
@@ -89,7 +91,9 @@ function FilterBubble({
         >
           <X className="w-3 h-3" />
         </span>
-      )}
+      ) : hasDropdown ? (
+        <ChevronDown className="w-3 h-3 opacity-50" />
+      ) : null}
     </button>
   );
 }
@@ -160,6 +164,22 @@ function ListingsContent() {
     const q = citySearch.toLowerCase();
     return !q || c.en.toLowerCase().includes(q) || c.ar.includes(q);
   });
+
+  // Restore city label when dropdown closes without selection
+  useEffect(() => {
+    if (!showCityDropdown && searchCity) {
+      const found = CITIES.find((c) => c.value === searchCity);
+      if (found) setCitySearch(isAr ? found.ar : found.en);
+    }
+  }, [showCityDropdown, searchCity, isAr]);
+
+  // Update city label on language switch
+  useEffect(() => {
+    if (searchCity) {
+      const found = CITIES.find((c) => c.value === searchCity);
+      if (found) setCitySearch(isAr ? found.ar : found.en);
+    }
+  }, [isAr]);
 
   // Click outside
   useEffect(() => {
@@ -332,7 +352,7 @@ function ListingsContent() {
                   type="text"
                   value={citySearch}
                   onChange={(e) => { setCitySearch(e.target.value); setSearchCity(''); setShowCityDropdown(true); }}
-                  onFocus={() => setShowCityDropdown(true)}
+                  onFocus={() => { setCitySearch(''); setShowCityDropdown(true); }}
                   placeholder={isAr ? '\u0627\u0628\u062D\u062B \u0639\u0646 \u0645\u062F\u064A\u0646\u0629...' : 'Search city...'}
                   className="w-full ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 bg-white"
                 />
@@ -444,7 +464,7 @@ function ListingsContent() {
                       </div>
                     </div>
                     {/* Confirm button */}
-                    <div className="flex ltr:justify-end rtl:justify-start">
+                    <div className="flex justify-end">
                       <button type="button" onClick={() => { setShowGuestPicker(false); }} className="px-6 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors">
                         {isAr ? '\u062A\u0623\u0643\u064A\u062F' : 'Confirm'}
                       </button>
@@ -475,18 +495,18 @@ function ListingsContent() {
                 active={selectedTypes.length > 0}
                 onClick={() => setOpenFilter(openFilter === 'type' ? null : 'type')}
                 onClear={selectedTypes.length > 0 ? () => { setSelectedTypes([]); } : undefined}
+                hasDropdown
               />
               {openFilter === 'type' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[220px]">
                   <div className="grid grid-cols-2 gap-1.5">
-                    {PROPERTY_TYPES.map(({ key, icon, label }) => (
+                    {PROPERTY_TYPES.map(({ key, label }) => (
                       <button key={key} type="button" onClick={() => toggleType(key)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                           selectedTypes.includes(key)
                             ? 'bg-primary-50 text-primary-700 border border-primary-200'
                             : 'text-gray-600 hover:bg-gray-50 border border-gray-100'
                         }`}>
-                        <span>{icon}</span>
                         {label[lang]}
                       </button>
                     ))}
@@ -507,6 +527,7 @@ function ListingsContent() {
                 active={!!minBedrooms}
                 onClick={() => setOpenFilter(openFilter === 'bedrooms' ? null : 'bedrooms')}
                 onClear={minBedrooms ? () => setMinBedrooms('') : undefined}
+                hasDropdown
               />
               {openFilter === 'bedrooms' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[180px]">
@@ -533,6 +554,7 @@ function ListingsContent() {
                 active={!!minRating}
                 onClick={() => setOpenFilter(openFilter === 'rating' ? null : 'rating')}
                 onClear={minRating ? () => setMinRating('') : undefined}
+                hasDropdown
               />
               {openFilter === 'rating' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[160px]">
@@ -580,6 +602,7 @@ function ListingsContent() {
                 active={priceRange < 4000}
                 onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
                 onClear={priceRange < 4000 ? () => setPriceRange(4000) : undefined}
+                hasDropdown
               />
               {openFilter === 'price' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
@@ -609,6 +632,7 @@ function ListingsContent() {
                 active={areaRange < 1500}
                 onClick={() => setOpenFilter(openFilter === 'area' ? null : 'area')}
                 onClear={areaRange < 1500 ? () => setAreaRange(1500) : undefined}
+                hasDropdown
               />
               {openFilter === 'area' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
@@ -638,6 +662,7 @@ function ListingsContent() {
                 active={!!direction}
                 onClick={() => setOpenFilter(openFilter === 'direction' ? null : 'direction')}
                 onClear={direction ? () => setDirection('') : undefined}
+                hasDropdown
               />
               {openFilter === 'direction' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[200px]">
@@ -666,6 +691,7 @@ function ListingsContent() {
                 active={!!district}
                 onClick={() => setOpenFilter(openFilter === 'district' ? null : 'district')}
                 onClear={district ? () => setDistrict('') : undefined}
+                hasDropdown
               />
               {openFilter === 'district' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[220px] max-h-[280px] overflow-y-auto">

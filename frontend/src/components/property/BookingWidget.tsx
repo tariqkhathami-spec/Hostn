@@ -26,7 +26,9 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   const isAr = language === 'ar';
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
-  const [guests, setGuests] = useState(1);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const guests = adults + children;
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
 
@@ -91,18 +93,18 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       <div className="flex items-center justify-between mb-5">
         <div>
           {property.pricing.discountPercent > 0 ? (
-            <div className="flex items-baseline gap-1.5" dir="ltr">
-              <span className="text-2xl font-bold text-primary-600">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold text-primary-600" dir="ltr">
                 <SarSymbol /> {formatPriceNumber(displayPrice)}
               </span>
-              <span className="text-base text-gray-400 line-through">
+              <span className="text-base text-gray-400 line-through" dir="ltr">
                 <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
               </span>
               <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
             </div>
           ) : (
-            <div className="flex items-baseline gap-1" dir="ltr">
-              <span className="text-2xl font-bold text-primary-600">
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-primary-600" dir="ltr">
                 <SarSymbol /> {formatPriceNumber(pricePerNight)}
               </span>
               <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
@@ -161,22 +163,39 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
             />
           </div>
         )}
-        <div className="border-t border-gray-200 p-3">
-          <label className="block text-xs font-semibold text-gray-500 mb-1">{t('booking.guests')}</label>
+        <div className="border-t border-gray-200 p-3 space-y-3">
+          <label className="block text-xs font-semibold text-gray-500">{t('booking.guests')}</label>
+          {/* Adults */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-800">
-                {guests} {guests > 1 ? t('booking.guestsCount') : t('booking.guestCount')}
-              </span>
+            <div>
+              <div className="text-sm font-medium text-gray-800">{isAr ? '\u0628\u0627\u0644\u063A\u064A\u0646' : 'Adults'}</div>
+              <div className="text-[10px] text-gray-400">{isAr ? '13 \u0633\u0646\u0629 \u0641\u0623\u0643\u062B\u0631' : 'Ages 13+'}</div>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setGuests((g) => Math.max(1, g - 1))} disabled={guests <= 1}
+              <button type="button" onClick={() => setAdults((a) => Math.max(1, a - 1))} disabled={adults <= 1}
                 className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Minus className="w-3 h-3" />
               </button>
-              <span className="w-5 text-center text-sm font-medium">{guests}</span>
-              <button type="button" onClick={() => setGuests((g) => Math.min(property.capacity.maxGuests, g + 1))} disabled={guests >= property.capacity.maxGuests}
+              <span className="w-5 text-center text-sm font-medium">{adults}</span>
+              <button type="button" onClick={() => setAdults((a) => Math.min(property.capacity.maxGuests - children, a + 1))} disabled={guests >= property.capacity.maxGuests}
+                className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+          {/* Children */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-800">{isAr ? '\u0623\u0637\u0641\u0627\u0644' : 'Children'}</div>
+              <div className="text-[10px] text-gray-400">{isAr ? '0\u201312 \u0633\u0646\u0629' : 'Ages 0\u201312'}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setChildren((c) => Math.max(0, c - 1))} disabled={children <= 0}
+                className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="w-5 text-center text-sm font-medium">{children}</span>
+              <button type="button" onClick={() => setChildren((c) => Math.min(property.capacity.maxGuests - adults, c + 1))} disabled={guests >= property.capacity.maxGuests}
                 className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Plus className="w-3 h-3" />
               </button>

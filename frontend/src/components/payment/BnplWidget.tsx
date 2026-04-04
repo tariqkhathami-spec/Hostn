@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
-import { formatPrice } from '@/lib/utils';
+import { formatPriceNumber } from '@/lib/utils';
+import SarSymbol from '@/components/ui/SarSymbol';
 import { ChevronDown } from 'lucide-react';
 
 interface BnplWidgetProps {
@@ -38,8 +39,8 @@ export default function BnplWidget({ total }: BnplWidgetProps) {
           </svg>
           <span className="text-xs font-semibold text-emerald-800">
             {isAr
-              ? `قسّمها على 4 دفعات — ${formatPrice(installment)} / دفعة`
-              : `Split into 4 payments of ${formatPrice(installment)}`
+              ? <>{'\u0642\u0633\u0651\u0645\u0647\u0627 \u0639\u0644\u0649 4 \u062F\u0641\u0639\u0627\u062A \u2014 '}<span dir="ltr"><SarSymbol /> {formatPriceNumber(installment)}</span>{' / \u062F\u0641\u0639\u0629'}</>
+              : <>Split into 4 payments of <span dir="ltr"><SarSymbol /> {formatPriceNumber(installment)}</span></>
             }
           </span>
         </div>
@@ -54,7 +55,7 @@ export default function BnplWidget({ total }: BnplWidgetProps) {
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="flex-1 text-center">
                 <div className={`h-1.5 rounded-full mb-1.5 ${i === 0 ? 'bg-emerald-500' : 'bg-emerald-200'}`} />
-                <p className="text-xs font-bold text-emerald-800">{formatPrice(installment)}</p>
+                <p className="text-xs font-bold text-emerald-800" dir="ltr"><SarSymbol /> {formatPriceNumber(installment)}</p>
                 <p className="text-[10px] text-emerald-600">
                   {i === 0
                     ? (isAr ? 'اليوم' : 'Today')

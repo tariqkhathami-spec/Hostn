@@ -51,7 +51,7 @@ export default function Header() {
                 </Link>
                 <button
                   onClick={logout}
-                  className="text-sm text-red-500 hover:text-red-600 transition-colors"
+                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
                   title={lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
                 >
                   <LogOut className="w-4 h-4 rtl:rotate-180" />

@@ -203,18 +203,18 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
           <div className="flex items-center justify-between">
             <div>
               {discountedPrice ? (
-                <div className="flex items-baseline gap-1.5" dir="ltr">
-                  <span className="text-base font-bold text-primary-600">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-base font-bold text-primary-600" dir="ltr">
                     <SarSymbol /> {formatPriceNumber(discountedPrice)}
                   </span>
-                  <span className="text-xs text-gray-400 line-through">
+                  <span className="text-xs text-gray-400 line-through" dir="ltr">
                     <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
                   </span>
                   <span className="text-xs text-gray-500">{t('property.perNight')}</span>
                 </div>
               ) : (
-                <div className="flex items-baseline gap-1" dir="ltr">
-                  <span className="text-base font-bold text-primary-600">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-bold text-primary-600" dir="ltr">
                     <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
                   </span>
                   <span className="text-xs text-gray-500">{t('property.perNight')}</span>

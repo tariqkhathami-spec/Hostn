@@ -37,9 +37,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protected routes: require authentication
+  // Protected routes: require authentication — pass original path as redirect
   if (!isAuthenticated) {
-    return NextResponse.redirect(new URL('/auth', request.url));
+    const redirectUrl = new URL('/auth', request.url);
+    redirectUrl.searchParams.set('redirect', pathname + (request.nextUrl.search || ''));
+    return NextResponse.redirect(redirectUrl);
   }
 
   // /dashboard/* — accessible by any authenticated user (primarily guest)
