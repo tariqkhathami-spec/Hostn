@@ -540,32 +540,32 @@ function BookingContent() {
                   <div className="space-y-3 text-sm mb-6">
                     <h3 className="font-bold text-gray-900">{isAr ? 'تفاصيل السعر' : 'Price details'}</h3>
                     <div className="flex justify-between text-gray-600">
-                      <span><SarSymbol /> {formatPriceNumber(pricePerNight)} &times; {nights} {isAr ? (nights === 1 ? '\u0644\u064A\u0644\u0629' : '\u0644\u064A\u0627\u0644\u064A') : (nights !== 1 ? 'nights' : 'night')}</span>
-                      <span><SarSymbol /> {formatPriceNumber(subtotal)}</span>
+                      <span dir="ltr"><SarSymbol /> {formatPriceNumber(pricePerNight)} &times; {nights} {isAr ? (nights === 1 ? '\u0644\u064A\u0644\u0629' : '\u0644\u064A\u0627\u0644\u064A') : (nights !== 1 ? 'nights' : 'night')}</span>
+                      <span dir="ltr"><SarSymbol /> {formatPriceNumber(subtotal)}</span>
                     </div>
                     {cleaningFee > 0 && (
                       <div className="flex justify-between text-gray-600">
                         <span>{isAr ? '\u0631\u0633\u0648\u0645 \u0627\u0644\u062A\u0646\u0638\u064A\u0641' : 'Cleaning fee'}</span>
-                        <span><SarSymbol /> {formatPriceNumber(cleaningFee)}</span>
+                        <span dir="ltr"><SarSymbol /> {formatPriceNumber(cleaningFee)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-gray-600">
                       <span>{isAr ? '\u0631\u0633\u0648\u0645 \u0627\u0644\u062E\u062F\u0645\u0629' : 'Service fee'}</span>
-                      <span><SarSymbol /> {formatPriceNumber(serviceFee)}</span>
+                      <span dir="ltr"><SarSymbol /> {formatPriceNumber(serviceFee)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span>{isAr ? `\u062E\u0635\u0645 (${property.pricing.discountPercent}%)` : `Discount (${property.pricing.discountPercent}%)`}</span>
-                        <span><SarSymbol /> -{formatPriceNumber(discount)}</span>
+                        <span dir="ltr"><SarSymbol /> -{formatPriceNumber(discount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-gray-600">
                       <span>{isAr ? '\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629 (15%)' : 'VAT (15%)'}</span>
-                      <span><SarSymbol /> {formatPriceNumber(vat)}</span>
+                      <span dir="ltr"><SarSymbol /> {formatPriceNumber(vat)}</span>
                     </div>
                     <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200 text-base">
                       <span>{isAr ? '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0634\u0627\u0645\u0644 \u0627\u0644\u0636\u0631\u064A\u0628\u0629' : 'Total (incl. VAT)'}</span>
-                      <span><SarSymbol /> {formatPriceNumber(total)}</span>
+                      <span dir="ltr"><SarSymbol /> {formatPriceNumber(total)}</span>
                     </div>
                   </div>
 
