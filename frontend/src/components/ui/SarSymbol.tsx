@@ -2,19 +2,29 @@
 
 interface SarSymbolProps {
   className?: string;
-  /** Height in pixels — defaults to matching surrounding text via 1em */
+  /** Fixed pixel size — when omitted the icon scales to match the font */
   size?: number;
 }
 
+/**
+ * Saudi Riyal (SAR) currency symbol as inline SVG.
+ *
+ * Guidelines followed:
+ *  • Symbol always to the LEFT of the number (caller wraps with dir="ltr")
+ *  • `fill="currentColor"` so colour inherits from surrounding text
+ *  • Height matches the digit height via `0.72em` (cap-height ≈ 72 % of font-size)
+ *  • `vertical-align: -0.05em` nudges it down to sit on the same baseline as digits
+ */
 export default function SarSymbol({ className = '', size }: SarSymbolProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1124.14 1256.39"
       fill="currentColor"
-      width={size || 16}
-      height={size || 16}
-      className={`inline-block ${size ? '' : 'h-[1em] w-auto'} ${className}`}
+      {...(size
+        ? { width: size, height: size }
+        : { style: { height: '0.72em', width: 'auto', verticalAlign: '-0.05em' } })}
+      className={`inline-block ${className}`}
       aria-label="SAR"
       role="img"
     >
