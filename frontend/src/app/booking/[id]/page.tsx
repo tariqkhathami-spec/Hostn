@@ -6,7 +6,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Property } from '@/types';
 import { propertiesApi, bookingsApi, paymentsApi, bnplApi } from '@/lib/api';
-import { formatPrice, formatDate, calculateNights } from '@/lib/utils';
+import { formatPrice, formatPriceNumber, formatDate, calculateNights } from '@/lib/utils';
+import SarSymbol from '@/components/ui/SarSymbol';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { CalendarDays, Users, CreditCard, Shield, ChevronRight, Lock, CheckCircle, Loader2, Clock, Banknote } from 'lucide-react';
@@ -539,32 +540,32 @@ function BookingContent() {
                   <div className="space-y-3 text-sm mb-6">
                     <h3 className="font-bold text-gray-900">{isAr ? 'تفاصيل السعر' : 'Price details'}</h3>
                     <div className="flex justify-between text-gray-600">
-                      <span>{formatPrice(pricePerNight)} × {nights} {isAr ? (nights === 1 ? 'ليلة' : 'ليالي') : (nights !== 1 ? 'nights' : 'night')}</span>
-                      <span>{formatPrice(subtotal)}</span>
+                      <span><SarSymbol /> {formatPriceNumber(pricePerNight)} &times; {nights} {isAr ? (nights === 1 ? '\u0644\u064A\u0644\u0629' : '\u0644\u064A\u0627\u0644\u064A') : (nights !== 1 ? 'nights' : 'night')}</span>
+                      <span><SarSymbol /> {formatPriceNumber(subtotal)}</span>
                     </div>
                     {cleaningFee > 0 && (
                       <div className="flex justify-between text-gray-600">
-                        <span>{isAr ? 'رسوم التنظيف' : 'Cleaning fee'}</span>
-                        <span>{formatPrice(cleaningFee)}</span>
+                        <span>{isAr ? '\u0631\u0633\u0648\u0645 \u0627\u0644\u062A\u0646\u0638\u064A\u0641' : 'Cleaning fee'}</span>
+                        <span><SarSymbol /> {formatPriceNumber(cleaningFee)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-gray-600">
-                      <span>{isAr ? 'رسوم الخدمة' : 'Service fee'}</span>
-                      <span>{formatPrice(serviceFee)}</span>
+                      <span>{isAr ? '\u0631\u0633\u0648\u0645 \u0627\u0644\u062E\u062F\u0645\u0629' : 'Service fee'}</span>
+                      <span><SarSymbol /> {formatPriceNumber(serviceFee)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>{isAr ? `خصم (${property.pricing.discountPercent}%)` : `Discount (${property.pricing.discountPercent}%)`}</span>
-                        <span>-{formatPrice(discount)}</span>
+                        <span>{isAr ? `\u062E\u0635\u0645 (${property.pricing.discountPercent}%)` : `Discount (${property.pricing.discountPercent}%)`}</span>
+                        <span><SarSymbol /> -{formatPriceNumber(discount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-gray-600">
-                      <span>{isAr ? 'ضريبة القيمة المضافة (15%)' : 'VAT (15%)'}</span>
-                      <span>{formatPrice(vat)}</span>
+                      <span>{isAr ? '\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629 (15%)' : 'VAT (15%)'}</span>
+                      <span><SarSymbol /> {formatPriceNumber(vat)}</span>
                     </div>
                     <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200 text-base">
-                      <span>{isAr ? 'الإجمالي شامل الضريبة' : 'Total (incl. VAT)'}</span>
-                      <span>{formatPrice(total)}</span>
+                      <span>{isAr ? '\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0634\u0627\u0645\u0644 \u0627\u0644\u0636\u0631\u064A\u0628\u0629' : 'Total (incl. VAT)'}</span>
+                      <span><SarSymbol /> {formatPriceNumber(total)}</span>
                     </div>
                   </div>
 
@@ -603,7 +604,7 @@ function BookingContent() {
 
                   <p className="text-xs text-center text-gray-500 mt-3">
                     {isAr ? 'بتأكيد الحجز، أنت توافق على ' : 'By confirming, you agree to our '}
-                    <Link href="/terms" className="text-primary-600 hover:underline">
+                    <Link href="/terms-of-use" className="text-primary-600 hover:underline">
                       {isAr ? 'الشروط والأحكام' : 'Terms of Service'}
                     </Link>
                   </p>

@@ -11,12 +11,13 @@ import { CITIES } from '@/lib/constants';
 import Link from 'next/link';
 import {
   Search, MapPin, Calendar, Users, X, ChevronDown, Minus, Plus,
-  Building, BedDouble, Star, Percent, Phone, DollarSign, Map,
+  Building, BedDouble, Star, Percent, DollarSign, Map, Droplets, Compass, Ruler,
 } from 'lucide-react';
 import { Property } from '@/types';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { format, addDays } from 'date-fns';
 import { calculateNights } from '@/lib/utils';
+import { DISTRICTS, DIRECTIONS } from '@/lib/constants';
 
 export default function ListingsPage() {
   return (
@@ -48,9 +49,10 @@ const BEDROOM_OPTIONS = [
 
 const RATING_OPTIONS = [
   { value: '', label: { en: 'Any', ar: '\u0627\u0644\u0643\u0644' } },
-  { value: '3', label: { en: '3+', ar: '3+' } },
-  { value: '4', label: { en: '4+', ar: '4+' } },
-  { value: '4.5', label: { en: '4.5+', ar: '4.5+' } },
+  { value: '6', label: { en: '6+', ar: '6+' } },
+  { value: '7', label: { en: '7+', ar: '7+' } },
+  { value: '8', label: { en: '8+', ar: '8+' } },
+  { value: '9', label: { en: '9+', ar: '9+' } },
 ];
 
 // ─── FilterBubble component ──────────────────────────────────────────────────
@@ -126,12 +128,15 @@ function ListingsContent() {
     const t = searchParams.get('type');
     return t ? t.split(',') : [];
   });
-  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
+  // price and area use slider state below
   const [minBedrooms, setMinBedrooms] = useState(searchParams.get('bedrooms') || '');
   const [minRating, setMinRating] = useState(searchParams.get('rating') || '');
   const [hasDiscount, setHasDiscount] = useState(searchParams.get('discount') === '1');
-  const [area, setArea] = useState(searchParams.get('area') || '');
+  const [district, setDistrict] = useState(searchParams.get('district') || '');
+  const [hasPool, setHasPool] = useState(searchParams.get('pool') === '1');
+  const [direction, setDirection] = useState(searchParams.get('direction') || '');
+  const [priceRange, setPriceRange] = useState(Number(searchParams.get('maxPrice')) || 4000);
+  const [areaRange, setAreaRange] = useState(Number(searchParams.get('maxArea')) || 1500);
 
   // ── Filter popover state ──
   const [openFilter, setOpenFilter] = useState<string | null>(null);
@@ -233,13 +238,15 @@ function ListingsContent() {
       if (selectedTypes.length > 0) params.type = selectedTypes.join(',');
       if (checkIn) params.checkIn = checkIn;
       if (checkOut) params.checkOut = checkOut;
-      if (minPrice) params.minPrice = Number(minPrice);
-      if (maxPrice) params.maxPrice = Number(maxPrice);
+      if (priceRange < 4000) params.maxPrice = priceRange;
       if (guests) params.guests = Number(guests);
       if (minBedrooms) params.bedrooms = Number(minBedrooms);
       if (minRating) params.rating = Number(minRating);
       if (hasDiscount) params.discount = 1;
-      if (area) params.area = area;
+      if (district) params.district = district;
+      if (hasPool) params.pool = 1;
+      if (direction) params.direction = direction;
+      if (areaRange < 1500) params.maxArea = areaRange;
       const res = await propertiesApi.getAll(params);
       setProperties(res.data.properties || res.data.data || []);
     } catch {
@@ -255,13 +262,15 @@ function ListingsContent() {
     if (selectedTypes.length > 0) params.set('type', selectedTypes.join(','));
     if (checkIn) params.set('checkIn', checkIn);
     if (checkOut) params.set('checkOut', checkOut);
-    if (minPrice) params.set('minPrice', minPrice);
-    if (maxPrice) params.set('maxPrice', maxPrice);
+    if (priceRange < 4000) params.set('maxPrice', String(priceRange));
     if (guests) params.set('guests', guests);
     if (minBedrooms) params.set('bedrooms', minBedrooms);
     if (minRating) params.set('rating', minRating);
     if (hasDiscount) params.set('discount', '1');
-    if (area) params.set('area', area);
+    if (district) params.set('district', district);
+    if (hasPool) params.set('pool', '1');
+    if (direction) params.set('direction', direction);
+    if (areaRange < 1500) params.set('maxArea', String(areaRange));
     router.push(`/listings?${params.toString()}`);
     setOpenFilter(null);
     fetchProperties();
@@ -276,10 +285,11 @@ function ListingsContent() {
     );
   };
 
-  const hasActiveFilters = !!(minPrice || maxPrice || minBedrooms || minRating || hasDiscount || area);
+  const hasActiveFilters = !!(priceRange < 4000 || minBedrooms || minRating || hasDiscount || district || hasPool || direction || areaRange < 1500);
   const clearAllFilters = () => {
-    setMinPrice(''); setMaxPrice(''); setMinBedrooms(''); setMinRating('');
-    setHasDiscount(false); setArea(''); setSelectedTypes([]);
+    setPriceRange(4000); setMinBedrooms(''); setMinRating('');
+    setHasDiscount(false); setDistrict(''); setSelectedTypes([]);
+    setHasPool(false); setDirection(''); setAreaRange(1500);
   };
 
   // Auto-flow: city → calendar
@@ -542,6 +552,15 @@ function ListingsContent() {
               )}
             </div>
 
+            {/* Pool */}
+            <FilterBubble
+              icon={Droplets}
+              label={isAr ? '\u0645\u0633\u0628\u062D' : 'Pool'}
+              active={hasPool}
+              onClick={() => { setHasPool(!hasPool); setTimeout(handleSearch, 0); }}
+              onClear={hasPool ? () => { setHasPool(false); } : undefined}
+            />
+
             {/* Discount */}
             <FilterBubble
               icon={Percent}
@@ -551,60 +570,122 @@ function ListingsContent() {
               onClear={hasDiscount ? () => { setHasDiscount(false); } : undefined}
             />
 
-            {/* Price Range */}
+            {/* Price Slider */}
             <div className="relative">
               <FilterBubble
                 icon={DollarSign}
-                label={minPrice || maxPrice
-                  ? `${minPrice || '0'} - ${maxPrice || '\u221E'} SAR`
+                label={priceRange < 4000
+                  ? `${isAr ? '\u062D\u062A\u0649' : 'Up to'} ${priceRange} SAR`
                   : (isAr ? '\u0627\u0644\u0633\u0639\u0631' : 'Price')}
-                active={!!(minPrice || maxPrice)}
+                active={priceRange < 4000}
                 onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
-                onClear={(minPrice || maxPrice) ? () => { setMinPrice(''); setMaxPrice(''); } : undefined}
+                onClear={priceRange < 4000 ? () => setPriceRange(4000) : undefined}
               />
               {openFilter === 'price' && (
-                <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[240px]">
-                  <div className="grid grid-cols-2 gap-2 mb-2">
-                    <div>
-                      <label className="block text-[10px] font-medium text-gray-500 mb-0.5">{isAr ? '\u0623\u0642\u0644' : 'Min'}</label>
-                      <input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0"
-                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-400" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-medium text-gray-500 mb-0.5">{isAr ? '\u0623\u0639\u0644\u0649' : 'Max'}</label>
-                      <input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="5000"
-                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-400" />
-                    </div>
+                <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-medium text-gray-500">0 SAR</span>
+                    <span className="text-xs font-bold text-primary-700">{priceRange >= 4000 ? '4000+' : priceRange} SAR</span>
+                    <span className="text-[10px] font-medium text-gray-500">4000+</span>
                   </div>
+                  <input type="range" min="0" max="4000" step="100" value={priceRange}
+                    onChange={(e) => setPriceRange(Number(e.target.value))}
+                    className="w-full accent-primary-600 h-1.5 cursor-pointer" />
                   <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
-                    className="w-full py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                    className="w-full mt-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
                     {isAr ? '\u062A\u0637\u0628\u064A\u0642' : 'Apply'}
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Area/District */}
+            {/* Area Slider (m²) */}
+            <div className="relative">
+              <FilterBubble
+                icon={Ruler}
+                label={areaRange < 1500
+                  ? `${isAr ? '\u062D\u062A\u0649' : 'Up to'} ${areaRange} m\u00B2`
+                  : (isAr ? '\u0627\u0644\u0645\u0633\u0627\u062D\u0629' : 'Area')}
+                active={areaRange < 1500}
+                onClick={() => setOpenFilter(openFilter === 'area' ? null : 'area')}
+                onClear={areaRange < 1500 ? () => setAreaRange(1500) : undefined}
+              />
+              {openFilter === 'area' && (
+                <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-medium text-gray-500">0 m\u00B2</span>
+                    <span className="text-xs font-bold text-primary-700">{areaRange >= 1500 ? '1500+' : areaRange} m\u00B2</span>
+                    <span className="text-[10px] font-medium text-gray-500">1500+ m\u00B2</span>
+                  </div>
+                  <input type="range" min="0" max="1500" step="50" value={areaRange}
+                    onChange={(e) => setAreaRange(Number(e.target.value))}
+                    className="w-full accent-primary-600 h-1.5 cursor-pointer" />
+                  <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
+                    className="w-full mt-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
+                    {isAr ? '\u062A\u0637\u0628\u064A\u0642' : 'Apply'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Direction */}
+            <div className="relative">
+              <FilterBubble
+                icon={Compass}
+                label={direction
+                  ? (DIRECTIONS.find(d => d.value === direction)?.[lang] || direction)
+                  : (isAr ? '\u0627\u0644\u0627\u062A\u062C\u0627\u0647' : 'Direction')}
+                active={!!direction}
+                onClick={() => setOpenFilter(openFilter === 'direction' ? null : 'direction')}
+                onClear={direction ? () => setDirection('') : undefined}
+              />
+              {openFilter === 'direction' && (
+                <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[200px]">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {DIRECTIONS.map((d) => (
+                      <button key={d.value} type="button"
+                        onClick={() => { setDirection(d.value); setOpenFilter(null); handleSearch(); }}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          direction === d.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}>
+                        {d[lang]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* District (city-dependent) */}
             <div className="relative">
               <FilterBubble
                 icon={Map}
-                label={area || (isAr ? '\u0627\u0644\u062D\u064A' : 'Area')}
-                active={!!area}
-                onClick={() => setOpenFilter(openFilter === 'area' ? null : 'area')}
-                onClear={area ? () => setArea('') : undefined}
+                label={district
+                  ? (DISTRICTS[searchCity]?.find(d => d.value === district)?.[lang] || district)
+                  : (isAr ? '\u0627\u0644\u062D\u064A' : 'District')}
+                active={!!district}
+                onClick={() => setOpenFilter(openFilter === 'district' ? null : 'district')}
+                onClear={district ? () => setDistrict('') : undefined}
               />
-              {openFilter === 'area' && (
-                <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[200px]">
-                  <input
-                    type="text" value={area} onChange={(e) => setArea(e.target.value)}
-                    placeholder={isAr ? '\u0627\u0633\u0645 \u0627\u0644\u062D\u064A \u0623\u0648 \u0627\u0644\u0645\u0646\u0637\u0642\u0629' : 'District or area name'}
-                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-400 mb-2"
-                    autoFocus
-                  />
-                  <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
-                    className="w-full py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
-                    {isAr ? '\u062A\u0637\u0628\u064A\u0642' : 'Apply'}
-                  </button>
+              {openFilter === 'district' && (
+                <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[220px] max-h-[280px] overflow-y-auto">
+                  {searchCity && DISTRICTS[searchCity] ? (
+                    <div className="space-y-1">
+                      {DISTRICTS[searchCity].map((d) => (
+                        <button key={d.value} type="button"
+                          onClick={() => { setDistrict(d.value); setOpenFilter(null); handleSearch(); }}
+                          className={`w-full text-start px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                            district === d.value ? 'bg-primary-50 text-primary-700 border border-primary-200' : 'text-gray-600 hover:bg-gray-50'
+                          }`}>
+                          {d[lang]}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center py-3">
+                      {isAr ? '\u0627\u062E\u062A\u0631 \u0645\u062F\u064A\u0646\u0629 \u0623\u0648\u0644\u0627\u064B' : 'Select a city first'}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

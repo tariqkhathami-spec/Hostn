@@ -14,6 +14,8 @@ const ALLOWED_UPDATE_FIELDS = [
   'capacity',
   'rules',
   'unavailableDates',
+  'area',
+  'direction',
 ];
 
 // @desc    Get all properties with search & filter
@@ -35,6 +37,15 @@ exports.getProperties = async (req, res, next) => {
       sort = '-ratings.average',
       featured,
       search,
+      bedrooms,
+      rating,
+      discount,
+      area,
+      district,
+      direction,
+      pool,
+      minArea,
+      maxArea,
     } = req.query;
 
     const query = { isActive: true };
@@ -50,10 +61,24 @@ exports.getProperties = async (req, res, next) => {
     }
 
     if (guests) query['capacity.maxGuests'] = { $gte: Number(guests) };
+    if (bedrooms) query['capacity.bedrooms'] = { $gte: Number(bedrooms) };
+    if (rating) query['ratings.average'] = { $gte: Number(rating) };
+    if (discount === '1' || discount === 'true') query['pricing.discountPercent'] = { $gt: 0 };
+    if (direction) query.direction = direction;
+    if (pool === '1' || pool === 'true') query.amenities = { ...(query.amenities || {}), $all: [...((query.amenities || {})?.$all || []), 'pool'] };
+
+    if (district) query['location.district'] = { $regex: escapeRegex(String(district)), $options: 'i' };
+    if (area) query['location.district'] = { $regex: escapeRegex(String(area)), $options: 'i' };
+
+    if (minArea || maxArea) {
+      query.area = {};
+      if (minArea) query.area.$gte = Number(minArea);
+      if (maxArea) query.area.$lte = Number(maxArea);
+    }
 
     if (amenities) {
-      const amenityList = amenities.split(',');
-      query.amenities = { $all: amenityList };
+      const amenityList = String(amenities).split(',');
+      query.amenities = { ...(query.amenities || {}), $all: [...((query.amenities || {})?.$all || []), ...amenityList] };
     }
 
     if (search) {

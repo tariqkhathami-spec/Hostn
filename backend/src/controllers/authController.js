@@ -311,10 +311,55 @@ exports.updateProfile = async (req, res, next) => {
       });
     }
 
-    // ── Normal profile update (name, phone, avatar) ──────────────────────
+    // ── Phone change flow (OTP required) ───────────────────────────────
+    if (phone !== undefined) {
+      const currentUser = await User.findById(req.user._id);
+      const currentPhone = currentUser.phone || '';
+
+      if (phone && phone !== currentPhone) {
+        const { phoneVerificationCode, phoneCountryCode } = req.body;
+
+        if (!phoneVerificationCode) {
+          return res.status(400).json({
+            success: false,
+            message: 'Phone verification required. Send OTP to the new number first.',
+            requiresVerification: true,
+          });
+        }
+
+        // Extract raw phone (without country code) for OTP lookup
+        const cc = phoneCountryCode || '+966';
+        const rawPhone = phone.startsWith(cc) ? phone.slice(cc.length) : phone;
+
+        const OTP = require('../models/OTP');
+        const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && phoneVerificationCode === '000000';
+        if (!isDevBypass) {
+          const result = await OTP.verifyCode(rawPhone, cc, phoneVerificationCode);
+          if (!result.valid) {
+            return res.status(400).json({ success: false, message: result.message || 'Invalid verification code' });
+          }
+        }
+
+        // Check phone not already taken
+        const existingPhoneUser = await User.findOne({ phone, _id: { $ne: req.user._id } });
+        if (existingPhoneUser) {
+          return res.status(400).json({ success: false, message: 'Phone already linked to another account' });
+        }
+
+        // Apply phone change along with any other profile fields
+        const updates = { phone, phoneVerified: true };
+        if (name !== undefined) updates.name = name;
+        if (avatar !== undefined) updates.avatar = avatar;
+
+        const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+        return res.json({ success: true, user });
+      }
+    }
+
+    // ── Normal profile update (name, avatar — phone unchanged) ──────────
     const updates = {};
     if (name !== undefined) updates.name = name;
-    if (phone !== undefined) updates.phone = phone;
+    if (phone !== undefined) updates.phone = phone; // same phone, no verification needed
     if (avatar !== undefined) updates.avatar = avatar;
 
     const user = await User.findByIdAndUpdate(

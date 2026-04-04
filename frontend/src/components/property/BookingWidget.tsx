@@ -93,7 +93,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
           {property.pricing.discountPercent > 0 ? (
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold text-primary-600">
-                {formatPriceNumber(displayPrice)} <SarSymbol />
+                <SarSymbol /> {formatPriceNumber(displayPrice)}
               </span>
               <span className="text-base text-gray-400 line-through">
                 {formatPriceNumber(property.pricing.perNight)}
@@ -103,7 +103,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
           ) : (
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-bold text-primary-600">
-                {formatPriceNumber(pricePerNight)} <SarSymbol />
+                <SarSymbol /> {formatPriceNumber(pricePerNight)}
               </span>
               <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
             </div>
@@ -195,32 +195,32 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       {nights > 0 && (
         <div className="space-y-3 text-sm">
           <div className="flex justify-between text-gray-600">
-            <span>{formatPriceNumber(pricePerNight)} <SarSymbol /> × {nights} {nightLabel}</span>
-            <span>{formatPriceNumber(subtotal)} <SarSymbol /></span>
+            <span><SarSymbol /> {formatPriceNumber(pricePerNight)} &times; {nights} {nightLabel}</span>
+            <span><SarSymbol /> {formatPriceNumber(subtotal)}</span>
           </div>
           {cleaningFee > 0 && (
             <div className="flex justify-between text-gray-600">
               <span>{t('booking.cleaningFee')}</span>
-              <span>{formatPriceNumber(cleaningFee)} <SarSymbol /></span>
+              <span><SarSymbol /> {formatPriceNumber(cleaningFee)}</span>
             </div>
           )}
           <div className="flex justify-between text-gray-600">
             <span>{t('booking.serviceFee')}</span>
-            <span>{formatPriceNumber(serviceFee)} <SarSymbol /></span>
+            <span><SarSymbol /> {formatPriceNumber(serviceFee)}</span>
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-green-600">
               <span>{t('booking.discount')} ({property.pricing.discountPercent}%)</span>
-              <span>-{formatPriceNumber(discount)} <SarSymbol /></span>
+              <span><SarSymbol /> -{formatPriceNumber(discount)}</span>
             </div>
           )}
           <div className="flex justify-between text-gray-600">
             <span>{t('booking.vat')}</span>
-            <span>{formatPriceNumber(vat)} <SarSymbol /></span>
+            <span><SarSymbol /> {formatPriceNumber(vat)}</span>
           </div>
           <div className="flex justify-between font-bold text-gray-900 pt-3 border-t border-gray-200">
             <span>{t('booking.total')}</span>
-            <span>{formatPriceNumber(total)} <SarSymbol /></span>
+            <span><SarSymbol /> {formatPriceNumber(total)}</span>
           </div>
           {/* BNPL installment preview */}
           <BnplWidget total={total} />

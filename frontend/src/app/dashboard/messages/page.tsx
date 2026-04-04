@@ -236,9 +236,9 @@ function GuestMessagesContent() {
                     <div className="relative">
                       <button onClick={() => setShowMenu(!showMenu)} className="p-2 hover:bg-gray-100 rounded-lg"><MoreVertical className="w-4 h-4 text-gray-500" /></button>
                       {showMenu && (
-                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[160px]">
-                          <button onClick={handleBlock} className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600">
-                            <Ban className="w-4 h-4" />{selectedConv?.isBlocked ? (isAr ? 'إلغاء الحظر' : 'Unblock') : (isAr ? 'حظر المستخدم' : 'Block User')}
+                        <div className="absolute end-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[160px]">
+                          <button onClick={handleBlock} className="w-full px-4 py-2.5 text-start text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600">
+                            <Ban className="w-4 h-4" />{selectedConv?.isBlocked ? (isAr ? '\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u062D\u0638\u0631' : 'Unblock') : (isAr ? '\u062D\u0638\u0631 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645' : 'Block User')}
                           </button>
                         </div>
                       )}

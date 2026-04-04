@@ -71,6 +71,11 @@ const propertySchema = new mongoose.Schema(
         ],
       },
     ],
+    area: { type: Number, min: 0 }, // property size in m²
+    direction: {
+      type: String,
+      enum: ['north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest'],
+    },
     pricing: {
       perNight: { type: Number, required: true, min: 0 },
       cleaningFee: { type: Number, default: 0 },

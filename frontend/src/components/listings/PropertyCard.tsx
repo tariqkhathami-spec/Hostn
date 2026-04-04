@@ -205,7 +205,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
               {discountedPrice ? (
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-base font-bold text-primary-600">
-                    {formatPriceNumber(discountedPrice)} <SarSymbol />
+                    <SarSymbol /> {formatPriceNumber(discountedPrice)}
                   </span>
                   <span className="text-xs text-gray-400 line-through">
                     {formatPriceNumber(property.pricing.perNight)}
@@ -215,7 +215,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
               ) : (
                 <div className="flex items-baseline gap-1">
                   <span className="text-base font-bold text-primary-600">
-                    {formatPriceNumber(property.pricing.perNight)} <SarSymbol />
+                    <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
                   </span>
                   <span className="text-xs text-gray-500">{t('property.perNight')}</span>
                 </div>

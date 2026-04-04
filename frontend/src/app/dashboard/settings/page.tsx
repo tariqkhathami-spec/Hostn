@@ -32,6 +32,16 @@ export default function SettingsPage() {
   const countryRef = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
 
+  // Phone editing with OTP
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [newPhoneCountry, setNewPhoneCountry] = useState(GCC_COUNTRIES[0]);
+  const [showNewCountryPicker, setShowNewCountryPicker] = useState(false);
+  const newCountryRef = useRef<HTMLDivElement>(null);
+  const [phoneCode, setPhoneCode] = useState('');
+  const [phoneCodeSent, setPhoneCodeSent] = useState(false);
+  const [phoneSaving, setPhoneSaving] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -69,11 +79,14 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  // Close country picker on outside click
+  // Close country pickers on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
         setShowCountryPicker(false);
+      }
+      if (newCountryRef.current && !newCountryRef.current.contains(e.target as Node)) {
+        setShowNewCountryPicker(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -88,9 +101,8 @@ export default function SettingsPage() {
     }
     setSaving(true);
     try {
-      const fullPhone = phone.trim() ? `${selectedCountry.code}${phone.trim()}` : '';
-      const res = await authApi.updateProfile({ name: name.trim(), phone: fullPhone });
-      updateUser(res.data.user || res.data.data || { ...user!, name: name.trim(), phone: phone.trim() });
+      const res = await authApi.updateProfile({ name: name.trim() });
+      updateUser(res.data.user || res.data.data || { ...user!, name: name.trim() });
       toast.success(lang === 'ar' ? '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062e\u0635\u064a' : 'Profile updated');
     } catch {
       toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u062d\u062f\u064a\u062b' : 'Failed to update profile');
@@ -136,6 +148,57 @@ export default function SettingsPage() {
     } catch {
       toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u0631\u0642\u064a\u0629' : 'Failed to upgrade');
       setUpgrading(false);
+    }
+  };
+
+  const handleSendPhoneCode = async () => {
+    if (!newPhone || newPhone.length < newPhoneCountry.digits) {
+      toast.error(lang === 'ar' ? '\u0631\u0642\u0645 \u0647\u0627\u062A\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D' : 'Invalid phone number');
+      return;
+    }
+    const fullPhone = `${newPhoneCountry.code}${newPhone}`;
+    const currentFull = `${selectedCountry.code}${phone}`;
+    if (fullPhone === currentFull) {
+      toast.error(lang === 'ar' ? '\u0647\u0630\u0627 \u0631\u0642\u0645\u0643 \u0627\u0644\u062D\u0627\u0644\u064A' : 'This is your current number');
+      return;
+    }
+    setPhoneSaving(true);
+    try {
+      await authApi.sendOtp({ phone: newPhone, countryCode: newPhoneCountry.code, method: 'sms', lang });
+      setPhoneCodeSent(true);
+      toast.success(lang === 'ar' ? '\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642' : 'Verification code sent');
+    } catch {
+      toast.error(lang === 'ar' ? '\u0641\u0634\u0644 \u0641\u064A \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0645\u0632' : 'Failed to send code');
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    if (!phoneCode || phoneCode.length < 4) {
+      toast.error(lang === 'ar' ? '\u0623\u062F\u062E\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642' : 'Enter the verification code');
+      return;
+    }
+    setPhoneSaving(true);
+    try {
+      const fullPhone = `${newPhoneCountry.code}${newPhone}`;
+      const res = await authApi.updateProfile({
+        phone: fullPhone,
+        phoneVerificationCode: phoneCode,
+        phoneCountryCode: newPhoneCountry.code,
+      });
+      updateUser(res.data.user || res.data.data || { ...user!, phone: fullPhone });
+      setSelectedCountry(newPhoneCountry);
+      setPhone(newPhone);
+      toast.success(lang === 'ar' ? '\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641' : 'Phone updated successfully');
+      setEditingPhone(false);
+      setPhoneCodeSent(false);
+      setNewPhone('');
+      setPhoneCode('');
+    } catch {
+      toast.error(lang === 'ar' ? '\u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D' : 'Invalid verification code');
+    } finally {
+      setPhoneSaving(false);
     }
   };
 
@@ -322,56 +385,134 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               {lang === 'ar' ? '\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062a\u0641' : 'Phone'}
             </label>
-            <div className="flex gap-2" dir="ltr">
-              {/* Country code picker */}
-              <div className="relative" ref={countryRef}>
+            {!editingPhone ? (
+              <div className="flex gap-2">
+                <div className="flex gap-2 flex-1" dir="ltr">
+                  <div className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-500 min-w-[105px]">
+                    <span className="text-lg leading-none">{selectedCountry.flag}</span>
+                    <span>{selectedCountry.code}</span>
+                  </div>
+                  <div className="relative flex-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      disabled
+                      className={`${inputClass} pl-9 bg-gray-50 text-gray-500 cursor-not-allowed`}
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setShowCountryPicker(!showCountryPicker)}
-                  className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 font-medium hover:bg-gray-100 transition-colors min-w-[105px] h-full"
+                  onClick={() => { setEditingPhone(true); setNewPhone(''); setNewPhoneCountry(selectedCountry); }}
+                  className="px-3 py-2 text-sm font-medium text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors flex items-center gap-1.5 shrink-0"
                 >
-                  <span className="text-lg leading-none">{selectedCountry.flag}</span>
-                  <span>{selectedCountry.code}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showCountryPicker ? 'rotate-180' : ''}`} />
+                  <Phone className="w-3.5 h-3.5" />
+                  {lang === 'ar' ? '\u062A\u0639\u062F\u064A\u0644' : 'Edit'}
                 </button>
-
-                {showCountryPicker && (
-                  <div className="absolute top-full mt-1 left-0 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[220px]">
-                    {GCC_COUNTRIES.map((country) => (
-                      <button
-                        key={country.code}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCountry(country);
-                          setShowCountryPicker(false);
-                          setPhone('');
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
-                          selectedCountry.code === country.code ? 'bg-primary-50 text-primary-700' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className="text-lg leading-none">{country.flag}</span>
-                        <span className="flex-1 text-start">{lang === 'ar' ? country.ar : country.en}</span>
-                        <span className="text-gray-400 font-mono text-xs">{country.code}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
-
-              {/* Phone input */}
-              <div className="relative flex-1">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            ) : !phoneCodeSent ? (
+              <div className="space-y-2">
+                <div className="flex gap-2" dir="ltr">
+                  <div className="relative" ref={newCountryRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewCountryPicker(!showNewCountryPicker)}
+                      className="flex items-center gap-1.5 px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 font-medium hover:bg-gray-100 transition-colors min-w-[105px] h-full"
+                    >
+                      <span className="text-lg leading-none">{newPhoneCountry.flag}</span>
+                      <span>{newPhoneCountry.code}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showNewCountryPicker ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showNewCountryPicker && (
+                      <div className="absolute top-full mt-1 left-0 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[220px]">
+                        {GCC_COUNTRIES.map((country) => (
+                          <button
+                            key={country.code}
+                            type="button"
+                            onClick={() => { setNewPhoneCountry(country); setShowNewCountryPicker(false); setNewPhone(''); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
+                              newPhoneCountry.code === country.code ? 'bg-primary-50 text-primary-700' : 'text-gray-700'
+                            }`}
+                          >
+                            <span className="text-lg leading-none">{country.flag}</span>
+                            <span className="flex-1 text-start">{lang === 'ar' ? country.ar : country.en}</span>
+                            <span className="text-gray-400 font-mono text-xs">{country.code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative flex-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, '').slice(0, newPhoneCountry.digits))}
+                      className={`${inputClass} pl-9`}
+                      placeholder={newPhoneCountry.startsWith ? `${newPhoneCountry.startsWith}XXXXXXXX` : 'XXXXXXXX'}
+                      dir="ltr"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSendPhoneCode}
+                    disabled={phoneSaving}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  >
+                    {phoneSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Phone className="w-3.5 h-3.5" />}
+                    {lang === 'ar' ? '\u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642' : 'Send Code'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingPhone(false); setNewPhone(''); }}
+                    className="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {lang === 'ar' ? '\u0625\u0644\u063A\u0627\u0621' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500">
+                  {lang === 'ar'
+                    ? `\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642 \u0625\u0644\u0649 ${newPhoneCountry.code}${newPhone}`
+                    : `Verification code sent to ${newPhoneCountry.code}${newPhone}`}
+                </p>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, selectedCountry.digits))}
-                  className={`${inputClass} pl-9`}
-                  placeholder={selectedCountry.startsWith ? `${selectedCountry.startsWith}XXXXXXXX` : 'XXXXXXXX'}
+                  type="text"
+                  inputMode="numeric"
+                  value={phoneCode}
+                  onChange={(e) => setPhoneCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className={`${inputClass} text-center tracking-widest font-mono`}
+                  placeholder="000000"
+                  autoFocus
                   dir="ltr"
                 />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleVerifyPhone}
+                    disabled={phoneSaving}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  >
+                    {phoneSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    {lang === 'ar' ? '\u062A\u0623\u0643\u064A\u062F' : 'Verify'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPhoneCodeSent(false); setPhoneCode(''); }}
+                    className="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {lang === 'ar' ? '\u0631\u062C\u0648\u0639' : 'Back'}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <button

@@ -50,6 +50,11 @@
 | F22 | 2026-04-04 | `/listings` — Calendar pinned to screen, not relative to search bar | AMS | Replaced createPortal/fixed with absolute positioning inside search container | Done |
 | F23 | 2026-04-04 | `/` and `/listings` — Calendar month names not in Arabic when language is Arabic | AMS | Added MONTH_NAMES_AR + formatMonthYear helper in MiniCalendar | Done |
 | F24 | 2026-04-04 | `/` — Arabic subtitle text appears squeezed, needs spacing | AMS | Changed leading-[1.1] to leading-[1.3] for Arabic | Done |
+| F25 | 2026-04-04 | `/privacy` and `/terms` — URL slugs not descriptive; RTL arrow broken | AMS | Created /privacy-policy and /terms-of-use routes; added redirects in next.config.js; fixed RTL arrow with rtl:rotate-180 | Done |
+| F26 | 2026-04-04 | `/dashboard/messages` — Block User menu not displaying properly in Arabic RTL | AMS | Changed right-0 → end-0, text-left → text-start for RTL-aware positioning | Done |
+| F27 | 2026-04-04 | Sitewide — SAR symbol after number instead of before; color doesn't match text | AMS | Rewrote SarSymbol from Image to inline SVG with fill="currentColor"; flipped to symbol-before-number everywhere | Done |
+| F28 | 2026-04-04 | Footer — Links to /terms and /privacy instead of /terms-of-use and /privacy-policy | AMS | Updated Footer.tsx hrefs | Done |
+| F29 | 2026-04-04 | `/booking/[id]` — Link to /terms instead of /terms-of-use | AMS | Updated terms link in booking page | Done |
 
 ## Improvements
 
@@ -88,3 +93,5 @@
 | I31 | 2026-04-04 | `/listings/[id]` — Add ability to chat with host | AMS | Added "Message" button on property page linking to dashboard messages; replaced host messages placeholder with full chat UI (conversations, real-time polling, block/unblock) | Done |
 | I32 | 2026-04-04 | `/` and `/listings` — Add OK/submit button inside calendar to dismiss and advance to next field | AMS | Added onConfirm prop to MiniCalendar; OK button shown when both dates selected; added on both homepage and listings | Done |
 | I33 | 2026-04-04 | `/blog` — Add blog page with categories, posts, and admin CMS (similar to blog.gathern.co) | AMS | Full stack: BlogPost + BlogCategory models, blog controller + routes, frontend listing + detail pages (bilingual), admin CMS, nav links in Header/Footer/Sidebar | Done |
+| I34 | 2026-04-04 | `/listings` — Add Pool filter, Direction filter, Area slider (0-1500+ m²), Rating from 10, Price slider (0-4000+), District dropdown by city | AMS | New filter bubbles: Pool toggle, Direction dropdown, Area range slider, Price range slider, District city-dependent dropdown; backend extended with area/direction/pool/district query support | Done |
+| I35 | 2026-04-04 | `/dashboard/settings` — Phone number change should require OTP verification | AMS | Phone section now read-only with Edit button; sends OTP to new number; verify code to apply change; backend updateProfile requires phoneVerificationCode for phone changes | Done |

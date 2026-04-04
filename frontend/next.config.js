@@ -37,6 +37,14 @@ const nextConfig = {
     // turbopack: true,
   },
 
+  // ── Redirects for clean URLs ──
+  async redirects() {
+    return [
+      { source: '/privacy', destination: '/privacy-policy', permanent: true },
+      { source: '/terms', destination: '/terms-of-use', permanent: true },
+    ];
+  },
+
   // ── Security Headers ──
   // Protects against XSS, clickjacking, MIME sniffing, and other attack vectors
   async headers() {
