@@ -70,6 +70,20 @@
 | F42 | 2026-04-04 | `/listings/[id]` — SAR symbol missing from strikethrough old price | AMS | Added SarSymbol inside line-through spans for PropertyCard and BookingWidget | Done |
 | F43 | 2026-04-04 | Sitewide — SAR symbol height doesn't match digit height | AMS | Set SarSymbol to `height: 0.72em` (cap-height) with `verticalAlign: -0.05em` for baseline alignment | Done |
 | F44 | 2026-04-04 | `/listings` and `/` — MiniCalendar confirm button on wrong side in Arabic | AMS | Changed to `justify-end` for correct side in both LTR and RTL | Done |
+| F45 | 2026-04-04 | `/dashboard/messages` — Send icon points down-left in Arabic (rotate-180 wrong) | AMS | Changed `rtl:rotate-180` to `rtl:-scale-x-100` (horizontal flip: ↗ becomes ↖) | Done |
+| F46 | 2026-04-04 | `/dashboard/support/[id]` — Send icon not flipped for Arabic | AMS | Added `rtl:-scale-x-100` to Send icon | Done |
+| F47 | 2026-04-04 | `/booking/[id]` — Back to property arrow not flipped in Arabic | AMS | Changed `rotate-180` to `ltr:rotate-180` on ChevronRight | Done |
+| F48 | 2026-04-04 | `/listings` — Area filter bubble missing m² unit in inactive label | AMS | Inactive label now shows `Area (m²)` / `المساحة (m²)` | Done |
+| F49 | 2026-04-04 | `/listings/[id]` — Guest count not carried from listings search | AMS | PropertyCard passes adults/children in URL; property detail reads and passes to BookingWidget | Done |
+| F50 | 2026-04-04 | `/booking/[id]` — Editing dates/guests loses all data when going back | AMS | Edit links and back-to-property link now preserve checkIn, checkOut, adults in URL params | Done |
+| F51 | 2026-04-04 | Sitewide — Arabic night plural incorrect (ليالي used for all plural) | AMS | Created `getNightLabel(count, lang)`: 1–2→ليلة, 3–10→ليالي, 11+→ليلة. Applied in BookingWidget, booking page, HeroSearch, listings, PropertyForm | Done |
+| F52 | 2026-04-04 | Sitewide — Wishlist add/remove toast shows English in Arabic mode | AMS | Translated all 3 toast messages in PropertyCard (saved, removed, sign-in required, error) | Done |
+| F53 | 2026-04-04 | `/dashboard/support/[id]` — All labels hardcoded English (Category, Priority, Status, etc.) | AMS | Added bilingual status/category/priority labels, translated back link, sender name, placeholder, closed message, loading text | Done |
+| F54 | 2026-04-04 | `/listings/[id]` — City and district under title show English in Arabic | AMS | City uses CITIES Arabic lookup; district uses DISTRICTS Arabic lookup | Done |
+| F55 | 2026-04-04 | `/dashboard/support/[id]` — Shows Header and Footer inside dashboard layout | AMS | Removed Header/Footer; page now uses dashboard layout only | Done |
+| F56 | 2026-04-04 | `/` — Search step indicator shows 3 color steps instead of 4 | AMS | Added `'type'` as distinct SearchStep; steps now location→type→dates→ready with unique keys | Done |
+| F57 | 2026-04-04 | `/` — Arabic subtitle text squeezed on desktop | AMS | Subtitle uses `leading-loose md:leading-[2]` for Arabic, `leading-relaxed` for English | Done |
+| F58 | 2026-04-04 | Sitewide — Session expires every ~15 minutes | AMS | Refresh cookie path was `/api/auth` but routes mounted at `/api/v1/auth`; browser never sent cookie. Fixed to `/api/v1/auth` | Done |
 
 ## Improvements
 
@@ -113,3 +127,6 @@
 | I36 | 2026-04-04 | `/listings` — Add dropdown arrows to expandable filter bubbles | AMS | Added `hasDropdown` prop to FilterBubble; ChevronDown icon on Type, Bedrooms, Rating, Price, Area, Direction, District filters | Done |
 | I37 | 2026-04-04 | `/listings/[id]` — Guest picker with adults/children split | AMS | Booking widget now has separate Adults (13+, min 1) and Children (0–12, min 0) counters with +/- buttons; total respects maxGuests | Done |
 | I38 | 2026-04-04 | `/` — Search step indicator showing progress through fields | AMS | Added Property step label to step indicator in HeroSearch | Done |
+| I39 | 2026-04-04 | `/host/listings/new` — District should be dropdown, not free text | AMS | District is now city-dependent `<select>` using DISTRICTS constant with Arabic labels; falls back to text input if city has no predefined districts; clears on city change | Done |
+| I40 | 2026-04-04 | `/host/listings/new` — Dropdown styling should match homepage | AMS | Updated inputClass to rounded-xl, bg-gray-50/50, primary ring focus matching HeroSearch style | Done |
+| I41 | 2026-04-04 | `/host/listings/new` — Error messages need clear field-specific explanation | AMS | Lists missing required fields by name; requires at least 1 photo; surfaces Mongoose validation errors and backend error messages; image upload shows file type/size hints. All bilingual | Done |
