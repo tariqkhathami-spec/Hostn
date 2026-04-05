@@ -266,7 +266,7 @@ export default function HostMessagesPage() {
                         className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400" />
                       <button onClick={handleSend} disabled={!newMessage.trim() || sending}
                         className="p-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-50 transition">
-                        <Send className="w-4 h-4" />
+                        <Send className="w-4 h-4 rtl:-scale-x-100" />
                       </button>
                     </div>
                   </div>

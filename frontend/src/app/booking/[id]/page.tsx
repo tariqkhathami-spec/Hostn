@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { saveSearchCookies } from '@/lib/searchCookies';
 
 declare global {
   interface Window {
@@ -47,6 +48,13 @@ function BookingContent() {
   const adultsCount = parseInt(searchParams.get('adults') || searchParams.get('guests') || '1', 10);
   const childrenCount = parseInt(searchParams.get('children') || '0', 10);
   const guestsCount = adultsCount + childrenCount;
+
+  // Save booking details to cookie
+  useEffect(() => {
+    if (checkIn || checkOut || adultsCount || childrenCount) {
+      saveSearchCookies({ checkIn, checkOut, adults: adultsCount, children: childrenCount });
+    }
+  }, [checkIn, checkOut, adultsCount, childrenCount]);
 
   useEffect(() => {
     if (!isAuthenticated) {

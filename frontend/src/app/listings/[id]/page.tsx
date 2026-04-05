@@ -21,6 +21,7 @@ const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
 });
 import StarRating from '@/components/ui/StarRating';
 import { useLanguage } from '@/context/LanguageContext';
+import { saveSearchCookies } from '@/lib/searchCookies';
 
 export default function PropertyDetailPage() {
   return (
@@ -58,6 +59,18 @@ function PropertyDetailContent() {
     };
     fetchProperty();
   }, [id]);
+
+  // Persist search params to cookie so they survive navigation
+  useEffect(() => {
+    if (initialCheckIn || initialCheckOut || initialAdults || initialChildren) {
+      saveSearchCookies({
+        checkIn: initialCheckIn,
+        checkOut: initialCheckOut,
+        adults: initialAdults,
+        children: initialChildren,
+      });
+    }
+  }, [initialCheckIn, initialCheckOut, initialAdults, initialChildren]);
 
   if (loading) {
     return (

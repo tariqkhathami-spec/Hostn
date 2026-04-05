@@ -80,7 +80,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       return;
     }
 
-    const params = new URLSearchParams({ checkIn, checkOut, guests: guests.toString() });
+    const params = new URLSearchParams({ checkIn, checkOut, adults: adults.toString(), children: children.toString() });
     router.push(`/booking/${property._id}?${params.toString()}`);
   };
 
