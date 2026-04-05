@@ -613,9 +613,9 @@ function ListingsContent() {
               {openFilter === 'price' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-medium text-gray-500">0 SAR</span>
-                    <span className="text-xs font-bold text-primary-700">{priceRange >= 4000 ? '4000+' : priceRange} SAR</span>
-                    <span className="text-[10px] font-medium text-gray-500">4000+</span>
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">0 <SarSymbol /></span>
+                    <span className="text-xs font-bold text-primary-700" dir="ltr">{priceRange >= 4000 ? '4000+' : priceRange} <SarSymbol /></span>
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">4000+ <SarSymbol /></span>
                   </div>
                   <input type="range" min="0" max="4000" step="100" value={priceRange}
                     onChange={(e) => setPriceRange(Number(e.target.value))}
@@ -642,14 +642,17 @@ function ListingsContent() {
               />
               {openFilter === 'area' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-medium text-gray-500">0 m\u00B2</span>
-                    <span className="text-xs font-bold text-primary-700">{areaRange >= 1500 ? '1500+' : areaRange} m\u00B2</span>
-                    <span className="text-[10px] font-medium text-gray-500">1500+ m\u00B2</span>
+                  <div className="text-center mb-2">
+                    <span className="text-xs font-bold text-primary-700">{areaRange >= 1500 ? '1500+' : areaRange} m²</span>
                   </div>
                   <input type="range" min="0" max="1500" step="50" value={areaRange}
                     onChange={(e) => setAreaRange(Number(e.target.value))}
                     className="w-full accent-primary-600 h-1.5 cursor-pointer" />
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] font-medium text-gray-500">0 m²</span>
+                    <span className="text-[10px] font-medium text-gray-500">650 m²</span>
+                    <span className="text-[10px] font-medium text-gray-500">1500+ m²</span>
+                  </div>
                   <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
                     className="w-full mt-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
                     {isAr ? '\u062A\u0637\u0628\u064A\u0642' : 'Apply'}

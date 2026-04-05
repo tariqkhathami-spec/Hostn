@@ -40,7 +40,7 @@ export function calculateNights(checkIn: string | Date, checkOut: string | Date)
 
 /**
  * Arabic night plural rules (returns full string with number):
- *   1   → 1 ليلة
+ *   1   → ليلة  (no number prefix)
  *   2   → ليلتان  (dual — no number prefix)
  *   3–10 → N ليالي
  *   11+  → N ليلة
@@ -48,7 +48,7 @@ export function calculateNights(checkIn: string | Date, checkOut: string | Date)
  */
 export function getNightLabel(count: number, lang: 'en' | 'ar' = 'en') {
   if (lang === 'ar') {
-    if (count === 1) return '1 ليلة';
+    if (count === 1) return 'ليلة';
     if (count === 2) return 'ليلتان';
     if (count <= 10) return `${count} ليالي`;
     return `${count} ليلة`;

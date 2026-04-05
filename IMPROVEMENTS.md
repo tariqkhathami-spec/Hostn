@@ -10,6 +10,7 @@
 - This file tracks all fixes and improvements made to the Hostn project.
 - Completed items stay in the lists for reference — never remove them.
 - Each entry includes a date, short description, author (who suggested it), and status.
+- **Each bullet point from the user is a separate task. Never merge, combine, or skip tasks. Each one gets its own entry and must be addressed individually.**
 
 ---
 
@@ -98,6 +99,15 @@
 | F70 | 2026-04-05 | `/booking/[id]` — Guest display shows total only, no adults/children split | AMS | Shows "2 adults, 1 child" / "2 بالغين، 1 طفل" with split counts | Done |
 | F71 | 2026-04-05 | `/booking/[id]` — Back/edit links lose children count when navigating | AMS | All 3 navigation links now pass both `adults` and `children` URL params | Done |
 | F72 | 2026-04-05 | `/host/listings/new` — Image upload accepts all image types (HEIC, BMP fail on backend) | AMS | Restricted to `.jpg,.jpeg,.png`; client-side type validation before upload; clear error messages | Done |
+| F73 | 2026-04-05 | Sidebar — Logout button permanently red, too prominent | AMS | Changed from always-red (`text-red-500 hover:bg-red-50`) to gray default with red on hover only (`text-gray-600 hover:text-red-500`) | Done |
+| F74 | 2026-04-05 | `/` — Homepage search does not save city to cookie | AMS | HeroSearch now imports `getSearchCookies` and restores city, type, dates from cookie on mount | Done |
+| F75 | 2026-04-05 | `/` — Date picker in Arabic stays left-aligned instead of flipping under dates field | AMS | Changed `left-1/2 -translate-x-1/2` to `ltr:right-0 rtl:left-0` so calendar anchors near dates column in both directions | Done |
+| F76 | 2026-04-05 | Sitewide — Arabic 1 night shows "1 ليلة" instead of "ليلة" | AMS | `getNightLabel` 1-night Arabic case now returns `'ليلة'` without number prefix; English unchanged | Done |
+| F77 | 2026-04-05 | Sitewide — Search cookies incomplete: `/` saves nothing, `/listings` missing guests, `/listings/[id]` saves nothing, `/booking/[id]` saves nothing | AMS | `/` now restores from cookie on mount and saves on search; `/listings` already saves adults+children (verified); `/listings/[id]` saves to cookie via useEffect; `/booking/[id]` saves to cookie via useEffect; `saveSearchCookies` now merges with existing cookie so partial saves don't wipe guest data. Cleared after booking success (already in payment-callback) | Done |
+| F78 | 2026-04-05 | `/listings` — Price filter slider shows "SAR" text instead of SarSymbol SVG | AMS | Replaced "SAR" text with `<SarSymbol />` component in all 3 slider labels; added `dir="ltr"` wrapping | Done |
+| F79 | 2026-04-05 | `/booking/[id]` — Going back to `/listings/[id]` loses adults/children split, shows total as adults | AMS | BookingWidget now sends `adults` and `children` as separate URL params instead of combined `guests` total | Done |
+| F80 | 2026-04-05 | `/host/messages` — Send icon not flipped horizontally in Arabic | AMS | Added `rtl:-scale-x-100` to Send icon, matching `/dashboard/messages` fix (F45) | Done |
+| F81 | 2026-04-05 | `/host/listings/new` — Image upload fails with "Image upload failed. Please try again." | AMS | Backend `.env` missing Cloudinary credentials (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`). Not a code bug — needs credentials from Cloudinary account | Open |
 
 ## Improvements
 

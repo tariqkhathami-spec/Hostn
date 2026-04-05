@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { CITIES } from '@/lib/constants';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { calculateNights, getNightLabel } from '@/lib/utils';
-import { saveSearchCookies } from '@/lib/searchCookies';
+import { saveSearchCookies, getSearchCookies } from '@/lib/searchCookies';
 
 type SearchStep = 'idle' | 'location' | 'type' | 'dates' | 'ready';
 
@@ -17,14 +17,17 @@ export default function HeroSearch() {
   const { t, language } = useLanguage();
   const isAr = language === 'ar';
 
+  // Restore previous search from cookies
+  const savedSearch = getSearchCookies();
+
   // Search state
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState(savedSearch?.city || '');
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
-  const [propertyType, setPropertyType] = useState('');
+  const [propertyType, setPropertyType] = useState(savedSearch?.type || '');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const [checkIn, setCheckIn] = useState(savedSearch?.checkIn || '');
+  const [checkOut, setCheckOut] = useState(savedSearch?.checkOut || '');
 
   // Step flow state
   const [step, setStep] = useState<SearchStep>('idle');
@@ -423,7 +426,7 @@ export default function HeroSearch() {
           {showCalendar && (
             <div
               ref={calendarPopupRef}
-              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-[60] bg-white shadow-2xl border border-gray-100 rounded-2xl max-h-[80vh] overflow-y-auto animate-fade-in-up w-full max-w-[620px]"
+              className="absolute ltr:right-0 rtl:left-0 top-full mt-2 z-[60] bg-white shadow-2xl border border-gray-100 rounded-2xl max-h-[80vh] overflow-y-auto animate-fade-in-up w-full max-w-[620px]"
             >
               <div className="px-4 pt-3 pb-1">
                 <p className="text-xs font-semibold text-primary-600" aria-live="polite">
