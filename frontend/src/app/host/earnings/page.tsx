@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { hostApi } from '@/lib/api';
 import { DollarSign, TrendingUp, Loader2 } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 
 interface MonthlyEarning {
@@ -79,7 +80,7 @@ export default function HostEarningsPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500">{t.totalEarnings[lang]}</p>
-            <p className="text-3xl font-bold text-gray-900">{data.totalEarnings?.toLocaleString()} SAR</p>
+            <p className="text-3xl font-bold text-gray-900"><span dir="ltr"><SarSymbol /> {data.totalEarnings?.toLocaleString()}</span></p>
           </div>
         </div>
       </div>
@@ -108,7 +109,7 @@ export default function HostEarningsPage() {
                       {item.bookings} {t.bookingsCount[lang]}
                     </p>
                   </div>
-                  <p className="text-lg font-bold text-emerald-600">{item.total?.toLocaleString()} SAR</p>
+                  <p className="text-lg font-bold text-emerald-600"><span dir="ltr"><SarSymbol /> {item.total?.toLocaleString()}</span></p>
                 </div>
               );
             })}

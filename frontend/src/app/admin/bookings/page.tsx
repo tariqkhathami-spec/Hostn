@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 
 interface BookingItem {
@@ -114,7 +115,7 @@ export default function AdminBookingsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      {b.totalPrice?.toLocaleString()} {isAr ? '\u0631.\u0633' : 'SAR'}
+                      <span dir="ltr"><SarSymbol /> {b.totalPrice?.toLocaleString()}</span>
                     </td>
                   </tr>
                 ))}

@@ -9,6 +9,7 @@ import { bookingsApi } from '@/lib/api';
 import { useSocketEvent } from '@/lib/useSocket';
 import { Booking } from '@/types';
 import { BookOpen, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 
 export default function MyBookingsPage() {
   const router = useRouter();
@@ -146,7 +147,7 @@ export default function MyBookingsPage() {
 
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-semibold text-gray-900">
-                    {total.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-SA')} {lang === 'ar' ? '\u0631.\u0633' : 'SAR'}
+                    <span dir="ltr"><SarSymbol /> {total.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-SA')}</span>
                   </span>
                   <span
                     className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${

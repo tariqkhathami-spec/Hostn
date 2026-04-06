@@ -145,6 +145,8 @@
 | F116 | 2026-04-06 | Sitewide — Arabic guest count grammar incorrect (ضيف/ضيفان/ضيوف rules) | AMS | New `getGuestLabel(count, lang)` in utils.ts: 1=ضيف, 2=ضيفان, 3-10=ضيوف, 11+=ضيف. Applied in PropertyCard, SearchFilters, BookingWidget, booking page | Done |
 | F117 | 2026-04-06 | Sitewide — Arabic adult/children count grammar incorrect (بالغ/بالغان/بالغين and طفل/طفلان/أطفال rules) | AMS | New `getAdultLabel` and `getChildLabel` in utils.ts with full Arabic plural rules. Applied in booking page, listings page guest picker | Done |
 | F118 | 2026-04-06 | Sitewide — Arabic separator between adults and children should be "و" not "،" or "·" | AMS | Changed `،` / `·` to `و` in booking page and listings page guest display | Done |
+| F119 | 2026-04-06 | `/booking/[id]` — "Visa, Mastercard, mada" not translated in Arabic | AMS | Added bilingual: `فيزا، ماستركارد، مدى` / `Visa, Mastercard, mada` | Done |
+| F120 | 2026-04-06 | Sitewide — "SAR" text shown instead of SAR symbol (﷼) | AMS | Replaced all `SAR` / `ر.س` text with `<SarSymbol />` component across dashboard, host, admin, earnings, bookings, balance, listings, and PropertyForm pages | Done |
 
 ## Improvements
 

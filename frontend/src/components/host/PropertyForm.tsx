@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Property, PropertyType, AmenityType } from '@/types';
 import { propertiesApi } from '@/lib/api';
 import { getAmenityLabel, getAmenityIcon, formatPrice, cn, getNightLabel } from '@/lib/utils';
+import SarSymbol from '@/components/ui/SarSymbol';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import {
@@ -556,7 +557,7 @@ export default function PropertyForm({ initialData, isEditing = false }: Propert
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">{isAr ? 'السعر لليلة (ريال)' : 'Price per Night (SAR)'}</label>
               <div className="relative max-w-xs">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">SAR</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium"><SarSymbol /></span>
                 <input
                   type="number"
                   min="0"

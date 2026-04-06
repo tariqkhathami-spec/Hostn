@@ -407,7 +407,7 @@ function BookingContent() {
                             <p className="text-sm font-semibold text-gray-800">
                               {isAr ? 'بطاقة ائتمان / مدى' : 'Credit Card / mada'}
                             </p>
-                            <p className="text-xs text-gray-500">Visa, Mastercard, mada</p>
+                            <p className="text-xs text-gray-500">{isAr ? 'فيزا، ماستركارد، مدى' : 'Visa, Mastercard, mada'}</p>
                           </div>
                           <div className="flex gap-1.5">
                             <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded">VISA</span>

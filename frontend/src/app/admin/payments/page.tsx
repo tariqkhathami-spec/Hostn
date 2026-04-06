@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Loader2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 
 interface PaymentItem {
@@ -113,7 +114,7 @@ export default function AdminPaymentsPage() {
                       {p.user?.name || p.userName || '-'}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      {p.amount?.toLocaleString()} {isAr ? '\u0631.\u0633' : 'SAR'}
+                      <span dir="ltr"><SarSymbol /> {p.amount?.toLocaleString()}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[p.status] || 'bg-gray-50 text-gray-700'}`}>
