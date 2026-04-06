@@ -123,7 +123,7 @@ function ListingsContent() {
   // Guest picker
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
-  const guests = adults + children > 1 ? String(adults + children) : '';
+  const guests = adults >= 1 ? String(adults + children) : '';
   const [showGuestPicker, setShowGuestPicker] = useState(false);
 
   // ── Filter state ──
@@ -490,7 +490,7 @@ function ListingsContent() {
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-3 min-w-[220px]">
                   <div className="grid grid-cols-2 gap-1.5">
                     {PROPERTY_TYPES.map(({ key, label }) => (
-                      <button key={key} type="button" onClick={() => toggleType(key)}
+                      <button key={key} type="button" onClick={() => { toggleType(key); setAutoSearch((n) => n + 1); }}
                         className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                           selectedTypes.includes(key)
                             ? 'bg-primary-50 text-primary-700 border border-primary-200'
@@ -500,10 +500,6 @@ function ListingsContent() {
                       </button>
                     ))}
                   </div>
-                  <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
-                    className="w-full mt-2 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
-                    {isAr ? '\u062A\u0637\u0628\u064A\u0642' : 'Apply'}
-                  </button>
                 </div>
               )}
             </div>
@@ -633,11 +629,11 @@ function ListingsContent() {
                   </div>
                   <input type="range" min="0" max="1500" step="50" value={areaRange}
                     onChange={(e) => setAreaRange(Number(e.target.value))}
-                    className="w-full accent-primary-600 h-1.5 cursor-pointer" dir="ltr" />
-                  <div className="flex items-center justify-between mt-1" dir="ltr">
-                    <span className="text-[10px] font-medium text-gray-500">0 m²</span>
-                    <span className="text-[10px] font-medium text-gray-500">650 m²</span>
-                    <span className="text-[10px] font-medium text-gray-500">1500+ m²</span>
+                    className="w-full accent-primary-600 h-1.5 cursor-pointer" />
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">0 m²</span>
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">650 m²</span>
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">1500+ m²</span>
                   </div>
                   <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
                     className="w-full mt-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
