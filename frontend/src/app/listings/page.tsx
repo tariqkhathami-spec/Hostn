@@ -287,6 +287,34 @@ function ListingsContent() {
   // Auto-fetch on first load and when auto-search is triggered (clear all / filter cancel)
   useEffect(() => { fetchProperties(); }, [autoSearch]);
 
+  // Auto-search when search bar dropdowns are dismissed
+  const prevShowCityRef = useRef(false);
+  useEffect(() => {
+    if (prevShowCityRef.current && !showCityDropdown && searchCity) {
+      saveSearchCookies({ city: searchCity, type: selectedTypes.join(','), checkIn, checkOut, adults, children });
+      setAutoSearch((n) => n + 1);
+    }
+    prevShowCityRef.current = showCityDropdown;
+  }, [showCityDropdown]);
+
+  const prevShowCalendarRef = useRef(false);
+  useEffect(() => {
+    if (prevShowCalendarRef.current && !showCalendar && checkIn) {
+      saveSearchCookies({ city: searchCity, type: selectedTypes.join(','), checkIn, checkOut, adults, children });
+      setAutoSearch((n) => n + 1);
+    }
+    prevShowCalendarRef.current = showCalendar;
+  }, [showCalendar]);
+
+  const prevShowGuestRef = useRef(false);
+  useEffect(() => {
+    if (prevShowGuestRef.current && !showGuestPicker) {
+      saveSearchCookies({ city: searchCity, type: selectedTypes.join(','), checkIn, checkOut, adults, children });
+      setAutoSearch((n) => n + 1);
+    }
+    prevShowGuestRef.current = showGuestPicker;
+  }, [showGuestPicker]);
+
   // Auto-apply when price or area filter is dismissed (click-away or bubble toggle)
   const prevOpenFilterRef = useRef<string | null>(null);
   useEffect(() => {
