@@ -116,6 +116,9 @@
 | F87 | 2026-04-06 | `/listings` — Clear all button does nothing when filters are applied, should auto-search | AMS | `clearAllFilters` increments `autoSearch` counter; `useEffect` re-fetches on change | Done |
 | F88 | 2026-04-06 | `/listings` — Canceling a single filter does not auto-search, requires manual search click | AMS | All 9 filter `onClear` handlers now call `setAutoSearch((n) => n + 1)` to trigger auto-fetch | Done |
 | F89 | 2026-04-06 | `/listings` — Price filter icon shows dollar sign, should be SAR symbol | AMS | Replaced `DollarSign` (lucide) with `SarSymbol` component as FilterBubble icon; removed unused import | Done |
+| F90 | 2026-04-06 | `/listings` — Price slider should follow page direction (RTL in Arabic, LTR in English), only number+symbol wrapped in dir=ltr | AMS | Removed `dir="ltr"` from slider input and labels container; kept `dir="ltr"` only on individual number+symbol spans | Done |
+| F91 | 2026-04-06 | `/listings` — URL should not contain search/filter details, rely on cookies only | AMS | Removed all URL params from `handleSearch` and clear-all; navigate to clean `/listings`; all state reads from cookies via `useEffect` on mount; removed `useSearchParams` | Done |
+| F92 | 2026-04-06 | `/listings` — Guest picker does not remember/restore adults and children count | AMS | State initializes empty then restores from cookies via `useEffect` on client mount (fixes SSR null `document` issue); adults and children restored from cookie | Done |
 
 ## Improvements
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PropertyCard from '@/components/listings/PropertyCard';
@@ -102,7 +102,6 @@ function FilterBubble({
 
 // ─── Main content ─────────────────────────────────────────────────────────────
 function ListingsContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
@@ -111,49 +110,32 @@ function ListingsContent() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Restore from cookies when URL has no params ──
-  const savedSearch = (!searchParams.get('city') && !searchParams.get('checkIn')) ? getSearchCookies() : null;
-
   // ── Search state ──
-  const [searchCity, setSearchCity] = useState(searchParams.get('city') || savedSearch?.city || '');
+  const [searchCity, setSearchCity] = useState('');
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
-  const [checkIn, setCheckIn] = useState(searchParams.get('checkIn') || savedSearch?.checkIn || '');
-  const [checkOut, setCheckOut] = useState(searchParams.get('checkOut') || savedSearch?.checkOut || '');
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
   // Calendar
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
 
-  // Guest picker — read adults/children separately from URL or cookies
-  const [adults, setAdults] = useState(() => {
-    const urlAdults = searchParams.get('adults');
-    if (urlAdults) return Math.max(1, parseInt(urlAdults, 10));
-    const urlGuests = searchParams.get('guests');
-    if (urlGuests) return Math.max(1, parseInt(urlGuests, 10));
-    return savedSearch?.adults || 1;
-  });
-  const [children, setChildren] = useState(() => {
-    const urlChildren = searchParams.get('children');
-    if (urlChildren) return parseInt(urlChildren, 10);
-    return savedSearch?.children || 0;
-  });
+  // Guest picker
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
   const guests = adults + children > 1 ? String(adults + children) : '';
   const [showGuestPicker, setShowGuestPicker] = useState(false);
 
   // ── Filter state ──
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(() => {
-    const t = searchParams.get('type') || savedSearch?.type;
-    return t ? t.split(',') : [];
-  });
-  // price and area use slider state below
-  const [minBedrooms, setMinBedrooms] = useState(searchParams.get('bedrooms') || '');
-  const [minRating, setMinRating] = useState(searchParams.get('rating') || '');
-  const [hasDiscount, setHasDiscount] = useState(searchParams.get('discount') === '1');
-  const [district, setDistrict] = useState(searchParams.get('district') || '');
-  const [hasPool, setHasPool] = useState(searchParams.get('pool') === '1');
-  const [direction, setDirection] = useState(searchParams.get('direction') || '');
-  const [priceRange, setPriceRange] = useState(Number(searchParams.get('maxPrice')) || 4000);
-  const [areaRange, setAreaRange] = useState(Number(searchParams.get('maxArea')) || 1500);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [minBedrooms, setMinBedrooms] = useState('');
+  const [minRating, setMinRating] = useState('');
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [district, setDistrict] = useState('');
+  const [hasPool, setHasPool] = useState(false);
+  const [direction, setDirection] = useState('');
+  const [priceRange, setPriceRange] = useState(4000);
+  const [areaRange, setAreaRange] = useState(1500);
 
   // ── Filter popover state ──
   const [openFilter, setOpenFilter] = useState<string | null>(null);
@@ -164,13 +146,21 @@ function ListingsContent() {
   const guestPickerRef = useRef<HTMLDivElement>(null);
   const filterRowRef = useRef<HTMLDivElement>(null);
 
-  // Init city text from URL
+  // Restore all state from cookies on client mount
   useEffect(() => {
-    if (searchCity) {
-      const found = CITIES.find((c) => c.value === searchCity);
+    const saved = getSearchCookies();
+    if (!saved) return;
+    if (saved.city) {
+      setSearchCity(saved.city);
+      const found = CITIES.find((c) => c.value === saved.city);
       if (found) setCitySearch(isAr ? found.ar : found.en);
-      else setCitySearch(searchCity);
+      else setCitySearch(saved.city);
     }
+    if (saved.checkIn) setCheckIn(saved.checkIn);
+    if (saved.checkOut) setCheckOut(saved.checkOut);
+    if (saved.adults) setAdults(saved.adults);
+    if (saved.children) setChildren(saved.children);
+    if (saved.type) setSelectedTypes(saved.type.split(','));
   }, []);
 
   const filteredCities = CITIES.filter((c) => {
@@ -286,23 +276,8 @@ function ListingsContent() {
   };
 
   const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (searchCity) params.set('city', searchCity);
-    if (selectedTypes.length > 0) params.set('type', selectedTypes.join(','));
-    if (checkIn) params.set('checkIn', checkIn);
-    if (checkOut) params.set('checkOut', checkOut);
-    if (priceRange < 4000) params.set('maxPrice', String(priceRange));
-    if (adults > 1) params.set('adults', String(adults));
-    if (children > 0) params.set('children', String(children));
-    if (minBedrooms) params.set('bedrooms', minBedrooms);
-    if (minRating) params.set('rating', minRating);
-    if (hasDiscount) params.set('discount', '1');
-    if (district) params.set('district', district);
-    if (hasPool) params.set('pool', '1');
-    if (direction) params.set('direction', direction);
-    if (areaRange < 1500) params.set('maxArea', String(areaRange));
     saveSearchCookies({ city: searchCity, type: selectedTypes.join(','), checkIn, checkOut, adults, children });
-    router.push(`/listings?${params.toString()}`);
+    router.push('/listings');
     setOpenFilter(null);
     fetchProperties();
   };
@@ -625,11 +600,11 @@ function ListingsContent() {
                   </div>
                   <input type="range" min="0" max="4000" step="100" value={priceRange}
                     onChange={(e) => setPriceRange(Number(e.target.value))}
-                    className="w-full accent-primary-600 h-1.5 cursor-pointer" dir="ltr" />
-                  <div className="flex items-center justify-between mt-1" dir="ltr">
-                    <span className="text-[10px] font-medium text-gray-500"><SarSymbol /> 0</span>
-                    <span className="text-[10px] font-medium text-gray-500"><SarSymbol /> 2000</span>
-                    <span className="text-[10px] font-medium text-gray-500"><SarSymbol /> 4000+</span>
+                    className="w-full accent-primary-600 h-1.5 cursor-pointer" />
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr"><SarSymbol /> 0</span>
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr"><SarSymbol /> 2000</span>
+                    <span className="text-[10px] font-medium text-gray-500" dir="ltr"><SarSymbol /> 4000+</span>
                   </div>
                   <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
                     className="w-full mt-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
@@ -740,15 +715,8 @@ function ListingsContent() {
             {(hasActiveFilters || selectedTypes.length > 0) && (
               <button type="button" onClick={() => {
                 clearAllFilters();
-                // Navigate with only base search params — avoids stale state
-                const p = new URLSearchParams();
-                if (searchCity) p.set('city', searchCity);
-                if (checkIn) p.set('checkIn', checkIn);
-                if (checkOut) p.set('checkOut', checkOut);
-                if (adults > 1) p.set('adults', String(adults));
-                if (children > 0) p.set('children', String(children));
                 saveSearchCookies({ city: searchCity, checkIn, checkOut, adults, children });
-                router.push(`/listings?${p.toString()}`);
+                router.push('/listings');
               }}
                 className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors">
                 <X className="w-3 h-3" />
