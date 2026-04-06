@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { hostApi } from '@/lib/api';
 import { Building, CalendarCheck, DollarSign, Star, Loader2 } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 
 interface Stats {
@@ -92,7 +93,7 @@ export default function HostDashboardPage() {
   const statCards = [
     { key: 'totalProperties', value: stats.totalProperties, icon: Building, color: 'text-primary-600 bg-primary-50' },
     { key: 'activeBookings', value: stats.activeBookings, icon: CalendarCheck, color: 'text-emerald-600 bg-emerald-50' },
-    { key: 'totalEarnings', value: `${stats.totalEarnings?.toLocaleString() || 0} SAR`, icon: DollarSign, color: 'text-blue-600 bg-blue-50' },
+    { key: 'totalEarnings', value: <span dir="ltr"><SarSymbol /> {stats.totalEarnings?.toLocaleString() || 0}</span>, icon: DollarSign, color: 'text-blue-600 bg-blue-50' },
     { key: 'averageRating', value: stats.averageRating?.toFixed(1) || '0.0', icon: Star, color: 'text-yellow-600 bg-yellow-50' },
   ];
 
@@ -158,7 +159,7 @@ export default function HostDashboardPage() {
                         {statusLabels[booking.status]?.[lang] || booking.status}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-gray-900">{(booking.pricing?.total || booking.totalPrice || 0).toLocaleString()} {isAr ? 'ر.س' : 'SAR'}</td>
+                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {(booking.pricing?.total || booking.totalPrice || 0).toLocaleString()}</span></td>
                   </tr>
                 ))}
               </tbody>

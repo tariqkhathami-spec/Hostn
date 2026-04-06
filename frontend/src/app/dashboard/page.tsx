@@ -10,6 +10,7 @@ import { Booking } from '@/types';
 import {
   BookOpen, CalendarDays, Heart, ArrowRight, Crown, Loader2, Wallet, ShieldBan, Star,
 } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 
 export default function GuestDashboardPage() {
   const router = useRouter();
@@ -97,7 +98,7 @@ export default function GuestDashboardPage() {
     },
     {
       label: { en: 'Balance', ar: '\u0627\u0644\u0631\u0635\u064a\u062f' },
-      value: `${walletBalance} SAR`,
+      value: <span dir="ltr"><SarSymbol /> {walletBalance}</span>,
       icon: Wallet,
       color: 'text-emerald-600 bg-emerald-50',
       href: '/dashboard/balance',

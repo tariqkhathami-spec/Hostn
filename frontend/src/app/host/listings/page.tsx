@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { propertiesApi, hostApi } from '@/lib/api';
 import { Plus, ToggleLeft, ToggleRight, Edit, Loader2, Building } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
@@ -122,7 +123,7 @@ export default function HostListingsPage() {
                 </h3>
                 <p className="text-sm text-gray-500 mb-2">{property.city}</p>
                 <p className="text-lg font-bold text-primary-600">
-                  {property.price?.toLocaleString()} {t.perNight[lang]}
+                  <span dir="ltr"><SarSymbol /> {property.price?.toLocaleString()}</span> / {lang === 'ar' ? 'ليلة' : 'night'}
                 </p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
                   <Link

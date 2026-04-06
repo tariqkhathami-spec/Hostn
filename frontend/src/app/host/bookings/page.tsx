@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { bookingsApi } from '@/lib/api';
 import { Loader2, Check, X } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 
 interface Booking {
@@ -147,7 +148,7 @@ export default function HostBookingsPage() {
                         {t[booking.status]?.[lang] || booking.status}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-gray-900">{booking.totalPrice?.toLocaleString()} SAR</td>
+                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {booking.totalPrice?.toLocaleString()}</span></td>
                     <td className="p-3">
                       {booking.status === 'pending' && (
                         <div className="flex gap-2">

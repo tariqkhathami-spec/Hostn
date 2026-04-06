@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Users, Building, BookOpen, CreditCard, Loader2 } from 'lucide-react';
+import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 
 interface Stats {
@@ -102,7 +103,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-2xl font-bold text-gray-900">
                 {card.isCurrency
-                  ? `${card.value.toLocaleString()} ${isAr ? '\u0631.\u0633' : 'SAR'}`
+                  ? <span dir="ltr"><SarSymbol /> {card.value.toLocaleString()}</span>
                   : card.value.toLocaleString()}
               </div>
             </div>
