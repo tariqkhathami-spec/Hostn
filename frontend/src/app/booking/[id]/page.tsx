@@ -6,7 +6,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Property } from '@/types';
 import { propertiesApi, bookingsApi, paymentsApi, bnplApi } from '@/lib/api';
-import { formatPrice, formatPriceNumber, formatDate, calculateNights, getNightLabel } from '@/lib/utils';
+import { formatPrice, formatPriceNumber, formatDate, calculateNights, getNightLabel, getGuestLabel, getAdultLabel, getChildLabel } from '@/lib/utils';
+import { CITIES } from '@/lib/constants';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -177,7 +178,7 @@ function BookingContent() {
         PROPERTY_NOT_FOUND: { en: 'Property not found', ar: 'العقار غير موجود' },
         OWN_PROPERTY: { en: 'Cannot book your own property', ar: 'لا يمكنك حجز عقارك الخاص' },
         NO_ADULTS: { en: 'At least one adult guest required', ar: 'مطلوب ضيف بالغ واحد على الأقل' },
-        MAX_CAPACITY: { en: `Exceeds max capacity of ${errData?.params?.max || ''} guests`, ar: `يتجاوز الحد الأقصى ${errData?.params?.max || ''} ضيوف` },
+        MAX_CAPACITY: { en: `Exceeds max capacity of ${errData?.params?.max || ''} guests`, ar: `يتجاوز الحد الأقصى ${getGuestLabel(errData?.params?.max || 0, 'ar')}` },
         DATES_BLOCKED: { en: 'Property is blocked for selected dates', ar: 'العقار محجوب للتواريخ المحددة' },
         MIN_STAY: { en: `Minimum stay is ${errData?.params?.min || ''} nights`, ar: `الحد الأدنى للإقامة ${errData?.params?.min || ''} ليالي` },
         MAX_STAY: { en: `Maximum stay is ${errData?.params?.max || ''} nights`, ar: `الحد الأقصى للإقامة ${errData?.params?.max || ''} ليالي` },
@@ -311,15 +312,15 @@ function BookingContent() {
                             <div>
                               <p className="text-sm font-medium text-gray-800">{isAr ? 'الضيوف' : 'Guests'}</p>
                               <p className="text-xs text-gray-500">
-                                {isAr ? `حتى ${property.capacity.maxGuests} ضيف مسموح` : `Up to ${property.capacity.maxGuests} allowed`}
+                                {isAr ? `حتى ${getGuestLabel(property.capacity.maxGuests, 'ar')} مسموح` : `Up to ${property.capacity.maxGuests} allowed`}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-semibold text-gray-700">
                               {isAr
-                                ? `${adultsCount} ${adultsCount === 1 ? 'بالغ' : 'بالغين'}${childrenCount > 0 ? `، ${childrenCount} ${childrenCount === 1 ? 'طفل' : 'أطفال'}` : ''}`
-                                : `${adultsCount} ${adultsCount === 1 ? 'adult' : 'adults'}${childrenCount > 0 ? `, ${childrenCount} ${childrenCount === 1 ? 'child' : 'children'}` : ''}`}
+                                ? `${getAdultLabel(adultsCount, 'ar')}${childrenCount > 0 ? `، ${getChildLabel(childrenCount, 'ar')}` : ''}`
+                                : `${getAdultLabel(adultsCount, 'en')}${childrenCount > 0 ? `, ${getChildLabel(childrenCount, 'en')}` : ''}`}
                             </span>
                             <Link
                               href={`/listings/${id}`}
@@ -549,7 +550,7 @@ function BookingContent() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 text-sm line-clamp-2">{property.title}</p>
-                      <p className="text-xs text-gray-500 mt-1">{property.location.city}</p>
+                      <p className="text-xs text-gray-500 mt-1">{isAr ? (CITIES.find(c => c.value === property.location.city)?.ar || property.location.city) : property.location.city}</p>
                     </div>
                   </div>
 

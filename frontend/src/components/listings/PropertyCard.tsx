@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck } from 'lucide-react';
 import { Property, User } from '@/types';
-import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice } from '@/lib/utils';
+import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { useAuth } from '@/context/AuthContext';
@@ -191,7 +191,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <div className="flex items-center gap-3 text-gray-500 text-xs mb-3">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {property.capacity.maxGuests} {property.capacity.maxGuests === 1 ? t('card.guest') : t('card.guests')}
+              {getGuestLabel(property.capacity.maxGuests, isAr ? 'ar' : 'en')}
             </span>
             <span className="flex items-center gap-1">
               <BedDouble className="w-3 h-3" />

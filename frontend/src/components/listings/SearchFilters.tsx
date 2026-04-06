@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { SlidersHorizontal, X, MapPin, Calendar, Users, ChevronDown, Minus, Plus } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { CITIES } from '@/lib/constants';
+import { getGuestLabel } from '@/lib/utils';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 
 export default function SearchFilters() {
@@ -238,7 +239,7 @@ export default function SearchFilters() {
               <Users className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
               <span className={totalGuests > 1 ? 'text-gray-800' : 'text-gray-400'}>
                 {totalGuests > 1
-                  ? `${totalGuests} ${isAr ? 'ضيوف' : 'guests'}`
+                  ? getGuestLabel(totalGuests, isAr ? 'ar' : 'en')
                   : isAr ? 'الضيوف' : 'Guests'
                 }
               </span>
