@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/types';
 import { formatPrice, formatPriceNumber, calculateNights, getDiscountedPrice, getNightLabel } from '@/lib/utils';
@@ -34,6 +34,13 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   const guests = adults + children;
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
+
+  // Persist dates and guests to cookies whenever they change
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    saveSearchCookies({ checkIn, checkOut, adults, children });
+  }, [checkIn, checkOut, adults, children]);
 
   const handleDateSelect = (dateStr: string) => {
     if (!selectingCheckOut || !checkIn) {
@@ -135,7 +142,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-gray-400" />
               <span className={`text-sm font-medium ${checkIn ? 'text-gray-800' : 'text-gray-400'}`}>
-                {checkIn ? format(new Date(checkIn), 'MMM d, yyyy') : t('booking.checkIn')}
+                {checkIn ? (isAr ? new Date(checkIn).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' }) : format(new Date(checkIn), 'MMM d, yyyy')) : t('booking.checkIn')}
               </span>
             </div>
           </button>
@@ -148,7 +155,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-gray-400" />
               <span className={`text-sm font-medium ${checkOut ? 'text-gray-800' : 'text-gray-400'}`}>
-                {checkOut ? format(new Date(checkOut), 'MMM d, yyyy') : t('booking.checkOut')}
+                {checkOut ? (isAr ? new Date(checkOut).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' }) : format(new Date(checkOut), 'MMM d, yyyy')) : t('booking.checkOut')}
               </span>
             </div>
           </button>

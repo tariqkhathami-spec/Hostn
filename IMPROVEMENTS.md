@@ -134,6 +134,9 @@
 | F105 | 2026-04-06 | `/listings/[id]` and `/booking/[id]` — URLs should not contain search params; read from cookies only | AMS | PropertyCard links to clean `/listings/[id]`; detail page reads dates/guests from cookies via `getSearchCookies`; BookingWidget saves to cookie then navigates to clean `/booking/[id]`; booking page reads from cookies; auth redirect uses clean URL | Done |
 | F106 | 2026-04-06 | `/listings/[id]` — BookingWidget calendar month names not in Arabic when language is Arabic | AMS | Pass `locale={language}` to MiniCalendar in BookingWidget; month names now use MONTH_NAMES_AR | Done |
 | F107 | 2026-04-06 | `/listings/[id]` — BookingWidget calendar shows duplicate month header (one in nav bar, one in MonthGrid) | AMS | Added `showHeader` prop to MonthGrid; non-dual mode passes `showHeader={false}` since nav bar already shows month; dual mode keeps both headers | Done |
+| F108 | 2026-04-06 | `/listings/[id]` — Check-in/check-out date boxes show English dates when language is Arabic | AMS | Uses `toLocaleDateString('ar-SA')` for Arabic; keeps `format(date, 'MMM d, yyyy')` for English | Done |
+| F109 | 2026-04-06 | `/listings/[id]` — Changing dates in BookingWidget does not update cookies (navigating to /listings shows old dates) | AMS | Added `useEffect` watching `checkIn`/`checkOut`/`adults`/`children` that calls `saveSearchCookies` on change (skips initial mount) | Done |
+| F110 | 2026-04-06 | `/listings/[id]` — Changing guest count in BookingWidget does not update cookies (navigating to /listings shows old count) | AMS | Same useEffect handles guest changes — cookies always in sync | Done |
 
 ## Improvements
 
