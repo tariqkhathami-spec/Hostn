@@ -15,13 +15,9 @@ import toast from 'react-hot-toast';
 
 interface PropertyCardProps {
   property: Property;
-  checkIn?: string;
-  checkOut?: string;
-  adults?: number;
-  children?: number;
 }
 
-export default function PropertyCard({ property, checkIn, checkOut, adults: propAdults, children: propChildren }: PropertyCardProps) {
+export default function PropertyCard({ property }: PropertyCardProps) {
   const { user, isAuthenticated, toggleWishlist } = useAuth();
   const { t, language } = useLanguage();
   const isAr = language === 'ar';
@@ -80,7 +76,7 @@ export default function PropertyCard({ property, checkIn, checkOut, adults: prop
   };
 
   return (
-    <Link href={`/listings/${property._id}${checkIn || checkOut || propAdults ? `?${new URLSearchParams({ ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}), ...(propAdults ? { adults: String(propAdults) } : {}), ...(propChildren ? { children: String(propChildren) } : {}) }).toString()}` : ''}`} className="group block">
+    <Link href={`/listings/${property._id}`} className="group block">
       <div className="card overflow-hidden group-hover:scale-[1.01] transition-all duration-300">
         {/* Image Carousel */}
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gray-100 group/carousel">

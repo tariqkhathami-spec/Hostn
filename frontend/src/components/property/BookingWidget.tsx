@@ -13,6 +13,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { format } from 'date-fns';
 import BnplWidget from '@/components/payment/BnplWidget';
 import SarSymbol from '@/components/ui/SarSymbol';
+import { saveSearchCookies } from '@/lib/searchCookies';
 
 interface BookingWidgetProps {
   property: Property;
@@ -80,8 +81,8 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       return;
     }
 
-    const params = new URLSearchParams({ checkIn, checkOut, adults: adults.toString(), children: children.toString() });
-    router.push(`/booking/${property._id}?${params.toString()}`);
+    saveSearchCookies({ checkIn, checkOut, adults, children });
+    router.push(`/booking/${property._id}`);
   };
 
   const displayPrice = property.pricing.discountPercent > 0

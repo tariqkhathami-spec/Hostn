@@ -131,6 +131,7 @@
 | F102 | 2026-04-06 | `/listings` — Offers toggle reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `setTimeout(handleSearch, 0)` | Done |
 | F103 | 2026-04-06 | `/listings` — Direction filter reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `handleSearch` | Done |
 | F104 | 2026-04-06 | `/listings` — District filter reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `handleSearch` | Done |
+| F105 | 2026-04-06 | `/listings/[id]` and `/booking/[id]` — URLs should not contain search params; read from cookies only | AMS | PropertyCard links to clean `/listings/[id]`; detail page reads dates/guests from cookies via `getSearchCookies`; BookingWidget saves to cookie then navigates to clean `/booking/[id]`; booking page reads from cookies; auth redirect uses clean URL | Done |
 
 ## Improvements
 

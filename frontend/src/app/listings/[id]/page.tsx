@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ImageGallery from '@/components/property/ImageGallery';
@@ -21,7 +21,7 @@ const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
 });
 import StarRating from '@/components/ui/StarRating';
 import { useLanguage } from '@/context/LanguageContext';
-import { saveSearchCookies } from '@/lib/searchCookies';
+import { getSearchCookies } from '@/lib/searchCookies';
 
 export default function PropertyDetailPage() {
   return (
@@ -33,18 +33,27 @@ export default function PropertyDetailPage() {
 
 function PropertyDetailContent() {
   const { id } = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const { t, language } = useLanguage();
-
-  // Read dates and guests from URL params (passed from listings search)
-  const initialCheckIn = searchParams.get('checkIn') || '';
-  const initialCheckOut = searchParams.get('checkOut') || '';
-  const initialAdults = parseInt(searchParams.get('adults') || '0', 10) || 0;
-  const initialChildren = parseInt(searchParams.get('children') || '0', 10) || 0;
   const isAr = language === 'ar';
+
+  // Read dates and guests from cookies
+  const [initialCheckIn, setInitialCheckIn] = useState('');
+  const [initialCheckOut, setInitialCheckOut] = useState('');
+  const [initialAdults, setInitialAdults] = useState(0);
+  const [initialChildren, setInitialChildren] = useState(0);
+
+  useEffect(() => {
+    const saved = getSearchCookies();
+    if (saved) {
+      if (saved.checkIn) setInitialCheckIn(saved.checkIn);
+      if (saved.checkOut) setInitialCheckOut(saved.checkOut);
+      if (saved.adults) setInitialAdults(saved.adults);
+      if (saved.children) setInitialChildren(saved.children);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -59,18 +68,6 @@ function PropertyDetailContent() {
     };
     fetchProperty();
   }, [id]);
-
-  // Persist search params to cookie so they survive navigation
-  useEffect(() => {
-    if (initialCheckIn || initialCheckOut || initialAdults || initialChildren) {
-      saveSearchCookies({
-        checkIn: initialCheckIn,
-        checkOut: initialCheckOut,
-        adults: initialAdults,
-        children: initialChildren,
-      });
-    }
-  }, [initialCheckIn, initialCheckOut, initialAdults, initialChildren]);
 
   if (loading) {
     return (

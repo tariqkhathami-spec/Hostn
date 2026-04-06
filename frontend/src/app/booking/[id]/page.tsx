@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Property } from '@/types';
@@ -15,7 +15,7 @@ import Button from '@/components/ui/Button';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { saveSearchCookies } from '@/lib/searchCookies';
+import { getSearchCookies } from '@/lib/searchCookies';
 
 declare global {
   interface Window {
@@ -27,7 +27,6 @@ declare global {
 
 function BookingContent() {
   const { id } = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { language } = useLanguage();
@@ -43,22 +42,26 @@ function BookingContent() {
 
   const isAr = language === 'ar';
 
-  const checkIn = searchParams.get('checkIn') || '';
-  const checkOut = searchParams.get('checkOut') || '';
-  const adultsCount = parseInt(searchParams.get('adults') || searchParams.get('guests') || '1', 10);
-  const childrenCount = parseInt(searchParams.get('children') || '0', 10);
+  // Read booking details from cookies
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
+  const [adultsCount, setAdultsCount] = useState(1);
+  const [childrenCount, setChildrenCount] = useState(0);
   const guestsCount = adultsCount + childrenCount;
 
-  // Save booking details to cookie
   useEffect(() => {
-    if (checkIn || checkOut || adultsCount || childrenCount) {
-      saveSearchCookies({ checkIn, checkOut, adults: adultsCount, children: childrenCount });
+    const saved = getSearchCookies();
+    if (saved) {
+      if (saved.checkIn) setCheckIn(saved.checkIn);
+      if (saved.checkOut) setCheckOut(saved.checkOut);
+      if (saved.adults) setAdultsCount(saved.adults);
+      if (saved.children) setChildrenCount(saved.children);
     }
-  }, [checkIn, checkOut, adultsCount, childrenCount]);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push(`/auth?redirect=/booking/${id}?${searchParams.toString()}`);
+      router.push(`/auth?redirect=/booking/${id}`);
       return;
     }
     fetchProperty();
