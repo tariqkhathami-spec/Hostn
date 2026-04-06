@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { CITIES } from '@/lib/constants';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { calculateNights, getNightLabel } from '@/lib/utils';
-import { saveSearchCookies, getSearchCookies } from '@/lib/searchCookies';
+import { saveSearchCookies, getSearchCookies, clearSearchCookies } from '@/lib/searchCookies';
 
 type SearchStep = 'idle' | 'location' | 'type' | 'dates' | 'ready';
 
@@ -485,17 +485,15 @@ export default function HeroSearch() {
             <button
               key={c.value}
               onClick={() => {
+                clearSearchCookies();
                 if (checkIn && checkOut) {
-                  // If dates already picked, go with those
-                  const params = new URLSearchParams({ city: c.value, checkIn, checkOut });
-                  router.push(`/listings?${params.toString()}`);
+                  saveSearchCookies({ city: c.value, checkIn, checkOut });
                 } else {
-                  // Default: 1 night from today
                   const todayStr = format(new Date(), 'yyyy-MM-dd');
                   const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-                  const params = new URLSearchParams({ city: c.value, checkIn: todayStr, checkOut: tomorrowStr });
-                  router.push(`/listings?${params.toString()}`);
+                  saveSearchCookies({ city: c.value, checkIn: todayStr, checkOut: tomorrowStr });
                 }
+                router.push('/listings');
               }}
               className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/5 hover:border-white/15"
             >

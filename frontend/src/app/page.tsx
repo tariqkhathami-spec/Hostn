@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import FeaturedListings from '@/components/home/FeaturedListings';
@@ -10,6 +11,7 @@ import { Search, Shield, Star, Headphones, Home, Building, TreePine, Tent, Hotel
 import { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { propertiesApi } from '@/lib/api';
+import { clearSearchCookies, saveSearchCookies } from '@/lib/searchCookies';
 
 const PROPERTY_TYPES = [
   { key: 'chalet', icon: Home, label: { en: 'Chalets', ar: 'شاليهات' } },
@@ -21,6 +23,7 @@ const PROPERTY_TYPES = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const { language, t } = useLanguage();
   const lang = language as 'en' | 'ar';
   const [stats, setStats] = useState<{ properties: number; hosts: number; completedBookings: number; reviews: number } | null>(null);
@@ -46,14 +49,18 @@ export default function HomePage() {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {PROPERTY_TYPES.map(({ key, icon: Icon, label }) => (
-              <Link
+              <button
                 key={key}
-                href={`/listings?type=${key}&city=Riyadh&checkIn=${format(new Date(), 'yyyy-MM-dd')}&checkOut=${format(addDays(new Date(), 1), 'yyyy-MM-dd')}`}
+                onClick={() => {
+                  clearSearchCookies();
+                  saveSearchCookies({ type: key });
+                  router.push('/listings');
+                }}
                 className="flex flex-col items-center gap-3 p-6 bg-gray-50 rounded-2xl hover:bg-primary-50 hover:border-primary-200 border-2 border-transparent transition-all"
               >
                 <Icon className="w-8 h-8 text-primary-600" />
                 <span className="text-sm font-medium text-gray-700">{label[lang]}</span>
-              </Link>
+              </button>
             ))}
           </div>
         </div>

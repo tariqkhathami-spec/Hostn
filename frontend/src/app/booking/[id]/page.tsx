@@ -180,8 +180,8 @@ function BookingContent() {
         NO_ADULTS: { en: 'At least one adult guest required', ar: 'مطلوب ضيف بالغ واحد على الأقل' },
         MAX_CAPACITY: { en: `Exceeds max capacity of ${errData?.params?.max || ''} guests`, ar: `يتجاوز الحد الأقصى ${getGuestLabel(errData?.params?.max || 0, 'ar')}` },
         DATES_BLOCKED: { en: 'Property is blocked for selected dates', ar: 'العقار محجوب للتواريخ المحددة' },
-        MIN_STAY: { en: `Minimum stay is ${errData?.params?.min || ''} nights`, ar: `الحد الأدنى للإقامة ${errData?.params?.min || ''} ليالي` },
-        MAX_STAY: { en: `Maximum stay is ${errData?.params?.max || ''} nights`, ar: `الحد الأقصى للإقامة ${errData?.params?.max || ''} ليالي` },
+        MIN_STAY: { en: `Minimum stay is ${getNightLabel(errData?.params?.min || 0, 'en')}`, ar: `الحد الأدنى للإقامة${getNightLabel(errData?.params?.min || 0, 'ar')}` },
+        MAX_STAY: { en: `Maximum stay is ${getNightLabel(errData?.params?.max || 0, 'en')}`, ar: `الحد الأقصى للإقامة${getNightLabel(errData?.params?.max || 0, 'ar')}` },
         DATES_UNAVAILABLE: { en: 'This property is already booked for one or more of your selected dates. Please choose different dates.', ar: 'هذا العقار محجوز بالفعل في أحد التواريخ التي اخترتها. يرجى اختيار تواريخ أخرى.' },
       };
       const mapped = errData?.code ? errorMessages[errData.code] : null;
@@ -440,10 +440,7 @@ function BookingContent() {
                                 {isAr ? 'تابي — قسّمها على 4' : 'Tabby — Split in 4'}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {isAr
-                                  ? `4 دفعات × ${formatPrice(Math.ceil((total / 4) * 100) / 100)} بدون فوائد`
-                                  : `4 × ${formatPrice(Math.ceil((total / 4) * 100) / 100)} interest-free`
-                                }
+                                {isAr ? '4 دفعات × ' : '4 × '}<span dir="ltr"><SarSymbol /> {formatPriceNumber(Math.ceil((total / 4) * 100) / 100)}</span>{isAr ? ' بدون فوائد' : ' interest-free'}
                               </p>
                             </div>
                             <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-lg">tabby</span>
@@ -474,10 +471,7 @@ function BookingContent() {
                                 {isAr ? 'تمارا — قسّمها على 4' : 'Tamara — Split in 4'}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {isAr
-                                  ? `4 دفعات × ${formatPrice(Math.ceil((total / 4) * 100) / 100)} بدون رسوم تأخير`
-                                  : `4 × ${formatPrice(Math.ceil((total / 4) * 100) / 100)} no late fees`
-                                }
+                                {isAr ? '4 دفعات × ' : '4 × '}<span dir="ltr"><SarSymbol /> {formatPriceNumber(Math.ceil((total / 4) * 100) / 100)}</span>{isAr ? ' بدون رسوم تأخير' : ' no late fees'}
                               </p>
                             </div>
                             <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-lg">tamara</span>
