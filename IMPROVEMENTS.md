@@ -122,7 +122,7 @@
 | F93 | 2026-04-06 | `/listings` — Guest button shows "Guests" text even with 1 adult selected | AMS | Changed condition from `adults + children > 1` to `adults >= 1` so 1 adult shows "1" instead of empty "Guests" | Done |
 | F94 | 2026-04-06 | `/listings` — Area filter slider should treat number+unit like F90 (only number+unit in dir=ltr, not whole slider) | AMS | Removed `dir="ltr"` from slider input and labels container; added `dir="ltr"` only on individual number+unit `<span>` elements so slider follows page direction | Done |
 | F95 | 2026-04-06 | `/listings` — Type filter should auto-update on click without Apply button | AMS | Each type click triggers `toggleType` + `setAutoSearch` for instant re-fetch; removed Apply button from type filter popover | Done |
-| F96 | 2026-04-06 | `/listings` — Selecting multiple types in filter returns no results (backend exact-matches comma string instead of `$in`) | AMS | Backend `getProperties` now splits comma-separated `type` param and uses `$in` for multi-type queries; single type still uses exact match | Done |
+| F96 | 2026-04-06 | `/listings` — Selecting multiple types in filter returns no results (backend exact-matches comma string instead of `$in`) | AMS | Frontend sends `type` as array (`type[]=chalet&type[]=villa`) instead of comma-joined string; backend receives array which MongoDB matches via implicit `$in`. Backend also has `$in` fallback for comma strings | Done |
 
 ## Improvements
 

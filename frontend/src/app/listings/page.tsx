@@ -254,7 +254,7 @@ function ListingsContent() {
     try {
       const params: Record<string, unknown> = {};
       if (searchCity) params.city = searchCity;
-      if (selectedTypes.length > 0) params.type = selectedTypes.join(',');
+      if (selectedTypes.length > 0) params.type = selectedTypes;
       if (checkIn) params.checkIn = checkIn;
       if (checkOut) params.checkOut = checkOut;
       if (priceRange < 4000) params.maxPrice = priceRange;
