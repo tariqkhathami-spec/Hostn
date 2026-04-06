@@ -59,6 +59,7 @@ function MonthGrid({
   onSelectDate,
   dayNames,
   locale,
+  showHeader = true,
 }: {
   month: Date;
   checkInDate: Date | null;
@@ -69,14 +70,17 @@ function MonthGrid({
   onSelectDate: (date: string) => void;
   dayNames: string[];
   locale: string;
+  showHeader?: boolean;
 }) {
   const weeks = useMemo(() => buildWeeks(month), [month]);
 
   return (
     <div>
-      <div className="text-center text-sm font-semibold text-gray-800 mb-2">
-        {formatMonthYear(month, locale)}
-      </div>
+      {showHeader && (
+        <div className="text-center text-sm font-semibold text-gray-800 mb-2">
+          {formatMonthYear(month, locale)}
+        </div>
+      )}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {dayNames.map((d) => (
           <div key={d} className="text-center text-[10px] font-medium text-gray-400 py-1">{d}</div>
@@ -196,7 +200,7 @@ export default function MiniCalendar({
           <MonthGrid month={nextMonth} {...sharedProps} />
         </div>
       ) : (
-        <MonthGrid month={currentMonth} {...sharedProps} />
+        <MonthGrid month={currentMonth} {...sharedProps} showHeader={false} />
       )}
 
       {onConfirm && checkIn && checkOut && (

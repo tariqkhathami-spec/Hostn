@@ -162,6 +162,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
               checkIn={checkIn}
               checkOut={checkOut}
               onSelectDate={handleDateSelect}
+              locale={language as 'en' | 'ar'}
               unavailableDates={((property as Property & { unavailableDates?: (string | Date)[] }).unavailableDates || []).map((d) => typeof d === 'string' ? d : format(new Date(d), 'yyyy-MM-dd'))}
             />
           </div>
