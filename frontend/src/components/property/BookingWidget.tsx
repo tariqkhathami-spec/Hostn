@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/types';
-import { formatPrice, formatPriceNumber, calculateNights, getDiscountedPrice, getNightLabel } from '@/lib/utils';
+import { formatPrice, formatPriceNumber, calculateNights, getDiscountedPrice, getNightLabel, getGuestLabel } from '@/lib/utils';
 import { Calendar, Users, Minus, Plus } from 'lucide-react';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import Button from '@/components/ui/Button';
@@ -84,7 +84,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       return;
     }
     if (guests > property.capacity.maxGuests) {
-      toast.error(t('booking.maxGuests').replace('{count}', String(property.capacity.maxGuests)));
+      toast.error(isAr ? `الحد الأقصى ${getGuestLabel(property.capacity.maxGuests, 'ar')}` : `Maximum ${property.capacity.maxGuests} guests allowed`);
       return;
     }
 

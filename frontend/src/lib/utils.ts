@@ -56,6 +56,60 @@ export function getNightLabel(count: number, lang: 'en' | 'ar' = 'en') {
   return count === 1 ? '1 night' : `${count} nights`;
 }
 
+/**
+ * Arabic guest plural rules:
+ *   1   → ضيف
+ *   2   → ضيفان
+ *   3–10 → N ضيوف
+ *   11+ → N ضيف
+ * English: 1 → 1 guest, else → N guests
+ */
+export function getGuestLabel(count: number, lang: 'en' | 'ar' = 'en') {
+  if (lang === 'ar') {
+    if (count === 1) return 'ضيف';
+    if (count === 2) return 'ضيفان';
+    if (count <= 10) return `${count} ضيوف`;
+    return `${count} ضيف`;
+  }
+  return count === 1 ? '1 guest' : `${count} guests`;
+}
+
+/**
+ * Arabic adult plural rules:
+ *   1   → بالغ
+ *   2   → بالغان
+ *   3–10 → N بالغين
+ *   11+ → N بالغ
+ * English: 1 → 1 adult, else → N adults
+ */
+export function getAdultLabel(count: number, lang: 'en' | 'ar' = 'en') {
+  if (lang === 'ar') {
+    if (count === 1) return 'بالغ';
+    if (count === 2) return 'بالغان';
+    if (count <= 10) return `${count} بالغين`;
+    return `${count} بالغ`;
+  }
+  return count === 1 ? '1 adult' : `${count} adults`;
+}
+
+/**
+ * Arabic child plural rules:
+ *   1   → طفل
+ *   2   → طفلان
+ *   3–10 → N أطفال
+ *   11+ → N طفل
+ * English: 1 → 1 child, else → N children
+ */
+export function getChildLabel(count: number, lang: 'en' | 'ar' = 'en') {
+  if (lang === 'ar') {
+    if (count === 1) return 'طفل';
+    if (count === 2) return 'طفلان';
+    if (count <= 10) return `${count} أطفال`;
+    return `${count} طفل`;
+  }
+  return count === 1 ? '1 child' : `${count} children`;
+}
+
 export function getPropertyTypeLabel(type: string, lang: 'en' | 'ar' = 'en') {
   const labels: Record<string, { en: string; ar: string }> = {
     chalet: { en: 'Chalet', ar: 'شاليه' },

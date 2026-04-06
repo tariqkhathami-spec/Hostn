@@ -16,7 +16,7 @@ import {
 import { Property } from '@/types';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { format, addDays } from 'date-fns';
-import { calculateNights, getNightLabel } from '@/lib/utils';
+import { calculateNights, getNightLabel, getAdultLabel, getChildLabel } from '@/lib/utils';
 import { DISTRICTS, DIRECTIONS } from '@/lib/constants';
 import { saveSearchCookies, getSearchCookies } from '@/lib/searchCookies';
 import SarSymbol from '@/components/ui/SarSymbol';
@@ -430,7 +430,7 @@ function ListingsContent() {
                   className={`w-full ltr:pl-9 ltr:pr-8 rtl:pr-9 rtl:pl-8 py-2.5 border rounded-xl text-sm text-start transition-all bg-white ${showGuestPicker ? 'border-primary-400 ring-2 ring-primary-400/40' : 'border-gray-200'}`}>
                   <span className={guests ? 'text-gray-800' : 'text-gray-400'}>
                     {guests
-                      ? isAr ? `${adults} \u0628\u0627\u0644\u063A${children > 0 ? ` \u00B7 ${children} \u0637\u0641\u0644` : ''}` : `${adults} Adult${adults > 1 ? 's' : ''}${children > 0 ? ` \u00B7 ${children} Child${children > 1 ? 'ren' : ''}` : ''}`
+                      ? isAr ? `${getAdultLabel(adults, 'ar')}${children > 0 ? ` · ${getChildLabel(children, 'ar')}` : ''}` : `${getAdultLabel(adults, 'en')}${children > 0 ? ` · ${getChildLabel(children, 'en')}` : ''}`
                       : isAr ? '\u0639\u062F\u062F \u0627\u0644\u0636\u064A\u0648\u0641' : 'Guests'}
                   </span>
                 </button>

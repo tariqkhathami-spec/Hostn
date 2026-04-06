@@ -141,6 +141,9 @@
 | F112 | 2026-04-06 | `/booking/[id]` — "Property not available for selected dates" error needs better explanation | AMS | Changed to "This property is already booked for one or more of your selected dates. Please choose different dates." (bilingual) | Done |
 | F113 | 2026-04-06 | `/booking/[id]` — Dates displayed in English format when language is Arabic | AMS | Uses `toLocaleDateString('ar-SA')` for Arabic date display | Done |
 | F114 | 2026-04-06 | `/contact` — Back arrow "←" points wrong direction in Arabic | AMS | Replaced hardcoded "←" with ArrowLeft icon + `rtl:rotate-180` | Done |
+| F115 | 2026-04-06 | `/booking/[id]` — City under property name shows in English when language is Arabic | AMS | Added CITIES import; lookup Arabic city name via `CITIES.find()` | Done |
+| F116 | 2026-04-06 | Sitewide — Arabic guest count grammar incorrect (ضيف/ضيفان/ضيوف rules) | AMS | New `getGuestLabel(count, lang)` in utils.ts: 1=ضيف, 2=ضيفان, 3-10=ضيوف, 11+=ضيف. Applied in PropertyCard, SearchFilters, BookingWidget, booking page | Done |
+| F117 | 2026-04-06 | Sitewide — Arabic adult/children count grammar incorrect (بالغ/بالغان/بالغين and طفل/طفلان/أطفال rules) | AMS | New `getAdultLabel` and `getChildLabel` in utils.ts with full Arabic plural rules. Applied in booking page, listings page guest picker | Done |
 
 ## Improvements
 
