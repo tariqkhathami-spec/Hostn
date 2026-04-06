@@ -119,6 +119,9 @@
 | F90 | 2026-04-06 | `/listings` — Price slider should follow page direction (RTL in Arabic, LTR in English), only number+symbol wrapped in dir=ltr | AMS | Removed `dir="ltr"` from slider input and labels container; kept `dir="ltr"` only on individual number+symbol spans | Done |
 | F91 | 2026-04-06 | `/listings` — URL should not contain search/filter details, rely on cookies only | AMS | Removed all URL params from `handleSearch` and clear-all; navigate to clean `/listings`; all state reads from cookies via `useEffect` on mount; removed `useSearchParams` | Done |
 | F92 | 2026-04-06 | `/listings` — Guest picker does not remember/restore adults and children count | AMS | State initializes empty then restores from cookies via `useEffect` on client mount (fixes SSR null `document` issue); adults and children restored from cookie | Done |
+| F93 | 2026-04-06 | `/listings` — Guest button shows "Guests" text even with 1 adult selected | AMS | Changed condition from `adults + children > 1` to `adults >= 1` so 1 adult shows "1" instead of empty "Guests" | Done |
+| F94 | 2026-04-06 | `/listings` — Area filter slider should treat number+unit like F90 (only number+unit in dir=ltr, not whole slider) | AMS | Removed `dir="ltr"` from slider input and labels container; added `dir="ltr"` only on individual number+unit `<span>` elements so slider follows page direction | Done |
+| F95 | 2026-04-06 | `/listings` — Type filter should auto-update on click without Apply button | AMS | Each type click triggers `toggleType` + `setAutoSearch` for instant re-fetch; removed Apply button from type filter popover | Done |
 
 ## Improvements
 
