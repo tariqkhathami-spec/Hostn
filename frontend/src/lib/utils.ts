@@ -48,10 +48,10 @@ export function calculateNights(checkIn: string | Date, checkOut: string | Date)
  */
 export function getNightLabel(count: number, lang: 'en' | 'ar' = 'en') {
   if (lang === 'ar') {
-    if (count === 1) return 'ليلة';
-    if (count === 2) return 'ليلتان';
-    if (count <= 10) return `${count} ليالي`;
-    return `${count} ليلة`;
+    if (count === 1) return '\u00A0ليلة';
+    if (count === 2) return '\u00A0ليلتان';
+    if (count <= 10) return `\u00A0${count} ليالي`;
+    return `\u00A0${count} ليلة`;
   }
   return count === 1 ? '1 night' : `${count} nights`;
 }

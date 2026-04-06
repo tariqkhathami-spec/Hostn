@@ -11,7 +11,7 @@ import { CITIES } from '@/lib/constants';
 import Link from 'next/link';
 import {
   Search, MapPin, Calendar, Users, X, ChevronDown, Minus, Plus,
-  Building, BedDouble, Star, Percent, DollarSign, Map, Droplets, Compass, Ruler,
+  Building, BedDouble, Star, Percent, Map, Droplets, Compass, Ruler,
 } from 'lucide-react';
 import { Property } from '@/types';
 import MiniCalendar from '@/components/ui/MiniCalendar';
@@ -120,16 +120,24 @@ function ListingsContent() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [checkIn, setCheckIn] = useState(searchParams.get('checkIn') || savedSearch?.checkIn || '');
   const [checkOut, setCheckOut] = useState(searchParams.get('checkOut') || savedSearch?.checkOut || '');
-  const [guests, setGuests] = useState(searchParams.get('guests') || savedSearch?.guests || '');
-
   // Calendar
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
 
-  // Guest picker
-  const initGuests = Number(searchParams.get('guests') || savedSearch?.adults || 0);
-  const [adults, setAdults] = useState(initGuests > 0 ? Math.max(1, initGuests) : (savedSearch?.adults || 1));
-  const [children, setChildren] = useState(savedSearch?.children || 0);
+  // Guest picker — read adults/children separately from URL or cookies
+  const [adults, setAdults] = useState(() => {
+    const urlAdults = searchParams.get('adults');
+    if (urlAdults) return Math.max(1, parseInt(urlAdults, 10));
+    const urlGuests = searchParams.get('guests');
+    if (urlGuests) return Math.max(1, parseInt(urlGuests, 10));
+    return savedSearch?.adults || 1;
+  });
+  const [children, setChildren] = useState(() => {
+    const urlChildren = searchParams.get('children');
+    if (urlChildren) return parseInt(urlChildren, 10);
+    return savedSearch?.children || 0;
+  });
+  const guests = adults + children > 1 ? String(adults + children) : '';
   const [showGuestPicker, setShowGuestPicker] = useState(false);
 
   // ── Filter state ──
@@ -199,11 +207,7 @@ function ListingsContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync guests total
-  useEffect(() => {
-    const total = adults + children;
-    setGuests(total > 0 ? String(total) : '');
-  }, [adults, children]);
+  // (guests is now a derived value from adults + children)
 
   // Calendar date handler
   const handleDateSelect = useCallback((dateStr: string) => {
@@ -288,7 +292,8 @@ function ListingsContent() {
     if (checkIn) params.set('checkIn', checkIn);
     if (checkOut) params.set('checkOut', checkOut);
     if (priceRange < 4000) params.set('maxPrice', String(priceRange));
-    if (guests) params.set('guests', guests);
+    if (adults > 1) params.set('adults', String(adults));
+    if (children > 0) params.set('children', String(children));
     if (minBedrooms) params.set('bedrooms', minBedrooms);
     if (minRating) params.set('rating', minRating);
     if (hasDiscount) params.set('discount', '1');
@@ -302,8 +307,10 @@ function ListingsContent() {
     fetchProperties();
   };
 
-  // Auto-fetch on first load and when filters change via bubbles
-  useEffect(() => { fetchProperties(); }, []);
+  const [autoSearch, setAutoSearch] = useState(0);
+
+  // Auto-fetch on first load and when auto-search is triggered (clear all / filter cancel)
+  useEffect(() => { fetchProperties(); }, [autoSearch]);
 
   const toggleType = (key: string) => {
     setSelectedTypes((prev) =>
@@ -316,6 +323,7 @@ function ListingsContent() {
     setPriceRange(4000); setMinBedrooms(''); setMinRating('');
     setHasDiscount(false); setDistrict(''); setSelectedTypes([]);
     setHasPool(false); setDirection(''); setAreaRange(1500);
+    setAutoSearch((n) => n + 1);
   };
 
   // Auto-flow: city → calendar
@@ -500,7 +508,7 @@ function ListingsContent() {
                   : (isAr ? '\u0646\u0648\u0639 \u0627\u0644\u0639\u0642\u0627\u0631' : 'Type')}
                 active={selectedTypes.length > 0}
                 onClick={() => setOpenFilter(openFilter === 'type' ? null : 'type')}
-                onClear={selectedTypes.length > 0 ? () => { setSelectedTypes([]); } : undefined}
+                onClear={selectedTypes.length > 0 ? () => { setSelectedTypes([]); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'type' && (
@@ -532,7 +540,7 @@ function ListingsContent() {
                 label={minBedrooms ? `${minBedrooms}+ ${isAr ? '\u063A\u0631\u0641' : 'bed'}` : (isAr ? '\u063A\u0631\u0641 \u0627\u0644\u0646\u0648\u0645' : 'Bedrooms')}
                 active={!!minBedrooms}
                 onClick={() => setOpenFilter(openFilter === 'bedrooms' ? null : 'bedrooms')}
-                onClear={minBedrooms ? () => setMinBedrooms('') : undefined}
+                onClear={minBedrooms ? () => { setMinBedrooms(''); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'bedrooms' && (
@@ -559,7 +567,7 @@ function ListingsContent() {
                 label={minRating ? `${minRating}+` : (isAr ? '\u0627\u0644\u062A\u0642\u064A\u064A\u0645' : 'Rating')}
                 active={!!minRating}
                 onClick={() => setOpenFilter(openFilter === 'rating' ? null : 'rating')}
-                onClear={minRating ? () => setMinRating('') : undefined}
+                onClear={minRating ? () => { setMinRating(''); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'rating' && (
@@ -586,7 +594,7 @@ function ListingsContent() {
               label={isAr ? '\u0645\u0633\u0628\u062D' : 'Pool'}
               active={hasPool}
               onClick={() => { setHasPool(!hasPool); setTimeout(handleSearch, 0); }}
-              onClear={hasPool ? () => { setHasPool(false); } : undefined}
+              onClear={hasPool ? () => { setHasPool(false); setAutoSearch((n) => n + 1); } : undefined}
             />
 
             {/* Discount */}
@@ -595,31 +603,34 @@ function ListingsContent() {
               label={isAr ? '\u0639\u0631\u0648\u0636' : 'Offers'}
               active={hasDiscount}
               onClick={() => { setHasDiscount(!hasDiscount); setTimeout(handleSearch, 0); }}
-              onClear={hasDiscount ? () => { setHasDiscount(false); } : undefined}
+              onClear={hasDiscount ? () => { setHasDiscount(false); setAutoSearch((n) => n + 1); } : undefined}
             />
 
             {/* Price Slider */}
             <div className="relative">
               <FilterBubble
-                icon={DollarSign}
+                icon={SarSymbol}
                 label={priceRange < 4000
                   ? <>{isAr ? '\u062D\u062A\u0649' : 'Up to'} <span dir="ltr"><SarSymbol /> {priceRange}</span></>
                   : (isAr ? '\u0627\u0644\u0633\u0639\u0631' : 'Price')}
                 active={priceRange < 4000}
                 onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
-                onClear={priceRange < 4000 ? () => setPriceRange(4000) : undefined}
+                onClear={priceRange < 4000 ? () => { setPriceRange(4000); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'price' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">0 <SarSymbol /></span>
-                    <span className="text-xs font-bold text-primary-700" dir="ltr">{priceRange >= 4000 ? '4000+' : priceRange} <SarSymbol /></span>
-                    <span className="text-[10px] font-medium text-gray-500" dir="ltr">4000+ <SarSymbol /></span>
+                  <div className="text-center mb-2">
+                    <span className="text-xs font-bold text-primary-700" dir="ltr"><SarSymbol /> {priceRange >= 4000 ? '4000+' : priceRange}</span>
                   </div>
                   <input type="range" min="0" max="4000" step="100" value={priceRange}
                     onChange={(e) => setPriceRange(Number(e.target.value))}
-                    className="w-full accent-primary-600 h-1.5 cursor-pointer" />
+                    className="w-full accent-primary-600 h-1.5 cursor-pointer" dir="ltr" />
+                  <div className="flex items-center justify-between mt-1" dir="ltr">
+                    <span className="text-[10px] font-medium text-gray-500"><SarSymbol /> 0</span>
+                    <span className="text-[10px] font-medium text-gray-500"><SarSymbol /> 2000</span>
+                    <span className="text-[10px] font-medium text-gray-500"><SarSymbol /> 4000+</span>
+                  </div>
                   <button type="button" onClick={() => { setOpenFilter(null); handleSearch(); }}
                     className="w-full mt-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors">
                     {isAr ? '\u062A\u0637\u0628\u064A\u0642' : 'Apply'}
@@ -637,18 +648,18 @@ function ListingsContent() {
                   : (isAr ? '\u0627\u0644\u0645\u0633\u0627\u062D\u0629 (m\u00B2)' : 'Area (m\u00B2)')}
                 active={areaRange < 1500}
                 onClick={() => setOpenFilter(openFilter === 'area' ? null : 'area')}
-                onClear={areaRange < 1500 ? () => setAreaRange(1500) : undefined}
+                onClear={areaRange < 1500 ? () => { setAreaRange(1500); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'area' && (
                 <div className="absolute top-full mt-1 ltr:left-0 rtl:right-0 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-4 min-w-[260px]">
                   <div className="text-center mb-2">
-                    <span className="text-xs font-bold text-primary-700">{areaRange >= 1500 ? '1500+' : areaRange} m²</span>
+                    <span className="text-xs font-bold text-primary-700" dir="ltr">{areaRange >= 1500 ? '1500+' : areaRange} m²</span>
                   </div>
                   <input type="range" min="0" max="1500" step="50" value={areaRange}
                     onChange={(e) => setAreaRange(Number(e.target.value))}
-                    className="w-full accent-primary-600 h-1.5 cursor-pointer" />
-                  <div className="flex items-center justify-between mt-1">
+                    className="w-full accent-primary-600 h-1.5 cursor-pointer" dir="ltr" />
+                  <div className="flex items-center justify-between mt-1" dir="ltr">
                     <span className="text-[10px] font-medium text-gray-500">0 m²</span>
                     <span className="text-[10px] font-medium text-gray-500">650 m²</span>
                     <span className="text-[10px] font-medium text-gray-500">1500+ m²</span>
@@ -670,7 +681,7 @@ function ListingsContent() {
                   : (isAr ? '\u0627\u0644\u0627\u062A\u062C\u0627\u0647' : 'Direction')}
                 active={!!direction}
                 onClick={() => setOpenFilter(openFilter === 'direction' ? null : 'direction')}
-                onClear={direction ? () => setDirection('') : undefined}
+                onClear={direction ? () => { setDirection(''); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'direction' && (
@@ -699,7 +710,7 @@ function ListingsContent() {
                   : (isAr ? '\u0627\u0644\u062D\u064A' : 'District')}
                 active={!!district}
                 onClick={() => setOpenFilter(openFilter === 'district' ? null : 'district')}
-                onClear={district ? () => setDistrict('') : undefined}
+                onClear={district ? () => { setDistrict(''); setAutoSearch((n) => n + 1); } : undefined}
                 hasDropdown
               />
               {openFilter === 'district' && (
@@ -734,7 +745,8 @@ function ListingsContent() {
                 if (searchCity) p.set('city', searchCity);
                 if (checkIn) p.set('checkIn', checkIn);
                 if (checkOut) p.set('checkOut', checkOut);
-                if (guests) p.set('guests', guests);
+                if (adults > 1) p.set('adults', String(adults));
+                if (children > 0) p.set('children', String(children));
                 saveSearchCookies({ city: searchCity, checkIn, checkOut, adults, children });
                 router.push(`/listings?${p.toString()}`);
               }}

@@ -108,6 +108,14 @@
 | F79 | 2026-04-05 | `/booking/[id]` — Going back to `/listings/[id]` loses adults/children split, shows total as adults | AMS | BookingWidget now sends `adults` and `children` as separate URL params instead of combined `guests` total | Done |
 | F80 | 2026-04-05 | `/host/messages` — Send icon not flipped horizontally in Arabic | AMS | Added `rtl:-scale-x-100` to Send icon, matching `/dashboard/messages` fix (F45) | Done |
 | F81 | 2026-04-05 | `/host/listings/new` — Image upload fails with "Image upload failed. Please try again." | AMS | Backend `.env` missing Cloudinary credentials (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`). Not a code bug — needs credentials from Cloudinary account | Open |
+| F82 | 2026-04-06 | `/listings` — Guest details (adults/children) not recorded in cookies | AMS | `guests` derived from `adults+children`; `handleSearch` and cookies now save both separately | Done |
+| F83 | 2026-04-06 | `/listings` — Going back from `/listings/[id]` combines children with adults as `&guests=3` | AMS | URL now uses `adults` and `children` params instead of combined `guests`; init reads `adults`/`children` from URL or cookie | Done |
+| F84 | 2026-04-06 | `/listings` — Arabic night label (ليلة/ليلتان) missing space before word, shows connected to previous word | AMS | Added non-breaking space (`\u00A0`) before all Arabic night labels in `getNightLabel` | Done |
+| F85 | 2026-04-06 | `/listings` — Area filter slider unit flipped in Arabic, should stay on the right always | AMS | Added `dir="ltr"` to area slider value label, range input, and scale labels container | Done |
+| F86 | 2026-04-06 | `/listings` — SAR symbol in price slider should be on the left of the number | AMS | Flipped from `{number} <SarSymbol />` to `<SarSymbol /> {number}`; restructured to current value on top, scale labels below slider | Done |
+| F87 | 2026-04-06 | `/listings` — Clear all button does nothing when filters are applied, should auto-search | AMS | `clearAllFilters` increments `autoSearch` counter; `useEffect` re-fetches on change | Done |
+| F88 | 2026-04-06 | `/listings` — Canceling a single filter does not auto-search, requires manual search click | AMS | All 9 filter `onClear` handlers now call `setAutoSearch((n) => n + 1)` to trigger auto-fetch | Done |
+| F89 | 2026-04-06 | `/listings` — Price filter icon shows dollar sign, should be SAR symbol | AMS | Replaced `DollarSign` (lucide) with `SarSymbol` component as FilterBubble icon; removed unused import | Done |
 
 ## Improvements
 
