@@ -51,7 +51,10 @@ exports.getProperties = async (req, res, next) => {
     const query = { isActive: true };
 
     if (city) query['location.city'] = { $regex: escapeRegex(String(city)), $options: 'i' };
-    if (type) query.type = type;
+    if (type) {
+      const types = String(type).split(',').map(t => t.trim()).filter(Boolean);
+      query.type = types.length === 1 ? types[0] : { $in: types };
+    }
     if (featured === 'true') query.isFeatured = true;
 
     if (minPrice || maxPrice) {
