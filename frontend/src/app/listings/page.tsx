@@ -528,7 +528,7 @@ function ListingsContent() {
                   <div className="flex flex-wrap gap-1.5">
                     {BEDROOM_OPTIONS.map(({ value, label }) => (
                       <button key={value} type="button"
-                        onClick={() => { setMinBedrooms(value); setOpenFilter(null); handleSearch(); }}
+                        onClick={() => { setMinBedrooms(value); setOpenFilter(null); setAutoSearch((n) => n + 1); }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                           minBedrooms === value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}>
@@ -555,7 +555,7 @@ function ListingsContent() {
                   <div className="flex flex-wrap gap-1.5">
                     {RATING_OPTIONS.map(({ value, label }) => (
                       <button key={value} type="button"
-                        onClick={() => { setMinRating(value); setOpenFilter(null); handleSearch(); }}
+                        onClick={() => { setMinRating(value); setOpenFilter(null); setAutoSearch((n) => n + 1); }}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                           minRating === value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}>
@@ -573,7 +573,7 @@ function ListingsContent() {
               icon={Droplets}
               label={isAr ? '\u0645\u0633\u0628\u062D' : 'Pool'}
               active={hasPool}
-              onClick={() => { setHasPool(!hasPool); setTimeout(handleSearch, 0); }}
+              onClick={() => { setHasPool(!hasPool); setAutoSearch((n) => n + 1); }}
               onClear={hasPool ? () => { setHasPool(false); setAutoSearch((n) => n + 1); } : undefined}
             />
 
@@ -582,7 +582,7 @@ function ListingsContent() {
               icon={Percent}
               label={isAr ? '\u0639\u0631\u0648\u0636' : 'Offers'}
               active={hasDiscount}
-              onClick={() => { setHasDiscount(!hasDiscount); setTimeout(handleSearch, 0); }}
+              onClick={() => { setHasDiscount(!hasDiscount); setAutoSearch((n) => n + 1); }}
               onClear={hasDiscount ? () => { setHasDiscount(false); setAutoSearch((n) => n + 1); } : undefined}
             />
 
@@ -661,7 +661,7 @@ function ListingsContent() {
                   <div className="grid grid-cols-2 gap-1.5">
                     {DIRECTIONS.map((d) => (
                       <button key={d.value} type="button"
-                        onClick={() => { setDirection(d.value); setOpenFilter(null); handleSearch(); }}
+                        onClick={() => { setDirection(d.value); setOpenFilter(null); setAutoSearch((n) => n + 1); }}
                         className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                           direction === d.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}>
@@ -691,7 +691,7 @@ function ListingsContent() {
                     <div className="space-y-1">
                       {DISTRICTS[searchCity].map((d) => (
                         <button key={d.value} type="button"
-                          onClick={() => { setDistrict(d.value); setOpenFilter(null); handleSearch(); }}
+                          onClick={() => { setDistrict(d.value); setOpenFilter(null); setAutoSearch((n) => n + 1); }}
                           className={`w-full text-start px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                             district === d.value ? 'bg-primary-50 text-primary-700 border border-primary-200' : 'text-gray-600 hover:bg-gray-50'
                           }`}>

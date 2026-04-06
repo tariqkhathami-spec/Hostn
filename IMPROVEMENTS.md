@@ -125,6 +125,12 @@
 | F96 | 2026-04-06 | `/listings` — Selecting multiple types in filter returns no results (backend exact-matches comma string instead of `$in`) | AMS | Frontend sends `type` as array (`type[]=chalet&type[]=villa`) instead of comma-joined string; backend receives array which MongoDB matches via implicit `$in`. Backend also has `$in` fallback for comma strings | Done |
 | F97 | 2026-04-06 | `/listings` — Price filter: dismissing by clicking away should auto-apply (same as Apply button) | AMS | useEffect on `openFilter` detects transition from `'price'` to `null` and triggers autoSearch; removed Apply button | Done |
 | F98 | 2026-04-06 | `/listings` — Area filter: dismissing by clicking away should auto-apply (same as Apply button) | AMS | Same useEffect handles `'area'` to `null` transition; removed Apply button | Done |
+| F99 | 2026-04-06 | `/listings` — Bedrooms filter reads stale state, doesn't actually filter | AMS | Replaced `handleSearch()` with `setAutoSearch((n) => n + 1)` so fetch runs after state updates | Done |
+| F100 | 2026-04-06 | `/listings` — Rating filter reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `handleSearch` | Done |
+| F101 | 2026-04-06 | `/listings` — Pool toggle reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `setTimeout(handleSearch, 0)` | Done |
+| F102 | 2026-04-06 | `/listings` — Offers toggle reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `setTimeout(handleSearch, 0)` | Done |
+| F103 | 2026-04-06 | `/listings` — Direction filter reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `handleSearch` | Done |
+| F104 | 2026-04-06 | `/listings` — District filter reads stale state, doesn't actually filter | AMS | Same fix — `setAutoSearch` instead of `handleSearch` | Done |
 
 ## Improvements
 
