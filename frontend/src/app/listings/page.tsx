@@ -267,7 +267,15 @@ function ListingsContent() {
       if (direction) params.direction = direction;
       if (areaRange < 1500) params.maxArea = areaRange;
       const res = await propertiesApi.getAll(params);
-      setProperties(res.data.properties || res.data.data || []);
+      let results = res.data.properties || res.data.data || [];
+      // Filter out properties whose minNights exceeds the selected stay duration
+      if (checkIn && checkOut) {
+        const selectedNights = Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24));
+        if (selectedNights > 0) {
+          results = results.filter((p: Property) => !p.rules?.minNights || p.rules.minNights <= selectedNights);
+        }
+      }
+      setProperties(results);
     } catch {
       setProperties([]);
     } finally {

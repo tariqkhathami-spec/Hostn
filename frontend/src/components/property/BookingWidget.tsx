@@ -83,6 +83,12 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       toast.error(t('booking.checkOutAfter'));
       return;
     }
+    if (property.rules?.minNights && nights < property.rules.minNights) {
+      toast.error(isAr
+        ? `الحد الأدنى للإقامة ${getNightLabel(property.rules.minNights, 'ar')}`
+        : `Minimum stay is ${getNightLabel(property.rules.minNights, 'en')}`);
+      return;
+    }
     if (guests > property.capacity.maxGuests) {
       toast.error(isAr ? `الحد الأقصى ${getGuestLabel(property.capacity.maxGuests, 'ar')}` : `Maximum ${property.capacity.maxGuests} guests allowed`);
       return;
@@ -214,6 +220,15 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
           </div>
         </div>
       </div>
+
+      {/* Min nights warning */}
+      {property.rules?.minNights > 1 && nights > 0 && nights < property.rules.minNights && (
+        <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3 text-center font-medium">
+          {isAr
+            ? `الحد الأدنى للإقامة ${getNightLabel(property.rules.minNights, 'ar')}`
+            : `Minimum stay is ${getNightLabel(property.rules.minNights, 'en')}`}
+        </p>
+      )}
 
       <Button onClick={handleBookNow} size="lg" className="w-full mb-4">
         {checkIn && checkOut ? `${t('booking.bookFor')} ${nightLabel}` : t('booking.checkAvailability')}

@@ -147,6 +147,12 @@
 | F118 | 2026-04-06 | Sitewide — Arabic separator between adults and children should be "و" not "،" or "·" | AMS | Changed `،` / `·` to `و` in booking page and listings page guest display | Done |
 | F119 | 2026-04-06 | `/booking/[id]` — "Visa, Mastercard, mada" not translated in Arabic | AMS | Added bilingual: `فيزا، ماستركارد، مدى` / `Visa, Mastercard, mada` | Done |
 | F120 | 2026-04-06 | Sitewide — "SAR" text shown instead of SAR symbol (﷼) | AMS | Replaced all `SAR` / `ر.س` text with `<SarSymbol />` component across dashboard, host, admin, earnings, bookings, balance, listings, and PropertyForm pages | Done |
+| F121 | 2026-04-06 | `/` — "Browse by Type" links pass URL params to `/listings` but params are ignored (cookie-only architecture) | AMS | Changed from `<Link href="/listings?type=...">` to `<button>` with `clearSearchCookies` + `saveSearchCookies({ type })` + `router.push('/listings')` | Done |
+| F122 | 2026-04-06 | `/` — City bubbles under search bar pass URL params to `/listings` but params are ignored | AMS | Changed from `router.push('/listings?city=...')` to `clearSearchCookies` + `saveSearchCookies({ city, checkIn, checkOut })` + `router.push('/listings')` | Done |
+| F123 | 2026-04-06 | `/listings` — Properties with minNights > selected nights still shown in results | AMS | Added client-side filter after fetch: removes properties where `rules.minNights > selectedNights` | Done |
+| F124 | 2026-04-06 | `/listings/[id]` — BookingWidget has no early warning for minimum nights; user only finds out at booking page | AMS | Added inline amber warning below date/guest section when `nights < minNights`; added validation in `handleBookNow` before navigation | Done |
+| F125 | 2026-04-06 | `/booking/[id]` — MIN_STAY and MAX_STAY error messages show English in Arabic mode | AMS | Replaced hardcoded "nights"/"ليالي" with `getNightLabel()` for proper Arabic plural grammar | Done |
+| F126 | 2026-04-06 | `/booking/[id]` — Tabby and Tamara BNPL descriptions show "SAR" text from `formatPrice()` | AMS | Replaced `formatPrice()` with `<SarSymbol /> formatPriceNumber()` in both Tabby and Tamara installment descriptions | Done |
 
 ## Improvements
 
