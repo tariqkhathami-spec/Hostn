@@ -181,7 +181,7 @@ function BookingContent() {
         DATES_BLOCKED: { en: 'Property is blocked for selected dates', ar: 'العقار محجوب للتواريخ المحددة' },
         MIN_STAY: { en: `Minimum stay is ${errData?.params?.min || ''} nights`, ar: `الحد الأدنى للإقامة ${errData?.params?.min || ''} ليالي` },
         MAX_STAY: { en: `Maximum stay is ${errData?.params?.max || ''} nights`, ar: `الحد الأقصى للإقامة ${errData?.params?.max || ''} ليالي` },
-        DATES_UNAVAILABLE: { en: 'Property not available for selected dates', ar: 'العقار غير متاح للتواريخ المحددة' },
+        DATES_UNAVAILABLE: { en: 'This property is already booked for one or more of your selected dates. Please choose different dates.', ar: 'هذا العقار محجوز بالفعل في أحد التواريخ التي اخترتها. يرجى اختيار تواريخ أخرى.' },
       };
       const mapped = errData?.code ? errorMessages[errData.code] : null;
       if (mapped) {
@@ -236,7 +236,7 @@ function BookingContent() {
           <div className="max-w-4xl mx-auto">
             {/* Back to property link */}
             {step === 1 && (
-              <Link href={`/listings/${id}?${new URLSearchParams({ ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}), ...(adultsCount > 0 ? { adults: String(adultsCount) } : {}), ...(childrenCount > 0 ? { children: String(childrenCount) } : {}) }).toString()}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4 transition-colors">
+              <Link href={`/listings/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4 transition-colors">
                 <ChevronRight className="w-4 h-4 ltr:rotate-180" />
                 {isAr ? 'العودة للعقار' : 'Back to property'}
               </Link>
@@ -286,7 +286,9 @@ function BookingContent() {
                             <div>
                               <p className="text-sm font-medium text-gray-800">{isAr ? 'التواريخ' : 'Dates'}</p>
                               <p className="text-xs text-gray-500">
-                                {formatDate(checkIn)} – {formatDate(checkOut)}
+                                {isAr
+                                  ? `${new Date(checkIn).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' })} – ${new Date(checkOut).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                  : `${formatDate(checkIn)} – ${formatDate(checkOut)}`}
                               </p>
                             </div>
                           </div>
@@ -295,7 +297,7 @@ function BookingContent() {
                               {getNightLabel(nights, isAr ? 'ar' : 'en')}
                             </span>
                             <Link
-                              href={`/listings/${id}?${new URLSearchParams({ ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}), ...(adultsCount > 0 ? { adults: String(adultsCount) } : {}), ...(childrenCount > 0 ? { children: String(childrenCount) } : {}) }).toString()}`}
+                              href={`/listings/${id}`}
                               className="text-xs font-medium text-primary-600 hover:text-primary-700 underline"
                             >
                               {isAr ? 'تعديل' : 'Edit'}
@@ -320,7 +322,7 @@ function BookingContent() {
                                 : `${adultsCount} ${adultsCount === 1 ? 'adult' : 'adults'}${childrenCount > 0 ? `, ${childrenCount} ${childrenCount === 1 ? 'child' : 'children'}` : ''}`}
                             </span>
                             <Link
-                              href={`/listings/${id}?${new URLSearchParams({ ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}), ...(adultsCount > 0 ? { adults: String(adultsCount) } : {}), ...(childrenCount > 0 ? { children: String(childrenCount) } : {}) }).toString()}`}
+                              href={`/listings/${id}`}
                               className="text-xs font-medium text-primary-600 hover:text-primary-700 underline"
                             >
                               {isAr ? 'تعديل' : 'Edit'}

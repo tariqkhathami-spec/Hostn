@@ -137,6 +137,10 @@
 | F108 | 2026-04-06 | `/listings/[id]` — Check-in/check-out date boxes show English dates when language is Arabic | AMS | Uses `toLocaleDateString('ar-SA')` for Arabic; keeps `format(date, 'MMM d, yyyy')` for English | Done |
 | F109 | 2026-04-06 | `/listings/[id]` — Changing dates in BookingWidget does not update cookies (navigating to /listings shows old dates) | AMS | Added `useEffect` watching `checkIn`/`checkOut`/`adults`/`children` that calls `saveSearchCookies` on change (skips initial mount) | Done |
 | F110 | 2026-04-06 | `/listings/[id]` — Changing guest count in BookingWidget does not update cookies (navigating to /listings shows old count) | AMS | Same useEffect handles guest changes — cookies always in sync | Done |
+| F111 | 2026-04-06 | `/booking/[id]` — Edit buttons for dates/guests link to `/listings/[id]` with URL params; should be clean URL | AMS | Replaced all 3 edit links with clean `/listings/[id]` — data already in cookies | Done |
+| F112 | 2026-04-06 | `/booking/[id]` — "Property not available for selected dates" error needs better explanation | AMS | Changed to "This property is already booked for one or more of your selected dates. Please choose different dates." (bilingual) | Done |
+| F113 | 2026-04-06 | `/booking/[id]` — Dates displayed in English format when language is Arabic | AMS | Uses `toLocaleDateString('ar-SA')` for Arabic date display | Done |
+| F114 | 2026-04-06 | `/contact` — Back arrow "←" points wrong direction in Arabic | AMS | Replaced hardcoded "←" with ArrowLeft icon + `rtl:rotate-180` | Done |
 
 ## Improvements
 
