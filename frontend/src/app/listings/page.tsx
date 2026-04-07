@@ -146,21 +146,26 @@ function ListingsContent() {
   const guestPickerRef = useRef<HTMLDivElement>(null);
   const filterRowRef = useRef<HTMLDivElement>(null);
 
+  // Track whether cookies have been restored (prevents empty initial fetch)
+  const [ready, setReady] = useState(false);
+
   // Restore all state from cookies on client mount
   useEffect(() => {
     const saved = getSearchCookies();
-    if (!saved) return;
-    if (saved.city) {
-      setSearchCity(saved.city);
-      const found = CITIES.find((c) => c.value === saved.city);
-      if (found) setCitySearch(isAr ? found.ar : found.en);
-      else setCitySearch(saved.city);
+    if (saved) {
+      if (saved.city) {
+        setSearchCity(saved.city);
+        const found = CITIES.find((c) => c.value === saved.city);
+        if (found) setCitySearch(isAr ? found.ar : found.en);
+        else setCitySearch(saved.city);
+      }
+      if (saved.checkIn) setCheckIn(saved.checkIn);
+      if (saved.checkOut) setCheckOut(saved.checkOut);
+      if (saved.adults) setAdults(saved.adults);
+      if (saved.children) setChildren(saved.children);
+      if (saved.type) setSelectedTypes(saved.type.split(','));
     }
-    if (saved.checkIn) setCheckIn(saved.checkIn);
-    if (saved.checkOut) setCheckOut(saved.checkOut);
-    if (saved.adults) setAdults(saved.adults);
-    if (saved.children) setChildren(saved.children);
-    if (saved.type) setSelectedTypes(saved.type.split(','));
+    setReady(true);
   }, []);
 
   const filteredCities = CITIES.filter((c) => {
@@ -292,8 +297,8 @@ function ListingsContent() {
 
   const [autoSearch, setAutoSearch] = useState(0);
 
-  // Auto-fetch on first load and when auto-search is triggered (clear all / filter cancel)
-  useEffect(() => { fetchProperties(); }, [autoSearch]);
+  // Fetch only after cookies are restored, and on every autoSearch trigger
+  useEffect(() => { if (ready) fetchProperties(); }, [ready, autoSearch]);
 
   // Auto-search when search bar dropdowns are dismissed
   const prevShowCityRef = useRef(false);

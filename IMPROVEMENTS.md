@@ -153,6 +153,10 @@
 | F124 | 2026-04-06 | `/listings/[id]` — BookingWidget has no early warning for minimum nights; user only finds out at booking page | AMS | Added inline amber warning below date/guest section when `nights < minNights`; added validation in `handleBookNow` before navigation | Done |
 | F125 | 2026-04-06 | `/booking/[id]` — MIN_STAY and MAX_STAY error messages show English in Arabic mode | AMS | Replaced hardcoded "nights"/"ليالي" with `getNightLabel()` for proper Arabic plural grammar | Done |
 | F126 | 2026-04-06 | `/booking/[id]` — Tabby and Tamara BNPL descriptions show "SAR" text from `formatPrice()` | AMS | Replaced `formatPrice()` with `<SarSymbol /> formatPriceNumber()` in both Tabby and Tamara installment descriptions | Done |
+| F127 | 2026-04-07 | `/` — Search bar button navigates with URL params (`?city=...`) instead of cookies | AMS | Changed `handleSearch` to save cookies only and navigate to clean `/listings` | Done |
+| F128 | 2026-04-07 | `/` — City bubbles clear guests/type/dates when navigating to `/listings` | AMS | Removed `clearSearchCookies()`; `saveSearchCookies` merges city into existing cookies, preserving dates/guests/type | Done |
+| F129 | 2026-04-07 | `/` — "Browse by Type" clears city/dates/guests when navigating to `/listings` | AMS | Removed `clearSearchCookies()`; `saveSearchCookies` merges type into existing cookies, preserving city/dates/guests | Done |
+| F130 | 2026-04-07 | `/listings` — Navigating from homepage doesn't auto-search (must click search manually) | AMS | Added `ready` flag; `fetchProperties` only runs after cookies are restored to state; ensures first fetch uses correct cookie values | Done |
 
 ## Improvements
 
