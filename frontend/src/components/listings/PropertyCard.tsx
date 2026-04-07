@@ -57,21 +57,24 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
   const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!isAuthenticated) {
       toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
       return;
     }
-    setWishlistLoading(true);
+    // Optimistic toggle
+    const wasWishlisted = isWishlisted;
+    setIsWishlisted(!wasWishlisted);
+    toast.success(wasWishlisted
+      ? (isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist')
+      : (isAr ? 'تمت الإضافة للمفضلة' : 'Saved to wishlist'));
+
     try {
       await toggleWishlist(property._id);
-      setIsWishlisted(!isWishlisted);
-      toast.success(isWishlisted
-        ? (isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist')
-        : (isAr ? 'تمت الإضافة للمفضلة' : 'Saved to wishlist'));
     } catch {
+      // Revert on failure
+      setIsWishlisted(wasWishlisted);
       toast.error(isAr ? 'حدث خطأ' : 'Something went wrong');
-    } finally {
-      setWishlistLoading(false);
     }
   };
 

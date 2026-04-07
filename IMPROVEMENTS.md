@@ -158,6 +158,7 @@
 | F129 | 2026-04-07 | `/` — "Browse by Type" clears city/dates/guests when navigating to `/listings` | AMS | Removed `clearSearchCookies()`; `saveSearchCookies` merges type into existing cookies, preserving city/dates/guests | Done |
 | F130 | 2026-04-07 | `/listings` — Navigating from homepage doesn't auto-search (must click search manually) | AMS | Added `ready` flag; `fetchProperties` only runs after cookies are restored to state; ensures first fetch uses correct cookie values | Done |
 | I56 | 2026-04-07 | `/admin/bookings` — Add ability to delete bookings | AMS | Backend `DELETE /admin/bookings/:id` with ActivityLog; frontend delete button per row with confirmation dialog; `held` status badge added | Done |
+| F131 | 2026-04-07 | `/listings` — Heart/favorite button not working; click navigates to property page instead | AMS | Added `e.stopPropagation()` to prevent Next.js Link from capturing click; made toggle optimistic (instant UI feedback) | Done |
 
 ## Improvements
 
