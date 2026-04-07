@@ -86,6 +86,15 @@ const createBookingRules = [
   handleValidation,
 ];
 
+const holdBookingRules = [
+  body('propertyId').isMongoId().withMessage('Invalid property ID'),
+  body('checkIn').isISO8601().withMessage('Check-in must be a valid date'),
+  body('checkOut').isISO8601().withMessage('Check-out must be a valid date'),
+  body('guests.adults').optional().isInt({ min: 1 }).withMessage('At least one adult required'),
+  body('guests.children').optional().isInt({ min: 0 }),
+  handleValidation,
+];
+
 const updateBookingStatusRules = [
   body('status').isIn(['confirmed', 'rejected', 'cancelled', 'completed']).withMessage('Invalid status'),
   handleValidation,
@@ -142,6 +151,7 @@ module.exports = {
   createPropertyRules,
   propertySearchRules,
   createBookingRules,
+  holdBookingRules,
   updateBookingStatusRules,
   createReviewRules,
   respondToReviewRules,

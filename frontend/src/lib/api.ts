@@ -122,6 +122,7 @@ export const propertiesApi = {
 // BOOKINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 export const bookingsApi = {
+  createHold: (data: Record<string, unknown>) => api.post('/bookings/hold', data),
   create: (data: Record<string, unknown>) => api.post('/bookings', data),
   getMyBookings: () => api.get('/bookings/my-bookings'),
   getHostBookings: () => api.get('/bookings/host-bookings'),

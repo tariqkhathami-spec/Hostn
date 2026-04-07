@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const {
+  createHold,
   createBooking,
   getMyBookings,
   getHostBookings,
@@ -11,12 +12,14 @@ const {
 const { protect } = require('../middleware/auth');
 const {
   createBookingRules,
+  holdBookingRules,
   updateBookingStatusRules,
   mongoIdParam,
 } = require('../middleware/validate');
 
 router.use(protect);
 
+router.post('/hold', holdBookingRules, createHold);
 router.post('/', createBookingRules, createBooking);
 router.get('/my-bookings', getMyBookings);
 router.get('/host-bookings', getHostBookings);

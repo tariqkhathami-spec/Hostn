@@ -124,14 +124,21 @@ function BookingContent() {
 
     setProcessing(true);
     try {
-      // Step 1: Create booking
+      // Use holdId if available (silent reservation hold from BookingWidget)
+      const holdId = typeof window !== 'undefined' ? localStorage.getItem(`hostn_hold_${id}`) : null;
+
+      // Step 1: Create booking (converts hold if valid, otherwise creates fresh)
       const bookingRes = await bookingsApi.create({
         propertyId: id,
         checkIn,
         checkOut,
         guests: { adults: adultsCount, children: childrenCount, infants: 0 },
         specialRequests,
+        ...(holdId ? { holdId } : {}),
       });
+
+      // Clean up holdId from localStorage
+      if (holdId) localStorage.removeItem(`hostn_hold_${id}`);
 
       const newBookingId = bookingRes.data.data._id;
       setBookingId(newBookingId);

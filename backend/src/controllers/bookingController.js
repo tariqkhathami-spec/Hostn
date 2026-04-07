@@ -5,15 +5,26 @@ const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const { emitToUser, emitToProperty } = require('../config/socket');
 
-// Helper: overlap query for date-range conflicts
+// Helper: overlap query for date-range conflicts (includes active holds)
 function overlapQuery(propertyId, checkInDate, checkOutDate) {
   return {
     property: propertyId,
-    status: { $in: ['pending', 'confirmed'] },
-    $or: [
-      { checkIn: { $lt: checkOutDate, $gte: checkInDate } },
-      { checkOut: { $gt: checkInDate, $lte: checkOutDate } },
-      { checkIn: { $lte: checkInDate }, checkOut: { $gte: checkOutDate } },
+    $and: [
+      // Active bookings OR non-expired holds
+      {
+        $or: [
+          { status: { $in: ['pending', 'confirmed'] } },
+          { status: 'held', holdExpiresAt: { $gt: new Date() } },
+        ],
+      },
+      // Date overlap
+      {
+        $or: [
+          { checkIn: { $lt: checkOutDate, $gte: checkInDate } },
+          { checkOut: { $gt: checkInDate, $lte: checkOutDate } },
+          { checkIn: { $lte: checkInDate }, checkOut: { $gte: checkOutDate } },
+        ],
+      },
     ],
   };
 }
@@ -87,12 +98,132 @@ async function fallbackBooking(bookingData, checkInDate, checkOutDate) {
   return booking;
 }
 
+// @desc    Create a reservation hold (15 min silent hold)
+// @route   POST /api/bookings/hold
+// @access  Private
+exports.createHold = async (req, res, next) => {
+  try {
+    const { propertyId, checkIn, checkOut, guests } = req.body;
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+      return res.status(400).json({ success: false, code: 'INVALID_DATES', message: 'Invalid date format' });
+    }
+    if (checkInDate >= checkOutDate) {
+      return res.status(400).json({ success: false, code: 'CHECKOUT_BEFORE_CHECKIN', message: 'Check-out must be after check-in' });
+    }
+
+    const property = await Property.findById(propertyId);
+    if (!property || !property.isActive) {
+      return res.status(404).json({ success: false, code: 'PROPERTY_NOT_FOUND', message: 'Property not found' });
+    }
+
+    if (property.host.toString() === req.user._id.toString()) {
+      return res.status(400).json({ success: false, code: 'OWN_PROPERTY', message: 'Cannot hold your own property' });
+    }
+
+    // Cancel any existing holds by this user (one hold per user)
+    await Booking.updateMany(
+      { guest: req.user._id, status: 'held' },
+      { status: 'cancelled', cancelledAt: new Date() }
+    );
+
+    // Check availability (includes active holds by other users)
+    const conflicting = await Booking.findOne(overlapQuery(propertyId, checkInDate, checkOutDate));
+    if (conflicting) {
+      return res.status(400).json({ success: false, code: 'DATES_UNAVAILABLE', message: 'Property not available for selected dates' });
+    }
+
+    // Calculate pricing
+    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+    const perNight = property.pricing.perNight;
+    const subtotal = perNight * nights;
+    const cleaningFee = property.pricing.cleaningFee || 0;
+    const serviceFee = Math.round(subtotal * 0.1);
+    const discount = property.pricing.discountPercent > 0
+      ? Math.round(subtotal * (property.pricing.discountPercent / 100))
+      : 0;
+    const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
+    const vat = Math.round(taxableAmount * 0.15);
+    const total = taxableAmount + vat;
+
+    const holdExpiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+
+    const hold = await Booking.create({
+      property: propertyId,
+      guest: req.user._id,
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
+      guests: guests || { adults: 1, children: 0, infants: 0 },
+      pricing: { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total },
+      status: 'held',
+      holdExpiresAt,
+    });
+
+    res.status(201).json({ success: true, data: { holdId: hold._id, holdExpiresAt } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create a booking
 // @route   POST /api/bookings
 // @access  Private
 exports.createBooking = async (req, res, next) => {
   try {
-    const { propertyId, checkIn, checkOut, guests, specialRequests } = req.body;
+    const { propertyId, checkIn, checkOut, guests, specialRequests, holdId } = req.body;
+
+    // ── Convert hold → booking (if holdId provided) ─────────────────
+    if (holdId) {
+      const hold = await Booking.findById(holdId);
+      if (hold && hold.guest.toString() === req.user._id.toString() && hold.status === 'held') {
+        if (hold.holdExpiresAt > new Date()) {
+          // Hold is still valid — convert to pending booking
+          hold.status = 'pending';
+          hold.specialRequests = specialRequests;
+          hold.holdExpiresAt = undefined;
+          await hold.save();
+
+          await hold.populate('property', 'title images location');
+          await hold.populate('guest', 'name email');
+
+          const property = await Property.findById(hold.property._id || hold.property);
+          if (property) {
+            emitToUser(property.host.toString(), 'booking:created', hold.toObject());
+            emitToProperty(hold.property._id?.toString() || hold.property.toString(), 'availability:changed', {
+              propertyId: hold.property._id?.toString() || hold.property.toString(),
+              checkIn: hold.checkIn,
+              checkOut: hold.checkOut,
+              status: 'pending',
+            });
+            Notification.createNotification({
+              user: property.host,
+              type: 'booking_created',
+              title: 'New Booking Request',
+              message: `${req.user.name} requested to book "${property.title}" for ${hold.pricing.nights} nights`,
+              data: { bookingId: hold._id, propertyId: property._id },
+            }).catch(() => {});
+          }
+
+          ActivityLog.create({
+            actor: req.user._id,
+            action: 'booking_created',
+            target: { type: 'Booking', id: hold._id },
+            details: `Booking created from hold for "${property?.title}" — ${hold.pricing.total} SAR`,
+            ip: req.ip,
+          }).catch(() => {});
+
+          return res.status(201).json({ success: true, data: hold });
+        }
+        // Hold expired — mark as cancelled and fall through to normal creation
+        hold.status = 'cancelled';
+        hold.cancelledAt = new Date();
+        await hold.save();
+      }
+      // Invalid/expired hold — fall through to normal booking creation
+    }
 
     // ── Input validation (no DB needed) ─────────────────────────────
     const checkInDate = new Date(checkIn);
@@ -253,7 +384,7 @@ exports.createBooking = async (req, res, next) => {
 // @access  Private
 exports.getMyBookings = async (req, res, next) => {
   try {
-    const bookings = await Booking.find({ guest: req.user._id })
+    const bookings = await Booking.find({ guest: req.user._id, status: { $ne: 'held' } })
       .populate('property', 'title images location type pricing')
       .sort('-createdAt');
 
@@ -271,7 +402,7 @@ exports.getHostBookings = async (req, res, next) => {
     const hostProperties = await Property.find({ host: req.user._id }).select('_id');
     const propertyIds = hostProperties.map((p) => p._id);
 
-    const bookings = await Booking.find({ property: { $in: propertyIds } })
+    const bookings = await Booking.find({ property: { $in: propertyIds }, status: { $ne: 'held' } })
       .populate('property', 'title images location')
       .populate('guest', 'name email phone avatar')
       .sort('-createdAt');
@@ -312,6 +443,7 @@ exports.getBooking = async (req, res, next) => {
 
 // Valid state transitions — prevents impossible states like cancelled → confirmed
 const VALID_TRANSITIONS = {
+  held: ['pending', 'cancelled'],       // hold → booking or expired/cancelled
   pending: ['confirmed', 'rejected', 'cancelled'],
   confirmed: ['completed', 'cancelled'],
   completed: [],    // terminal state

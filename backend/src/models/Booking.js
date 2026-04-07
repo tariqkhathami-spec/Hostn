@@ -37,8 +37,11 @@ const bookingSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'cancelled', 'completed', 'rejected'],
+      enum: ['held', 'pending', 'confirmed', 'cancelled', 'completed', 'rejected'],
       default: 'pending',
+    },
+    holdExpiresAt: {
+      type: Date,
     },
     paymentStatus: {
       type: String,
@@ -63,6 +66,7 @@ bookingSchema.index({ property: 1, status: 1 }); // availability check, host boo
 bookingSchema.index({ guest: 1, status: 1 });     // my-bookings filtered by status
 bookingSchema.index({ property: 1, checkIn: 1, checkOut: 1 }); // date overlap queries
 bookingSchema.index({ createdAt: -1 });            // sort by newest
+bookingSchema.index({ status: 1, holdExpiresAt: 1 }); // hold expiry queries
 
 // Validate checkOut > checkIn
 bookingSchema.pre('save', function (next) {

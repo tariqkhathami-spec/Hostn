@@ -100,6 +100,7 @@ export interface Property {
   isFeatured: boolean;
   tags: string[];
   discountedPrice: number;
+  bookedDates?: { start: string; end: string }[];
   createdAt: string;
 }
 
@@ -119,7 +120,7 @@ export interface BookingPricing {
   total: number;
 }
 
-export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
+export type BookingStatus = 'held' | 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
 
 export interface Booking {
   _id: string;
@@ -132,6 +133,7 @@ export interface Booking {
   status: BookingStatus;
   paymentStatus: 'unpaid' | 'paid' | 'refunded';
   specialRequests?: string;
+  holdExpiresAt?: string;
   createdAt: string;
 }
 
