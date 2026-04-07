@@ -11,7 +11,7 @@ import { Search, Shield, Star, Headphones, Home, Building, TreePine, Tent, Hotel
 import { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { propertiesApi } from '@/lib/api';
-import { clearSearchCookies, saveSearchCookies } from '@/lib/searchCookies';
+import { saveSearchCookies } from '@/lib/searchCookies';
 
 const PROPERTY_TYPES = [
   { key: 'chalet', icon: Home, label: { en: 'Chalets', ar: 'شاليهات' } },
@@ -52,7 +52,6 @@ export default function HomePage() {
               <button
                 key={key}
                 onClick={() => {
-                  clearSearchCookies();
                   saveSearchCookies({ type: key });
                   router.push('/listings');
                 }}

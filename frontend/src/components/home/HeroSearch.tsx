@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { CITIES } from '@/lib/constants';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { calculateNights, getNightLabel } from '@/lib/utils';
-import { saveSearchCookies, getSearchCookies, clearSearchCookies } from '@/lib/searchCookies';
+import { saveSearchCookies, getSearchCookies } from '@/lib/searchCookies';
 
 type SearchStep = 'idle' | 'location' | 'type' | 'dates' | 'ready';
 
@@ -60,13 +60,8 @@ export default function HeroSearch() {
 
   const handleSearch = () => {
     setShowCalendar(false);
-    const params = new URLSearchParams();
-    if (city) params.set('city', city);
-    if (propertyType) params.set('type', propertyType);
-    if (checkIn) params.set('checkIn', checkIn);
-    if (checkOut) params.set('checkOut', checkOut);
     saveSearchCookies({ city, type: propertyType, checkIn, checkOut });
-    router.push(`/listings?${params.toString()}`);
+    router.push('/listings');
   };
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -485,9 +480,8 @@ export default function HeroSearch() {
             <button
               key={c.value}
               onClick={() => {
-                clearSearchCookies();
                 if (checkIn && checkOut) {
-                  saveSearchCookies({ city: c.value, checkIn, checkOut });
+                  saveSearchCookies({ city: c.value });
                 } else {
                   const todayStr = format(new Date(), 'yyyy-MM-dd');
                   const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
