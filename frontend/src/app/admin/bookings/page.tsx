@@ -63,15 +63,16 @@ export default function AdminBookingsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm(isAr ? 'هل أنت متأكد من حذف هذا الحجز نهائياً؟' : 'Are you sure you want to permanently delete this booking?')) return;
-    setDeleting(id);
+
+    // Optimistic: remove from UI immediately
+    setBookings((prev) => prev.filter((b) => b._id !== id));
+    toast.success(isAr ? 'تم حذف الحجز' : 'Booking deleted');
+
     try {
       await adminApi.deleteBooking(id);
-      toast.success(isAr ? 'تم حذف الحجز' : 'Booking deleted');
-      loadBookings();
     } catch {
-      toast.error(isAr ? 'فشل في حذف الحجز' : 'Failed to delete booking');
-    } finally {
-      setDeleting(null);
+      // If it truly failed, reload to restore
+      loadBookings();
     }
   };
 

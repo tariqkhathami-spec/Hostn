@@ -490,7 +490,8 @@ exports.deleteBooking = async (req, res, next) => {
 
     await Booking.deleteOne({ _id: booking._id });
 
-    await ActivityLog.create({
+    // Non-blocking log — don't let logging failure break the response
+    ActivityLog.create({
       actor: req.user._id,
       actorRole: req.user.role,
       actorAdminRole: req.user.adminRole || null,
@@ -498,7 +499,7 @@ exports.deleteBooking = async (req, res, next) => {
       target: { type: 'Booking', id: booking._id },
       details: `Admin permanently deleted booking (status was "${booking.status}")`,
       ip: req.ip,
-    });
+    }).catch(() => {});
 
     res.json({ success: true, message: 'Booking deleted' });
   } catch (error) {
