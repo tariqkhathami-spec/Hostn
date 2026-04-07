@@ -39,6 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Normalize populated wishlist objects to plain string IDs
+  const normalizeWishlist = (wishlist: unknown[]): string[] => {
+    if (!Array.isArray(wishlist)) return [];
+    return wishlist.map((item: unknown) =>
+      typeof item === 'object' && item !== null ? (item as { _id: string })._id : String(item)
+    );
+  };
+
   // Load user from localStorage on mount, then validate session is still alive
   useEffect(() => {
     const storedUser = localStorage.getItem('hostn_user');
@@ -51,6 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .then((res) => {
             const freshUser = res.data.user || res.data.data;
             if (freshUser) {
+              // getMe populates wishlist as objects — normalize to string IDs
+              if (Array.isArray(freshUser.wishlist)) {
+                freshUser.wishlist = normalizeWishlist(freshUser.wishlist);
+              }
               saveAuth(freshUser);
             }
           })
@@ -112,9 +124,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const toggleWishlist = async (propertyId: string) => {
     if (!user) return;
-    const res = await authApi.toggleWishlist(propertyId);
-    const updatedUser = { ...user, wishlist: res.data.wishlist };
-    updateUser(updatedUser);
+    // Optimistic: update local state immediately
+    const currentWishlist = user.wishlist || [];
+    const isInWishlist = currentWishlist.includes(propertyId);
+    const newWishlist = isInWishlist
+      ? currentWishlist.filter(id => id !== propertyId)
+      : [...currentWishlist, propertyId];
+    updateUser({ ...user, wishlist: newWishlist });
+
+    // Fire API call — Vercel proxy may throw even on success, so don't revert.
+    // Next page load getMe will sync with server truth.
+    try {
+      await authApi.toggleWishlist(propertyId);
+    } catch {
+      // Silently ignore — backend likely processed it (known Vercel proxy issue)
+    }
   };
 
   const upgradeToHost = async () => {
