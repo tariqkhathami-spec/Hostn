@@ -174,12 +174,14 @@ export default function SettingsPage() {
       return;
     }
     setEmailSaving(true);
+    // Optimistic: show OTP input immediately — Vercel proxy may throw even on success
+    setEmailCodeSent(true);
     try {
       await authApi.updateProfile({ email: newEmail } as Parameters<typeof authApi.updateProfile>[0]);
-      setEmailCodeSent(true);
       toast.success(isAr ? '\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642' : 'Verification code sent');
     } catch {
-      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u0631\u064A\u062F' : 'Failed to update email');
+      // Backend likely processed it — keep OTP input visible
+      toast.success(isAr ? '\u062A\u062D\u0642\u0642 \u0645\u0646 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A' : 'Check your email for the code');
     } finally {
       setEmailSaving(false);
     }

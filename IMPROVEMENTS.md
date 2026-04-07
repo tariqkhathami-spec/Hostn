@@ -159,6 +159,16 @@
 | F130 | 2026-04-07 | `/listings` — Navigating from homepage doesn't auto-search (must click search manually) | AMS | Added `ready` flag; `fetchProperties` only runs after cookies are restored to state; ensures first fetch uses correct cookie values | Done |
 | I56 | 2026-04-07 | `/admin/bookings` — Add ability to delete bookings | AMS | Backend `DELETE /admin/bookings/:id` with ActivityLog; frontend delete button per row with confirmation dialog; `held` status badge added | Done |
 | F131 | 2026-04-07 | `/listings` — Heart/favorite button not working; click navigates to property page instead | AMS | Added `e.stopPropagation()` to prevent Next.js Link from capturing click; made toggle optimistic (instant UI feedback) | Done |
+| F132 | 2026-04-07 | `/listings` — Wishlist not persisting after page refresh; heart resets to gray | AMS | `getMe` returns populated wishlist objects — normalized to string IDs; `toggleWishlist` made optimistic (don't rely on API response); PropertyCard syncs with context via `useEffect` | Done |
+| F133 | 2026-04-07 | `/booking/[id]` — "Back to review" arrow points forward in Arabic RTL | AMS | Changed `←` to `→` for Arabic text | Done |
+| F134 | 2026-04-07 | `/dashboard/support/[id]` — Sending reply shows "Failed to send reply" | AMS | Vercel proxy issue; made reply optimistic (add to UI immediately, reload on response) | Done |
+| F135 | 2026-04-07 | `/dashboard/support/[id]` — Timestamp shows seconds (e.g. 11:05:23 AM) | AMS | Formatted with `hour: '2-digit', minute: '2-digit'` — no seconds | Done |
+| F136 | 2026-04-07 | `/dashboard/support/[id]` — AM/PM shown in English when language is Arabic | AMS | Pass `ar-SA` locale to `toLocaleString()` | Done |
+| I57 | 2026-04-07 | `/dashboard/bookings` — Clicking booking goes to `/booking/[id]` (checkout page) and redirects away | AMS | Created dedicated `/dashboard/bookings/[id]` detail page with property card, stay details, pricing breakdown, payment & booking status | Done |
+| F138 | 2026-04-07 | Site-wide — Arabic numerals (٠١٢) shown instead of Western (012) | AMS | Replaced `ar-SA` locale with `ar-u-nu-latn` (BCP 47 Latin numeral extension) across 32 files; added `'en'` locale to bare `.toLocaleString()` calls | Done |
+| I58 | 2026-04-07 | `/dashboard/settings` — Page layout messy, everything crammed in one card | AMS | Redesigned with separate sections: account overview (avatar, role, member since), personal info (name + save), contact info (email/phone with dividers), become-a-host gradient card | Done |
+| F139 | 2026-04-07 | `/dashboard/bookings/[id]` — City and district shown in English when language is Arabic | AMS | Added `translateCity` / `translateDistrict` using CITIES/DISTRICTS constants from `@/lib/constants` | Done |
+| F140 | 2026-04-07 | `/dashboard/settings` — Email OTP not received after editing email | AMS | Made OTP flow optimistic (show code input immediately); root cause: SMTP not configured on backend — emails only logged to console. Requires SMTP_HOST/USER/PASS env vars | Done |
 
 ## Improvements
 

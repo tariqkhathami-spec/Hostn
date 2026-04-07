@@ -23,6 +23,7 @@ import {
   FileText,
 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
+import { CITIES, DISTRICTS } from '@/lib/constants';
 import toast from 'react-hot-toast';
 
 const statusConfig: Record<string, { en: string; ar: string; color: string; icon: React.ReactNode }> = {
@@ -96,6 +97,19 @@ export default function BookingDetailPage() {
       day: 'numeric',
     });
 
+  const translateCity = (city: string) => {
+    if (!isAr) return city;
+    const found = CITIES.find(c => c.value.toLowerCase() === city.toLowerCase() || c.en.toLowerCase() === city.toLowerCase());
+    return found?.ar || city;
+  };
+
+  const translateDistrict = (district: string, city: string) => {
+    if (!isAr) return district;
+    const cityDistricts = DISTRICTS[city] || [];
+    const found = cityDistricts.find(d => d.value.toLowerCase() === district.toLowerCase() || d.en.toLowerCase() === district.toLowerCase());
+    return found?.ar || district;
+  };
+
   const totalGuests = (booking.guests?.adults || 0) + (booking.guests?.children || 0);
 
   return (
@@ -150,7 +164,10 @@ export default function BookingDetailPage() {
                   </Link>
                   <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-2">
                     <MapPin className="w-4 h-4 flex-shrink-0" />
-                    <span>{property.location?.district ? `${property.location.district}, ` : ''}{property.location?.city}</span>
+                    <span>
+                      {property.location?.district ? `${translateDistrict(property.location.district, property.location?.city || '')}, ` : ''}
+                      {translateCity(property.location?.city || '')}
+                    </span>
                   </div>
                   {property.capacity && (
                     <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
