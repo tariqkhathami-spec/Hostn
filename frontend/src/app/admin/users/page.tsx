@@ -172,7 +172,7 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">
-                      {new Date(user.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                      {new Date(user.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
                       <button

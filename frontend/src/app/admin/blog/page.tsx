@@ -185,7 +185,7 @@ export default function AdminBlogPage() {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
                       {cat && <span>{cat.name[lang]}</span>}
-                      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(post.createdAt).toLocaleDateString('en')}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">

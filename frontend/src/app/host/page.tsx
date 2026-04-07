@@ -93,7 +93,7 @@ export default function HostDashboardPage() {
   const statCards = [
     { key: 'totalProperties', value: stats.totalProperties, icon: Building, color: 'text-primary-600 bg-primary-50' },
     { key: 'activeBookings', value: stats.activeBookings, icon: CalendarCheck, color: 'text-emerald-600 bg-emerald-50' },
-    { key: 'totalEarnings', value: <span dir="ltr"><SarSymbol /> {stats.totalEarnings?.toLocaleString() || 0}</span>, icon: DollarSign, color: 'text-blue-600 bg-blue-50' },
+    { key: 'totalEarnings', value: <span dir="ltr"><SarSymbol /> {stats.totalEarnings?.toLocaleString('en') || 0}</span>, icon: DollarSign, color: 'text-blue-600 bg-blue-50' },
     { key: 'averageRating', value: stats.averageRating?.toFixed(1) || '0.0', icon: Star, color: 'text-yellow-600 bg-yellow-50' },
   ];
 
@@ -152,14 +152,14 @@ export default function HostDashboardPage() {
                   <tr key={booking._id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="p-3 text-gray-900">{booking.guest?.name || '-'}</td>
                     <td className="p-3 text-gray-700">{booking.property?.title || '-'}</td>
-                    <td className="p-3 text-gray-600">{new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}</td>
-                    <td className="p-3 text-gray-600">{new Date(booking.checkOut).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}</td>
+                    <td className="p-3 text-gray-600">{new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US')}</td>
+                    <td className="p-3 text-gray-600">{new Date(booking.checkOut).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US')}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[booking.status] || 'bg-gray-100 text-gray-600'}`}>
                         {statusLabels[booking.status]?.[lang] || booking.status}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {(booking.pricing?.total || booking.totalPrice || 0).toLocaleString()}</span></td>
+                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {(booking.pricing?.total || booking.totalPrice || 0).toLocaleString('en')}</span></td>
                   </tr>
                 ))}
               </tbody>

@@ -73,7 +73,7 @@ export default function AdminTicketDetailPage() {
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', margin: 0 }}>{ticket.subject}</h1>
             <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
-              From: {userName} {userEmail ? `(${userEmail})` : ''} · Created: {new Date(ticket.createdAt).toLocaleString()}
+              From: {userName} {userEmail ? `(${userEmail})` : ''} · Created: {new Date(ticket.createdAt).toLocaleString('en')}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -112,7 +112,7 @@ export default function AdminTicketDetailPage() {
             return (
               <div key={msg._id || i} style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
                 <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
-                  {isAdmin ? '🛡️ Admin' : senderName} · {new Date(msg.createdAt).toLocaleString()}
+                  {isAdmin ? '🛡️ Admin' : senderName} · {new Date(msg.createdAt).toLocaleString('en')}
                 </div>
                 <div style={{
                   maxWidth: '75%', padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap',

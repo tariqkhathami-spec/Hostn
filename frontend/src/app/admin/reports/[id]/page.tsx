@@ -80,7 +80,7 @@ export default function AdminReportDetailPage() {
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Date</div>
-              <div style={{ fontSize: 14, color: '#1e293b' }}>{new Date(report.createdAt).toLocaleString()}</div>
+              <div style={{ fontSize: 14, color: '#1e293b' }}>{new Date(report.createdAt).toLocaleString('en')}</div>
             </div>
           </div>
 

@@ -114,7 +114,7 @@ export default function AdminPaymentsPage() {
                       {p.user?.name || p.userName || '-'}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      <span dir="ltr"><SarSymbol /> {p.amount?.toLocaleString()}</span>
+                      <span dir="ltr"><SarSymbol /> {p.amount?.toLocaleString('en')}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[p.status] || 'bg-gray-50 text-gray-700'}`}>
@@ -122,7 +122,7 @@ export default function AdminPaymentsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {new Date(p.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                      {new Date(p.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
                       {p.status === 'paid' && (

@@ -89,7 +89,7 @@ export default function BookingDetailPage() {
   const primaryImage = property?.images?.find(img => img.isPrimary)?.url || property?.images?.[0]?.url;
 
   const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {
+    new Date(date).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -232,31 +232,31 @@ export default function BookingDetailPage() {
             <div className="space-y-3 text-sm">
               {pricing?.perNight != null && (
                 <div className="flex justify-between text-gray-600">
-                  <span dir="ltr"><SarSymbol /> {pricing.perNight.toLocaleString()} x {nights} {isAr ? 'ليالي' : 'nights'}</span>
-                  <span dir="ltr"><SarSymbol /> {pricing.subtotal?.toLocaleString()}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.perNight.toLocaleString('en')} x {nights} {isAr ? 'ليالي' : 'nights'}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.subtotal?.toLocaleString('en')}</span>
                 </div>
               )}
               {(pricing?.cleaningFee || 0) > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>{isAr ? 'رسوم التنظيف' : 'Cleaning fee'}</span>
-                  <span dir="ltr"><SarSymbol /> {pricing.cleaningFee.toLocaleString()}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.cleaningFee.toLocaleString('en')}</span>
                 </div>
               )}
               {(pricing?.serviceFee || 0) > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>{isAr ? 'رسوم الخدمة' : 'Service fee'}</span>
-                  <span dir="ltr"><SarSymbol /> {pricing.serviceFee.toLocaleString()}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.serviceFee.toLocaleString('en')}</span>
                 </div>
               )}
               {(pricing?.discount || 0) > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>{isAr ? 'خصم' : 'Discount'}</span>
-                  <span dir="ltr">- <SarSymbol /> {pricing.discount.toLocaleString()}</span>
+                  <span dir="ltr">- <SarSymbol /> {pricing.discount.toLocaleString('en')}</span>
                 </div>
               )}
               <div className="border-t border-gray-200 pt-3 flex justify-between font-semibold text-gray-900">
                 <span>{isAr ? 'الإجمالي' : 'Total'}</span>
-                <span dir="ltr"><SarSymbol /> {pricing?.total?.toLocaleString() || '0'}</span>
+                <span dir="ltr"><SarSymbol /> {pricing?.total?.toLocaleString('en') || '0'}</span>
               </div>
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function BookingDetailPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500">{isAr ? 'تاريخ الحجز' : 'Booked on'}</span>
                 <span className="text-gray-900">
-                  {new Date(booking.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {
+                  {new Date(booking.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',

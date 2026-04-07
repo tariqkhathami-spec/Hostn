@@ -110,7 +110,7 @@ export default function HomePage() {
                 <div key={label}>
                   <Icon className="w-6 h-6 text-primary-600 mx-auto mb-2" />
                   <div className="text-3xl font-bold text-gray-900">
-                    {value >= 1000 ? `${(value / 1000).toFixed(1)}K` : value.toLocaleString()}
+                    {value >= 1000 ? `${(value / 1000).toFixed(1)}K` : value.toLocaleString('en')}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">{label}</div>
                 </div>

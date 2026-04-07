@@ -145,7 +145,7 @@ export default function HeroSearch() {
     if (!dateStr) return null;
     const date = new Date(dateStr);
     return isAr
-      ? date.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' })
+      ? date.toLocaleDateString('ar-u-nu-latn', { month: 'short', day: 'numeric' })
       : format(date, 'MMM d');
   };
 

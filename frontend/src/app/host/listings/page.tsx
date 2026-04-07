@@ -123,7 +123,7 @@ export default function HostListingsPage() {
                 </h3>
                 <p className="text-sm text-gray-500 mb-2">{property.city}</p>
                 <p className="text-lg font-bold text-primary-600">
-                  <span dir="ltr"><SarSymbol /> {property.price?.toLocaleString()}</span> / {lang === 'ar' ? 'ليلة' : 'night'}
+                  <span dir="ltr"><SarSymbol /> {property.price?.toLocaleString('en')}</span> / {lang === 'ar' ? 'ليلة' : 'night'}
                 </p>
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
                   <Link

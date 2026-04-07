@@ -235,12 +235,12 @@ export default function GuestDashboardPage() {
                       {property?.title || (lang === 'ar' ? '\u062d\u062c\u0632' : 'Booking')}
                     </p>
                     <p className="text-sm text-gray-500 mt-0.5">
-                      {new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+                      {new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US', {
                         month: 'short',
                         day: 'numeric',
                       })}{' '}
                       -{' '}
-                      {new Date(booking.checkOut).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+                      {new Date(booking.checkOut).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',

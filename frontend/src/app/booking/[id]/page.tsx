@@ -295,7 +295,7 @@ function BookingContent() {
                               <p className="text-sm font-medium text-gray-800">{isAr ? 'التواريخ' : 'Dates'}</p>
                               <p className="text-xs text-gray-500">
                                 {isAr
-                                  ? `${new Date(checkIn).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' })} – ${new Date(checkOut).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                  ? `${new Date(checkIn).toLocaleDateString('ar-u-nu-latn', { month: 'short', day: 'numeric', year: 'numeric' })} – ${new Date(checkOut).toLocaleDateString('ar-u-nu-latn', { month: 'short', day: 'numeric', year: 'numeric' })}`
                                   : `${formatDate(checkIn)} – ${formatDate(checkOut)}`}
                               </p>
                             </div>

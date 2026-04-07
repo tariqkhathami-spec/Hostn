@@ -138,17 +138,17 @@ export default function HostBookingsPage() {
                     <td className="p-3 text-gray-900">{booking.guest?.name || '-'}</td>
                     <td className="p-3 text-gray-700">{booking.property?.title || '-'}</td>
                     <td className="p-3 text-gray-600">
-                      {new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                      {new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="p-3 text-gray-600">
-                      {new Date(booking.checkOut).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                      {new Date(booking.checkOut).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[booking.status] || 'bg-gray-100 text-gray-600'}`}>
                         {t[booking.status]?.[lang] || booking.status}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {booking.totalPrice?.toLocaleString()}</span></td>
+                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {booking.totalPrice?.toLocaleString('en')}</span></td>
                     <td className="p-3">
                       {booking.status === 'pending' && (
                         <div className="flex gap-2">

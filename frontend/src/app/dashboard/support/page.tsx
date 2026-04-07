@@ -134,7 +134,7 @@ export default function SupportPage() {
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{categoryLabels[ticket.category][isAr ? 'ar' : 'en']}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[ticket.priority]}`}>{priorityLabels[ticket.priority]?.[isAr ? 'ar' : 'en'] || ticket.priority}</span>
-                      <span className="text-xs text-gray-400">{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                      <span className="text-xs text-gray-400">{new Date(ticket.createdAt).toLocaleDateString('en')}</span>
                       <span className="text-xs text-gray-400">{ticket.messages?.length || 0} {isAr ? 'رسائل' : 'messages'}</span>
                     </div>
                   </div>

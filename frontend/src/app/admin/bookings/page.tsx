@@ -128,10 +128,10 @@ export default function AdminBookingsPage() {
                       {b.property?.title || b.propertyTitle || '-'}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {new Date(b.checkIn).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                      {new Date(b.checkIn).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {new Date(b.checkOut).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                      {new Date(b.checkOut).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${statusColors[b.status] || 'bg-gray-50 text-gray-700'}`}>
@@ -139,7 +139,7 @@ export default function AdminBookingsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      <span dir="ltr"><SarSymbol /> {(b.pricing?.total || b.totalPrice)?.toLocaleString()}</span>
+                      <span dir="ltr"><SarSymbol /> {(b.pricing?.total || b.totalPrice)?.toLocaleString('en')}</span>
                     </td>
                     <td className="px-4 py-3">
                       <button

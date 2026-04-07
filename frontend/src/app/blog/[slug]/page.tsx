@@ -35,7 +35,7 @@ export default function BlogPostPage() {
   }, [slug]);
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {
+    return new Date(dateStr).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US', {
       month: 'long', day: 'numeric', year: 'numeric',
     });
   };

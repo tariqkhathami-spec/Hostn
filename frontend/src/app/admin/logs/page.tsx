@@ -79,7 +79,7 @@ export default function AdminLogsPage() {
                 {logs.map((log) => (
                   <tr key={log._id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleString(isAr ? 'ar-SA' : 'en-US', {
+                      {new Date(log.createdAt).toLocaleString(isAr ? 'ar-u-nu-latn' : 'en-US', {
                         dateStyle: 'short',
                         timeStyle: 'short',
                       })}

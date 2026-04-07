@@ -187,7 +187,7 @@ export default function AdminPropertiesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500">
-                      {new Date(prop.createdAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
+                      {new Date(prop.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

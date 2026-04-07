@@ -103,7 +103,7 @@ export default function AdminSupportPage() {
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 12, background: sc.bg, color: sc.color }}>{sc.label}</span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12 }}>{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12 }}>{new Date(ticket.createdAt).toLocaleDateString('en')}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <Link href={`/admin/support/${ticket._id}`} style={{ color: '#3b82f6', fontSize: 12, textDecoration: 'none', fontWeight: 500 }}>View</Link>
                     </td>

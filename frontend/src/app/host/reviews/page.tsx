@@ -89,7 +89,7 @@ export default function HostReviewsPage() {
                   </p>
                 </div>
                 <span className="text-xs text-gray-400">
-                  {new Date(review.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+                  {new Date(review.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US')}
                 </span>
               </div>
               <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>

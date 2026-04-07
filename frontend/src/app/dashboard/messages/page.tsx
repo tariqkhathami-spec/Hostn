@@ -19,7 +19,7 @@ function timeAgo(dateStr: string, isAr: boolean) {
   if (hrs < 24) return isAr ? `${hrs} س` : `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return isAr ? `${days} ي` : `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString(isAr ? 'ar-SA' : undefined);
+  return new Date(dateStr).toLocaleDateString(isAr ? 'ar-u-nu-latn' : undefined);
 }
 
 function GuestMessagesContent() {
@@ -278,7 +278,7 @@ function GuestMessagesContent() {
                           }`}>
                             <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                             <p className={`text-[10px] mt-1 ${isMe ? 'text-primary-100' : 'text-gray-400'}`}>
-                              {new Date(msg.createdAt).toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                              {new Date(msg.createdAt).toLocaleTimeString(isAr ? 'ar-u-nu-latn' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                             </p>
                           </div>
                         </div>

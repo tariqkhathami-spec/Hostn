@@ -120,7 +120,7 @@ export default function TicketDetailPage() {
           <div className="flex items-center gap-4 text-xs text-gray-400">
             <span>{isAr ? 'الفئة' : 'Category'}: <span className="text-gray-600 capitalize">{(isAr ? categoryLabels[ticket.category]?.ar : categoryLabels[ticket.category]?.en) || ticket.category}</span></span>
             <span>{isAr ? 'الأولوية' : 'Priority'}: <span className="text-gray-600 capitalize">{(isAr ? priorityLabels[ticket.priority]?.ar : priorityLabels[ticket.priority]?.en) || ticket.priority}</span></span>
-            <span>{isAr ? 'تاريخ الإنشاء' : 'Created'}: {new Date(ticket.createdAt).toLocaleDateString(isAr ? 'ar-SA' : undefined)}</span>
+            <span>{isAr ? 'تاريخ الإنشاء' : 'Created'}: {new Date(ticket.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : undefined)}</span>
           </div>
         </div>
 
@@ -136,7 +136,7 @@ export default function TicketDetailPage() {
                     <div className="flex items-center gap-2 mb-1">
                       {isAdmin && <Shield className="w-3.5 h-3.5 text-primary-500" />}
                       <span className="text-xs font-medium text-gray-500">{isAdmin ? (isAr ? 'فريق الدعم' : 'Support Team') : senderName}</span>
-                      <span className="text-xs text-gray-300">{new Date(msg.createdAt).toLocaleString(isAr ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-xs text-gray-300">{new Date(msg.createdAt).toLocaleString(isAr ? 'ar-u-nu-latn' : 'en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <div className={`rounded-2xl px-4 py-3 ${isAdmin ? 'bg-primary-50 border border-primary-100 text-gray-800 rounded-bl-md' : 'bg-gray-100 text-gray-800 rounded-br-md'}`}>
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>

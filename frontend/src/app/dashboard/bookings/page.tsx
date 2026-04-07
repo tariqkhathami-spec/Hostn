@@ -134,12 +134,12 @@ export default function MyBookingsPage() {
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
                     {new Date(booking.checkIn).toLocaleDateString(
-                      lang === 'ar' ? 'ar-SA' : 'en-US',
+                      lang === 'ar' ? 'ar-u-nu-latn' : 'en-US',
                       { month: 'short', day: 'numeric' }
                     )}{' '}
                     -{' '}
                     {new Date(booking.checkOut).toLocaleDateString(
-                      lang === 'ar' ? 'ar-SA' : 'en-US',
+                      lang === 'ar' ? 'ar-u-nu-latn' : 'en-US',
                       { month: 'short', day: 'numeric', year: 'numeric' }
                     )}
                   </p>
@@ -147,7 +147,7 @@ export default function MyBookingsPage() {
 
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-semibold text-gray-900">
-                    <span dir="ltr"><SarSymbol /> {total.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-SA')}</span>
+                    <span dir="ltr"><SarSymbol /> {total.toLocaleString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-SA')}</span>
                   </span>
                   <span
                     className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${

@@ -106,7 +106,7 @@ export default function AdminReportsPage() {
                     <td style={{ padding: '12px 16px', color: '#64748b', textTransform: 'capitalize', fontSize: 12 }}>
                       {report.actionTaken === 'none' ? '-' : report.actionTaken?.replace('_', ' ')}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12 }}>{new Date(report.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: 12 }}>{new Date(report.createdAt).toLocaleDateString('en')}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <Link href={`/admin/reports/${report._id}`} style={{ color: '#3b82f6', fontSize: 12, textDecoration: 'none', fontWeight: 500 }}>Review</Link>
                     </td>

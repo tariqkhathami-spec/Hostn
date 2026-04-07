@@ -140,7 +140,7 @@ export default function SearchFilters() {
     if (!dateStr) return null;
     const date = new Date(dateStr);
     return isAr
-      ? date.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' })
+      ? date.toLocaleDateString('ar-u-nu-latn', { month: 'short', day: 'numeric' })
       : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
