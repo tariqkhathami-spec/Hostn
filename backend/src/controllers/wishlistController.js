@@ -18,7 +18,7 @@ exports.getLists = async (req, res, next) => {
       name: list.name,
       isDefault: list.isDefault,
       propertyCount: list.properties.length,
-      coverImage: list.properties[0]?.images?.[0] || null,
+      coverImage: list.properties[0]?.images?.[0]?.url || null,
       createdAt: list.createdAt,
       updatedAt: list.updatedAt,
     }));

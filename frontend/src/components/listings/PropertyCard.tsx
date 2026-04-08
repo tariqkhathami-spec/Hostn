@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck } from 'lucide-react';
-import { Property, User } from '@/types';
+import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, Check, X } from 'lucide-react';
+import { Property, User, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { CITIES } from '@/lib/constants';
-import { useState, useCallback, useEffect } from 'react';
+import { wishlistsApi } from '@/lib/api';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 
 interface PropertyCardProps {
@@ -38,6 +39,16 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // List picker state
+  const [showListPicker, setShowListPicker] = useState(false);
+  const [lists, setLists] = useState<WishlistList[]>([]);
+  const [listsLoading, setListsLoading] = useState(false);
+  const [togglingList, setTogglingList] = useState<string | null>(null);
+  const [showNewList, setShowNewList] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [creatingList, setCreatingList] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
   const images = property.images.length > 0
     ? property.images.slice(0, 5)
     : [{ url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', isPrimary: true }];
@@ -59,18 +70,138 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent)
       : null;
 
-  const handleWishlist = async (e: React.MouseEvent) => {
+  // Click-outside to close list picker
+  useEffect(() => {
+    if (!showListPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowListPicker(false);
+        setShowNewList(false);
+        setNewListName('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showListPicker]);
+
+  // Fetch lists when picker opens
+  const openListPicker = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
       toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
       return;
     }
-    toast.success(isWishlisted
-      ? (isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist')
-      : (isAr ? 'تمت الإضافة للمفضلة' : 'Saved to wishlist'));
-    // toggleWishlist does optimistic update in AuthContext → useEffect syncs local state
-    await toggleWishlist(property._id);
+
+    // If already wishlisted and user just taps heart again — open the picker to let them manage
+    setShowListPicker(true);
+    setListsLoading(true);
+    try {
+      const res = await wishlistsApi.getLists();
+      const fetchedLists: WishlistList[] = res.data.data || [];
+      // For each list, check if this property is in it — we need the full list data
+      const detailedLists = await Promise.all(
+        fetchedLists.map(async (list) => {
+          try {
+            const detail = await wishlistsApi.getList(list._id);
+            const props = detail.data.data?.properties || [];
+            return {
+              ...list,
+              _hasProperty: props.some((p: Property) => p._id === property._id),
+            };
+          } catch {
+            return { ...list, _hasProperty: false };
+          }
+        })
+      );
+      setLists(detailedLists);
+    } catch {
+      toast.error(isAr ? 'فشل في تحميل القوائم' : 'Failed to load lists');
+      setShowListPicker(false);
+    } finally {
+      setListsLoading(false);
+    }
+  };
+
+  // Toggle property in a specific list
+  const handleToggleInList = async (listId: string) => {
+    setTogglingList(listId);
+    try {
+      await wishlistsApi.toggleProperty(listId, property._id);
+      setLists((prev) =>
+        prev.map((l) =>
+          l._id === listId
+            ? { ...l, _hasProperty: !(l as WishlistList & { _hasProperty: boolean })._hasProperty }
+            : l
+        )
+      );
+      // Sync the auth context wishlist
+      try {
+        const { authApi } = await import('@/lib/api');
+        const meRes = await authApi.getMe();
+        const freshUser = meRes.data.user || meRes.data.data;
+        if (freshUser?.wishlist) {
+          const normalizedWishlist = freshUser.wishlist.map((item: unknown) =>
+            typeof item === 'object' && item !== null ? (item as { _id: string })._id : String(item)
+          );
+          // Update local state immediately
+          setIsWishlisted(normalizedWishlist.includes(property._id));
+        }
+      } catch {
+        // Silent fail — the toggle still worked server-side
+      }
+    } catch {
+      toast.error(isAr ? 'فشل في تحديث القائمة' : 'Failed to update list');
+    } finally {
+      setTogglingList(null);
+    }
+  };
+
+  // Create a new list and add property to it
+  const handleCreateAndAdd = async () => {
+    if (!newListName.trim()) return;
+    setCreatingList(true);
+    try {
+      const res = await wishlistsApi.createList(newListName.trim());
+      const newList = res.data.data;
+      // Add property to the new list
+      await wishlistsApi.toggleProperty(newList._id, property._id);
+      setLists((prev) => [
+        ...prev,
+        { ...newList, propertyCount: 1, coverImage: null, _hasProperty: true },
+      ]);
+      setNewListName('');
+      setShowNewList(false);
+      setIsWishlisted(true);
+      toast.success(isAr ? 'تم إنشاء القائمة وإضافة العقار' : 'List created & property saved');
+    } catch {
+      toast.error(isAr ? 'فشل في إنشاء القائمة' : 'Failed to create list');
+    } finally {
+      setCreatingList(false);
+    }
+  };
+
+  // Quick remove — if wishlisted and user wants fast remove, just use the old toggle
+  const handleQuickRemove = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
+      return;
+    }
+    if (isWishlisted) {
+      // Remove from all lists via the auth toggle (removes from default list)
+      toast.success(isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist');
+      await toggleWishlist(property._id);
+    } else {
+      // Not wishlisted — open picker to choose list
+      openListPicker(e);
+    }
+  };
+
+  const getListDisplayName = (list: WishlistList) => {
+    if (list.isDefault) return isAr ? 'مفضلاتي' : 'My Favorites';
+    return list.name;
   };
 
   return (
@@ -139,16 +270,114 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Wishlist button */}
           <button
-            onClick={handleWishlist}
+            onClick={isWishlisted ? handleQuickRemove : openListPicker}
             disabled={wishlistLoading}
-            className="absolute top-3 ltr:right-3 rtl:left-3 p-1.5 hover:scale-110 transition-all duration-200 disabled:opacity-60 drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
+            className="absolute bottom-3 ltr:right-3 rtl:left-3 p-1.5 hover:scale-110 transition-all duration-200 disabled:opacity-60 drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
           >
             <Heart
               className={`w-5 h-5 transition-colors ${
-                isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/80 text-white'
+                isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/60 text-white/80'
               }`}
             />
           </button>
+
+          {/* List picker popover */}
+          {showListPicker && (
+            <div
+              ref={pickerRef}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              className="absolute bottom-12 ltr:right-2 rtl:left-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-60 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
+                <span className="text-sm font-semibold text-gray-900">
+                  {isAr ? 'حفظ في قائمة' : 'Save to list'}
+                </span>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowListPicker(false); setShowNewList(false); setNewListName(''); }}
+                  className="p-1 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* List items */}
+              <div className="max-h-48 overflow-y-auto">
+                {listsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
+                  </div>
+                ) : (
+                  lists.map((list) => {
+                    const hasProperty = (list as WishlistList & { _hasProperty?: boolean })._hasProperty;
+                    return (
+                      <button
+                        key={list._id}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleInList(list._id); }}
+                        disabled={togglingList === list._id}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start disabled:opacity-60"
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          hasProperty ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
+                        }`}>
+                          {togglingList === list._id ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-white" />
+                          ) : hasProperty ? (
+                            <Check className="w-3 h-3 text-white" />
+                          ) : null}
+                        </div>
+                        <span className="text-sm text-gray-800 truncate flex-1">
+                          {getListDisplayName(list)}
+                        </span>
+                        {list.isDefault && (
+                          <Heart className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Create new list */}
+              <div className="border-t border-gray-100">
+                {showNewList ? (
+                  <div className="p-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                      placeholder={isAr ? 'اسم القائمة' : 'List name'}
+                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      autoFocus
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') handleCreateAndAdd();
+                        if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); }
+                      }}
+                    />
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateAndAdd(); }}
+                      disabled={creatingList || !newListName.trim()}
+                      className="bg-primary-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50"
+                    >
+                      {creatingList ? <Loader2 className="w-3 h-3 animate-spin" /> : isAr ? 'إنشاء' : 'Create'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowNewList(true); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start"
+                  >
+                    <Plus className="w-4 h-4 text-primary-600" />
+                    <span className="text-sm text-primary-600 font-medium">
+                      {isAr ? 'قائمة جديدة' : 'New list'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Type badge */}
           <div className="absolute bottom-3 ltr:left-3 rtl:right-3">

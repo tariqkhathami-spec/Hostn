@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -25,6 +25,27 @@ export default function FavoritesPage() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Translate the default list name based on current language
+  const getDisplayName = (list: WishlistList) => {
+    if (list.isDefault) {
+      return isAr ? 'مفضلاتي' : 'My Favorites';
+    }
+    return list.name;
+  };
+
+  // Click-outside handler to dismiss the 3-dot menu
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -167,7 +188,7 @@ export default function FavoritesPage() {
             <div key={list._id} className="relative group">
               {/* Menu for non-default lists */}
               {!list.isDefault && (
-                <div className="absolute top-3 ltr:right-3 rtl:left-3 z-10">
+                <div className="absolute top-3 ltr:right-3 rtl:left-3 z-10" ref={menuOpen === list._id ? menuRef : undefined}>
                   <button
                     onClick={(e) => { e.preventDefault(); setMenuOpen(menuOpen === list._id ? null : list._id); }}
                     className="p-1.5 bg-white/90 rounded-full shadow-sm hover:bg-white transition-colors"
@@ -204,15 +225,15 @@ export default function FavoritesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                   {/* Cover image */}
                   <div className="relative h-40 bg-gradient-to-br from-primary-100 to-primary-50">
-                    {list.coverImage && (
+                    {list.coverImage ? (
                       <Image
                         src={list.coverImage}
-                        alt={list.name}
+                        alt={getDisplayName(list)}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
-                    )}
-                    {!list.coverImage && (
+                    ) : (
                       <div className="flex items-center justify-center h-full">
                         <Heart className="w-10 h-10 text-primary-300" />
                       </div>
@@ -236,7 +257,7 @@ export default function FavoritesPage() {
                       </div>
                     ) : (
                       <>
-                        <h3 className="font-semibold text-gray-900">{list.name}</h3>
+                        <h3 className="font-semibold text-gray-900">{getDisplayName(list)}</h3>
                         <p className="text-sm text-gray-500 mt-0.5">
                           {list.propertyCount} {isAr ? 'عقار' : list.propertyCount === 1 ? 'property' : 'properties'}
                         </p>
