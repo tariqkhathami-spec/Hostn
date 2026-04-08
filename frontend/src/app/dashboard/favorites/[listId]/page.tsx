@@ -722,7 +722,7 @@ export default function WishlistDetailPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayProperties.map(property => (
-                <PropertyListCard key={property._id} property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} />
+                <PropertyListCard key={property._id} property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} checkIn={checkIn} checkOut={checkOut} />
               ))}
             </div>
           )}
@@ -732,14 +732,16 @@ export default function WishlistDetailPage() {
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
                 {isAr ? 'لا تطابق البحث' : 'Doesn\'t match search'}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 opacity-50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {mismatched.map(({ property, reasons }) => (
                   <div key={property._id} className="relative">
-                    <PropertyListCard property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} />
-                    <div className="absolute bottom-0 inset-x-0 bg-amber-50 border-t border-amber-200 rounded-b-xl px-3 py-2">
-                      <div className="flex items-start gap-1.5">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-[11px] text-amber-700 leading-tight">{reasons.join(' · ')}</p>
+                    <div className="opacity-40">
+                      <PropertyListCard property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} checkIn={checkIn} checkOut={checkOut} />
+                    </div>
+                    <div className="absolute bottom-0 inset-x-0 bg-amber-100 border border-amber-300 rounded-b-xl px-3 py-2.5 shadow-sm">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 font-medium leading-snug">{reasons.join(' · ')}</p>
                       </div>
                     </div>
                   </div>
@@ -754,13 +756,34 @@ export default function WishlistDetailPage() {
 }
 
 // ─── Property card sub-component ────────────────────────────────────────────
-function PropertyListCard({ property, isAr, lang, removingId, onRemove, translateCity, translateDistrict }: {
+function PropertyListCard({ property, isAr, lang, removingId, onRemove, translateCity, translateDistrict, checkIn, checkOut }: {
   property: Property; isAr: boolean; lang: 'en' | 'ar'; removingId: string | null;
   onRemove: (id: string) => void; translateCity: (city: string) => string;
   translateDistrict: (district: string, city: string) => string;
+  checkIn?: string; checkOut?: string;
 }) {
   const primaryImage = property.images?.find(img => img.isPrimary)?.url || property.images?.[0]?.url || 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800';
   const discountedPrice = property.pricing.discountPercent > 0 ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent) : null;
+
+  // Pricing: total, weekly, monthly
+  const effectivePrice = discountedPrice || property.pricing.perNight;
+  const nights = (checkIn && checkOut) ? calculateNights(checkIn, checkOut) : 0;
+  const totalPrice = nights > 0 ? effectivePrice * nights : 0;
+
+  let displayPrice = effectivePrice;
+  let originalDisplayPrice = property.pricing.perNight;
+  let priceUnitLabel: string;
+  if (nights >= 30) {
+    displayPrice = effectivePrice * 30;
+    originalDisplayPrice = property.pricing.perNight * 30;
+    priceUnitLabel = isAr ? '/ شهر' : '/ month';
+  } else if (nights >= 7) {
+    displayPrice = effectivePrice * 7;
+    originalDisplayPrice = property.pricing.perNight * 7;
+    priceUnitLabel = isAr ? '/ أسبوع' : '/ week';
+  } else {
+    priceUnitLabel = isAr ? '/ ليلة' : '/ night';
+  }
 
   return (
     <div className="relative group">
@@ -796,15 +819,23 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
             <div>
               {discountedPrice ? (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(discountedPrice)}</span>
-                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(property.pricing.perNight)}</span>
-                  <span className="text-xs text-gray-500">{isAr ? '/ ليلة' : '/ night'}</span>
+                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(originalDisplayPrice)}</span>
+                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(property.pricing.perNight)}</span>
-                  <span className="text-xs text-gray-500">{isAr ? '/ ليلة' : '/ night'}</span>
+                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
                 </div>
+              )}
+              {nights > 0 && (
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {isAr
+                    ? <><span>إجمالي{getNightLabel(nights, 'ar')}:</span> <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
+                    : <>Total for {getNightLabel(nights, 'en')}: <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
+                  }
+                </p>
               )}
             </div>
           </div>

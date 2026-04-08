@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
 import { Property, User, WishlistList } from '@/types';
-import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel } from '@/lib/utils';
+import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel, calculateNights, getNightLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { useAuth } from '@/context/AuthContext';
@@ -17,9 +17,11 @@ import toast from 'react-hot-toast';
 
 interface PropertyCardProps {
   property: Property;
+  checkIn?: string;
+  checkOut?: string;
 }
 
-export default function PropertyCard({ property }: PropertyCardProps) {
+export default function PropertyCard({ property, checkIn, checkOut }: PropertyCardProps) {
   const { user, isAuthenticated, toggleWishlist } = useAuth();
   const { t, language } = useLanguage();
   const isAr = language === 'ar';
@@ -80,6 +82,26 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     property.pricing.discountPercent > 0
       ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent)
       : null;
+
+  // Pricing: total, weekly, monthly
+  const effectivePrice = discountedPrice || property.pricing.perNight;
+  const nights = (checkIn && checkOut) ? calculateNights(checkIn, checkOut) : 0;
+  const totalPrice = nights > 0 ? effectivePrice * nights : 0;
+
+  let displayPrice = effectivePrice;
+  let originalDisplayPrice = property.pricing.perNight;
+  let priceUnitLabel: string;
+  if (nights >= 30) {
+    displayPrice = effectivePrice * 30;
+    originalDisplayPrice = property.pricing.perNight * 30;
+    priceUnitLabel = isAr ? '/ شهر' : '/ month';
+  } else if (nights >= 7) {
+    displayPrice = effectivePrice * 7;
+    originalDisplayPrice = property.pricing.perNight * 7;
+    priceUnitLabel = isAr ? '/ أسبوع' : '/ week';
+  } else {
+    priceUnitLabel = t('property.perNight');
+  }
 
   // Click-outside to close list picker (exclude heart button)
   useEffect(() => {
@@ -346,15 +368,23 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             <div>
               {discountedPrice ? (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(discountedPrice)}</span>
-                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(property.pricing.perNight)}</span>
-                  <span className="text-xs text-gray-500">{t('property.perNight')}</span>
+                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(originalDisplayPrice)}</span>
+                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(property.pricing.perNight)}</span>
-                  <span className="text-xs text-gray-500">{t('property.perNight')}</span>
+                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
                 </div>
+              )}
+              {nights > 0 && (
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {isAr
+                    ? <><span>إجمالي{getNightLabel(nights, 'ar')}:</span> <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
+                    : <>Total for {getNightLabel(nights, 'en')}: <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
+                  }
+                </p>
               )}
             </div>
           </div>
