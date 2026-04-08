@@ -224,6 +224,8 @@ export const wishlistsApi = {
     api.post(`/wishlists/${listId}/properties/${propertyId}`),
   moveProperty: (data: { propertyId: string; fromListId: string; toListId: string }) =>
     api.put('/wishlists/move', data),
+  getPropertyMembership: (propertyId: string) =>
+    api.get(`/wishlists/property/${propertyId}/membership`),
 };
 
 export const supportApi = {

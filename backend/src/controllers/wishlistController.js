@@ -199,6 +199,22 @@ exports.moveProperty = async (req, res, next) => {
   }
 };
 
+// @desc    Check which lists contain a specific property
+// @route   GET /api/v1/wishlists/property/:propertyId/membership
+// @access  Private
+exports.getPropertyMembership = async (req, res, next) => {
+  try {
+    const { propertyId } = req.params;
+    const lists = await Wishlist.find({ user: req.user._id }).select('_id properties');
+    const listIds = lists
+      .filter((l) => l.properties.some((p) => p.toString() === propertyId))
+      .map((l) => l._id.toString());
+    res.json({ success: true, data: listIds });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * Sync user.wishlist with all Wishlist lists — union of all list properties.
  */

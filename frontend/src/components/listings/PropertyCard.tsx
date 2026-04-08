@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X } from 'lucide-react';
+import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check } from 'lucide-react';
 import { Property, User, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
@@ -41,8 +41,9 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   // List picker state
   const [showListPicker, setShowListPicker] = useState(false);
   const [lists, setLists] = useState<WishlistList[]>([]);
+  const [memberListIds, setMemberListIds] = useState<Set<string>>(new Set());
   const [listsLoading, setListsLoading] = useState(false);
-  const [savingToList, setSavingToList] = useState<string | null>(null);
+  const [togglingList, setTogglingList] = useState<string | null>(null);
   const [showNewList, setShowNewList] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [creatingList, setCreatingList] = useState(false);
@@ -83,7 +84,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showListPicker]);
 
-  // Fetch lists when picker opens (just list names — no N+1 detail calls)
+  // Fetch lists + membership when picker opens (2 parallel calls, no N+1)
   const openListPicker = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -94,8 +95,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     setShowListPicker(true);
     setListsLoading(true);
     try {
-      const res = await wishlistsApi.getLists();
-      setLists(res.data.data || []);
+      const [listsRes, memberRes] = await Promise.all([
+        wishlistsApi.getLists(),
+        wishlistsApi.getPropertyMembership(property._id),
+      ]);
+      setLists(listsRes.data.data || []);
+      setMemberListIds(new Set(memberRes.data.data || []));
     } catch {
       toast.error(isAr ? 'فشل في تحميل القوائم' : 'Failed to load lists');
       setShowListPicker(false);
@@ -104,29 +109,31 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     }
   };
 
-  // Single-select: save to ONE list, then close
-  const handleSaveToList = async (listId: string) => {
-    setSavingToList(listId);
+  // Multi-select: toggle property in a list (check/uncheck)
+  const handleToggleInList = async (listId: string) => {
+    setTogglingList(listId);
+    const wasIn = memberListIds.has(listId);
     try {
       await wishlistsApi.toggleProperty(listId, property._id);
-      setIsWishlisted(true);
-      setShowListPicker(false);
-      setShowNewList(false);
-      setNewListName('');
-      const listName = getListDisplayName(lists.find(l => l._id === listId));
-      toast.success(isAr ? `تم الحفظ في "${listName}"` : `Saved to "${listName}"`);
-      // Sync auth context
-      await toggleWishlist(property._id).catch(() => {});
-      // Re-set true since toggleWishlist might flip it
-      setIsWishlisted(true);
+      setMemberListIds(prev => {
+        const next = new Set(prev);
+        if (wasIn) next.delete(listId);
+        else next.add(listId);
+        return next;
+      });
+      // Update wishlisted state: property is wishlisted if it's in ANY list
+      const stillInAny = wasIn
+        ? memberListIds.size > 1 // removing from one, but still in others
+        : true; // just added
+      setIsWishlisted(stillInAny);
     } catch {
-      toast.error(isAr ? 'فشل في الحفظ' : 'Failed to save');
+      toast.error(isAr ? 'فشل في تحديث القائمة' : 'Failed to update list');
     } finally {
-      setSavingToList(null);
+      setTogglingList(null);
     }
   };
 
-  // Create new list and save property to it
+  // Create new list and add property to it
   const handleCreateAndAdd = async () => {
     if (!newListName.trim()) return;
     setCreatingList(true);
@@ -134,10 +141,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       const res = await wishlistsApi.createList(newListName.trim());
       const newList = res.data.data;
       await wishlistsApi.toggleProperty(newList._id, property._id);
-      setIsWishlisted(true);
-      setShowListPicker(false);
-      setShowNewList(false);
+      setLists(prev => [...prev, { ...newList, propertyCount: 1, coverImage: null }]);
+      setMemberListIds(prev => new Set([...prev, newList._id]));
       setNewListName('');
+      setShowNewList(false);
+      setIsWishlisted(true);
       toast.success(isAr ? `تم الحفظ في "${newListName.trim()}"` : `Saved to "${newListName.trim()}"`);
     } catch {
       toast.error(isAr ? 'فشل في إنشاء القائمة' : 'Failed to create list');
@@ -146,7 +154,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     }
   };
 
-  // Heart click handler
+  // Heart click: always opens picker (for both add and manage)
   const handleHeartClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -154,12 +162,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
       return;
     }
-    if (isWishlisted) {
-      toast.success(isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist');
-      await toggleWishlist(property._id);
-    } else {
-      openListPicker(e);
-    }
+    openListPicker(e);
   };
 
   const getListDisplayName = (list?: WishlistList) => {
@@ -230,16 +233,16 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             <Heart className={`w-5 h-5 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/60 text-white/80'}`} />
           </button>
 
-          {/* List picker — single select */}
+          {/* List picker — multi-select checkboxes */}
           {showListPicker && (
             <div
               ref={pickerRef}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="absolute bottom-12 ltr:right-2 rtl:left-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-56 overflow-hidden"
+              className="absolute bottom-12 ltr:right-2 rtl:left-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-60 overflow-hidden"
             >
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
                 <span className="text-sm font-semibold text-gray-900">
-                  {isAr ? 'حفظ في قائمة' : 'Save to list'}
+                  {isAr ? 'حفظ في قوائم' : 'Save to lists'}
                 </span>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowListPicker(false); setShowNewList(false); setNewListName(''); }}
@@ -255,26 +258,33 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                     <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
                   </div>
                 ) : (
-                  lists.map((list) => (
-                    <button
-                      key={list._id}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveToList(list._id); }}
-                      disabled={savingToList === list._id}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary-50 transition-colors text-start disabled:opacity-60"
-                    >
-                      {savingToList === list._id ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-primary-500 flex-shrink-0" />
-                      ) : (
-                        <Heart className={`w-4 h-4 flex-shrink-0 ${list.isDefault ? 'text-red-400' : 'text-gray-300'}`} />
-                      )}
-                      <span className="text-sm text-gray-800 truncate flex-1">
-                        {getListDisplayName(list)}
-                      </span>
-                      <span className="text-[10px] text-gray-400">
-                        {list.propertyCount}
-                      </span>
-                    </button>
-                  ))
+                  lists.map((list) => {
+                    const isIn = memberListIds.has(list._id);
+                    return (
+                      <button
+                        key={list._id}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleInList(list._id); }}
+                        disabled={togglingList === list._id}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start disabled:opacity-60"
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isIn ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
+                        }`}>
+                          {togglingList === list._id ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-white" />
+                          ) : isIn ? (
+                            <Check className="w-3 h-3 text-white" />
+                          ) : null}
+                        </div>
+                        <span className="text-sm text-gray-800 truncate flex-1">
+                          {getListDisplayName(list)}
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {list.propertyCount}
+                        </span>
+                      </button>
+                    );
+                  })
                 )}
               </div>
 

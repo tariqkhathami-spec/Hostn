@@ -9,6 +9,7 @@ const {
   deleteList,
   toggleProperty,
   moveProperty,
+  getPropertyMembership,
 } = require('../controllers/wishlistController');
 
 router.use(protect);
@@ -16,6 +17,7 @@ router.use(protect);
 router.get('/', getLists);
 router.post('/', createList);
 router.put('/move', moveProperty);
+router.get('/property/:propertyId/membership', getPropertyMembership);
 router.get('/:listId', getList);
 router.put('/:listId', updateList);
 router.delete('/:listId', deleteList);
