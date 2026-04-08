@@ -123,7 +123,9 @@ export default function WishlistDetailPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600 rtl:rotate-180" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{list.name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {list.isDefault ? (isAr ? 'مفضلاتي' : 'My Favorites') : list.name}
+          </h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {list.propertyCount} {isAr ? 'عقار' : list.propertyCount === 1 ? 'property' : 'properties'}
           </p>
