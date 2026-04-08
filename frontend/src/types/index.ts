@@ -14,6 +14,17 @@ export interface User {
   createdAt: string;
 }
 
+export interface WishlistList {
+  _id: string;
+  name: string;
+  isDefault: boolean;
+  propertyCount: number;
+  coverImage: string | null;
+  properties?: Property[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PropertyImage {
   url: string;
   caption?: string;

@@ -427,22 +427,35 @@ exports.upgradeToHost = async (req, res, next) => {
   }
 };
 
-// @desc    Toggle wishlist
+// @desc    Toggle wishlist (adds/removes from default list + keeps user.wishlist in sync)
 // @route   POST /api/auth/wishlist/:propertyId
 // @access  Private
 exports.toggleWishlist = async (req, res, next) => {
   try {
+    const Wishlist = require('../models/Wishlist');
     const user = await User.findById(req.user._id);
     const propertyId = req.params.propertyId;
 
+    // Toggle in user.wishlist (backward compat for mobile)
     const index = user.wishlist.indexOf(propertyId);
-    if (index > -1) {
-      user.wishlist.splice(index, 1);
-    } else {
+    const adding = index === -1;
+    if (adding) {
       user.wishlist.push(propertyId);
+    } else {
+      user.wishlist.splice(index, 1);
     }
-
     await user.save();
+
+    // Also toggle in the default Wishlist list
+    const defaultList = await Wishlist.getOrCreateDefault(req.user._id);
+    const listIdx = defaultList.properties.indexOf(propertyId);
+    if (adding && listIdx === -1) {
+      defaultList.properties.push(propertyId);
+    } else if (!adding && listIdx > -1) {
+      defaultList.properties.splice(listIdx, 1);
+    }
+    await defaultList.save();
+
     res.json({ success: true, wishlist: user.wishlist });
   } catch (error) {
     next(error);

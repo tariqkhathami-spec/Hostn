@@ -141,11 +141,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           <button
             onClick={handleWishlist}
             disabled={wishlistLoading}
-            className="absolute bottom-3 ltr:right-3 rtl:left-3 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-200 disabled:opacity-60"
+            className="absolute top-3 ltr:right-3 rtl:left-3 p-1.5 hover:scale-110 transition-all duration-200 disabled:opacity-60 drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
           >
             <Heart
-              className={`w-4 h-4 transition-colors ${
-                isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-400'
+              className={`w-5 h-5 transition-colors ${
+                isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/80 text-white'
               }`}
             />
           </button>

@@ -211,6 +211,21 @@ export const messagesApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUPPORT
 // ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// WISHLISTS (multi-list)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const wishlistsApi = {
+  getLists: () => api.get('/wishlists'),
+  getList: (id: string) => api.get(`/wishlists/${id}`),
+  createList: (name: string) => api.post('/wishlists', { name }),
+  updateList: (id: string, name: string) => api.put(`/wishlists/${id}`, { name }),
+  deleteList: (id: string) => api.delete(`/wishlists/${id}`),
+  toggleProperty: (listId: string, propertyId: string) =>
+    api.post(`/wishlists/${listId}/properties/${propertyId}`),
+  moveProperty: (data: { propertyId: string; fromListId: string; toListId: string }) =>
+    api.put('/wishlists/move', data),
+};
+
 export const supportApi = {
   getMyTickets: () => api.get('/support'),
   createTicket: (data: { subject: string; category: string; priority: string; message: string }) =>
