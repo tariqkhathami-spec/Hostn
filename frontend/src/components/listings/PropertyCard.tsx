@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, Check, X } from 'lucide-react';
+import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X } from 'lucide-react';
 import { Property, User, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
@@ -32,7 +32,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const [isWishlisted, setIsWishlisted] = useState(
     user?.wishlist?.includes(property._id) ?? false
   );
-  // Sync with auth context changes (e.g., after page refresh + getMe)
   useEffect(() => {
     setIsWishlisted(user?.wishlist?.includes(property._id) ?? false);
   }, [user?.wishlist, property._id]);
@@ -43,7 +42,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const [showListPicker, setShowListPicker] = useState(false);
   const [lists, setLists] = useState<WishlistList[]>([]);
   const [listsLoading, setListsLoading] = useState(false);
-  const [togglingList, setTogglingList] = useState<string | null>(null);
+  const [savingToList, setSavingToList] = useState<string | null>(null);
   const [showNewList, setShowNewList] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [creatingList, setCreatingList] = useState(false);
@@ -84,7 +83,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showListPicker]);
 
-  // Fetch lists when picker opens
+  // Fetch lists when picker opens (just list names — no N+1 detail calls)
   const openListPicker = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -92,29 +91,11 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
       return;
     }
-
-    // If already wishlisted and user just taps heart again — open the picker to let them manage
     setShowListPicker(true);
     setListsLoading(true);
     try {
       const res = await wishlistsApi.getLists();
-      const fetchedLists: WishlistList[] = res.data.data || [];
-      // For each list, check if this property is in it — we need the full list data
-      const detailedLists = await Promise.all(
-        fetchedLists.map(async (list) => {
-          try {
-            const detail = await wishlistsApi.getList(list._id);
-            const props = detail.data.data?.properties || [];
-            return {
-              ...list,
-              _hasProperty: props.some((p: Property) => p._id === property._id),
-            };
-          } catch {
-            return { ...list, _hasProperty: false };
-          }
-        })
-      );
-      setLists(detailedLists);
+      setLists(res.data.data || []);
     } catch {
       toast.error(isAr ? 'فشل في تحميل القوائم' : 'Failed to load lists');
       setShowListPicker(false);
@@ -123,57 +104,41 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     }
   };
 
-  // Toggle property in a specific list
-  const handleToggleInList = async (listId: string) => {
-    setTogglingList(listId);
+  // Single-select: save to ONE list, then close
+  const handleSaveToList = async (listId: string) => {
+    setSavingToList(listId);
     try {
       await wishlistsApi.toggleProperty(listId, property._id);
-      setLists((prev) =>
-        prev.map((l) =>
-          l._id === listId
-            ? { ...l, _hasProperty: !(l as WishlistList & { _hasProperty: boolean })._hasProperty }
-            : l
-        )
-      );
-      // Sync the auth context wishlist
-      try {
-        const { authApi } = await import('@/lib/api');
-        const meRes = await authApi.getMe();
-        const freshUser = meRes.data.user || meRes.data.data;
-        if (freshUser?.wishlist) {
-          const normalizedWishlist = freshUser.wishlist.map((item: unknown) =>
-            typeof item === 'object' && item !== null ? (item as { _id: string })._id : String(item)
-          );
-          // Update local state immediately
-          setIsWishlisted(normalizedWishlist.includes(property._id));
-        }
-      } catch {
-        // Silent fail — the toggle still worked server-side
-      }
+      setIsWishlisted(true);
+      setShowListPicker(false);
+      setShowNewList(false);
+      setNewListName('');
+      const listName = getListDisplayName(lists.find(l => l._id === listId));
+      toast.success(isAr ? `تم الحفظ في "${listName}"` : `Saved to "${listName}"`);
+      // Sync auth context
+      await toggleWishlist(property._id).catch(() => {});
+      // Re-set true since toggleWishlist might flip it
+      setIsWishlisted(true);
     } catch {
-      toast.error(isAr ? 'فشل في تحديث القائمة' : 'Failed to update list');
+      toast.error(isAr ? 'فشل في الحفظ' : 'Failed to save');
     } finally {
-      setTogglingList(null);
+      setSavingToList(null);
     }
   };
 
-  // Create a new list and add property to it
+  // Create new list and save property to it
   const handleCreateAndAdd = async () => {
     if (!newListName.trim()) return;
     setCreatingList(true);
     try {
       const res = await wishlistsApi.createList(newListName.trim());
       const newList = res.data.data;
-      // Add property to the new list
       await wishlistsApi.toggleProperty(newList._id, property._id);
-      setLists((prev) => [
-        ...prev,
-        { ...newList, propertyCount: 1, coverImage: null, _hasProperty: true },
-      ]);
-      setNewListName('');
-      setShowNewList(false);
       setIsWishlisted(true);
-      toast.success(isAr ? 'تم إنشاء القائمة وإضافة العقار' : 'List created & property saved');
+      setShowListPicker(false);
+      setShowNewList(false);
+      setNewListName('');
+      toast.success(isAr ? `تم الحفظ في "${newListName.trim()}"` : `Saved to "${newListName.trim()}"`);
     } catch {
       toast.error(isAr ? 'فشل في إنشاء القائمة' : 'Failed to create list');
     } finally {
@@ -181,8 +146,8 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     }
   };
 
-  // Quick remove — if wishlisted and user wants fast remove, just use the old toggle
-  const handleQuickRemove = async (e: React.MouseEvent) => {
+  // Heart click handler
+  const handleHeartClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAuthenticated) {
@@ -190,16 +155,15 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       return;
     }
     if (isWishlisted) {
-      // Remove from all lists via the auth toggle (removes from default list)
       toast.success(isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist');
       await toggleWishlist(property._id);
     } else {
-      // Not wishlisted — open picker to choose list
       openListPicker(e);
     }
   };
 
-  const getListDisplayName = (list: WishlistList) => {
+  const getListDisplayName = (list?: WishlistList) => {
+    if (!list) return '';
     if (list.isDefault) return isAr ? 'مفضلاتي' : 'My Favorites';
     return list.name;
   };
@@ -218,19 +182,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             unoptimized
           />
 
-          {/* Carousel arrows (show on hover, only if multiple images) */}
+          {/* Carousel arrows */}
           {images.length > 1 && (
             <>
-              <button
-                onClick={handlePrevImage}
-                className="absolute top-1/2 -translate-y-1/2 ltr:left-2 rtl:right-2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-white"
-              >
+              <button onClick={handlePrevImage} className="absolute top-1/2 -translate-y-1/2 ltr:left-2 rtl:right-2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-white">
                 <ChevronLeft className="w-4 h-4 text-gray-700 rtl:rotate-180" />
               </button>
-              <button
-                onClick={handleNextImage}
-                className="absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-white"
-              >
+              <button onClick={handleNextImage} className="absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-white">
                 <ChevronRight className="w-4 h-4 text-gray-700 rtl:rotate-180" />
               </button>
             </>
@@ -240,12 +198,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           {images.length > 1 && (
             <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1">
               {images.map((_, idx) => (
-                <span
-                  key={idx}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    idx === currentImageIndex ? 'bg-white w-2.5' : 'bg-white/60'
-                  }`}
-                />
+                <span key={idx} className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white w-2.5' : 'bg-white/60'}`} />
               ))}
             </div>
           )}
@@ -270,25 +223,20 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Wishlist button */}
           <button
-            onClick={isWishlisted ? handleQuickRemove : openListPicker}
+            onClick={handleHeartClick}
             disabled={wishlistLoading}
             className="absolute bottom-3 ltr:right-3 rtl:left-3 p-1.5 hover:scale-110 transition-all duration-200 disabled:opacity-60 drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
           >
-            <Heart
-              className={`w-5 h-5 transition-colors ${
-                isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/60 text-white/80'
-              }`}
-            />
+            <Heart className={`w-5 h-5 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/60 text-white/80'}`} />
           </button>
 
-          {/* List picker popover */}
+          {/* List picker — single select */}
           {showListPicker && (
             <div
               ref={pickerRef}
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="absolute bottom-12 ltr:right-2 rtl:left-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-60 overflow-hidden"
+              className="absolute bottom-12 ltr:right-2 rtl:left-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-56 overflow-hidden"
             >
-              {/* Header */}
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
                 <span className="text-sm font-semibold text-gray-900">
                   {isAr ? 'حفظ في قائمة' : 'Save to list'}
@@ -301,40 +249,32 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                 </button>
               </div>
 
-              {/* List items */}
               <div className="max-h-48 overflow-y-auto">
                 {listsLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
                   </div>
                 ) : (
-                  lists.map((list) => {
-                    const hasProperty = (list as WishlistList & { _hasProperty?: boolean })._hasProperty;
-                    return (
-                      <button
-                        key={list._id}
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleInList(list._id); }}
-                        disabled={togglingList === list._id}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start disabled:opacity-60"
-                      >
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          hasProperty ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
-                        }`}>
-                          {togglingList === list._id ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-white" />
-                          ) : hasProperty ? (
-                            <Check className="w-3 h-3 text-white" />
-                          ) : null}
-                        </div>
-                        <span className="text-sm text-gray-800 truncate flex-1">
-                          {getListDisplayName(list)}
-                        </span>
-                        {list.isDefault && (
-                          <Heart className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })
+                  lists.map((list) => (
+                    <button
+                      key={list._id}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveToList(list._id); }}
+                      disabled={savingToList === list._id}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-primary-50 transition-colors text-start disabled:opacity-60"
+                    >
+                      {savingToList === list._id ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-primary-500 flex-shrink-0" />
+                      ) : (
+                        <Heart className={`w-4 h-4 flex-shrink-0 ${list.isDefault ? 'text-red-400' : 'text-gray-300'}`} />
+                      )}
+                      <span className="text-sm text-gray-800 truncate flex-1">
+                        {getListDisplayName(list)}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {list.propertyCount}
+                      </span>
+                    </button>
+                  ))
                 )}
               </div>
 
@@ -350,18 +290,14 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                       className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
                       autoFocus
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === 'Enter') handleCreateAndAdd();
-                        if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); }
-                      }}
+                      onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') handleCreateAndAdd(); if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); } }}
                     />
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateAndAdd(); }}
                       disabled={creatingList || !newListName.trim()}
                       className="bg-primary-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50"
                     >
-                      {creatingList ? <Loader2 className="w-3 h-3 animate-spin" /> : isAr ? 'إنشاء' : 'Create'}
+                      {creatingList ? <Loader2 className="w-3 h-3 animate-spin" /> : isAr ? 'حفظ' : 'Save'}
                     </button>
                   </div>
                 ) : (
@@ -389,21 +325,12 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
         {/* Content */}
         <div className="p-4">
-          {/* Rating */}
           {property.ratings.count > 0 && (
-            <StarRating
-              rating={property.ratings.average}
-              count={property.ratings.count}
-              className="mb-2"
-            />
+            <StarRating rating={property.ratings.average} count={property.ratings.count} className="mb-2" />
           )}
-
-          {/* Title */}
           <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2 group-hover:text-primary-600 transition-colors">
             {property.title}
           </h3>
-
-          {/* Location + Verified badge */}
           <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
             <MapPin className="w-3 h-3 flex-shrink-0" />
             <span className="flex-1">{property.location.district ? `${property.location.district}, ` : ''}{translateCity(property.location.city)}</span>
@@ -413,8 +340,6 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               </span>
             )}
           </div>
-
-          {/* Capacity */}
           <div className="flex items-center gap-3 text-gray-500 text-xs mb-3">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
@@ -425,25 +350,17 @@ export default function PropertyCard({ property }: PropertyCardProps) {
               {property.capacity.bedrooms} {property.capacity.bedrooms !== 1 ? t('card.beds') : t('card.bed')}
             </span>
           </div>
-
-          {/* Price */}
           <div className="flex items-center justify-between">
             <div>
               {discountedPrice ? (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-primary-600" dir="ltr">
-                    <SarSymbol /> {formatPriceNumber(discountedPrice)}
-                  </span>
-                  <span className="text-xs text-gray-400 line-through" dir="ltr">
-                    <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
-                  </span>
+                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(discountedPrice)}</span>
+                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(property.pricing.perNight)}</span>
                   <span className="text-xs text-gray-500">{t('property.perNight')}</span>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-base font-bold text-primary-600" dir="ltr">
-                    <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
-                  </span>
+                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(property.pricing.perNight)}</span>
                   <span className="text-xs text-gray-500">{t('property.perNight')}</span>
                 </div>
               )}

@@ -35,7 +35,7 @@ exports.getLists = async (req, res, next) => {
 exports.getList = async (req, res, next) => {
   try {
     const list = await Wishlist.findById(req.params.listId)
-      .populate('properties', 'title images location pricing ratings type capacity');
+      .populate('properties', 'title images location pricing ratings type capacity amenities area direction');
 
     if (!list) {
       return res.status(404).json({ success: false, message: 'List not found' });

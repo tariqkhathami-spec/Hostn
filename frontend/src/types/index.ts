@@ -112,6 +112,8 @@ export interface Property {
   tags: string[];
   discountedPrice: number;
   bookedDates?: { start: string; end: string }[];
+  area?: number;
+  direction?: string;
   createdAt: string;
 }
 
