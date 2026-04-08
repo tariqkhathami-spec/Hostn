@@ -81,6 +81,44 @@ exports.getUnreadCount = async (req, res, next) => {
   }
 };
 
+// @desc    Get unread counts grouped by category (bookings, support, messages)
+// @route   GET /api/notifications/unread-summary
+// @access  Private
+exports.getUnreadSummary = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    const results = await Notification.aggregate([
+      { $match: { user: userId, isRead: false } },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const bookingTypes = [
+      'booking_created', 'booking_confirmed', 'booking_rejected',
+      'booking_cancelled', 'booking_completed',
+    ];
+
+    let bookings = 0;
+    let support = 0;
+    let messages = 0;
+
+    for (const r of results) {
+      if (bookingTypes.includes(r._id)) bookings += r.count;
+      else if (r._id === 'support_reply') support += r.count;
+      else if (r._id === 'new_message') messages += r.count;
+    }
+
+    res.json({ success: true, data: { bookings, support, messages } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Register device token for push notifications
 // @route   POST /api/notifications/device-token
 // @access  Private

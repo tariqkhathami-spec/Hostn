@@ -169,6 +169,7 @@
 | I58 | 2026-04-07 | `/dashboard/settings` — Page layout messy, everything crammed in one card | AMS | Redesigned with separate sections: account overview (avatar, role, member since), personal info (name + save), contact info (email/phone with dividers), become-a-host gradient card | Done |
 | F139 | 2026-04-07 | `/dashboard/bookings/[id]` — City and district shown in English when language is Arabic | AMS | Added `translateCity` / `translateDistrict` using CITIES/DISTRICTS constants from `@/lib/constants` | Done |
 | F140 | 2026-04-07 | `/dashboard/settings` — Email OTP not received after editing email | AMS | Made OTP flow optimistic (show code input immediately); root cause: SMTP not configured on backend — emails only logged to console. Requires SMTP_HOST/USER/PASS env vars | Done |
+| I59 | 2026-04-08 | Dashboard sidebar — No visual indicator for unread bookings, messages, or support replies | AMS | Backend: `GET /notifications/unread-summary` aggregates unread counts by category. Frontend: Sidebar fetches counts every 30s; red badge with number on Bookings/Messages/Support icons; clears on navigation. Works for guest + host dashboards | Done |
 
 ## Improvements
 
