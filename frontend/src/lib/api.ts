@@ -189,6 +189,7 @@ export const notificationsApi = {
   markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
   markAllAsRead: () => api.put('/notifications/read-all'),
   getUnreadCount: () => api.get('/notifications/unread-count'),
+  getUnreadSummary: () => api.get<{ success: boolean; data: { bookings: number; support: number; messages: number } }>('/notifications/unread-summary'),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

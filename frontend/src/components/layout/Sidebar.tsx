@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
@@ -9,32 +10,36 @@ import {
   FileText, Shield, LogOut, ChevronRight, Heart, Wallet, Globe, Newspaper,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { notificationsApi, messagesApi } from '@/lib/api';
+
+type BadgeKey = 'bookings' | 'messages' | 'support';
 
 type NavItem = {
   href: string;
   icon: React.ElementType;
   label: { en: string; ar: string };
   adminRoles?: ('super' | 'support' | 'finance')[];
+  badgeKey?: BadgeKey;
 };
 
 const guestNav: NavItem[] = [
   { href: '/dashboard', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
-  { href: '/dashboard/bookings', icon: BookOpen, label: { en: 'My Bookings', ar: 'حجوزاتي' } },
+  { href: '/dashboard/bookings', icon: BookOpen, label: { en: 'My Bookings', ar: 'حجوزاتي' }, badgeKey: 'bookings' },
   { href: '/dashboard/favorites', icon: Heart, label: { en: 'Favorites', ar: 'المفضلة' } },
   { href: '/dashboard/balance', icon: Wallet, label: { en: 'Balance', ar: 'الرصيد' } },
-  { href: '/dashboard/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' } },
-  { href: '/dashboard/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' } },
+  { href: '/dashboard/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' }, badgeKey: 'messages' },
+  { href: '/dashboard/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' }, badgeKey: 'support' },
   { href: '/dashboard/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
 ];
 
 const hostNav: NavItem[] = [
   { href: '/host', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
   { href: '/host/listings', icon: Building, label: { en: 'My Listings', ar: 'عقاراتي' } },
-  { href: '/host/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' } },
+  { href: '/host/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' }, badgeKey: 'bookings' },
   { href: '/host/calendar', icon: Calendar, label: { en: 'Calendar', ar: 'التقويم' } },
   { href: '/host/earnings', icon: CreditCard, label: { en: 'Earnings', ar: 'الأرباح' } },
   { href: '/host/reviews', icon: Star, label: { en: 'Reviews', ar: 'التقييمات' } },
-  { href: '/host/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' } },
+  { href: '/host/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' }, badgeKey: 'messages' },
   { href: '/host/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
 ];
 
@@ -85,6 +90,43 @@ export default function Sidebar({ role }: SidebarProps) {
     ? rawNav.filter(item => !item.adminRoles || item.adminRoles.includes(adminRole))
     : rawNav;
 
+  // ── Unread badge counts ──
+  const [badges, setBadges] = useState<Record<BadgeKey, number>>({ bookings: 0, messages: 0, support: 0 });
+
+  const fetchBadges = useCallback(async () => {
+    if (!user) return;
+    try {
+      const [summaryRes, msgRes] = await Promise.all([
+        notificationsApi.getUnreadSummary().catch(() => null),
+        messagesApi.getUnreadCount().catch(() => null),
+      ]);
+      const s = summaryRes?.data?.data;
+      const m = msgRes?.data?.data;
+      setBadges({
+        bookings: s?.bookings ?? 0,
+        support: s?.support ?? 0,
+        messages: (m?.count ?? 0) + (s?.messages ?? 0),
+      });
+    } catch { /* silently ignore */ }
+  }, [user]);
+
+  useEffect(() => {
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 30_000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, [fetchBadges]);
+
+  // Clear badge when user navigates to that section
+  useEffect(() => {
+    if (pathname.startsWith('/dashboard/bookings') || pathname.startsWith('/host/bookings')) {
+      setBadges(prev => ({ ...prev, bookings: 0 }));
+    } else if (pathname.startsWith('/dashboard/messages') || pathname.startsWith('/host/messages')) {
+      setBadges(prev => ({ ...prev, messages: 0 }));
+    } else if (pathname.startsWith('/dashboard/support')) {
+      setBadges(prev => ({ ...prev, support: 0 }));
+    }
+  }, [pathname]);
+
   const isActive = (href: string) => {
     if (href === '/host' || href === '/admin' || href === '/dashboard') {
       return pathname === href;
@@ -106,21 +148,31 @@ export default function Sidebar({ role }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1">
-        {nav.map(({ href, icon: Icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              isActive(href)
-                ? 'bg-primary-50 text-primary-700'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-          >
-            <Icon className="w-5 h-5" />
-            <span className="flex-1">{label[lang]}</span>
-            {isActive(href) && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
-          </Link>
-        ))}
+        {nav.map(({ href, icon: Icon, label, badgeKey }) => {
+          const count = badgeKey ? badges[badgeKey] : 0;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive(href)
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <span className="relative">
+                <Icon className="w-5 h-5" />
+                {count > 0 && (
+                  <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                    {count > 9 ? '9+' : count}
+                  </span>
+                )}
+              </span>
+              <span className="flex-1">{label[lang]}</span>
+              {isActive(href) && <ChevronRight className="w-4 h-4 rtl:rotate-180" />}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Language + User + Logout */}
