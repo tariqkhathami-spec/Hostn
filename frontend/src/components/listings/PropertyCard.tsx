@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check } from 'lucide-react';
+import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
 import { Property, User, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
@@ -12,6 +12,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { CITIES } from '@/lib/constants';
 import { wishlistsApi } from '@/lib/api';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 
 interface PropertyCardProps {
@@ -48,6 +49,9 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   const [newListName, setNewListName] = useState('');
   const [creatingList, setCreatingList] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const heartRef = useRef<HTMLButtonElement>(null);
+  const [clearingAll, setClearingAll] = useState(false);
+  const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
 
   const images = property.images.length > 0
     ? property.images.slice(0, 5)
@@ -70,18 +74,30 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent)
       : null;
 
-  // Click-outside to close list picker
+  // Click-outside to close list picker (exclude heart button)
   useEffect(() => {
     if (!showListPicker) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+      if (
+        pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
+        heartRef.current && !heartRef.current.contains(e.target as Node)
+      ) {
         setShowListPicker(false);
         setShowNewList(false);
         setNewListName('');
       }
     };
+    const handleScroll = () => {
+      setShowListPicker(false);
+      setShowNewList(false);
+      setNewListName('');
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [showListPicker]);
 
   // Fetch lists + membership when picker opens (2 parallel calls, no N+1)
@@ -92,6 +108,34 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
       return;
     }
+
+    // Calculate fixed position relative to heart button
+    if (heartRef.current) {
+      const rect = heartRef.current.getBoundingClientRect();
+      const pickerW = 240;
+      const gap = 8;
+      let left = isAr ? rect.left : rect.right - pickerW;
+      left = Math.max(gap, Math.min(left, window.innerWidth - pickerW - gap));
+
+      if (rect.top > 220) {
+        setPickerStyle({
+          position: 'fixed',
+          bottom: window.innerHeight - rect.top + gap,
+          left,
+          maxHeight: rect.top - gap * 2,
+          zIndex: 9999,
+        });
+      } else {
+        setPickerStyle({
+          position: 'fixed',
+          top: rect.bottom + gap,
+          left,
+          maxHeight: window.innerHeight - rect.bottom - gap * 2,
+          zIndex: 9999,
+        });
+      }
+    }
+
     setShowListPicker(true);
     setListsLoading(true);
     try {
@@ -154,6 +198,27 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     }
   };
 
+  // Clear from ALL wishlists
+  const handleClearFromAll = async () => {
+    if (memberListIds.size === 0) return;
+    setClearingAll(true);
+    try {
+      await Promise.all(
+        [...memberListIds].map((listId) => wishlistsApi.toggleProperty(listId, property._id))
+      );
+      setMemberListIds(new Set());
+      setIsWishlisted(false);
+      setShowListPicker(false);
+      setShowNewList(false);
+      setNewListName('');
+      toast.success(isAr ? 'تم الإزالة من جميع القوائم' : 'Removed from all wishlists');
+    } catch {
+      toast.error(isAr ? 'فشل في الإزالة' : 'Failed to remove');
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
   // Heart click: always opens picker (for both add and manage)
   const handleHeartClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -172,6 +237,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
   };
 
   return (
+    <>
     <Link href={`/listings/${property._id}`} className="group block">
       <div className="card overflow-hidden group-hover:scale-[1.01] transition-all duration-300">
         {/* Image Carousel */}
@@ -226,104 +292,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
 
           {/* Wishlist button */}
           <button
+            ref={heartRef}
             onClick={handleHeartClick}
             disabled={wishlistLoading}
             className="absolute bottom-3 ltr:right-3 rtl:left-3 p-1.5 hover:scale-110 transition-all duration-200 disabled:opacity-60 drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
           >
             <Heart className={`w-5 h-5 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'fill-white/60 text-white/80'}`} />
           </button>
-
-          {/* List picker — multi-select checkboxes */}
-          {showListPicker && (
-            <div
-              ref={pickerRef}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="absolute bottom-12 ltr:right-2 rtl:left-2 z-50 bg-white rounded-xl shadow-xl border border-gray-200 w-60 overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
-                <span className="text-sm font-semibold text-gray-900">
-                  {isAr ? 'حفظ في قوائم' : 'Save to lists'}
-                </span>
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowListPicker(false); setShowNewList(false); setNewListName(''); }}
-                  className="p-1 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="w-3.5 h-3.5 text-gray-400" />
-                </button>
-              </div>
-
-              <div className="max-h-48 overflow-y-auto">
-                {listsLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
-                  </div>
-                ) : (
-                  lists.map((list) => {
-                    const isIn = memberListIds.has(list._id);
-                    return (
-                      <button
-                        key={list._id}
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleInList(list._id); }}
-                        disabled={togglingList === list._id}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start disabled:opacity-60"
-                      >
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isIn ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
-                        }`}>
-                          {togglingList === list._id ? (
-                            <Loader2 className="w-3 h-3 animate-spin text-white" />
-                          ) : isIn ? (
-                            <Check className="w-3 h-3 text-white" />
-                          ) : null}
-                        </div>
-                        <span className="text-sm text-gray-800 truncate flex-1">
-                          {getListDisplayName(list)}
-                        </span>
-                        <span className="text-[10px] text-gray-400">
-                          {list.propertyCount}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Create new list */}
-              <div className="border-t border-gray-100">
-                {showNewList ? (
-                  <div className="p-2 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newListName}
-                      onChange={(e) => setNewListName(e.target.value)}
-                      placeholder={isAr ? 'اسم القائمة' : 'List name'}
-                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      autoFocus
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') handleCreateAndAdd(); if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); } }}
-                    />
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateAndAdd(); }}
-                      disabled={creatingList || !newListName.trim()}
-                      className="bg-primary-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50"
-                    >
-                      {creatingList ? <Loader2 className="w-3 h-3 animate-spin" /> : isAr ? 'حفظ' : 'Save'}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowNewList(true); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start"
-                  >
-                    <Plus className="w-4 h-4 text-primary-600" />
-                    <span className="text-sm text-primary-600 font-medium">
-                      {isAr ? 'قائمة جديدة' : 'New list'}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Type badge */}
           <div className="absolute bottom-3 ltr:left-3 rtl:right-3">
@@ -379,5 +354,118 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         </div>
       </div>
     </Link>
+
+    {/* Wishlist picker — rendered as portal to avoid overflow-hidden clipping */}
+    {showListPicker && typeof window !== 'undefined' && createPortal(
+      <div
+        ref={pickerRef}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        style={pickerStyle}
+        className="bg-white rounded-xl shadow-xl border border-gray-200 w-60 flex flex-col overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
+          <span className="text-sm font-semibold text-gray-900">
+            {isAr ? 'المفضلة' : 'Wishlist'}
+          </span>
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowListPicker(false); setShowNewList(false); setNewListName(''); }}
+            className="p-1 hover:bg-gray-100 rounded-full"
+          >
+            <X className="w-3.5 h-3.5 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="max-h-48 overflow-y-auto">
+          {listsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
+            </div>
+          ) : (
+            lists.map((list) => {
+              const isIn = memberListIds.has(list._id);
+              return (
+                <button
+                  key={list._id}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleInList(list._id); }}
+                  disabled={togglingList === list._id}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start disabled:opacity-60"
+                >
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isIn ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
+                  }`}>
+                    {togglingList === list._id ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-white" />
+                    ) : isIn ? (
+                      <Check className="w-3 h-3 text-white" />
+                    ) : null}
+                  </div>
+                  <span className="text-sm text-gray-800 truncate flex-1">
+                    {getListDisplayName(list)}
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    {list.propertyCount}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer: New wishlist + Clear */}
+        <div className="border-t border-gray-100">
+          {showNewList ? (
+            <div className="p-2 flex items-center gap-2">
+              <input
+                type="text"
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                placeholder={isAr ? 'اسم القائمة' : 'List name'}
+                className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                autoFocus
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') handleCreateAndAdd(); if (e.key === 'Escape') { setShowNewList(false); setNewListName(''); } }}
+              />
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCreateAndAdd(); }}
+                disabled={creatingList || !newListName.trim()}
+                className="bg-primary-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50"
+              >
+                {creatingList ? <Loader2 className="w-3 h-3 animate-spin" /> : isAr ? 'حفظ' : 'Save'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowNewList(true); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start"
+              >
+                <Plus className="w-4 h-4 text-primary-600" />
+                <span className="text-sm text-primary-600 font-medium">
+                  {isAr ? 'قائمة مفضلة جديدة' : 'New wishlist'}
+                </span>
+              </button>
+              {memberListIds.size > 0 && (
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleClearFromAll(); }}
+                  disabled={clearingAll}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-red-50 transition-colors text-start border-t border-gray-100 disabled:opacity-60"
+                >
+                  {clearingAll ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className="text-sm text-red-500 font-medium">
+                    {isAr ? 'إزالة من الكل' : 'Clear'}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
