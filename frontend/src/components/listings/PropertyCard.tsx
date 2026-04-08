@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MapPin, Users, BedDouble, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
+import { Heart, MapPin, Users, BedDouble, Bath, Ruler, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
 import { Property, User, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel, calculateNights, getNightLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
@@ -339,13 +339,10 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
 
         {/* Content */}
         <div className="p-4">
-          {property.ratings.count > 0 && (
-            <StarRating rating={property.ratings.average} count={property.ratings.count} className="mb-2" />
-          )}
           <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2 group-hover:text-primary-600 transition-colors">
             {property.title}
           </h3>
-          <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+          <div className="flex items-center gap-1 text-gray-500 text-xs mb-2">
             <MapPin className="w-3 h-3 flex-shrink-0" />
             <span className="flex-1">{property.location.district ? `${translateDistrict(property.location.district, property.location.city)}, ` : ''}{translateCity(property.location.city)}</span>
             {host?.isVerified && (
@@ -354,15 +351,25 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-gray-500 text-xs mb-3">
-            <span className="flex items-center gap-1">
+          <div className="flex items-center gap-2.5 text-gray-500 text-xs mb-3">
+            <span className="flex items-center gap-1" title={isAr ? 'ضيوف' : 'Guests'}>
               <Users className="w-3 h-3" />
-              {getGuestLabel(property.capacity.maxGuests, isAr ? 'ar' : 'en')}
+              {property.capacity.maxGuests}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title={isAr ? 'غرف نوم' : 'Bedrooms'}>
               <BedDouble className="w-3 h-3" />
-              {property.capacity.bedrooms} {property.capacity.bedrooms !== 1 ? t('card.beds') : t('card.bed')}
+              {property.capacity.bedrooms}
             </span>
+            <span className="flex items-center gap-1" title={isAr ? 'حمامات' : 'Bathrooms'}>
+              <Bath className="w-3 h-3" />
+              {property.capacity.bathrooms}
+            </span>
+            {property.area ? (
+              <span className="flex items-center gap-1" title={isAr ? 'المساحة' : 'Area'}>
+                <Ruler className="w-3 h-3" />
+                {property.area} {isAr ? 'م²' : 'm²'}
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -387,6 +394,9 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
                 </p>
               )}
             </div>
+            {property.ratings.count > 0 && (
+              <StarRating rating={property.ratings.average} count={property.ratings.count} />
+            )}
           </div>
         </div>
       </div>

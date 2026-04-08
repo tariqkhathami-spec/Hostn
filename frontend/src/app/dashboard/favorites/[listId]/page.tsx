@@ -7,7 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { wishlistsApi } from '@/lib/api';
 import { WishlistList, Property } from '@/types';
 import {
-  Heart, Loader2, ArrowLeft, Trash2, MapPin, Users, BedDouble,
+  Heart, Loader2, ArrowLeft, Trash2, MapPin, Users, BedDouble, Bath,
   Building, Star, Droplets, Percent, Compass, Ruler, X, ChevronDown, Map,
   AlertCircle, Calendar, Minus, Plus,
 } from 'lucide-react';
@@ -806,36 +806,44 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
             )}
           </div>
           <div className="p-4">
-            {property.ratings.count > 0 && <StarRating rating={property.ratings.average} count={property.ratings.count} className="mb-2" />}
             <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{property.title}</h3>
-            <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+            <div className="flex items-center gap-1 text-gray-500 text-xs mb-2">
               <MapPin className="w-3 h-3 flex-shrink-0" />
               <span>{property.location.district ? `${translateDistrict(property.location.district, property.location.city)}, ` : ''}{translateCity(property.location.city)}</span>
             </div>
-            <div className="flex items-center gap-3 text-gray-500 text-xs mb-3">
-              <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getGuestLabel(property.capacity.maxGuests, isAr ? 'ar' : 'en')}</span>
-              <span className="flex items-center gap-1"><BedDouble className="w-3 h-3" />{property.capacity.bedrooms} {property.capacity.bedrooms !== 1 ? (isAr ? 'غرف' : 'beds') : (isAr ? 'غرفة' : 'bed')}</span>
+            <div className="flex items-center gap-2.5 text-gray-500 text-xs mb-3">
+              <span className="flex items-center gap-1" title={isAr ? 'ضيوف' : 'Guests'}><Users className="w-3 h-3" />{property.capacity.maxGuests}</span>
+              <span className="flex items-center gap-1" title={isAr ? 'غرف نوم' : 'Bedrooms'}><BedDouble className="w-3 h-3" />{property.capacity.bedrooms}</span>
+              <span className="flex items-center gap-1" title={isAr ? 'حمامات' : 'Bathrooms'}><Bath className="w-3 h-3" />{property.capacity.bathrooms}</span>
+              {property.area ? (
+                <span className="flex items-center gap-1" title={isAr ? 'المساحة' : 'Area'}><Ruler className="w-3 h-3" />{property.area} {isAr ? 'م²' : 'm²'}</span>
+              ) : null}
             </div>
-            <div>
-              {discountedPrice ? (
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(originalDisplayPrice)}</span>
-                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                </div>
-              ) : (
-                <div className="flex items-baseline gap-1">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                </div>
-              )}
-              {nights > 0 && (
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {isAr
-                    ? <><span>إجمالي{getNightLabel(nights, 'ar')}:</span> <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
-                    : <>Total for {getNightLabel(nights, 'en')}: <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
-                  }
-                </p>
+            <div className="flex items-center justify-between">
+              <div>
+                {discountedPrice ? (
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                    <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(originalDisplayPrice)}</span>
+                    <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                    <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                  </div>
+                )}
+                {nights > 0 && (
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {isAr
+                      ? <><span>إجمالي{getNightLabel(nights, 'ar')}:</span> <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
+                      : <>Total for {getNightLabel(nights, 'en')}: <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
+                    }
+                  </p>
+                )}
+              </div>
+              {property.ratings.count > 0 && (
+                <StarRating rating={property.ratings.average} count={property.ratings.count} />
               )}
             </div>
           </div>
