@@ -19,6 +19,7 @@ import SarSymbol from '@/components/ui/SarSymbol';
 import StarRating from '@/components/ui/StarRating';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { CITIES, DISTRICTS, DIRECTIONS } from '@/lib/constants';
+import { getSearchCookies, saveSearchCookies } from '@/lib/searchCookies';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const PROPERTY_TYPES = [
@@ -216,6 +217,13 @@ export default function WishlistDetailPage() {
     return found?.ar || city;
   };
 
+  const translateDistrict = (district: string, city: string) => {
+    if (!isAr) return district;
+    const cityDistricts = DISTRICTS[city] || [];
+    const found = cityDistricts.find(d => d.value.toLowerCase() === district.toLowerCase() || d.en.toLowerCase() === district.toLowerCase());
+    return found?.ar || district;
+  };
+
   const toggleType = (key: string) => {
     setSelectedTypes(prev => prev.includes(key) ? prev.filter(t => t !== key) : [...prev, key]);
   };
@@ -226,6 +234,7 @@ export default function WishlistDetailPage() {
     setAreaRange(1500); setDirection(''); setDistrict('');
     setSearchCity(''); setCitySearch(''); setCheckIn(''); setCheckOut('');
     setAdults(0); setChildren(0); setOpenFilter(null);
+    saveSearchCookies({ city: '', checkIn: '', checkOut: '', adults: 0, children: 0 });
   };
 
   // City dropdown filter
@@ -277,6 +286,48 @@ export default function WishlistDetailPage() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/auth');
   }, [authLoading, isAuthenticated, router]);
+
+  // Restore search state from cookies (same pattern as /listings)
+  useEffect(() => {
+    const saved = getSearchCookies();
+    if (saved) {
+      if (saved.city) {
+        setSearchCity(saved.city);
+        const found = CITIES.find(c => c.value === saved.city);
+        if (found) setCitySearch(isAr ? found.ar : found.en);
+        else setCitySearch(saved.city);
+      }
+      if (saved.checkIn) setCheckIn(saved.checkIn);
+      if (saved.checkOut) setCheckOut(saved.checkOut);
+      if (saved.adults) setAdults(saved.adults);
+      if (saved.children) setChildren(saved.children);
+    }
+  }, []);
+
+  // Persist search state to cookies when dropdowns close
+  const prevShowCityRef = useRef(false);
+  useEffect(() => {
+    if (prevShowCityRef.current && !showCityDropdown) {
+      saveSearchCookies({ city: searchCity, checkIn, checkOut, adults, children });
+    }
+    prevShowCityRef.current = showCityDropdown;
+  }, [showCityDropdown]);
+
+  const prevShowCalendarRef = useRef(false);
+  useEffect(() => {
+    if (prevShowCalendarRef.current && !showCalendar) {
+      saveSearchCookies({ city: searchCity, checkIn, checkOut, adults, children });
+    }
+    prevShowCalendarRef.current = showCalendar;
+  }, [showCalendar]);
+
+  const prevShowGuestRef = useRef(false);
+  useEffect(() => {
+    if (prevShowGuestRef.current && !showGuestPicker) {
+      saveSearchCookies({ city: searchCity, checkIn, checkOut, adults, children });
+    }
+    prevShowGuestRef.current = showGuestPicker;
+  }, [showGuestPicker]);
 
   useEffect(() => {
     if (!isAuthenticated || !listId) return;
@@ -671,7 +722,7 @@ export default function WishlistDetailPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayProperties.map(property => (
-                <PropertyListCard key={property._id} property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} />
+                <PropertyListCard key={property._id} property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} />
               ))}
             </div>
           )}
@@ -684,7 +735,7 @@ export default function WishlistDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 opacity-50">
                 {mismatched.map(({ property, reasons }) => (
                   <div key={property._id} className="relative">
-                    <PropertyListCard property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} />
+                    <PropertyListCard property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} />
                     <div className="absolute bottom-0 inset-x-0 bg-amber-50 border-t border-amber-200 rounded-b-xl px-3 py-2">
                       <div className="flex items-start gap-1.5">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -703,9 +754,10 @@ export default function WishlistDetailPage() {
 }
 
 // ─── Property card sub-component ────────────────────────────────────────────
-function PropertyListCard({ property, isAr, lang, removingId, onRemove, translateCity }: {
+function PropertyListCard({ property, isAr, lang, removingId, onRemove, translateCity, translateDistrict }: {
   property: Property; isAr: boolean; lang: 'en' | 'ar'; removingId: string | null;
   onRemove: (id: string) => void; translateCity: (city: string) => string;
+  translateDistrict: (district: string, city: string) => string;
 }) {
   const primaryImage = property.images?.find(img => img.isPrimary)?.url || property.images?.[0]?.url || 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800';
   const discountedPrice = property.pricing.discountPercent > 0 ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent) : null;
@@ -735,7 +787,7 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
             <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{property.title}</h3>
             <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
               <MapPin className="w-3 h-3 flex-shrink-0" />
-              <span>{property.location.district ? `${property.location.district}, ` : ''}{translateCity(property.location.city)}</span>
+              <span>{property.location.district ? `${translateDistrict(property.location.district, property.location.city)}, ` : ''}{translateCity(property.location.city)}</span>
             </div>
             <div className="flex items-center gap-3 text-gray-500 text-xs mb-3">
               <span className="flex items-center gap-1"><Users className="w-3 h-3" />{getGuestLabel(property.capacity.maxGuests, isAr ? 'ar' : 'en')}</span>

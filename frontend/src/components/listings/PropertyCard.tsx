@@ -9,7 +9,7 @@ import StarRating from '@/components/ui/StarRating';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { CITIES } from '@/lib/constants';
+import { CITIES, DISTRICTS } from '@/lib/constants';
 import { wishlistsApi } from '@/lib/api';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -28,6 +28,13 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     if (!isAr) return city;
     const found = CITIES.find(c => c.value.toLowerCase() === city.toLowerCase() || c.en.toLowerCase() === city.toLowerCase());
     return found?.ar || city;
+  };
+
+  const translateDistrict = (district: string, city: string) => {
+    if (!isAr) return district;
+    const cityDistricts = DISTRICTS[city] || [];
+    const found = cityDistricts.find(d => d.value.toLowerCase() === district.toLowerCase() || d.en.toLowerCase() === district.toLowerCase());
+    return found?.ar || district;
   };
 
   const [isWishlisted, setIsWishlisted] = useState(
@@ -318,7 +325,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           </h3>
           <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
             <MapPin className="w-3 h-3 flex-shrink-0" />
-            <span className="flex-1">{property.location.district ? `${property.location.district}, ` : ''}{translateCity(property.location.city)}</span>
+            <span className="flex-1">{property.location.district ? `${translateDistrict(property.location.district, property.location.city)}, ` : ''}{translateCity(property.location.city)}</span>
             {host?.isVerified && (
               <span className="flex items-center gap-0.5 text-primary-600" title="Verified Host">
                 <BadgeCheck className="w-3.5 h-3.5" />
