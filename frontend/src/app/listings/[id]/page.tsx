@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ImageGallery from '@/components/property/ImageGallery';
@@ -9,10 +10,10 @@ import AmenitiesList from '@/components/property/AmenitiesList';
 import ReviewsList from '@/components/property/ReviewsList';
 import BookingWidget from '@/components/property/BookingWidget';
 import { Property, User } from '@/types';
-import { propertiesApi } from '@/lib/api';
+import { propertiesApi, publicHostApi } from '@/lib/api';
 import { getPropertyTypeLabel } from '@/lib/utils';
 import { CITIES, DISTRICTS } from '@/lib/constants';
-import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, MessageCircle } from 'lucide-react';
+import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
@@ -21,7 +22,9 @@ const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
 });
 import StarRating from '@/components/ui/StarRating';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { getSearchCookies } from '@/lib/searchCookies';
+import toast from 'react-hot-toast';
 
 export default function PropertyDetailPage() {
   return (
@@ -37,7 +40,18 @@ function PropertyDetailContent() {
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const { t, language } = useLanguage();
+  const { user, isAuthenticated, toggleWishlist } = useAuth();
   const isAr = language === 'ar';
+
+  // Wishlist state
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  // Host stats from public API
+  const [hostStats, setHostStats] = useState<{ propertyCount: number; averageRating: number; totalReviews: number } | null>(null);
+
+  // Segmented nav active section
+  const [activeSection, setActiveSection] = useState('specification');
 
   // Read dates and guests from cookies
   const [initialCheckIn, setInitialCheckIn] = useState('');
@@ -68,6 +82,73 @@ function PropertyDetailContent() {
     };
     fetchProperty();
   }, [id]);
+
+  // Track wishlist state
+  useEffect(() => {
+    if (property) setIsWishlisted(user?.wishlist?.includes(property._id) ?? false);
+  }, [user?.wishlist, property]);
+
+  // Fetch host stats
+  useEffect(() => {
+    if (!property) return;
+    const h = property.host as User;
+    if (!h?._id) return;
+    publicHostApi.getProfile(h._id, { propertyLimit: 0, reviewLimit: 0 })
+      .then(res => setHostStats(res.data.data.stats))
+      .catch(() => {});
+  }, [property]);
+
+  // Intersection observer for segmented nav
+  useEffect(() => {
+    const ids = ['specification', 'reviews', 'location', 'terms'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-100px 0px -60% 0px', threshold: 0.1 }
+    );
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [property]);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = property?.title || 'Hostn';
+    if (navigator.share) {
+      try { await navigator.share({ title, url }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast.success(isAr ? 'تم نسخ الرابط' : 'Link copied to clipboard');
+    }
+  };
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated || !property) {
+      toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
+      return;
+    }
+    setWishlistLoading(true);
+    try {
+      await toggleWishlist(property._id);
+      const newState = !isWishlisted;
+      setIsWishlisted(newState);
+      toast.success(newState
+        ? (isAr ? 'تم الحفظ في المفضلة' : 'Saved to wishlist')
+        : (isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist'));
+    } catch {
+      toast.error(isAr ? 'حدث خطأ' : 'Something went wrong');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -143,11 +224,19 @@ function PropertyDetailContent() {
                   </span>
                 </div>
               </div>
-              {property.pricing.discountPercent > 0 && (
-                <span className="badge bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1.5">
-                  🎉 {isAr ? `خصم ${property.pricing.discountPercent}%` : `${property.pricing.discountPercent}% Discount`}
-                </span>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {property.pricing.discountPercent > 0 && (
+                  <span className="badge bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1.5">
+                    🎉 {isAr ? `خصم ${property.pricing.discountPercent}%` : `${property.pricing.discountPercent}% Discount`}
+                  </span>
+                )}
+                <button onClick={handleShare} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title={isAr ? 'مشاركة' : 'Share'}>
+                  <Share2 className="w-5 h-5 text-gray-600" />
+                </button>
+                <button onClick={handleWishlistToggle} disabled={wishlistLoading} className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50" title={isAr ? 'المفضلة' : 'Wishlist'}>
+                  <Heart className={`w-5 h-5 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600 hover:text-red-400'}`} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -156,11 +245,36 @@ function PropertyDetailContent() {
             <ImageGallery images={property.images} title={property.title} />
           </div>
 
+          {/* Segmented navigation */}
+          <div className="sticky top-0 z-30 bg-white border-b border-gray-100 py-3 -mx-4 px-4 mb-6">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar">
+              {[
+                { id: 'specification', label: isAr ? 'المواصفات' : 'Specification' },
+                { id: 'reviews', label: isAr ? 'تقييمات الضيوف' : 'Guest Reviews' },
+                { id: 'location', label: isAr ? 'الموقع والخريطة' : 'Location & Map' },
+                { id: 'terms', label: isAr ? 'الشروط والسياسات' : 'Terms & Policies' },
+              ].map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap border transition-colors ${
+                    activeSection === s.id
+                      ? 'bg-primary-50 border-primary-300 text-primary-700'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Main content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             {/* Left column */}
             <div className="lg:col-span-2 space-y-8">
               {/* Quick stats */}
+              <div id="specification"></div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                   { Icon: Users, label: t('property.maxGuests'), value: property.capacity.maxGuests },
@@ -178,31 +292,34 @@ function PropertyDetailContent() {
 
               {/* Host info */}
               {host && typeof host === 'object' && (
-                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
+                <Link href={`/hosts/${host._id}`} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors group">
                   <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary-600 font-bold text-lg">
-                      {host.name?.charAt(0).toUpperCase()}
-                    </span>
+                    {host.avatar ? (
+                      <img src={host.avatar} alt={host.name} className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <span className="text-primary-600 font-bold text-lg">
+                        {host.name?.charAt(0).toUpperCase()}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                    <p className="font-semibold text-gray-900 flex items-center gap-1.5 group-hover:text-primary-600">
                       {t('property.hostedBy')} {host.name}
                       {host.isVerified && (
                         <BadgeCheck className="w-4 h-4 text-primary-600" />
                       )}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      {isAr ? `مضيف منذ ${new Date(host.createdAt).getFullYear()}` : `Host since ${new Date(host.createdAt).getFullYear()}`}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                      <span>{isAr ? `مضيف منذ ${new Date(host.createdAt).getFullYear()}` : `Host since ${new Date(host.createdAt).getFullYear()}`}</span>
+                      {hostStats && hostStats.averageRating > 0 && (
+                        <StarRating rating={hostStats.averageRating} count={hostStats.totalReviews} size="sm" />
+                      )}
+                      {hostStats && (
+                        <span>{isAr ? `${hostStats.propertyCount} عقارات` : `${hostStats.propertyCount} properties`}</span>
+                      )}
+                    </div>
                   </div>
-                  <a
-                    href={`/dashboard/messages?host=${host._id}&property=${property._id}`}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-primary-300 hover:text-primary-600 transition-colors"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {isAr ? '\u062A\u0648\u0627\u0635\u0644' : 'Message'}
-                  </a>
-                </div>
+                </Link>
               )}
 
               {/* Description */}
@@ -230,7 +347,7 @@ function PropertyDetailContent() {
               )}
 
               {/* House rules */}
-              <div>
+              <div id="terms">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.houseRules')}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
@@ -272,7 +389,7 @@ function PropertyDetailContent() {
 
               {/* Location Map */}
               {property.location.coordinates?.lat && property.location.coordinates?.lng && (
-                <div>
+                <div id="location">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'الموقع' : 'Location'}</h2>
                   <PropertyMap
                     lat={property.location.coordinates.lat}
@@ -291,7 +408,7 @@ function PropertyDetailContent() {
               )}
 
               {/* Reviews */}
-              <div>
+              <div id="reviews">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.guestReviews')}</h2>
                 <ReviewsList
                   propertyId={property._id}

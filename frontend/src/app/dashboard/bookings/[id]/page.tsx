@@ -21,6 +21,8 @@ import {
   AlertCircle,
   BedDouble,
   FileText,
+  BadgeCheck,
+  MessageCircle,
 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { CITIES, DISTRICTS } from '@/lib/constants';
@@ -83,6 +85,7 @@ export default function BookingDetailPage() {
 
   const property = typeof booking.property === 'object' ? (booking.property as Property) : null;
   const guest = typeof booking.guest === 'object' ? (booking.guest as User) : null;
+  const host = property && typeof property.host === 'object' ? (property.host as User) : null;
   const status = statusConfig[booking.status] || statusConfig.pending;
   const paymentStatus = paymentStatusConfig[booking.paymentStatus] || paymentStatusConfig.unpaid;
   const pricing = booking.pricing;
@@ -287,6 +290,39 @@ export default function BookingDetailPage() {
               {isAr ? paymentStatus.ar : paymentStatus.en}
             </span>
           </div>
+
+          {/* Host Info */}
+          {host && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-3">
+                {isAr ? 'المضيف' : 'Host'}
+              </h2>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  {host.avatar ? (
+                    <img src={host.avatar} alt={host.name} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <span className="text-primary-600 font-bold text-lg">
+                      {host.name?.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/hosts/${host._id}`} className="font-semibold text-gray-900 hover:text-primary-600 flex items-center gap-1.5">
+                    {host.name}
+                    {host.isVerified && <BadgeCheck className="w-4 h-4 text-primary-600" />}
+                  </Link>
+                </div>
+                <Link
+                  href={`/dashboard/messages?host=${host._id}&property=${property?._id}`}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-primary-300 hover:text-primary-600 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {isAr ? 'تواصل' : 'Message'}
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Booking Info */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">

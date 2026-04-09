@@ -330,6 +330,11 @@ export const bnplApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // BLOG
 // ═══════════════════════════════════════════════════════════════════════════════
+export const publicHostApi = {
+  getProfile: (id: string, params?: Record<string, unknown>) =>
+    api.get(`/hosts/${id}`, { params }),
+};
+
 export const blogApi = {
   // Public
   getPosts: (params?: Record<string, unknown>) =>
