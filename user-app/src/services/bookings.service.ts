@@ -4,7 +4,7 @@ import type { Booking } from '../types';
 export const bookingsService = {
   getMyBookings(status?: 'upcoming' | 'previous') {
     return api
-      .get<Booking[]>('/bookings', { params: { status } })
+      .get<Booking[]>('/bookings/my-bookings', { params: { status } })
       .then((r) => r.data);
   },
 
@@ -13,7 +13,7 @@ export const bookingsService = {
   },
 
   create(data: {
-    property: string;
+    propertyId: string;
     checkIn: string;
     checkOut: string;
     guests: number;
@@ -24,6 +24,6 @@ export const bookingsService = {
   },
 
   cancel(id: string) {
-    return api.patch<Booking>(`/bookings/${id}/cancel`).then((r) => r.data);
+    return api.put<Booking>(`/bookings/${id}/cancel`).then((r) => r.data);
   },
 };

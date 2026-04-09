@@ -39,7 +39,7 @@ export const authService = {
   },
 
   upgradeToHost() {
-    return api.post<User>('/auth/upgrade-role', { role: 'host' }).then((r) => r.data);
+    return api.put<User>('/auth/upgrade-to-host').then((r) => r.data);
   },
 
   deleteAccount() {

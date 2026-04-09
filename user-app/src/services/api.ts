@@ -32,7 +32,13 @@ const processQueue = (error: unknown) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Auto-unwrap { success, data } backend wrapper so services get the inner data directly
+    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

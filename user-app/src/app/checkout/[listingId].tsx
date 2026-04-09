@@ -46,7 +46,7 @@ export default function CheckoutScreen() {
   const bookMutation = useMutation({
     mutationFn: () =>
       bookingsService.create({
-        property: listingId!,
+        propertyId: listingId!,
         checkIn: checkIn!,
         checkOut: checkOut!,
         guests,
