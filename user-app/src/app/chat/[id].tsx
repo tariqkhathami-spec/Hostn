@@ -40,10 +40,15 @@ export default function ChatScreen() {
     chatService
       .createConversation(id, propertyId)
       .then((conv) => {
-        if (!cancelled) setConversationId(conv._id);
+        if (!cancelled) {
+          // conv could be the full conversation object or unwrapped
+          const convId = conv?._id ?? (conv as any)?.id ?? id;
+          setConversationId(convId);
+        }
       })
-      .catch(() => {
-        // If create fails, id might already be a conversation ID
+      .catch((err) => {
+        console.warn('Chat conversation creation failed:', err?.response?.data?.message ?? err?.message);
+        // If create fails, id might already be a conversation ID — try using it
         if (!cancelled) setConversationId(id);
       })
       .finally(() => {
