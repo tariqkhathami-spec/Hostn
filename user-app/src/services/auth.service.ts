@@ -3,14 +3,14 @@ import type { User } from '../types';
 
 export const authService = {
   sendOtp(phone: string) {
-    return api.post<{ message: string }>('/otp/send-otp', { phone }).then((r) => r.data);
+    return api.post<{ message: string }>('/auth/send-otp', { phone }).then((r) => r.data);
   },
 
   verifyOtp(phone: string, code: string) {
     return api
-      .post<{ token: string; refreshToken: string; user: User }>('/otp/verify-otp', {
+      .post<{ token: string; refreshToken: string; user: User }>('/auth/verify-otp', {
         phone,
-        code,
+        otp: code,
       })
       .then((r) => r.data);
   },
