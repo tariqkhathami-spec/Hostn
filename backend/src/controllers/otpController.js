@@ -4,11 +4,12 @@ const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const authentica = require('../services/authentica');
 
+// Long-lived access token (30 days — matches refresh token & authController)
 const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, phone: user.phone, role: user.role, tokenVersion: user.tokenVersion },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '30d' }
   );
 };
 
@@ -267,7 +268,7 @@ exports.verifyOTP = async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       path: '/',
     });
     res.cookie('hostn_refresh', refreshToken, {
