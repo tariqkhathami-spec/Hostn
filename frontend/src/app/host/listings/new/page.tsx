@@ -356,23 +356,6 @@ export default function NewListingPage() {
             )}
           </div>
 
-          {images.length === 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setImages([
-                  { url: 'https://cdn.oxfordski.com/media/75861/luxury-ski-chalet-chamonix-chalet-freya-oxford-ski-lounge-2.jpg', isPrimary: true },
-                  { url: 'https://cdn.oxfordski.com/media/75845/luxury-ski-chalet-chamonix-chalet-freya-oxford-ski-lounge-3.jpg', isPrimary: false },
-                  { url: 'https://cdn.oxfordski.com/media/75860/luxury-ski-chalet-chamonix-chalet-freya-oxford-ski-lounge-1.jpg', isPrimary: false },
-                  { url: 'https://cdn.oxfordski.com/media/75849/luxury-ski-chalet-chamonix-chalet-freya-oxford-ski-sitting-area.jpg', isPrimary: false },
-                ]);
-              }}
-              className="text-xs text-primary-600 hover:text-primary-700 font-medium underline"
-            >
-              {lang === 'ar' ? 'استخدم صور تجريبية' : 'Use test images'}
-            </button>
-          )}
-
           <input
             ref={fileInputRef}
             type="file"

@@ -36,10 +36,10 @@ export default function HostProfilePage() {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useLanguage();
   const isAr = language === 'ar';
-  usePageTitle(data ? data.host.name : (isAr ? 'المضيف' : 'Host'));
 
   const [data, setData] = useState<HostData | null>(null);
   const [loading, setLoading] = useState(true);
+  usePageTitle(data ? data.host.name : (isAr ? 'المضيف' : 'Host'));
   const [activeTab, setActiveTab] = useState<'reviews' | 'properties'>('reviews');
   const [reviewPage, setReviewPage] = useState(1);
   const [propertyPage, setPropertyPage] = useState(1);
