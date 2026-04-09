@@ -11,12 +11,15 @@ import {
   BookOpen, CalendarDays, Heart, ArrowRight, Crown, Loader2, Wallet, ShieldBan, Star,
 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 export default function GuestDashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, upgradeToHost } = useAuth();
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = language === 'ar';
+  usePageTitle(isAr ? 'لوحة التحكم' : 'Dashboard');
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);

@@ -5,6 +5,7 @@ import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface PropertyRaw {
   _id: string;
@@ -46,6 +47,7 @@ const statusColors: Record<string, string> = {
 export default function AdminPropertiesPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'العقارات' : 'Properties');
 
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [loading, setLoading] = useState(true);

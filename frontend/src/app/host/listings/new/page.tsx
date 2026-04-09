@@ -10,6 +10,7 @@ import { Loader2, ArrowLeft, Upload, X, ImagePlus } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const t: Record<string, Record<string, string>> = {
   title: { en: 'Create New Listing', ar: '\u0625\u0646\u0634\u0627\u0621 \u0625\u0639\u0644\u0627\u0646 \u062c\u062f\u064a\u062f' },
@@ -73,6 +74,8 @@ export default function NewListingPage() {
   const router = useRouter();
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'إضافة عقار' : 'Add Listing');
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);

@@ -27,6 +27,7 @@ import {
 import SarSymbol from '@/components/ui/SarSymbol';
 import { CITIES, DISTRICTS } from '@/lib/constants';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const statusConfig: Record<string, { en: string; ar: string; color: string; icon: React.ReactNode }> = {
   pending: { en: 'Pending', ar: 'قيد الانتظار', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: <Clock className="w-4 h-4" /> },
@@ -49,6 +50,7 @@ export default function BookingDetailPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'تفاصيل الحجز' : 'Booking Details');
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);

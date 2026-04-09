@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Loader2, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface PricingData {
   total?: number;
@@ -35,6 +36,7 @@ const statusColors: Record<string, string> = {
 export default function AdminBookingsPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'الحجوزات' : 'Bookings');
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);

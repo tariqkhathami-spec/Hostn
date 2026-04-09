@@ -9,6 +9,7 @@ import { SupportTicket, TicketCategory, TicketPriority } from '@/types';
 import { HelpCircle, Plus, Clock, CheckCircle2, AlertCircle, ChevronRight, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const categoryLabels: Record<TicketCategory, { en: string; ar: string }> = {
   payment: { en: 'Payment Issue', ar: 'مشكلة دفع' },
@@ -46,6 +47,7 @@ export default function SupportPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'الدعم' : 'Support');
   const router = useRouter();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);

@@ -25,6 +25,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { getSearchCookies } from '@/lib/searchCookies';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 export default function PropertyDetailPage() {
   return (
@@ -42,6 +43,7 @@ function PropertyDetailContent() {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, toggleWishlist } = useAuth();
   const isAr = language === 'ar';
+  usePageTitle(property ? property.title : (isAr ? 'تفاصيل العقار' : 'Property Details'));
 
   // Wishlist state
   const [isWishlisted, setIsWishlisted] = useState(false);

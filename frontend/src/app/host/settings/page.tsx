@@ -5,6 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Settings, Trash2, AlertTriangle, X } from 'lucide-react';
 import { authApi } from '@/lib/api';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const labels: Record<string, Record<string, string>> = {
   title: { en: 'Settings', ar: 'الإعدادات' },
@@ -34,6 +35,8 @@ export default function HostSettingsPage() {
   const { language } = useLanguage();
   const { user, logout } = useAuth();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'إعدادات المضيف' : 'Host Settings');
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');

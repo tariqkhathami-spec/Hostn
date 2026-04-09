@@ -6,6 +6,7 @@ import { hostApi } from '@/lib/api';
 import { DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface MonthlyEarning {
   month: string;
@@ -37,6 +38,8 @@ const monthNames: Record<string, string[]> = {
 export default function HostEarningsPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'الأرباح' : 'Earnings');
   const [data, setData] = useState<EarningsData>({ totalEarnings: 0, monthlyBreakdown: [] });
   const [loading, setLoading] = useState(true);
 

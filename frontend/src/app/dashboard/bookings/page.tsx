@@ -10,12 +10,15 @@ import { useSocketEvent } from '@/lib/useSocket';
 import { Booking } from '@/types';
 import { BookOpen, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 export default function MyBookingsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = language === 'ar';
+  usePageTitle(isAr ? 'حجوزاتي' : 'My Bookings');
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);

@@ -5,6 +5,7 @@ import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface LogItem {
   _id: string;
@@ -19,6 +20,7 @@ interface LogItem {
 export default function AdminLogsPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'سجل النشاط' : 'Activity Logs');
 
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [loading, setLoading] = useState(true);

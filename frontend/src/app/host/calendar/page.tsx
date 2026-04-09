@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { propertiesApi } from '@/lib/api';
 import { Calendar, Loader2 } from 'lucide-react';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Property {
   _id: string;
@@ -23,6 +24,8 @@ const t: Record<string, Record<string, string>> = {
 export default function HostCalendarPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'التقويم' : 'Calendar');
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState('');
   const [loading, setLoading] = useState(true);

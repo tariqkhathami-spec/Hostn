@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { Search, Loader2, ShieldOff, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface UserItem {
   _id: string;
@@ -21,6 +22,7 @@ export default function AdminUsersPage() {
   const { language } = useLanguage();
   const { user: currentUser } = useAuth();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'المستخدمين' : 'Users');
   const isSuperAdmin = currentUser?.role === 'admin' && (currentUser?.adminRole || 'super') === 'super';
 
   const roleLabels: Record<string, { en: string; ar: string }> = {

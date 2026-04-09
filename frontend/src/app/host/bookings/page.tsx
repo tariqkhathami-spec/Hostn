@@ -6,6 +6,7 @@ import { bookingsApi } from '@/lib/api';
 import { Loader2, Check, X } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Booking {
   _id: string;
@@ -50,6 +51,8 @@ const statusColors: Record<string, string> = {
 export default function HostBookingsPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'حجوزات المضيف' : 'Host Bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');

@@ -8,11 +8,13 @@ import {
   Plus, Pencil, Trash2, Eye, EyeOff, Loader2, X, Save, BookOpen, FolderPlus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 export default function AdminBlogPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'المدونة' : 'Blog');
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [categories, setCategories] = useState<BlogCategory[]>([]);

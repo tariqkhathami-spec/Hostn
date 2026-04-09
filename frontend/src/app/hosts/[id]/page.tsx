@@ -12,6 +12,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Property, User } from '@/types';
 import { BadgeCheck, Share2, Building2, Clock, CalendarDays, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface HostReview {
   _id: string;
@@ -35,6 +36,7 @@ export default function HostProfilePage() {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(data ? data.host.name : (isAr ? 'المضيف' : 'Host'));
 
   const [data, setData] = useState<HostData | null>(null);
   const [loading, setLoading] = useState(true);

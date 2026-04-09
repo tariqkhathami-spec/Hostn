@@ -9,6 +9,7 @@ import { SupportTicket } from '@/types';
 import { ArrowLeft, Send, Clock, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const statusConfig: Record<string, { label: { en: string; ar: string }; color: string; icon: JSX.Element }> = {
   open: { label: { en: 'Open', ar: 'مفتوحة' }, color: 'bg-blue-100 text-blue-700', icon: <Clock className="w-3.5 h-3.5" /> },
@@ -37,6 +38,7 @@ export default function TicketDetailPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'تذكرة الدعم' : 'Support Ticket');
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;

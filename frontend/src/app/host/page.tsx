@@ -6,6 +6,7 @@ import { hostApi } from '@/lib/api';
 import { Building, CalendarCheck, DollarSign, Star, Loader2 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Stats {
   totalProperties: number;
@@ -60,6 +61,7 @@ export default function HostDashboardPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'لوحة تحكم المضيف' : 'Host Dashboard');
   const [stats, setStats] = useState<Stats>({ totalProperties: 0, activeBookings: 0, totalEarnings: 0, averageRating: 0 });
   const [bookings, setBookings] = useState<RecentBooking[]>([]);
   const [loading, setLoading] = useState(true);

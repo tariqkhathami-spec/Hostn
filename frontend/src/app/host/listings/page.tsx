@@ -7,6 +7,7 @@ import { Plus, ToggleLeft, ToggleRight, Edit, Loader2, Building } from 'lucide-r
 import SarSymbol from '@/components/ui/SarSymbol';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Property {
   _id: string;
@@ -35,6 +36,8 @@ const t: Record<string, Record<string, string>> = {
 export default function HostListingsPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'عقاراتي' : 'My Listings');
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 

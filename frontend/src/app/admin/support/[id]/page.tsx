@@ -7,6 +7,7 @@ import { SupportTicket } from '@/types';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/context/LanguageContext';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const statusOptions = ['open', 'in_progress', 'resolved', 'closed'];
 
@@ -20,6 +21,7 @@ const getStatusLabels = (isAr: boolean): Record<string, string> => ({
 export default function AdminTicketDetailPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'تذكرة الدعم' : 'Support Ticket');
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;

@@ -5,6 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { hostApi } from '@/lib/api';
 import { Star, Loader2, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Review {
   _id: string;
@@ -38,6 +39,8 @@ function StarDisplay({ rating }: { rating: number }) {
 export default function HostReviewsPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'التقييمات' : 'Reviews');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 

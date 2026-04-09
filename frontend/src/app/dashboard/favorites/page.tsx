@@ -10,12 +10,14 @@ import { Heart, Loader2, Plus, MoreVertical, Pencil, Trash2, X } from 'lucide-re
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 export default function FavoritesPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'المفضلة' : 'Favorites');
 
   const [lists, setLists] = useState<WishlistList[]>([]);
   const [loading, setLoading] = useState(true);

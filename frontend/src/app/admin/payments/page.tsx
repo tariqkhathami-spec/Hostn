@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Loader2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface PaymentItem {
   _id: string;
@@ -26,6 +27,7 @@ const statusColors: Record<string, string> = {
 export default function AdminPaymentsPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'المدفوعات' : 'Payments');
 
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);

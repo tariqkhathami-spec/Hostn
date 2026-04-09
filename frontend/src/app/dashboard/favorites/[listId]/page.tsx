@@ -20,6 +20,7 @@ import StarRating from '@/components/ui/StarRating';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { CITIES, DISTRICTS, DIRECTIONS } from '@/lib/constants';
 import { getSearchCookies, saveSearchCookies } from '@/lib/searchCookies';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const PROPERTY_TYPES = [
@@ -186,6 +187,7 @@ export default function WishlistDetailPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'قائمة المفضلة' : 'Favorite List');
 
   const [list, setList] = useState<WishlistList | null>(null);
   const [loading, setLoading] = useState(true);

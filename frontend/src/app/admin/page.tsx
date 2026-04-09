@@ -6,6 +6,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Users, Building, BookOpen, CreditCard, Loader2 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Stats {
   totalUsers: number;
@@ -34,6 +35,7 @@ function mapStats(raw: Record<string, unknown>): Stats {
 export default function AdminDashboardPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'لوحة تحكم المدير' : 'Admin Dashboard');
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);

@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import {
   User, Crown, Loader2, Save, Mail, Check, ChevronDown, Phone, Shield, Calendar,
 } from 'lucide-react';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const GCC_COUNTRIES = [
   { code: '+966', flag: '\u{1F1F8}\u{1F1E6}', en: 'Saudi Arabia', ar: '\u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629', digits: 9, startsWith: '5' },
@@ -30,6 +31,7 @@ export default function SettingsPage() {
   const { user, isAuthenticated, isLoading: authLoading, updateUser, upgradeToHost } = useAuth();
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'الإعدادات' : 'Settings');
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');

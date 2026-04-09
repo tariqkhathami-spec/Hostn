@@ -7,6 +7,7 @@ import { Report, ReportAction } from '@/types';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/context/LanguageContext';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const getActionLabels = (isAr: boolean): Record<ReportAction, string> => ({
   none: isAr ? 'بدون إجراء' : 'No Action',
@@ -28,6 +29,7 @@ const getStatusLabels = (isAr: boolean): Record<string, string> => ({
 export default function AdminReportDetailPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'تفاصيل البلاغ' : 'Report Details');
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;

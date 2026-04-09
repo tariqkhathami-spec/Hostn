@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { walletApi } from '@/lib/api';
 import { Wallet, ArrowDownLeft, ArrowUpRight, Loader2, Gift } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 interface Transaction {
   _id: string;
@@ -21,6 +22,8 @@ export default function BalancePage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = language === 'ar';
+  usePageTitle(isAr ? 'الرصيد' : 'Balance');
 
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);

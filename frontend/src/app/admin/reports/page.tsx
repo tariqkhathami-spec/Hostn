@@ -5,6 +5,7 @@ import { reportsApi } from '@/lib/api';
 import { Report } from '@/types';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const statusConfig = (isAr: boolean): Record<string, { label: string; color: string; bg: string }> => ({
   pending: { label: isAr ? 'قيد الانتظار' : 'Pending', color: '#f59e0b', bg: '#fffbeb' },
@@ -29,6 +30,7 @@ const getReasonLabels = (isAr: boolean): Record<string, string> => ({
 export default function AdminReportsPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'البلاغات' : 'Reports');
   const [reports, setReports] = useState<Report[]>([]);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);

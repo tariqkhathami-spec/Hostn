@@ -5,6 +5,7 @@ import { supportApi } from '@/lib/api';
 import { SupportTicket } from '@/types';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const getStatusConfig = (isAr: boolean): Record<string, { label: string; color: string; bg: string }> => ({
   open: { label: isAr ? 'مفتوح' : 'Open', color: '#3b82f6', bg: '#eff6ff' },
@@ -22,6 +23,7 @@ const getPriorityLabels = (isAr: boolean): Record<string, string> => ({
 export default function AdminSupportPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'الدعم' : 'Support');
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);

@@ -8,6 +8,7 @@ import { CITIES } from '@/lib/constants';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const t: Record<string, Record<string, string>> = {
   title: { en: 'Edit Listing', ar: '\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0625\u0639\u0644\u0627\u0646' },
@@ -43,6 +44,8 @@ export default function EditListingPage() {
   const id = params.id as string;
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
+  const isAr = lang === 'ar';
+  usePageTitle(isAr ? 'تعديل العقار' : 'Edit Listing');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({

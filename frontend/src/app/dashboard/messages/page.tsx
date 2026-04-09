@@ -9,6 +9,7 @@ import { Conversation, Message, User } from '@/types';
 import { MessageSquare, Search, Send, ArrowLeft, Ban, MoreVertical, AlertCircle, Flag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 function timeAgo(dateStr: string, isAr: boolean) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -26,6 +27,7 @@ function GuestMessagesContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { language } = useLanguage();
   const isAr = language === 'ar';
+  usePageTitle(isAr ? 'الرسائل' : 'Messages');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
