@@ -33,9 +33,15 @@ const processQueue = (error: unknown) => {
 
 api.interceptors.response.use(
   (response) => {
-    // Auto-unwrap { success, data } backend wrapper so services get the inner data directly
-    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
-      response.data = response.data.data;
+    // Auto-unwrap { success, data } backend wrapper, but preserve pagination if present
+    const d = response.data;
+    if (d && typeof d === 'object' && 'success' in d && 'data' in d) {
+      if ('pagination' in d) {
+        // Paginated response — keep { data, pagination } structure
+        response.data = { data: d.data, pagination: d.pagination };
+      } else {
+        response.data = d.data;
+      }
     }
     return response;
   },
