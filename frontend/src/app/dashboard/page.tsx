@@ -227,7 +227,7 @@ export default function GuestDashboardPage() {
               return (
                 <Link
                   key={booking._id}
-                  href={`/booking/${booking._id}`}
+                  href={`/dashboard/bookings/${booking._id}`}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
                 >
                   <div className="min-w-0 flex-1">

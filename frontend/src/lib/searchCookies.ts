@@ -19,14 +19,23 @@ export interface SearchCookieParams {
 export function saveSearchCookies(params: SearchCookieParams) {
   // Merge with existing cookie so partial saves don't wipe other fields
   const existing = getSearchCookies() || {};
-  const merged = { ...existing, ...params };
 
-  // Strip empty values
+  // Keys explicitly passed as empty/0 should remove the old value
   const clean: Record<string, string | number> = {};
-  for (const [k, v] of Object.entries(merged)) {
-    if (v !== undefined && v !== '' && v !== 0) clean[k] = v;
+  for (const [k, v] of Object.entries(existing)) {
+    if (!(k in params) && v !== undefined && v !== '' && v !== 0) {
+      clean[k] = v;
+    }
   }
-  if (Object.keys(clean).length === 0) return;
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== '' && v !== 0) {
+      clean[k] = v;
+    }
+  }
+  if (Object.keys(clean).length === 0) {
+    clearSearchCookies();
+    return;
+  }
   const value = encodeURIComponent(JSON.stringify(clean));
   document.cookie = `${COOKIE_NAME}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
 }

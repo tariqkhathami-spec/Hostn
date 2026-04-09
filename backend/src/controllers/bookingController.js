@@ -419,7 +419,11 @@ exports.getHostBookings = async (req, res, next) => {
 exports.getBooking = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate('property', 'title images location type pricing rules capacity host')
+      .populate({
+        path: 'property',
+        select: 'title images location type pricing rules capacity host',
+        populate: { path: 'host', select: 'name avatar isVerified _id' },
+      })
       .populate('guest', 'name email phone avatar');
 
     if (!booking) {

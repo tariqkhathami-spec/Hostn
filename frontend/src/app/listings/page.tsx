@@ -303,7 +303,7 @@ function ListingsContent() {
   // Auto-search when search bar dropdowns are dismissed
   const prevShowCityRef = useRef(false);
   useEffect(() => {
-    if (prevShowCityRef.current && !showCityDropdown && searchCity) {
+    if (prevShowCityRef.current && !showCityDropdown) {
       saveSearchCookies({ city: searchCity, type: selectedTypes.join(','), checkIn, checkOut, adults, children });
       setAutoSearch((n) => n + 1);
     }

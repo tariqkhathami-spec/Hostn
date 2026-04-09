@@ -71,6 +71,7 @@ export default function HeroSearch() {
     setCity(cityValue);
     setCitySearch(cityLabel);
     setShowCityDropdown(false);
+    saveSearchCookies({ city: cityValue });
     setShowTypeDropdown(true);
     setStep('type');
   }, []);
@@ -293,6 +294,16 @@ export default function HeroSearch() {
                       <div className="px-4 py-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-50">
                         {t('hero.popularDestinations')}
                       </div>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={!city}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { handleCitySelect('', ''); setCityHighlight(-1); }}
+                        className={`w-full text-start px-4 py-2.5 text-sm transition-colors min-h-[44px] ${!city ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'}`}
+                      >
+                        {isAr ? 'جميع المدن' : 'All cities'}
+                      </button>
                       {filteredCities.map((c, idx) => (
                         <button
                           key={c.value}
