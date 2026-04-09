@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { bookingsService } from '../../services/bookings.service';
+import { getSocket } from '../../services/socket';
 import { formatCurrency, formatDateRange } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import type { Booking } from '../../types';
@@ -21,7 +22,25 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'previous'>('upcoming');
+
+  const handleBookingEvent = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+  }, [queryClient]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on('booking:updated', handleBookingEvent);
+    socket.on('booking:cancelled', handleBookingEvent);
+
+    return () => {
+      socket.off('booking:updated', handleBookingEvent);
+      socket.off('booking:cancelled', handleBookingEvent);
+    };
+  }, [handleBookingEvent]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['bookings', activeTab],
@@ -33,10 +52,10 @@ export default function BookingsScreen() {
   const renderBookingCard = ({ item }: { item: Booking }) => (
     <Pressable
       style={styles.bookingCard}
-      onPress={() => router.push(`/listing/${item.property._id}`)}
+      onPress={() => router.push(`/booking/${item._id}`)}
     >
       <Image
-        source={{ uri: item.property.images[0] }}
+        source={{ uri: typeof item.property?.images?.[0] === 'string' ? item.property.images[0] : item.property?.images?.[0]?.url }}
         style={styles.bookingImage}
         contentFit="cover"
       />

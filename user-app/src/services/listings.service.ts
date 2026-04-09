@@ -9,13 +9,17 @@ export const listingsService = {
   },
 
   getById(id: string) {
-    return api.get<Listing>(`/properties/${id}`).then((r) => r.data);
+    return api.get<{ data: Listing } | Listing>(`/properties/${id}`).then((r) => {
+      // API may wrap in { success, data } or return directly
+      const d = r.data as any;
+      return d.data ?? d;
+    });
   },
 
   getHomeFeed() {
     return api
-      .get<{ featured: Listing[]; popular: Listing[]; deals: Listing[] }>('/properties', {
-        params: { featured: true, limit: 10 },
+      .get<PaginatedResponse<Listing>>('/properties', {
+        params: { limit: 20 },
       })
       .then((r) => r.data);
   },

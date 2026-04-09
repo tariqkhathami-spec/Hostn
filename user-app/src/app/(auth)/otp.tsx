@@ -22,7 +22,7 @@ const OTP_LENGTH = 4;
 
 export default function OtpScreen() {
   const router = useRouter();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { phone, countryCode } = useLocalSearchParams<{ phone: string; countryCode?: string }>();
   const login = useAuthStore((s) => s.login);
 
   const [code, setCode] = useState('');
@@ -64,7 +64,7 @@ export default function OtpScreen() {
   const handleResend = async () => {
     if (countdown > 0 || !phone) return;
     try {
-      await authService.sendOtp(phone);
+      await authService.sendOtp(phone, { countryCode: countryCode ?? '+966' });
       setCountdown(60);
       setCode('');
     } catch (error: any) {

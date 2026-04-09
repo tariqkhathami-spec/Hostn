@@ -21,8 +21,18 @@ export default function ResultsScreen() {
   const city = params.city ?? searchStore.city;
   const cityName = params.cityName ?? searchStore.cityName ?? 'Results';
 
+  const {
+    minPrice, maxPrice, bedrooms, bathrooms, amenities,
+    ratingMin, hasDiscount, district, direction, minArea, maxArea,
+  } = searchStore;
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ['search', city, searchStore.propertyType, searchStore.guests, searchStore.checkIn, searchStore.checkOut],
+    queryKey: [
+      'search', city, searchStore.propertyType, searchStore.guests,
+      searchStore.checkIn, searchStore.checkOut,
+      minPrice, maxPrice, bedrooms, bathrooms, amenities,
+      ratingMin, hasDiscount, district, direction, minArea, maxArea,
+    ],
     queryFn: ({ pageParam = 1 }) =>
       listingsService.search({
         city: city ?? undefined,
@@ -30,16 +40,29 @@ export default function ResultsScreen() {
         guests: searchStore.guests,
         checkIn: searchStore.checkIn ?? undefined,
         checkOut: searchStore.checkOut ?? undefined,
+        minPrice: minPrice ?? undefined,
+        maxPrice: maxPrice ?? undefined,
+        bedrooms: bedrooms || undefined,
+        bathrooms: bathrooms || undefined,
+        amenities: amenities.length > 0 ? amenities : undefined,
+        ratingMin: ratingMin ?? undefined,
+        hasDiscount: hasDiscount || undefined,
+        district: district ?? undefined,
+        direction: direction ?? undefined,
+        minArea: minArea ?? undefined,
+        maxArea: maxArea ?? undefined,
         page: pageParam,
         limit: 20,
       }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
+    getNextPageParam: (lastPage) => {
+      const p = lastPage.pagination ?? (lastPage as any);
+      return (p.page ?? 1) < (p.pages ?? 1) ? (p.page ?? 1) + 1 : undefined;
+    },
   });
 
   const listings = data?.pages.flatMap((p) => p.data) ?? [];
-  const total = data?.pages[0]?.total ?? 0;
+  const total = data?.pages[0]?.pagination?.total ?? 0;
 
   const handleToggleFavorite = async (propertyId: string) => {
     try {
@@ -88,7 +111,7 @@ export default function ResultsScreen() {
               listing={item}
               onPress={() => router.push(`/listing/${item._id}`)}
               onFavoritePress={() => handleToggleFavorite(item._id)}
-              isFavorite={user?.wishlist.includes(item._id)}
+              isFavorite={user?.wishlist?.includes(item._id)}
             />
           )}
         />

@@ -15,42 +15,76 @@ import type { Message } from '../../types';
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string; hostName?: string }>();
+  const { id, propertyId, hostName } = useLocalSearchParams<{
+    id: string;
+    propertyId?: string;
+    hostName?: string;
+  }>();
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.user?._id);
   const [text, setText] = useState('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  // When entering from a listing detail page, id = host ID
+  // We need to create/get a conversation with this host first
+  useEffect(() => {
+    if (!id) return;
+
+    let cancelled = false;
+    setCreating(true);
+
+    chatService
+      .createConversation(id, propertyId)
+      .then((conv) => {
+        if (!cancelled) setConversationId(conv._id);
+      })
+      .catch(() => {
+        // If create fails, id might already be a conversation ID
+        if (!cancelled) setConversationId(id);
+      })
+      .finally(() => {
+        if (!cancelled) setCreating(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, propertyId]);
+
   const { data: messages, isLoading } = useQuery({
-    queryKey: ['messages', id],
-    queryFn: () => chatService.getMessages(id!),
-    enabled: !!id,
+    queryKey: ['messages', conversationId],
+    queryFn: () => chatService.getMessages(conversationId!),
+    enabled: !!conversationId,
     refetchInterval: 5000,
   });
 
-  const sendMessage = useMutation({
-    mutationFn: (messageText: string) => chatService.sendMessage(id!, messageText),
+  const sendMutation = useMutation({
+    mutationFn: (messageText: string) => chatService.sendMessage(conversationId!, messageText),
     onSuccess: () => {
       setText('');
-      queryClient.invalidateQueries({ queryKey: ['messages', id] });
+      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
 
   const handleSend = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    sendMessage.mutate(trimmed);
+    if (!trimmed || !conversationId) return;
+    sendMutation.mutate(trimmed);
   };
 
-  const sortedMessages = [...(messages ?? [])].reverse();
+  const sortedMessages = [...(Array.isArray(messages) ? messages : [])].reverse();
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMine = item.sender === userId;
+    // Messages may use 'content' field instead of 'text'
+    const messageText = item.text ?? (item as any).content ?? '';
     return (
       <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
         <Text style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextOther]}>
-          {item.text}
+          {messageText}
         </Text>
         <Text style={[styles.bubbleTime, isMine ? styles.bubbleTimeMine : styles.bubbleTimeOther]}>
           {formatDate(item.createdAt, 'h:mm a')}
@@ -59,13 +93,15 @@ export default function ChatScreen() {
     );
   };
 
+  const displayName = hostName || 'Chat';
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Chat</Text>
+        <Text style={styles.title} numberOfLines={1}>{displayName}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -74,7 +110,7 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}
       >
-        {isLoading ? (
+        {isLoading || creating ? (
           <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
         ) : (
           <FlatList
@@ -84,6 +120,12 @@ export default function ChatScreen() {
             inverted
             contentContainerStyle={styles.messageList}
             renderItem={renderMessage}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons name="chatbubbles-outline" size={48} color={Colors.textTertiary} />
+                <Text style={styles.emptyText}>Send a message to start the conversation</Text>
+              </View>
+            }
           />
         )}
 
@@ -98,9 +140,9 @@ export default function ChatScreen() {
             maxLength={1000}
           />
           <Pressable
-            style={[styles.sendButton, !text.trim() && styles.sendDisabled]}
+            style={[styles.sendButton, (!text.trim() || !conversationId) && styles.sendDisabled]}
             onPress={handleSend}
-            disabled={!text.trim() || sendMessage.isPending}
+            disabled={!text.trim() || !conversationId || sendMutation.isPending}
           >
             <Ionicons name="send" size={20} color={Colors.white} />
           </Pressable>
@@ -118,9 +160,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
     borderBottomWidth: 1, borderBottomColor: Colors.divider,
   },
-  title: { ...Typography.subtitle, color: Colors.textPrimary },
+  title: { ...Typography.subtitle, color: Colors.textPrimary, flex: 1, textAlign: 'center' },
   loader: { flex: 1, justifyContent: 'center' },
   messageList: { padding: Spacing.xl, gap: Spacing.sm },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 100, gap: Spacing.md },
+  emptyText: { ...Typography.body, color: Colors.textTertiary, textAlign: 'center' },
   bubble: {
     maxWidth: '75%', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     borderRadius: Radius.md, marginBottom: Spacing.xs,

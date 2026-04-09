@@ -21,7 +21,11 @@ const MENU_ITEMS: MenuItem[] = [
   { icon: 'wallet-outline', label: 'Wallet', route: '/account/wallet' },
   { icon: 'card-outline', label: 'Payment Methods', route: '/account/payment-methods' },
   { icon: 'notifications-outline', label: 'Notifications', route: '/account/notifications' },
-  { icon: 'help-circle-outline', label: 'FAQ', route: '/account/faq' },
+  { icon: 'help-circle-outline', label: 'Support', route: '/account/support' },
+  { icon: 'information-circle-outline', label: 'About', route: '/account/about' },
+  { icon: 'mail-outline', label: 'Contact Us', route: '/account/contact' },
+  { icon: 'newspaper-outline', label: 'Blog', route: '/account/blog' },
+  { icon: 'information-circle-outline', label: 'FAQ', route: '/account/faq' },
   { icon: 'document-text-outline', label: 'Terms of Use', route: '/account/terms' },
   { icon: 'shield-checkmark-outline', label: 'Privacy Policy', route: '/account/privacy' },
 ];

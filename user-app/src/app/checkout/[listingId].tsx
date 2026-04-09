@@ -35,7 +35,8 @@ export default function CheckoutScreen() {
   });
 
   const nights = checkIn && checkOut ? getNights(checkIn, checkOut) : 1;
-  const subtotal = (listing?.price ?? 0) * nights;
+  const nightlyRate = listing?.discountedPrice ?? listing?.pricing?.perNight ?? 0;
+  const subtotal = nightlyRate * nights;
   const serviceFee = Math.round(subtotal * 0.1);
   const vat = Math.round((subtotal + serviceFee) * 0.15);
   const total = subtotal + serviceFee + vat - couponDiscount;
@@ -95,10 +96,10 @@ export default function CheckoutScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Property Summary */}
         <View style={styles.propertyCard}>
-          <Image source={{ uri: listing.images[0] }} style={styles.propertyImage} contentFit="cover" />
+          <Image source={{ uri: typeof listing.images?.[0] === 'string' ? listing.images[0] : listing.images?.[0]?.url }} style={styles.propertyImage} contentFit="cover" />
           <View style={styles.propertyInfo}>
             <Text style={styles.propertyTitle} numberOfLines={2}>{listing.title}</Text>
-            <Text style={styles.propertyLocation}>{listing.city}</Text>
+            <Text style={styles.propertyLocation}>{listing.location?.city ?? ''}</Text>
             {checkIn && checkOut && (
               <Text style={styles.propertyDates}>{formatDateRange(checkIn, checkOut)}</Text>
             )}
@@ -110,7 +111,7 @@ export default function CheckoutScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Price Breakdown</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>{formatCurrency(listing.price)} x {nights} night{nights > 1 ? 's' : ''}</Text>
+            <Text style={styles.priceLabel}>{formatCurrency(nightlyRate)} x {nights} night{nights > 1 ? 's' : ''}</Text>
             <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
           </View>
           <View style={styles.priceRow}>

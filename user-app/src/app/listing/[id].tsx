@@ -8,12 +8,14 @@ import {
   Share,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { listingsService } from '../../services/listings.service';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/authStore';
@@ -34,7 +36,7 @@ export default function ListingDetailScreen() {
     enabled: !!id,
   });
 
-  const isFavorite = user?.wishlist.includes(id!) ?? false;
+  const isFavorite = user?.wishlist?.includes(id!) ?? false;
 
   const handleFavorite = async () => {
     if (!id) return;
@@ -49,7 +51,7 @@ export default function ListingDetailScreen() {
     if (!listing) return;
     try {
       await Share.share({
-        message: `Check out ${listing.title} on Hostn! ${listing.city}`,
+        message: `Check out ${listing.title} on Hostn! ${listing.location?.city ?? ''}`,
       });
     } catch {}
   };
@@ -60,9 +62,10 @@ export default function ListingDetailScreen() {
 
   const handleContactHost = () => {
     if (!listing) return;
+    const hostName = listing.host.name ?? listing.host.firstName ?? '';
     router.push({
       pathname: `/chat/${listing.host._id}`,
-      params: { propertyId: id, hostName: listing.host.firstName },
+      params: { propertyId: id, hostName },
     });
   };
 
@@ -74,15 +77,25 @@ export default function ListingDetailScreen() {
     );
   }
 
+  const price = listing.discountedPrice ?? listing.pricing?.perNight ?? 0;
+  const rating = listing.ratings?.average ?? 0;
+  const reviewCount = listing.ratings?.count ?? 0;
+  const city = listing.location?.city ?? '';
+  const district = listing.location?.district;
+  const hostName = listing.host.name ?? `${listing.host.firstName ?? ''} ${listing.host.lastName ?? ''}`.trim();
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Image Gallery */}
         <View style={styles.imageContainer}>
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-            {listing.images.map((uri, i) => (
-              <Image key={i} source={{ uri }} style={styles.heroImage} contentFit="cover" />
-            ))}
+            {(listing.images ?? []).map((img: any, i: number) => {
+              const uri = typeof img === 'string' ? img : img?.url;
+              return uri ? (
+                <Image key={i} source={{ uri }} style={styles.heroImage} contentFit="cover" />
+              ) : null;
+            })}
           </ScrollView>
           <View style={styles.imageOverlay}>
             <Pressable style={styles.overlayButton} onPress={() => router.back()}>
@@ -103,7 +116,7 @@ export default function ListingDetailScreen() {
           </View>
           <View style={styles.imageBadge}>
             <Text style={styles.imageBadgeText}>
-              1/{listing.images.length}
+              1/{listing.images?.length ?? 0}
             </Text>
           </View>
         </View>
@@ -114,32 +127,32 @@ export default function ListingDetailScreen() {
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
             <Text style={styles.locationText}>
-              {listing.city}{listing.district ? `, ${listing.district}` : ''}
+              {city}{district ? `, ${district}` : ''}
             </Text>
           </View>
 
           {/* Quick Stats */}
           <View style={styles.statsRow}>
-            {listing.rating > 0 && (
+            {rating > 0 && (
               <View style={styles.stat}>
                 <Ionicons name="star" size={18} color={Colors.accent} />
-                <Text style={styles.statValue}>{formatRating(listing.rating)}</Text>
-                <Text style={styles.statLabel}>({listing.reviewCount} reviews)</Text>
+                <Text style={styles.statValue}>{formatRating(rating)}</Text>
+                <Text style={styles.statLabel}>({reviewCount} reviews)</Text>
               </View>
             )}
             <View style={styles.stat}>
               <Ionicons name="people-outline" size={18} color={Colors.textSecondary} />
-              <Text style={styles.statValue}>{listing.maxGuests}</Text>
+              <Text style={styles.statValue}>{listing.capacity?.maxGuests ?? '-'}</Text>
               <Text style={styles.statLabel}>guests</Text>
             </View>
             <View style={styles.stat}>
               <Ionicons name="bed-outline" size={18} color={Colors.textSecondary} />
-              <Text style={styles.statValue}>{listing.bedrooms}</Text>
+              <Text style={styles.statValue}>{listing.capacity?.bedrooms ?? '-'}</Text>
               <Text style={styles.statLabel}>beds</Text>
             </View>
             <View style={styles.stat}>
               <Ionicons name="water-outline" size={18} color={Colors.textSecondary} />
-              <Text style={styles.statValue}>{listing.bathrooms}</Text>
+              <Text style={styles.statValue}>{listing.capacity?.bathrooms ?? '-'}</Text>
               <Text style={styles.statLabel}>baths</Text>
             </View>
           </View>
@@ -151,11 +164,11 @@ export default function ListingDetailScreen() {
           </View>
 
           {/* Amenities */}
-          {listing.amenities.length > 0 && (
+          {listing.amenities?.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Amenities</Text>
               <View style={styles.amenitiesGrid}>
-                {listing.amenities.slice(0, 8).map((amenity, i) => (
+                {listing.amenities.slice(0, 8).map((amenity: string, i: number) => (
                   <View key={i} style={styles.amenityItem}>
                     <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
                     <Text style={styles.amenityText}>{amenity}</Text>
@@ -177,13 +190,9 @@ export default function ListingDetailScreen() {
                 )}
               </View>
               <View style={styles.hostInfo}>
-                <Text style={styles.hostName}>
-                  {listing.host.firstName} {listing.host.lastName ?? ''}
-                </Text>
-                {listing.host.responseTime && (
-                  <Text style={styles.hostMeta}>
-                    Responds in {listing.host.responseTime}
-                  </Text>
+                <Text style={styles.hostName}>{hostName}</Text>
+                {listing.host.isVerified && (
+                  <Text style={styles.hostMeta}>Verified host</Text>
                 )}
               </View>
               <Pressable style={styles.contactButton} onPress={handleContactHost}>
@@ -192,28 +201,84 @@ export default function ListingDetailScreen() {
             </View>
           </View>
 
+          {/* Location Map */}
+          {(() => {
+            const coords = listing.location?.coordinates
+              ?? listing.location?.geoJSON?.coordinates;
+            if (!coords) return null;
+            // geoJSON is [lng, lat], coordinates may be {lat, lng} or [lng, lat]
+            let lat: number | undefined;
+            let lng: number | undefined;
+            if (Array.isArray(coords)) {
+              lng = coords[0];
+              lat = coords[1];
+            } else if (typeof coords === 'object') {
+              lat = (coords as any).lat;
+              lng = (coords as any).lng;
+            }
+            if (!lat || !lng) return null;
+            return (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Location</Text>
+                <View style={styles.mapContainer}>
+                  <MapView
+                    provider={PROVIDER_GOOGLE}
+                    style={styles.map}
+                    initialRegion={{
+                      latitude: lat,
+                      longitude: lng,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    pitchEnabled={false}
+                    rotateEnabled={false}
+                  >
+                    <Marker coordinate={{ latitude: lat, longitude: lng }} />
+                  </MapView>
+                </View>
+                {listing.location?.isApproximate && (
+                  <Text style={styles.approximateText}>Approximate location shown</Text>
+                )}
+              </View>
+            );
+          })()}
+
           {/* Policies */}
-          {(listing.checkInTime || listing.checkOutTime) && (
+          {(listing.rules?.checkInTime || listing.rules?.checkOutTime) && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Policies</Text>
-              {listing.checkInTime && (
+              {listing.rules.checkInTime && (
                 <View style={styles.policyRow}>
                   <Text style={styles.policyLabel}>Check-in</Text>
-                  <Text style={styles.policyValue}>{listing.checkInTime}</Text>
+                  <Text style={styles.policyValue}>{listing.rules.checkInTime}</Text>
                 </View>
               )}
-              {listing.checkOutTime && (
+              {listing.rules.checkOutTime && (
                 <View style={styles.policyRow}>
                   <Text style={styles.policyLabel}>Check-out</Text>
-                  <Text style={styles.policyValue}>{listing.checkOutTime}</Text>
+                  <Text style={styles.policyValue}>{listing.rules.checkOutTime}</Text>
                 </View>
               )}
-              {listing.cancellationPolicy && (
+              {listing.rules.minNights > 1 && (
                 <View style={styles.policyRow}>
-                  <Text style={styles.policyLabel}>Cancellation</Text>
-                  <Text style={styles.policyValue}>{listing.cancellationPolicy}</Text>
+                  <Text style={styles.policyLabel}>Min nights</Text>
+                  <Text style={styles.policyValue}>{listing.rules.minNights}</Text>
                 </View>
               )}
+              <View style={styles.policyRow}>
+                <Text style={styles.policyLabel}>Smoking</Text>
+                <Text style={styles.policyValue}>{listing.rules.smokingAllowed ? 'Allowed' : 'Not allowed'}</Text>
+              </View>
+              <View style={styles.policyRow}>
+                <Text style={styles.policyLabel}>Pets</Text>
+                <Text style={styles.policyValue}>{listing.rules.petsAllowed ? 'Allowed' : 'Not allowed'}</Text>
+              </View>
+              <View style={styles.policyRow}>
+                <Text style={styles.policyLabel}>Parties</Text>
+                <Text style={styles.policyValue}>{listing.rules.partiesAllowed ? 'Allowed' : 'Not allowed'}</Text>
+              </View>
             </View>
           )}
 
@@ -224,7 +289,7 @@ export default function ListingDetailScreen() {
       {/* Sticky Bottom Bar */}
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.bottomPrice}>{formatCurrency(listing.price)}</Text>
+          <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
           <Text style={styles.bottomPerNight}>per night</Text>
         </View>
         <Pressable style={styles.bookButton} onPress={handleBook}>
@@ -319,6 +384,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   contactText: { ...Typography.smallBold, color: Colors.primary },
+  mapContainer: {
+    height: 200,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+  },
+  map: { flex: 1 },
+  approximateText: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: Spacing.sm,
+    fontStyle: 'italic',
+  },
   policyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

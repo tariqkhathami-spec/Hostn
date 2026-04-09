@@ -17,6 +17,9 @@
       "bundleIdentifier": "com.hostn.app",
       "infoPlist": {
         "CFBundleAllowMixedLocalizations": true
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyD9mcyuKK3L2TUkZ7vep6xF_eUV5DzIDUw"
       }
     },
     "android": {
@@ -25,7 +28,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4B0082"
       },
-      "permissions": []
+      "permissions": [],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyD9mcyuKK3L2TUkZ7vep6xF_eUV5DzIDUw"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

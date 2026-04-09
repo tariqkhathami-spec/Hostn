@@ -15,16 +15,31 @@ interface Props {
 }
 
 export default function ListingCard({ listing, onPress, onFavoritePress, isFavorite, style }: Props) {
+  const primaryImage = listing.images?.find((img) => img.isPrimary) ?? listing.images?.[0];
+  const imageUri = typeof primaryImage === 'string' ? primaryImage : primaryImage?.url;
+  const price = listing.discountedPrice ?? listing.pricing?.perNight ?? 0;
+  const discount = listing.pricing?.discountPercent ?? 0;
+  const city = listing.location?.city ?? '';
+  const district = listing.location?.district;
+  const rating = listing.ratings?.average ?? 0;
+  const reviewCount = listing.ratings?.count ?? 0;
+
   return (
     <Pressable style={[styles.container, style]} onPress={onPress}>
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: listing.images[0] }}
-          style={styles.image}
-          contentFit="cover"
-          placeholder={{ blurhash: 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.' }}
-          transition={200}
-        />
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.image}
+            contentFit="cover"
+            placeholder={{ blurhash: 'LGF5]+Yk^6#M@-5c,1J5@[or[Q6.' }}
+            transition={200}
+          />
+        ) : (
+          <View style={[styles.image, { backgroundColor: Colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
+            <Ionicons name="image-outline" size={32} color={Colors.textTertiary} />
+          </View>
+        )}
         {onFavoritePress && (
           <Pressable style={styles.heartButton} onPress={onFavoritePress} hitSlop={8}>
             <Ionicons
@@ -34,9 +49,9 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
             />
           </Pressable>
         )}
-        {listing.discountPercentage && listing.discountPercentage > 0 && (
+        {discount > 0 && (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{listing.discountPercentage}% OFF</Text>
+            <Text style={styles.discountText}>{discount}% OFF</Text>
           </View>
         )}
       </View>
@@ -48,19 +63,19 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
           <Text style={styles.location} numberOfLines={1}>
-            {listing.city}{listing.district ? `, ${listing.district}` : ''}
+            {city}{district ? `, ${district}` : ''}
           </Text>
         </View>
         <View style={styles.bottomRow}>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{formatCurrency(listing.price)}</Text>
+            <Text style={styles.price}>{formatCurrency(price)}</Text>
             <Text style={styles.perNight}>/night</Text>
           </View>
-          {listing.rating > 0 && (
+          {rating > 0 && (
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color={Colors.accent} />
-              <Text style={styles.rating}>{formatRating(listing.rating)}</Text>
-              <Text style={styles.reviewCount}>({listing.reviewCount})</Text>
+              <Text style={styles.rating}>{formatRating(rating)}</Text>
+              <Text style={styles.reviewCount}>({reviewCount})</Text>
             </View>
           )}
         </View>
