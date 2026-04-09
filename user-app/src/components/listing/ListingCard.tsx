@@ -6,6 +6,17 @@ import { formatCurrency, formatRating } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import type { Listing } from '../../types';
 
+const TYPE_LABELS: Record<string, string> = {
+  chalet: 'Chalet',
+  apartment: 'Apartment',
+  villa: 'Villa',
+  studio: 'Studio',
+  farm: 'Farm',
+  camp: 'Camp',
+  resort: 'Resort',
+  hotel: 'Hotel',
+};
+
 interface Props {
   listing: Listing;
   onPress: () => void;
@@ -17,12 +28,18 @@ interface Props {
 export default function ListingCard({ listing, onPress, onFavoritePress, isFavorite, style }: Props) {
   const primaryImage = listing.images?.find((img) => img.isPrimary) ?? listing.images?.[0];
   const imageUri = typeof primaryImage === 'string' ? primaryImage : primaryImage?.url;
-  const price = listing.discountedPrice ?? listing.pricing?.perNight ?? 0;
+  const originalPrice = listing.pricing?.perNight ?? 0;
+  const price = listing.discountedPrice ?? originalPrice;
   const discount = listing.pricing?.discountPercent ?? 0;
+  const hasDiscount = discount > 0 && price < originalPrice;
   const city = listing.location?.city ?? '';
   const district = listing.location?.district;
   const rating = listing.ratings?.average ?? 0;
   const reviewCount = listing.ratings?.count ?? 0;
+  const guests = listing.capacity?.maxGuests;
+  const bedrooms = listing.capacity?.bedrooms;
+  const bathrooms = listing.capacity?.bathrooms;
+  const typeLabel = TYPE_LABELS[listing.type] ?? listing.type;
 
   return (
     <Pressable style={[styles.container, style]} onPress={onPress}>
@@ -49,11 +66,15 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
             />
           </Pressable>
         )}
-        {discount > 0 && (
+        {hasDiscount && (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>{discount}% OFF</Text>
           </View>
         )}
+        {/* Property type badge */}
+        <View style={styles.typeBadge}>
+          <Text style={styles.typeText}>{typeLabel}</Text>
+        </View>
       </View>
 
       <View style={styles.info}>
@@ -66,8 +87,36 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
             {city}{district ? `, ${district}` : ''}
           </Text>
         </View>
+
+        {/* Capacity stats row — matching web */}
+        {(guests || bedrooms || bathrooms) && (
+          <View style={styles.capacityRow}>
+            {guests ? (
+              <View style={styles.capacityStat}>
+                <Ionicons name="people-outline" size={13} color={Colors.textSecondary} />
+                <Text style={styles.capacityText}>{guests}</Text>
+              </View>
+            ) : null}
+            {bedrooms ? (
+              <View style={styles.capacityStat}>
+                <Ionicons name="bed-outline" size={13} color={Colors.textSecondary} />
+                <Text style={styles.capacityText}>{bedrooms}</Text>
+              </View>
+            ) : null}
+            {bathrooms ? (
+              <View style={styles.capacityStat}>
+                <Ionicons name="water-outline" size={13} color={Colors.textSecondary} />
+                <Text style={styles.capacityText}>{bathrooms}</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
+
         <View style={styles.bottomRow}>
           <View style={styles.priceRow}>
+            {hasDiscount && (
+              <Text style={styles.originalPrice}>{formatCurrency(originalPrice)}</Text>
+            )}
             <Text style={styles.price}>{formatCurrency(price)}</Text>
             <Text style={styles.perNight}>/night</Text>
           </View>
@@ -123,6 +172,20 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700',
   },
+  typeBadge: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    right: Spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.xs,
+  },
+  typeText: {
+    ...Typography.tiny,
+    color: Colors.white,
+    fontWeight: '600',
+  },
   info: {
     padding: Spacing.md,
     gap: Spacing.xs,
@@ -141,6 +204,20 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     flex: 1,
   },
+  capacityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  capacityStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  capacityText: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -150,6 +227,12 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    gap: 4,
+  },
+  originalPrice: {
+    ...Typography.small,
+    color: Colors.textTertiary,
+    textDecorationLine: 'line-through',
   },
   price: {
     ...Typography.bodyBold,
@@ -158,7 +241,6 @@ const styles = StyleSheet.create({
   perNight: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    marginLeft: 2,
   },
   ratingRow: {
     flexDirection: 'row',

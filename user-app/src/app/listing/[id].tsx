@@ -77,12 +77,20 @@ export default function ListingDetailScreen() {
     );
   }
 
-  const price = listing.discountedPrice ?? listing.pricing?.perNight ?? 0;
+  const originalPrice = listing.pricing?.perNight ?? 0;
+  const price = listing.discountedPrice ?? originalPrice;
+  const discount = listing.pricing?.discountPercent ?? 0;
+  const hasDiscount = discount > 0 && price < originalPrice;
   const rating = listing.ratings?.average ?? 0;
   const reviewCount = listing.ratings?.count ?? 0;
   const city = listing.location?.city ?? '';
   const district = listing.location?.district;
   const hostName = listing.host.name ?? `${listing.host.firstName ?? ''} ${listing.host.lastName ?? ''}`.trim();
+
+  const TYPE_LABELS: Record<string, string> = {
+    chalet: 'Chalet', apartment: 'Apartment', villa: 'Villa', studio: 'Studio',
+    farm: 'Farm', camp: 'Camp', resort: 'Resort', hotel: 'Hotel',
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -122,6 +130,18 @@ export default function ListingDetailScreen() {
         </View>
 
         <View style={styles.content}>
+          {/* Discount & Type badges */}
+          <View style={styles.badgesRow}>
+            {hasDiscount && (
+              <View style={styles.discountTag}>
+                <Text style={styles.discountTagText}>{discount}% OFF</Text>
+              </View>
+            )}
+            <View style={styles.typeTag}>
+              <Text style={styles.typeTagText}>{TYPE_LABELS[listing.type] ?? listing.type}</Text>
+            </View>
+          </View>
+
           {/* Title & Location */}
           <Text style={styles.listingTitle}>{listing.title}</Text>
           <View style={styles.locationRow}>
@@ -289,7 +309,12 @@ export default function ListingDetailScreen() {
       {/* Sticky Bottom Bar */}
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+            {hasDiscount && (
+              <Text style={styles.bottomOriginalPrice}>{formatCurrency(originalPrice)}</Text>
+            )}
+            <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
+          </View>
           <Text style={styles.bottomPerNight}>per night</Text>
         </View>
         <Pressable style={styles.bookButton} onPress={handleBook}>
@@ -334,6 +359,21 @@ const styles = StyleSheet.create({
   },
   imageBadgeText: { ...Typography.tiny, color: Colors.white },
   content: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.base },
+  badgesRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+  discountTag: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.xs,
+  },
+  discountTagText: { ...Typography.tiny, color: Colors.white, fontWeight: '700' },
+  typeTag: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.xs,
+  },
+  typeTagText: { ...Typography.tiny, color: Colors.white, fontWeight: '600' },
   listingTitle: { ...Typography.h2, color: Colors.textPrimary },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: Spacing.xs },
   locationText: { ...Typography.small, color: Colors.textSecondary },
@@ -420,6 +460,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     ...Shadows.bottomBar,
   },
+  bottomOriginalPrice: { ...Typography.small, color: Colors.textTertiary, textDecorationLine: 'line-through' },
   bottomPrice: { ...Typography.h3, color: Colors.primary },
   bottomPerNight: { ...Typography.caption, color: Colors.textSecondary },
   bookButton: {
