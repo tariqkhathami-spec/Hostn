@@ -2,9 +2,11 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { formatCurrency, formatRating } from '../../utils/format';
+import { formatCurrency, formatRating, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { translateDistrict, translateCity } from '../../constants/districts';
+import { useSearchStore } from '../../store/searchStore';
 import type { Listing } from '../../types';
 
 interface Props {
@@ -16,7 +18,8 @@ interface Props {
 }
 
 export default function ListingCard({ listing, onPress, onFavoritePress, isFavorite, style }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { checkIn, checkOut } = useSearchStore();
   const primaryImage = listing.images?.find((img) => img.isPrimary) ?? listing.images?.[0];
   const imageUri = typeof primaryImage === 'string' ? primaryImage : primaryImage?.url;
   const originalPrice = listing.pricing?.perNight ?? 0;
@@ -31,6 +34,23 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
   const bedrooms = listing.capacity?.bedrooms;
   const bathrooms = listing.capacity?.bathrooms;
   const typeLabel = t(('type.' + listing.type) as any) ?? listing.type;
+
+  // Date-aware pricing
+  const nights = checkIn && checkOut ? getNights(checkIn, checkOut) : 0;
+  const totalPrice = nights > 0 ? price * nights : 0;
+  const rateLabel = nights >= 30
+    ? t('listing.perMonth' as any)
+    : nights >= 7
+      ? t('listing.perWeek' as any)
+      : t('listing.perNight' as any);
+  const displayPrice = nights >= 30
+    ? price * 30
+    : nights >= 7
+      ? price * 7
+      : price;
+  const nightsLabel = nights === 1
+    ? t('listing.nightLabel' as any, { count: nights })
+    : t('listing.nightsLabel' as any, { count: nights });
 
   return (
     <Pressable style={[styles.container, style]} onPress={onPress}>
@@ -75,7 +95,7 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
           <Text style={styles.location} numberOfLines={1}>
-            {city}{district ? `, ${district}` : ''}
+            {translateCity(city, language)}{district ? `, ${translateDistrict(district, city, language)}` : ''}
           </Text>
         </View>
 
@@ -108,8 +128,8 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
             {hasDiscount && (
               <Text style={styles.originalPrice}>{formatCurrency(originalPrice)}</Text>
             )}
-            <Text style={styles.price}>{formatCurrency(price)}</Text>
-            <Text style={styles.perNight}>{t('listing.perNight')}</Text>
+            <Text style={styles.price}>{formatCurrency(displayPrice)}</Text>
+            <Text style={styles.perNight}>{rateLabel}</Text>
           </View>
           {rating > 0 && (
             <View style={styles.ratingRow}>
@@ -119,6 +139,11 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
             </View>
           )}
         </View>
+        {nights > 0 && (
+          <Text style={styles.totalPrice}>
+            {t('listing.totalFor' as any, { nights: nightsLabel, price: formatCurrency(totalPrice) })}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
@@ -245,5 +270,10 @@ const styles = StyleSheet.create({
   reviewCount: {
     ...Typography.caption,
     color: Colors.textSecondary,
+  },
+  totalPrice: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 });

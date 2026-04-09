@@ -23,6 +23,7 @@ import { useAuthStore } from '../../store/authStore';
 import { formatCurrency, formatRating } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { translateDistrict, translateCity } from '../../constants/districts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -155,7 +156,7 @@ export default function ListingDetailScreen() {
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
             <Text style={styles.locationText}>
-              {city}{district ? `, ${district}` : ''}
+              {translateCity(city, language)}{district ? `, ${translateDistrict(district, city, language)}` : ''}
             </Text>
           </View>
 

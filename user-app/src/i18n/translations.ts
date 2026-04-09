@@ -27,6 +27,11 @@ export const translations = {
     'listing.guests': 'guests',
     'listing.beds': 'beds',
     'listing.baths': 'baths',
+    'listing.perWeek': '/ week',
+    'listing.perMonth': '/ month',
+    'listing.totalFor': 'Total for {nights}: {price}',
+    'listing.nightLabel': '{count} night',
+    'listing.nightsLabel': '{count} nights',
 
     // Property Types
     'type.chalet': 'Chalet',
@@ -362,6 +367,11 @@ export const translations = {
     'listing.guests': 'ضيوف',
     'listing.beds': 'أسرّة',
     'listing.baths': 'حمامات',
+    'listing.perWeek': '/ أسبوع',
+    'listing.perMonth': '/ شهر',
+    'listing.totalFor': 'إجمالي {nights}: {price}',
+    'listing.nightLabel': '{count} ليلة',
+    'listing.nightsLabel': '{count} ليالٍ',
 
     // Property Types
     'type.chalet': 'شاليه',
