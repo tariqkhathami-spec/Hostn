@@ -4,7 +4,13 @@ import { useState, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { uploadApi } from '@/lib/api';
 import {
-  Loader2, X, ImagePlus, Plus, Trash2,
+  Loader2, X, ImagePlus, Plus, Minus, Trash2, Check,
+  BedDouble, Bath, Waves, UtensilsCrossed, Armchair,
+  Droplets, Sparkles, Thermometer, Shirt, Package,
+  Tv, Flame, Fan, Music, Dumbbell, Gamepad2, Film,
+  Lightbulb, TreePine, Mountain, Umbrella, Sun, Eye,
+  Wifi, Car, Shield, Briefcase, Scissors, Tent,
+  type LucideIcon,
 } from 'lucide-react';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -19,54 +25,26 @@ const t: Record<string, Record<string, string>> = {
   description:  { en: 'Description', ar: 'الوصف' },
   area:         { en: 'Area (m²)', ar: 'المساحة (م²)' },
   suitability:  { en: 'Suitable for', ar: 'مناسبة لـ' },
-  family:       { en: 'Families', ar: 'عائلات' },
-  singles:      { en: 'Singles', ar: 'أفراد' },
-  both:         { en: 'Both', ar: 'الكل' },
+  maxGuests:    { en: 'Max Guests', ar: 'أقصى عدد ضيوف' },
 
   photos:       { en: 'Photos', ar: 'الصور' },
-  uploadHint:   { en: 'Upload up to 10 photos', ar: 'ارفع حتى 10 صور' },
+  uploadHint:   { en: 'Upload photos (JPG, PNG)', ar: 'ارفع صور (JPG, PNG)' },
   uploading:    { en: 'Uploading...', ar: 'جاري الرفع...' },
   main:         { en: 'Main', ar: 'رئيسية' },
 
-  pricing:      { en: 'Pricing (SAR per night)', ar: 'التسعير (ر.س لليلة)' },
-  sunday:       { en: 'Sun', ar: 'أحد' },
-  monday:       { en: 'Mon', ar: 'إثنين' },
-  tuesday:      { en: 'Tue', ar: 'ثلاثاء' },
-  wednesday:    { en: 'Wed', ar: 'أربعاء' },
-  thursday:     { en: 'Thu', ar: 'خميس' },
-  friday:       { en: 'Fri', ar: 'جمعة' },
-  saturday:     { en: 'Sat', ar: 'سبت' },
-  cleaningFee:  { en: 'Cleaning Fee', ar: 'رسوم التنظيف' },
-  discount:     { en: 'Discount %', ar: 'خصم %' },
-  weeklyDiscount:{ en: 'Weekly Discount %', ar: 'خصم أسبوعي %' },
+  mainAmenities:{ en: 'Main Amenities', ar: 'المرافق الرئيسية' },
+  mainAmHint:   { en: 'Toggle to add details for each facility', ar: 'فعّل لإضافة تفاصيل كل مرفق' },
 
-  capacityTitle:{ en: 'Capacity & Deposit', ar: 'السعة والعربون' },
-  maxGuests:    { en: 'Max Guests', ar: 'أقصى عدد ضيوف' },
-  deposit:      { en: 'Deposit %', ar: 'نسبة العربون %' },
-  insurance:    { en: 'Insurance on Arrival', ar: 'تأمين عند الوصول' },
-  insuranceAmt: { en: 'Insurance Amount (SAR)', ar: 'مبلغ التأمين (ر.س)' },
-
-  roomsTitle:   { en: 'Rooms', ar: 'الغرف' },
-  livingRooms:  { en: 'Living Rooms', ar: 'غرف المعيشة' },
-  mainLiving:   { en: 'Main', ar: 'رئيسية' },
-  additional:   { en: 'Additional', ar: 'إضافية' },
-  outdoor:      { en: 'Outdoor', ar: 'خارجية' },
-  outdoorRoom:  { en: 'Outdoor Room', ar: 'غرفة خارجية' },
   bedroomsTitle:{ en: 'Bedrooms', ar: 'غرف النوم' },
   bedroomCount: { en: 'Rooms', ar: 'الغرف' },
   singleBeds:   { en: 'Single Beds', ar: 'أسرّة فردية' },
   doubleBeds:   { en: 'Double Beds', ar: 'أسرّة مزدوجة' },
-  bathrooms:    { en: 'Bathrooms', ar: 'الحمامات' },
+
+  bathroomTitle:{ en: 'Bathrooms', ar: 'الحمامات' },
   bathroomCount:{ en: 'Count', ar: 'العدد' },
   bathroomAmns: { en: 'Bathroom Amenities', ar: 'مستلزمات الحمام' },
 
-  kitchenTitle: { en: 'Kitchen', ar: 'المطبخ' },
-  hasKitchen:   { en: 'Has Kitchen', ar: 'يوجد مطبخ' },
-  diningCap:    { en: 'Dining Capacity', ar: 'سعة الطعام' },
-  kitchenAmns:  { en: 'Kitchen Amenities', ar: 'مستلزمات المطبخ' },
-
   poolsTitle:   { en: 'Pools', ar: 'المسابح' },
-  hasPool:      { en: 'Has Pool', ar: 'يوجد مسبح' },
   addPool:      { en: 'Add Pool', ar: 'إضافة مسبح' },
   poolType:     { en: 'Pool Type', ar: 'نوع المسبح' },
   varDepth:     { en: 'Variable Depth', ar: 'عمق متغير' },
@@ -77,23 +55,34 @@ const t: Record<string, Record<string, string>> = {
   width:        { en: 'Width (m)', ar: 'العرض (م)' },
   isEmpty:      { en: 'Empty', ar: 'فارغ' },
 
-  amenitiesTitle:{ en: 'Amenities', ar: 'المرافق' },
-  featuresTitle: { en: 'Features', ar: 'الميزات' },
+  kitchenTitle: { en: 'Kitchen', ar: 'المطبخ' },
+  diningCap:    { en: 'Dining Capacity', ar: 'سعة الطعام' },
+  kitchenAmns:  { en: 'Kitchen Amenities', ar: 'مستلزمات المطبخ' },
 
-  rulesTitle:   { en: 'Cancellation & Rules', ar: 'الإلغاء والقواعد' },
-  cancelPolicy: { en: 'Cancellation Policy', ar: 'سياسة الإلغاء' },
-  cancelDesc:   { en: 'Cancellation Description', ar: 'وصف سياسة الإلغاء' },
+  livingTitle:  { en: 'Living Rooms', ar: 'غرف المعيشة' },
+  mainLiving:   { en: 'Main', ar: 'رئيسية' },
+  additional:   { en: 'Additional', ar: 'إضافية' },
+  outdoor:      { en: 'Outdoor', ar: 'خارجية' },
+  annex:        { en: 'Annex', ar: 'ملحق' },
+
+  addlAmenities:{ en: 'Additional Amenities', ar: 'مرافق إضافية' },
+  featuresTitle:{ en: 'Features', ar: 'الميزات' },
+
+  insuranceTitle:{ en: 'Insurance', ar: 'التأمين' },
+  insurance:    { en: 'Insurance on Arrival', ar: 'تأمين عند الوصول' },
+  insuranceAmt: { en: 'Insurance Amount (SAR)', ar: 'مبلغ التأمين (ر.س)' },
+
+  cancelTitle:  { en: 'Cancellation Policy', ar: 'سياسة الإلغاء' },
+  rulesTitle:   { en: 'Rules', ar: 'القواعد' },
   writtenRules: { en: 'Written Rules', ar: 'القواعد المكتوبة' },
 
   save:         { en: 'Save Unit', ar: 'حفظ الوحدة' },
   saving:       { en: 'Saving...', ar: 'جاري الحفظ...' },
   create:       { en: 'Create Unit', ar: 'إنشاء الوحدة' },
-  yes:          { en: 'Yes', ar: 'نعم' },
-  no:           { en: 'No', ar: 'لا' },
 };
 
 /* ══════════════════════════════════════════════════════════════════════
-   ENUM LABELS
+   ENUM / DATA
    ══════════════════════════════════════════════════════════════════════ */
 const SUITABILITY_OPTIONS = [
   { value: 'family', en: 'Families', ar: 'عائلات' },
@@ -101,11 +90,42 @@ const SUITABILITY_OPTIONS = [
   { value: 'both', en: 'Both', ar: 'الكل' },
 ];
 
-const CANCEL_POLICIES = [
-  { value: 'free', en: 'Free', ar: 'مجاني' },
-  { value: 'flexible', en: 'Flexible', ar: 'مرن' },
-  { value: 'normal', en: 'Normal', ar: 'عادي' },
-  { value: 'restricted', en: 'Restricted', ar: 'مقيد' },
+/* ── Main amenity toggle definitions ── */
+interface MainToggle { key: string; en: string; ar: string; icon: LucideIcon }
+const MAIN_TOGGLES: MainToggle[] = [
+  { key: 'hasBedrooms',    en: 'Bedrooms',     ar: 'غرف النوم',   icon: BedDouble },
+  { key: 'hasBathrooms',   en: 'Bathrooms',    ar: 'الحمامات',    icon: Bath },
+  { key: 'hasPool',        en: 'Pool',         ar: 'مسبح',        icon: Waves },
+  { key: 'hasKitchen',     en: 'Kitchen',      ar: 'المطبخ',      icon: UtensilsCrossed },
+  { key: 'hasLivingRooms', en: 'Living Room',  ar: 'غرف المعيشة', icon: Armchair },
+];
+
+/* ── Cancellation policies (radio cards) ── */
+const CANCEL_POLICIES: {
+  value: string;
+  en: { title: string; desc: string; detail?: string };
+  ar: { title: string; desc: string; detail?: string };
+}[] = [
+  {
+    value: 'free',
+    en: { title: 'Free', desc: 'Guest can cancel or modify at any time before 12:00 PM on check-in day (deposit refunded)', detail: 'Guest can cancel one or more nights at any time before the check-in date or before the modified night (deposit refunded)' },
+    ar: { title: 'مجانا', desc: 'عندما يقوم الضيف بالغاء كامل الحجز أو تعديل بعض الليالي في أي وقت قبل الساعة 12 ظهرا بتاريخ الدخول أو قبل تاريخ الليلة المعدلة (يسترجع العربون)' },
+  },
+  {
+    value: 'flexible',
+    en: { title: 'Flexible (Recommended)', desc: 'Cancel 2 days before check-in, deposit refunded', detail: 'Guest can cancel one or more nights 48 hours before the night date' },
+    ar: { title: 'مرن (موصى به)', desc: 'عندما يقوم الضيف بالغاء الحجز قبل يوم الدخول بيومين يسترجع له العربون', detail: 'يسمح للضيف بإلغاء ليلة أو أكثر من الحجز قبل 48 ساعة من تاريخ الليلة المراد إلغائها' },
+  },
+  {
+    value: 'normal',
+    en: { title: 'Moderate', desc: 'Cancel 4 days before check-in, deposit refunded', detail: 'Guest can cancel one or more nights 4 days before the night date' },
+    ar: { title: 'معتدل', desc: 'عندما يقوم الضيف بالغاء الحجز قبل يوم الدخول بأربع ايام يسترجع العربون', detail: 'يسمح للضيف بإلغاء ليلة أو أكثر من الحجز قبل 4 أيام من تاريخ الليلة المراد إلغائها' },
+  },
+  {
+    value: 'restricted',
+    en: { title: 'Strict (Not Recommended)', desc: 'No refund and no cancellation allowed' },
+    ar: { title: 'صارم (غير موصى به)', desc: 'لا يسترجع العربون ولا يسمح بالإلغاء الحجز أو الليالي' },
+  },
 ];
 
 const POOL_TYPES = [
@@ -118,85 +138,85 @@ const POOL_TYPES = [
   { value: 'heated', en: 'Heated', ar: 'مُدفأ' },
 ];
 
-const BATHROOM_AMENITIES: { value: string; en: string; ar: string }[] = [
-  { value: 'bath', en: 'Bathtub', ar: 'حوض استحمام' },
-  { value: 'shower', en: 'Shower', ar: 'دش' },
-  { value: 'jacuzzi', en: 'Jacuzzi', ar: 'جاكوزي' },
-  { value: 'sauna', en: 'Sauna', ar: 'ساونا' },
-  { value: 'tissues', en: 'Tissues', ar: 'مناديل' },
-  { value: 'soap', en: 'Soap', ar: 'صابون' },
-  { value: 'shampoo', en: 'Shampoo', ar: 'شامبو' },
-  { value: 'slippers', en: 'Slippers', ar: 'شباشب' },
-  { value: 'robe', en: 'Bathrobe', ar: 'روب' },
+const BATHROOM_AMENITIES: { value: string; en: string; ar: string; icon: LucideIcon }[] = [
+  { value: 'bath', en: 'Bathtub', ar: 'حوض استحمام', icon: Bath },
+  { value: 'shower', en: 'Shower', ar: 'دش', icon: Droplets },
+  { value: 'jacuzzi', en: 'Jacuzzi', ar: 'جاكوزي', icon: Waves },
+  { value: 'sauna', en: 'Sauna', ar: 'ساونا', icon: Thermometer },
+  { value: 'tissues', en: 'Tissues', ar: 'مناديل', icon: Package },
+  { value: 'soap', en: 'Soap', ar: 'صابون', icon: Sparkles },
+  { value: 'shampoo', en: 'Shampoo', ar: 'شامبو', icon: Droplets },
+  { value: 'slippers', en: 'Slippers', ar: 'شباشب', icon: Fan },
+  { value: 'robe', en: 'Bathrobe', ar: 'روب', icon: Shirt },
 ];
 
-const KITCHEN_AMENITIES: { value: string; en: string; ar: string }[] = [
-  { value: 'equipped_kitchen', en: 'Equipped Kitchen', ar: 'مطبخ مجهز' },
-  { value: 'refrigerator', en: 'Refrigerator', ar: 'ثلاجة' },
-  { value: 'freezer', en: 'Freezer', ar: 'فريزر' },
-  { value: 'furnace', en: 'Stove', ar: 'موقد' },
-  { value: 'microwave', en: 'Microwave', ar: 'مايكروويف' },
-  { value: 'water_kettle', en: 'Water Kettle', ar: 'غلاية' },
-  { value: 'coffee_machine', en: 'Coffee Machine', ar: 'ماكينة قهوة' },
-  { value: 'dishes', en: 'Dishes', ar: 'أواني' },
-  { value: 'washing_machine', en: 'Washing Machine', ar: 'غسالة' },
+const KITCHEN_AMENITIES: { value: string; en: string; ar: string; icon: LucideIcon }[] = [
+  { value: 'equipped_kitchen', en: 'Equipped Kitchen', ar: 'مطبخ مجهز', icon: UtensilsCrossed },
+  { value: 'refrigerator', en: 'Refrigerator', ar: 'ثلاجة', icon: Thermometer },
+  { value: 'freezer', en: 'Freezer', ar: 'فريزر', icon: Thermometer },
+  { value: 'furnace', en: 'Stove', ar: 'موقد', icon: Flame },
+  { value: 'microwave', en: 'Microwave', ar: 'مايكروويف', icon: Lightbulb },
+  { value: 'water_kettle', en: 'Water Kettle', ar: 'غلاية', icon: Droplets },
+  { value: 'coffee_machine', en: 'Coffee Machine', ar: 'ماكينة قهوة', icon: Droplets },
+  { value: 'dishes', en: 'Dishes', ar: 'أواني', icon: UtensilsCrossed },
+  { value: 'washing_machine', en: 'Washing Machine', ar: 'غسالة', icon: Fan },
 ];
 
-const UNIT_AMENITIES: { value: string; en: string; ar: string }[] = [
-  { value: 'tv', en: 'TV', ar: 'تلفزيون' },
-  { value: 'balcony', en: 'Balcony', ar: 'شرفة' },
-  { value: 'outdoor_seating', en: 'Outdoor Seating', ar: 'جلسة خارجية' },
-  { value: 'green_area', en: 'Green Area', ar: 'مسطحات خضراء' },
-  { value: 'bbq_area', en: 'BBQ Area', ar: 'منطقة شواء' },
-  { value: 'fire_pit', en: 'Fire Pit', ar: 'حفرة نار' },
-  { value: 'mist_fan', en: 'Mist Fan', ar: 'مروحة رذاذ' },
-  { value: 'speakers', en: 'Speakers', ar: 'سماعات' },
-  { value: 'extra_lighting', en: 'Extra Lighting', ar: 'إضاءة إضافية' },
-  { value: 'projector', en: 'Projector', ar: 'بروجكتر' },
-  { value: 'shared_pool', en: 'Shared Pool', ar: 'مسبح مشترك' },
-  { value: 'lit_pool', en: 'Lit Pool', ar: 'مسبح مضاء' },
-  { value: 'slide', en: 'Slide', ar: 'زحليقة' },
-  { value: 'two_sections', en: 'Two Sections', ar: 'قسمين' },
-  { value: 'two_separate_sections', en: 'Two Separate Sections', ar: 'قسمين منفصلين' },
-  { value: 'two_sections_connected', en: 'Two Sections (connected)', ar: 'قسمين (متصلين)' },
-  { value: 'womens_pool', en: "Women's Pool", ar: 'مسبح نسائي' },
-  { value: 'outdoor_annex', en: 'Outdoor Annex', ar: 'ملحق خارجي' },
-  { value: 'tent', en: 'Tent', ar: 'خيمة' },
-  { value: 'dining_hall', en: 'Dining Hall', ar: 'قاعة طعام' },
-  { value: 'sand_skiing', en: 'Sand Skiing', ar: 'تزلج على الرمال' },
-  { value: 'drivers_room', en: "Driver's Room", ar: 'غرفة سائق' },
-  { value: 'cinema_room', en: 'Cinema Room', ar: 'غرفة سينما' },
-  { value: 'luxury_salon', en: 'Luxury Salon', ar: 'صالون فاخر' },
-  { value: 'hair_salon', en: 'Hair Salon', ar: 'صالون تجميل' },
-  { value: 'bridal_room', en: 'Bridal Room', ar: 'غرفة عروس' },
-  { value: 'zipline', en: 'Zipline', ar: 'زيبلاين' },
-  { value: 'volleyball', en: 'Volleyball', ar: 'كرة طائرة' },
-  { value: 'basketball', en: 'Basketball', ar: 'كرة سلة' },
-  { value: 'football', en: 'Football', ar: 'كرة قدم' },
-  { value: 'table_tennis', en: 'Table Tennis', ar: 'تنس طاولة' },
-  { value: 'playstation', en: 'PlayStation', ar: 'بلايستيشن' },
-  { value: 'sand_games', en: 'Sand Games', ar: 'ألعاب رملية' },
-  { value: 'kids_playground', en: 'Kids Playground', ar: 'ملعب أطفال' },
-  { value: 'billiards', en: 'Billiards', ar: 'بلياردو' },
-  { value: 'trampoline', en: 'Trampoline', ar: 'ترامبولين' },
-  { value: 'massage_chairs', en: 'Massage Chairs', ar: 'كراسي مساج' },
+const UNIT_AMENITIES: { value: string; en: string; ar: string; icon: LucideIcon }[] = [
+  { value: 'tv', en: 'TV', ar: 'تلفزيون', icon: Tv },
+  { value: 'balcony', en: 'Balcony', ar: 'شرفة', icon: Eye },
+  { value: 'outdoor_seating', en: 'Outdoor Seating', ar: 'جلسة خارجية', icon: Sun },
+  { value: 'green_area', en: 'Green Area', ar: 'مسطحات خضراء', icon: TreePine },
+  { value: 'bbq_area', en: 'BBQ Area', ar: 'منطقة شواء', icon: Flame },
+  { value: 'fire_pit', en: 'Fire Pit', ar: 'حفرة نار', icon: Flame },
+  { value: 'mist_fan', en: 'Mist Fan', ar: 'مروحة رذاذ', icon: Fan },
+  { value: 'speakers', en: 'Speakers', ar: 'سماعات', icon: Music },
+  { value: 'extra_lighting', en: 'Extra Lighting', ar: 'إضاءة إضافية', icon: Lightbulb },
+  { value: 'projector', en: 'Projector', ar: 'بروجكتر', icon: Film },
+  { value: 'shared_pool', en: 'Shared Pool', ar: 'مسبح مشترك', icon: Waves },
+  { value: 'lit_pool', en: 'Lit Pool', ar: 'مسبح مضاء', icon: Waves },
+  { value: 'slide', en: 'Slide', ar: 'زحليقة', icon: Dumbbell },
+  { value: 'two_sections', en: 'Two Sections', ar: 'قسمين', icon: Shield },
+  { value: 'two_separate_sections', en: 'Two Separate Sections', ar: 'قسمين منفصلين', icon: Shield },
+  { value: 'two_sections_connected', en: 'Two Sections (connected)', ar: 'قسمين (متصلين)', icon: Shield },
+  { value: 'womens_pool', en: "Women's Pool", ar: 'مسبح نسائي', icon: Waves },
+  { value: 'outdoor_annex', en: 'Outdoor Annex', ar: 'ملحق خارجي', icon: Tent },
+  { value: 'tent', en: 'Tent', ar: 'خيمة', icon: Tent },
+  { value: 'dining_hall', en: 'Dining Hall', ar: 'قاعة طعام', icon: UtensilsCrossed },
+  { value: 'sand_skiing', en: 'Sand Skiing', ar: 'تزلج على الرمال', icon: Mountain },
+  { value: 'drivers_room', en: "Driver's Room", ar: 'غرفة سائق', icon: Car },
+  { value: 'cinema_room', en: 'Cinema Room', ar: 'غرفة سينما', icon: Film },
+  { value: 'luxury_salon', en: 'Luxury Salon', ar: 'صالون فاخر', icon: Sparkles },
+  { value: 'hair_salon', en: 'Hair Salon', ar: 'صالون تجميل', icon: Scissors },
+  { value: 'bridal_room', en: 'Bridal Room', ar: 'غرفة عروس', icon: Sparkles },
+  { value: 'zipline', en: 'Zipline', ar: 'زيبلاين', icon: Dumbbell },
+  { value: 'volleyball', en: 'Volleyball', ar: 'كرة طائرة', icon: Dumbbell },
+  { value: 'basketball', en: 'Basketball', ar: 'كرة سلة', icon: Dumbbell },
+  { value: 'football', en: 'Football', ar: 'كرة قدم', icon: Dumbbell },
+  { value: 'table_tennis', en: 'Table Tennis', ar: 'تنس طاولة', icon: Gamepad2 },
+  { value: 'playstation', en: 'PlayStation', ar: 'بلايستيشن', icon: Gamepad2 },
+  { value: 'sand_games', en: 'Sand Games', ar: 'ألعاب رملية', icon: Sun },
+  { value: 'kids_playground', en: 'Kids Playground', ar: 'ملعب أطفال', icon: Dumbbell },
+  { value: 'billiards', en: 'Billiards', ar: 'بلياردو', icon: Gamepad2 },
+  { value: 'trampoline', en: 'Trampoline', ar: 'ترامبولين', icon: Dumbbell },
+  { value: 'massage_chairs', en: 'Massage Chairs', ar: 'كراسي مساج', icon: Armchair },
 ];
 
-const UNIT_FEATURES: { value: string; en: string; ar: string }[] = [
-  { value: 'internet', en: 'Internet', ar: 'إنترنت' },
-  { value: 'parking', en: 'Parking', ar: 'موقف سيارات' },
-  { value: 'elevator', en: 'Elevator', ar: 'مصعد' },
-  { value: 'self_checkin', en: 'Self Check-in', ar: 'دخول ذاتي' },
-  { value: 'cleaning', en: 'Cleaning Service', ar: 'خدمة تنظيف' },
-  { value: 'security_office', en: 'Security', ar: 'حراسة أمنية' },
-  { value: 'workspace', en: 'Workspace', ar: 'مساحة عمل' },
-  { value: 'wardrobe', en: 'Wardrobe', ar: 'خزانة ملابس' },
-  { value: 'personal_care', en: 'Personal Care', ar: 'عناية شخصية' },
-  { value: 'mountain_view', en: 'Mountain View', ar: 'إطلالة جبلية' },
-  { value: 'sea_view', en: 'Sea View', ar: 'إطلالة بحرية' },
-  { value: 'garden_view', en: 'Garden View', ar: 'إطلالة حديقة' },
-  { value: 'mountain_waterfall', en: 'Mountain Waterfall', ar: 'شلال جبلي' },
-  { value: 'private_beach', en: 'Private Beach', ar: 'شاطئ خاص' },
+const UNIT_FEATURES: { value: string; en: string; ar: string; icon: LucideIcon }[] = [
+  { value: 'internet', en: 'Internet', ar: 'إنترنت', icon: Wifi },
+  { value: 'parking', en: 'Parking', ar: 'موقف سيارات', icon: Car },
+  { value: 'elevator', en: 'Elevator', ar: 'مصعد', icon: Briefcase },
+  { value: 'self_checkin', en: 'Self Check-in', ar: 'دخول ذاتي', icon: Shield },
+  { value: 'cleaning', en: 'Cleaning Service', ar: 'خدمة تنظيف', icon: Sparkles },
+  { value: 'security_office', en: 'Security', ar: 'حراسة أمنية', icon: Shield },
+  { value: 'workspace', en: 'Workspace', ar: 'مساحة عمل', icon: Briefcase },
+  { value: 'wardrobe', en: 'Wardrobe', ar: 'خزانة ملابس', icon: Shirt },
+  { value: 'personal_care', en: 'Personal Care', ar: 'عناية شخصية', icon: Sparkles },
+  { value: 'mountain_view', en: 'Mountain View', ar: 'إطلالة جبلية', icon: Mountain },
+  { value: 'sea_view', en: 'Sea View', ar: 'إطلالة بحرية', icon: Waves },
+  { value: 'garden_view', en: 'Garden View', ar: 'إطلالة حديقة', icon: TreePine },
+  { value: 'mountain_waterfall', en: 'Mountain Waterfall', ar: 'شلال جبلي', icon: Droplets },
+  { value: 'private_beach', en: 'Private Beach', ar: 'شاطئ خاص', icon: Umbrella },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -226,7 +246,6 @@ export interface UnitFormData {
   cancellationPolicy: string;
   cancellationDescription: string;
   writtenRules: string;
-  // rooms
   hasLivingRooms: boolean;
   livingMain: string;
   livingAdditional: string;
@@ -240,18 +259,10 @@ export interface UnitFormData {
   hasKitchen: boolean;
   diningCapacity: string;
   hasPool: boolean;
-  // pricing
-  priceSun: string;
-  priceMon: string;
-  priceTue: string;
-  priceWed: string;
-  priceThu: string;
-  priceFri: string;
-  priceSat: string;
-  cleaningFee: string;
-  discountPercent: string;
-  weeklyDiscount: string;
-  // capacity
+  // pricing (kept for backward compat; hidden in form)
+  priceSun: string; priceMon: string; priceTue: string; priceWed: string;
+  priceThu: string; priceFri: string; priceSat: string;
+  cleaningFee: string; discountPercent: string; weeklyDiscount: string;
   maxGuests: string;
 }
 
@@ -267,6 +278,30 @@ export const defaultFormData: UnitFormData = {
   cleaningFee: '0', discountPercent: '0', weeklyDiscount: '0',
   maxGuests: '1',
 };
+
+/* ══════════════════════════════════════════════════════════════════════
+   NUMBER STEPPER COMPONENT
+   ══════════════════════════════════════════════════════════════════════ */
+function NumberStepper({ value, onChange, min = 0, max = 99, label }: {
+  value: number; onChange: (v: number) => void; min?: number; max?: number; label?: string;
+}) {
+  return (
+    <div>
+      {label && <label className="block text-xs font-medium text-gray-600 mb-1.5">{label}</label>}
+      <div className="inline-flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50/50">
+        <button type="button" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min}
+          className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors">
+          <Minus className="w-4 h-4" />
+        </button>
+        <span className="w-10 text-center text-sm font-semibold text-gray-900 select-none">{value}</span>
+        <button type="button" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}
+          className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors">
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    COMPONENT
@@ -309,7 +344,10 @@ export default function UnitForm({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* ── Helpers ─────────────────────────────────────── */
+  // hasBathrooms is derived from bathroomCount > 0 for backward compat
+  const hasBathrooms = Number(form.bathroomCount) > 0 || bathroomAmenities.length > 0;
+
+  /* ── Helpers ─────────────────────────────────── */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -319,14 +357,37 @@ export default function UnitForm({
   const toggleInArray = (arr: string[], setArr: (v: string[]) => void, val: string) => {
     setArr(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
   };
+  const setStepper = (key: keyof UnitFormData, val: number) => {
+    setForm({ ...form, [key]: String(val) });
+  };
 
-  /* ── Image upload (same pattern as property edit) ── */
+  /* ── Main toggle handler (hasBathrooms is special) ── */
+  const handleMainToggle = (key: string) => {
+    if (key === 'hasBathrooms') {
+      // Toggle by setting bathroom count to 1 or 0
+      if (hasBathrooms) {
+        setForm({ ...form, bathroomCount: '0' });
+        setBathroomAmenities([]);
+      } else {
+        setForm({ ...form, bathroomCount: '1' });
+      }
+    } else {
+      toggleBool(key as keyof UnitFormData);
+    }
+  };
+  const isMainToggleActive = (key: string) => {
+    if (key === 'hasBathrooms') return hasBathrooms;
+    return !!form[key as keyof UnitFormData];
+  };
+
+  /* ── Image upload ── */
+  const MAX_IMAGES = 30;
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png'];
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const remaining = 10 - images.length;
-    if (remaining <= 0) { toast.error(isAr ? 'الحد الأقصى 10 صور' : 'Maximum 10 images'); return; }
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) { toast.error(isAr ? `الحد الأقصى ${MAX_IMAGES} صور` : `Maximum ${MAX_IMAGES} images`); return; }
     const toUpload = Array.from(files).slice(0, remaining);
     const invalid = toUpload.filter(f => !ALLOWED_IMAGE_TYPES.includes(f.type));
     if (invalid.length > 0) { toast.error(isAr ? 'يُقبل فقط صور JPG و PNG' : 'Only JPG and PNG accepted'); if (fileInputRef.current) fileInputRef.current.value = ''; return; }
@@ -392,7 +453,6 @@ export default function UnitForm({
         },
         capacity: { maxGuests: Number(form.maxGuests) || 1 },
         bathroomCount: Number(form.bathroomCount) || 0,
-        // Rooms
         hasLivingRooms: form.hasLivingRooms,
         livingRooms: form.hasLivingRooms
           ? { main: Number(form.livingMain) || 0, additional: Number(form.livingAdditional) || 0, outdoor: Number(form.livingOutdoor) || 0, outdoorRoom: Number(form.livingOutdoorRoom) || 0 }
@@ -419,9 +479,9 @@ export default function UnitForm({
   /* ── Styles ── */
   const inputClass = 'w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 focus:ring-2 focus:ring-primary-400/40 focus:border-primary-300 focus:bg-white outline-none text-sm transition-all duration-200';
   const sectionTitle = 'text-base font-semibold text-gray-900 mb-3';
-  const toggleBtnClass = (active: boolean) =>
-    `flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm transition-colors text-start ${
-      active ? 'border-primary-500 bg-primary-50 text-primary-700 font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+  const iconToggleBtn = (active: boolean) =>
+    `flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-sm transition-all text-start ${
+      active ? 'border-primary-500 bg-primary-50 text-primary-700 font-medium shadow-sm' : 'border-gray-200 text-gray-500 hover:border-gray-300'
     }`;
 
   const btnLabel = submitLabel || (initialData ? t.save : t.create);
@@ -445,7 +505,7 @@ export default function UnitForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">{t.description[lang]}</label>
           <textarea name="description" value={form.description} onChange={handleChange} rows={3} className={inputClass} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.area[lang]}</label>
             <input name="area" type="number" min="0" value={form.area} onChange={handleChange} className={inputClass} />
@@ -456,6 +516,10 @@ export default function UnitForm({
               {SUITABILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o[lang]}</option>)}
             </select>
           </div>
+          <div>
+            <NumberStepper label={t.maxGuests[lang]} value={Number(form.maxGuests) || 1}
+              onChange={(v) => setStepper('maxGuests', v)} min={1} max={100} />
+          </div>
         </div>
       </div>
 
@@ -463,7 +527,7 @@ export default function UnitForm({
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.photos[lang]}</h2>
         <p className="text-xs text-gray-500 mb-3">{t.uploadHint[lang]}</p>
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
           {images.map((img, idx) => (
             <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
               <Image src={img.url} alt="" fill className="object-cover" unoptimized />
@@ -478,190 +542,85 @@ export default function UnitForm({
               </div>
             </div>
           ))}
-          {images.length < 10 && (
-            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-              className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-primary-400 hover:text-primary-500 transition-colors disabled:opacity-50">
-              {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
-              <span className="text-[10px]">{uploading ? t.uploading[lang] : (isAr ? 'إضافة' : 'Add')}</span>
-            </button>
-          )}
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+            className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-primary-400 hover:text-primary-500 transition-colors disabled:opacity-50">
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+            <span className="text-[10px]">{uploading ? t.uploading[lang] : (isAr ? 'إضافة' : 'Add')}</span>
+          </button>
         </div>
         <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" multiple onChange={handleImageUpload} className="hidden" />
       </div>
 
-      {/* ── 3. Pricing ────────────────────────────────────── */}
+      {/* ── 3. Main Amenities (toggle grid) ───────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className={sectionTitle}>{t.pricing[lang]}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
-          {[
-            { key: 'priceSun', label: t.sunday },
-            { key: 'priceMon', label: t.monday },
-            { key: 'priceTue', label: t.tuesday },
-            { key: 'priceWed', label: t.wednesday },
-            { key: 'priceThu', label: t.thursday },
-            { key: 'priceFri', label: t.friday },
-            { key: 'priceSat', label: t.saturday },
-          ].map(({ key, label }) => (
-            <div key={key}>
-              <label className="block text-xs font-medium text-gray-600 mb-1">{label[lang]}</label>
-              <input name={key} type="number" min="0" value={form[key as keyof UnitFormData] as string} onChange={handleChange} className={inputClass} />
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.cleaningFee[lang]}</label>
-            <input name="cleaningFee" type="number" min="0" value={form.cleaningFee} onChange={handleChange} className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.discount[lang]}</label>
-            <input name="discountPercent" type="number" min="0" max="100" value={form.discountPercent} onChange={handleChange} className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.weeklyDiscount[lang]}</label>
-            <input name="weeklyDiscount" type="number" min="0" max="100" value={form.weeklyDiscount} onChange={handleChange} className={inputClass} />
-          </div>
-        </div>
-      </div>
+        <h2 className={sectionTitle}>{t.mainAmenities[lang]}</h2>
+        <p className="text-xs text-gray-500 mb-4">{t.mainAmHint[lang]}</p>
 
-      {/* ── 4. Capacity & Deposit ─────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className={sectionTitle}>{t.capacityTitle[lang]}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.maxGuests[lang]}</label>
-            <input name="maxGuests" type="number" min="1" value={form.maxGuests} onChange={handleChange} className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.deposit[lang]}</label>
-            <input name="depositPercent" type="number" min="0" max="100" value={form.depositPercent} onChange={handleChange} className={inputClass} />
-          </div>
-          <div className="flex items-end gap-2">
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer pb-3">
-              <input type="checkbox" checked={form.insuranceOnArrival} onChange={() => toggleBool('insuranceOnArrival')}
-                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-              {t.insurance[lang]}
-            </label>
-          </div>
-          {form.insuranceOnArrival && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t.insuranceAmt[lang]}</label>
-              <input name="insuranceAmount" type="number" min="0" value={form.insuranceAmount} onChange={handleChange} className={inputClass} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── 5. Rooms ──────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
-        <h2 className={sectionTitle}>{t.roomsTitle[lang]}</h2>
-
-        {/* Living rooms */}
-        <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer">
-            <input type="checkbox" checked={form.hasLivingRooms} onChange={() => toggleBool('hasLivingRooms')}
-              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-            {t.livingRooms[lang]}
-          </label>
-          {form.hasLivingRooms && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 ms-6">
-              {[
-                { key: 'livingMain', label: t.mainLiving },
-                { key: 'livingAdditional', label: t.additional },
-                { key: 'livingOutdoor', label: t.outdoor },
-                { key: 'livingOutdoorRoom', label: t.outdoorRoom },
-              ].map(({ key, label }) => (
-                <div key={key}>
-                  <label className="block text-xs text-gray-600 mb-1">{label[lang]}</label>
-                  <input name={key} type="number" min="0" value={form[key as keyof UnitFormData] as string} onChange={handleChange} className={inputClass} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Bedrooms */}
-        <div>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer">
-            <input type="checkbox" checked={form.hasBedrooms} onChange={() => toggleBool('hasBedrooms')}
-              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-            {t.bedroomsTitle[lang]}
-          </label>
-          {form.hasBedrooms && (
-            <div className="grid grid-cols-3 gap-3 ms-6">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">{t.bedroomCount[lang]}</label>
-                <input name="bedroomCount" type="number" min="0" value={form.bedroomCount} onChange={handleChange} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">{t.singleBeds[lang]}</label>
-                <input name="singleBeds" type="number" min="0" value={form.singleBeds} onChange={handleChange} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">{t.doubleBeds[lang]}</label>
-                <input name="doubleBeds" type="number" min="0" value={form.doubleBeds} onChange={handleChange} className={inputClass} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bathrooms */}
-        <div>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t.bathroomCount[lang]}</label>
-              <input name="bathroomCount" type="number" min="0" value={form.bathroomCount} onChange={handleChange} className={inputClass} />
-            </div>
-          </div>
-          <p className="text-xs font-medium text-gray-600 mb-2">{t.bathroomAmns[lang]}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {BATHROOM_AMENITIES.map((a) => (
-              <button key={a.value} type="button" onClick={() => toggleInArray(bathroomAmenities, setBathroomAmenities, a.value)}
-                className={toggleBtnClass(bathroomAmenities.includes(a.value))}>
-                {a[lang]}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {MAIN_TOGGLES.map((tog) => {
+            const active = isMainToggleActive(tog.key);
+            const Icon = tog.icon;
+            return (
+              <button key={tog.key} type="button" onClick={() => handleMainToggle(tog.key)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  active
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                    : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-500'
+                }`}>
+                <Icon className="w-8 h-8" />
+                <span className="text-xs font-medium text-center">{tog[lang]}</span>
+                {active && <Check className="w-4 h-4 text-primary-500" />}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </div>
 
-      {/* ── 6. Kitchen ────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3 cursor-pointer">
-          <input type="checkbox" checked={form.hasKitchen} onChange={() => toggleBool('hasKitchen')}
-            className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-          {t.kitchenTitle[lang]}
-        </label>
-        {form.hasKitchen && (
-          <div className="space-y-3 ms-6">
-            <div className="max-w-xs">
-              <label className="block text-xs text-gray-600 mb-1">{t.diningCap[lang]}</label>
-              <input name="diningCapacity" type="number" min="0" value={form.diningCapacity} onChange={handleChange} className={inputClass} />
-            </div>
-            <p className="text-xs font-medium text-gray-600 mb-2">{t.kitchenAmns[lang]}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {KITCHEN_AMENITIES.map((a) => (
-                <button key={a.value} type="button" onClick={() => toggleInArray(kitchenAmenities, setKitchenAmenities, a.value)}
-                  className={toggleBtnClass(kitchenAmenities.includes(a.value))}>
-                  {a[lang]}
-                </button>
-              ))}
+        {/* ── Bedroom detail card ── */}
+        {form.hasBedrooms && (
+          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <BedDouble className="w-4 h-4 text-primary-500" /> {t.bedroomsTitle[lang]}
+            </h3>
+            <div className="flex flex-wrap gap-6">
+              <NumberStepper label={t.bedroomCount[lang]} value={Number(form.bedroomCount)} onChange={(v) => setStepper('bedroomCount', v)} />
+              <NumberStepper label={t.singleBeds[lang]} value={Number(form.singleBeds)} onChange={(v) => setStepper('singleBeds', v)} />
+              <NumberStepper label={t.doubleBeds[lang]} value={Number(form.doubleBeds)} onChange={(v) => setStepper('doubleBeds', v)} />
             </div>
           </div>
         )}
-      </div>
 
-      {/* ── 7. Pools ──────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3 cursor-pointer">
-          <input type="checkbox" checked={form.hasPool} onChange={() => toggleBool('hasPool')}
-            className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-          {t.poolsTitle[lang]}
-        </label>
+        {/* ── Bathroom detail card ── */}
+        {hasBathrooms && (
+          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <Bath className="w-4 h-4 text-primary-500" /> {t.bathroomTitle[lang]}
+            </h3>
+            <NumberStepper label={t.bathroomCount[lang]} value={Number(form.bathroomCount)} onChange={(v) => setStepper('bathroomCount', v)} min={1} />
+            <p className="text-xs font-medium text-gray-600 mt-3">{t.bathroomAmns[lang]}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {BATHROOM_AMENITIES.map((a) => {
+                const Icon = a.icon;
+                return (
+                  <button key={a.value} type="button" onClick={() => toggleInArray(bathroomAmenities, setBathroomAmenities, a.value)}
+                    className={iconToggleBtn(bathroomAmenities.includes(a.value))}>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span>{a[lang]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Pool detail card ── */}
         {form.hasPool && (
-          <div className="space-y-4 ms-6">
+          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <Waves className="w-4 h-4 text-primary-500" /> {t.poolsTitle[lang]}
+            </h3>
+
             {pools.map((pool, idx) => (
-              <div key={idx} className="border border-gray-100 rounded-lg p-4 relative">
+              <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-white relative">
                 <button type="button" onClick={() => removePool(idx)}
                   className="absolute top-2 end-2 p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
 
@@ -723,53 +682,134 @@ export default function UnitForm({
             </button>
           </div>
         )}
+
+        {/* ── Kitchen detail card ── */}
+        {form.hasKitchen && (
+          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <UtensilsCrossed className="w-4 h-4 text-primary-500" /> {t.kitchenTitle[lang]}
+            </h3>
+            <NumberStepper label={t.diningCap[lang]} value={Number(form.diningCapacity)} onChange={(v) => setStepper('diningCapacity', v)} />
+            <p className="text-xs font-medium text-gray-600 mt-3">{t.kitchenAmns[lang]}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {KITCHEN_AMENITIES.map((a) => {
+                const Icon = a.icon;
+                return (
+                  <button key={a.value} type="button" onClick={() => toggleInArray(kitchenAmenities, setKitchenAmenities, a.value)}
+                    className={iconToggleBtn(kitchenAmenities.includes(a.value))}>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span>{a[lang]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Living room detail card ── */}
+        {form.hasLivingRooms && (
+          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <Armchair className="w-4 h-4 text-primary-500" /> {t.livingTitle[lang]}
+            </h3>
+            <div className="flex flex-wrap gap-6">
+              <NumberStepper label={t.mainLiving[lang]} value={Number(form.livingMain)} onChange={(v) => setStepper('livingMain', v)} />
+              <NumberStepper label={t.additional[lang]} value={Number(form.livingAdditional)} onChange={(v) => setStepper('livingAdditional', v)} />
+              <NumberStepper label={t.outdoor[lang]} value={Number(form.livingOutdoor)} onChange={(v) => setStepper('livingOutdoor', v)} />
+              <NumberStepper label={t.annex[lang]} value={Number(form.livingOutdoorRoom)} onChange={(v) => setStepper('livingOutdoorRoom', v)} />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── 8. Amenities ──────────────────────────────────── */}
+      {/* ── 4. Additional Amenities ───────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className={sectionTitle}>{t.amenitiesTitle[lang]}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {UNIT_AMENITIES.map((a) => (
-            <button key={a.value} type="button" onClick={() => toggleInArray(amenities, setAmenities, a.value)}
-              className={toggleBtnClass(amenities.includes(a.value))}>
-              {a[lang]}
-            </button>
-          ))}
+        <h2 className={sectionTitle}>{t.addlAmenities[lang]}</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {UNIT_AMENITIES.map((a) => {
+            const Icon = a.icon;
+            return (
+              <button key={a.value} type="button" onClick={() => toggleInArray(amenities, setAmenities, a.value)}
+                className={iconToggleBtn(amenities.includes(a.value))}>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-xs">{a[lang]}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── 9. Features ───────────────────────────────────── */}
+      {/* ── 5. Features (big icons) ──────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.featuresTitle[lang]}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {UNIT_FEATURES.map((f) => (
-            <button key={f.value} type="button" onClick={() => toggleInArray(features, setFeatures, f.value)}
-              className={toggleBtnClass(features.includes(f.value))}>
-              {f[lang]}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {UNIT_FEATURES.map((f) => {
+            const Icon = f.icon;
+            const active = features.includes(f.value);
+            return (
+              <button key={f.value} type="button" onClick={() => toggleInArray(features, setFeatures, f.value)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  active
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                    : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-500'
+                }`}>
+                <Icon className="w-7 h-7" />
+                <span className="text-xs font-medium text-center">{f[lang]}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── 10. Cancellation & Rules ──────────────────────── */}
+      {/* ── 6. Insurance ─────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <h2 className={sectionTitle}>{t.rulesTitle[lang]}</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.cancelPolicy[lang]}</label>
-            <select name="cancellationPolicy" value={form.cancellationPolicy} onChange={handleChange} className={inputClass}>
-              {CANCEL_POLICIES.map((p) => <option key={p.value} value={p.value}>{p[lang]}</option>)}
-            </select>
+        <h2 className={sectionTitle}>{t.insuranceTitle[lang]}</h2>
+        <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+          <input type="checkbox" checked={form.insuranceOnArrival} onChange={() => toggleBool('insuranceOnArrival')}
+            className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+          {t.insurance[lang]}
+        </label>
+        {form.insuranceOnArrival && (
+          <div className="max-w-xs">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.insuranceAmt[lang]}</label>
+            <input name="insuranceAmount" type="number" min="0" value={form.insuranceAmount} onChange={handleChange} className={inputClass} />
           </div>
+        )}
+      </div>
+
+      {/* ── 7. Cancellation Policy (radio cards) ─────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className={sectionTitle}>{t.cancelTitle[lang]}</h2>
+        <div className="space-y-3">
+          {CANCEL_POLICIES.map((policy) => {
+            const active = form.cancellationPolicy === policy.value;
+            const p = policy[lang];
+            return (
+              <label key={policy.value}
+                className={`block p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  active ? 'border-primary-500 bg-primary-50/60' : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                <div className="flex items-start gap-3">
+                  <input type="radio" name="cancellationPolicy" value={policy.value}
+                    checked={active} onChange={handleChange}
+                    className="mt-0.5 w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500" />
+                  <div className="min-w-0">
+                    <span className={`text-sm font-semibold ${active ? 'text-primary-700' : 'text-gray-900'}`}>{p.title}</span>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{p.desc}</p>
+                    {p.detail && <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{p.detail}</p>}
+                  </div>
+                </div>
+              </label>
+            );
+          })}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.cancelDesc[lang]}</label>
-          <textarea name="cancellationDescription" value={form.cancellationDescription} onChange={handleChange} rows={2} className={inputClass} />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t.writtenRules[lang]}</label>
-          <textarea name="writtenRules" value={form.writtenRules} onChange={handleChange} rows={3} className={inputClass} />
-        </div>
+      </div>
+
+      {/* ── 8. Written Rules ─────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className={sectionTitle}>{t.rulesTitle[lang]}</h2>
+        <textarea name="writtenRules" value={form.writtenRules} onChange={handleChange} rows={4} className={inputClass}
+          placeholder={isAr ? 'أضف قواعد الوحدة هنا...' : 'Add unit rules here...'} />
       </div>
 
       {/* ── Submit ─────────────────────────────────────────── */}
