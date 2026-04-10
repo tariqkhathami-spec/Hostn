@@ -32,6 +32,9 @@ export const hostService = {
   toggleUnit: (id: string) =>
     api.patch(`/units/${id}/toggle`).then((r: any) => r.data),
 
+  // Earnings
+  getEarnings: (params?: { year?: number }) => api.get('/host/earnings', { params }).then(r => r.data),
+
   // Bookings
   getBookings: (params?: { status?: string; page?: number }) => api.get<{ data: Booking[] }>('/host/bookings', { params }).then(r => r.data),
   getUpcomingGuests: () => api.get<{ data: Booking[] }>('/host/bookings/upcoming').then(r => r.data),

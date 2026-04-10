@@ -15,6 +15,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
+  { icon: 'trending-up-outline', label: 'الأرباح', route: '/financial/earnings' },
   { icon: 'card-outline', label: 'طريقة الدفع', route: '/financial/payment-method' },
   { icon: 'time-outline', label: 'مدة التحويل', route: '/financial/transfer-duration' },
   { icon: 'swap-horizontal-outline', label: 'الحوالات البنكية', route: '/financial/transfers' },
