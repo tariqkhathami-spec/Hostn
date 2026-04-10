@@ -17,9 +17,14 @@ import { useLanguage } from '../../i18n';
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
-  const { checkIn, checkOut, guests } = useSearchStore();
+  const searchStore = useSearchStore();
+
+  // Local state for dates/guests — initialize from search store
+  const [checkIn, setCheckIn] = useState(searchStore.checkIn || '');
+  const [checkOut, setCheckOut] = useState(searchStore.checkOut || '');
+  const [guestCount, setGuestCount] = useState(Math.max(1, searchStore.guests));
 
   const PAYMENT_METHODS = [
     { id: 'card', label: t('checkout.bankCard'), icon: 'card-outline' },
@@ -36,30 +41,35 @@ export default function CheckoutScreen() {
     enabled: !!listingId,
   });
 
-  const nights = checkIn && checkOut ? getNights(checkIn, checkOut) : 1;
+  const hasValidDates = checkIn.length > 0 && checkOut.length > 0;
+  const nights = hasValidDates ? getNights(checkIn, checkOut) : 1;
   const nightlyRate = listing?.discountedPrice ?? listing?.pricing?.perNight ?? 0;
-  const subtotal = nightlyRate * nights;
+  const subtotal = nightlyRate * (hasValidDates ? nights : 1);
   const serviceFee = Math.round(subtotal * 0.1);
   const vat = Math.round((subtotal + serviceFee) * 0.15);
   const total = subtotal + serviceFee + vat - couponDiscount;
+
+  const canBook = hasValidDates && guestCount >= 1 && nights > 0;
 
   const bookMutation = useMutation({
     mutationFn: () =>
       bookingsService.create({
         propertyId: listingId!,
-        checkIn: checkIn!,
-        checkOut: checkOut!,
-        guests,
+        checkIn,
+        checkOut,
+        guests: guestCount,
         paymentMethod,
         couponCode: couponCode || undefined,
       }),
     onSuccess: () => {
-      Alert.alert('Booking Confirmed!', 'Your reservation has been created.', [
-        { text: 'View Bookings', onPress: () => router.replace('/(tabs)/bookings') },
-      ]);
+      Alert.alert(
+        t('common.success'),
+        language === 'ar' ? 'تم إنشاء حجزك بنجاح.' : 'Your reservation has been created.',
+        [{ text: t('bookings.title'), onPress: () => router.replace('/(tabs)/bookings') }]
+      );
     },
     onError: (error: any) => {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to create booking.');
+      Alert.alert(t('common.error'), error.response?.data?.message || 'Failed to create booking.');
     },
   });
 
@@ -70,12 +80,20 @@ export default function CheckoutScreen() {
       if (result.valid) {
         setCouponDiscount(result.discount);
       } else {
-        Alert.alert('Invalid Coupon', 'This coupon code is not valid.');
+        Alert.alert(t('common.error'), language === 'ar' ? 'كود الخصم غير صالح.' : 'This coupon code is not valid.');
       }
     } catch {
-      Alert.alert('Error', 'Failed to validate coupon.');
+      Alert.alert(t('common.error'), language === 'ar' ? 'فشل التحقق من الكوبون.' : 'Failed to validate coupon.');
     }
   };
+
+  // Generate tomorrow and day after as defaults
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfter = new Date();
+  dayAfter.setDate(dayAfter.getDate() + 2);
+  const defaultCheckIn = tomorrow.toISOString().split('T')[0];
+  const defaultCheckOut = dayAfter.toISOString().split('T')[0];
 
   if (isLoading || !listing) {
     return (
@@ -102,10 +120,73 @@ export default function CheckoutScreen() {
           <View style={styles.propertyInfo}>
             <Text style={styles.propertyTitle} numberOfLines={2}>{listing.title}</Text>
             <Text style={styles.propertyLocation}>{listing.location?.city ?? ''}</Text>
-            {checkIn && checkOut && (
+            {hasValidDates && (
               <Text style={styles.propertyDates}>{formatDateRange(checkIn, checkOut)}</Text>
             )}
-            <Text style={styles.propertyGuests}>{guests} {guests > 1 ? t('listing.guests') : t('booking.guest')}</Text>
+            <Text style={styles.propertyGuests}>{guestCount} {guestCount > 1 ? t('listing.guests') : t('booking.guest')}</Text>
+          </View>
+        </View>
+
+        {/* Dates & Guests Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('booking.dates')} & {t('booking.guests')}</Text>
+
+          {/* Date inputs */}
+          <View style={styles.dateRow}>
+            <View style={styles.dateField}>
+              <Text style={styles.dateLabel}>{t('search.checkIn')}</Text>
+              <TextInput
+                style={styles.dateInput}
+                placeholder={defaultCheckIn}
+                placeholderTextColor={Colors.textTertiary}
+                value={checkIn}
+                onChangeText={setCheckIn}
+                keyboardType="default"
+              />
+            </View>
+            <View style={styles.dateField}>
+              <Text style={styles.dateLabel}>{t('search.checkOut')}</Text>
+              <TextInput
+                style={styles.dateInput}
+                placeholder={defaultCheckOut}
+                placeholderTextColor={Colors.textTertiary}
+                value={checkOut}
+                onChangeText={setCheckOut}
+                keyboardType="default"
+              />
+            </View>
+          </View>
+
+          {!hasValidDates && (
+            <Pressable
+              style={styles.quickDateButton}
+              onPress={() => { setCheckIn(defaultCheckIn); setCheckOut(defaultCheckOut); }}
+            >
+              <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
+              <Text style={styles.quickDateText}>
+                {language === 'ar' ? 'حجز ليلة واحدة (غدًا)' : 'Book 1 night (tomorrow)'}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Guest counter */}
+          <View style={styles.guestRow}>
+            <Text style={styles.guestLabel}>{t('booking.guests')}</Text>
+            <View style={styles.guestCounter}>
+              <Pressable
+                style={styles.guestButton}
+                onPress={() => setGuestCount(Math.max(1, guestCount - 1))}
+              >
+                <Ionicons name="remove" size={18} color={Colors.textPrimary} />
+              </Pressable>
+              <Text style={styles.guestCount}>{guestCount}</Text>
+              <Pressable
+                style={styles.guestButton}
+                onPress={() => setGuestCount(Math.min(listing.capacity?.maxGuests ?? 20, guestCount + 1))}
+              >
+                <Ionicons name="add" size={18} color={Colors.textPrimary} />
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -113,7 +194,7 @@ export default function CheckoutScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('checkout.priceBreakdown')}</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>{formatCurrency(nightlyRate)} x {nights} {nights > 1 ? t('booking.nights') : t('booking.night')}</Text>
+            <Text style={styles.priceLabel}>{formatCurrency(nightlyRate)} x {hasValidDates ? nights : 1} {(hasValidDates ? nights : 1) > 1 ? t('booking.nights') : t('booking.night')}</Text>
             <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
           </View>
           <View style={styles.priceRow}>
@@ -173,14 +254,18 @@ export default function CheckoutScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={styles.payButton}
-          onPress={() => bookMutation.mutate()}
-          disabled={bookMutation.isPending}
+          style={[styles.payButton, !canBook && styles.payButtonDisabled]}
+          onPress={() => canBook && bookMutation.mutate()}
+          disabled={!canBook || bookMutation.isPending}
         >
           {bookMutation.isPending ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.payText}>{t('checkout.pay')} {formatCurrency(total)}</Text>
+            <Text style={styles.payText}>
+              {canBook
+                ? `${t('checkout.pay')} ${formatCurrency(total)}`
+                : language === 'ar' ? 'اختر التواريخ أولًا' : 'Select dates first'}
+            </Text>
           )}
         </Pressable>
       </View>
@@ -206,6 +291,30 @@ const styles = StyleSheet.create({
   propertyGuests: { ...Typography.caption, color: Colors.textSecondary },
   section: { marginTop: Spacing.xl },
   sectionTitle: { ...Typography.bodyBold, color: Colors.textPrimary, marginBottom: Spacing.md },
+  dateRow: { flexDirection: 'row', gap: Spacing.md },
+  dateField: { flex: 1 },
+  dateLabel: { ...Typography.caption, color: Colors.textSecondary, marginBottom: 4 },
+  dateInput: {
+    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, ...Typography.small,
+    color: Colors.textPrimary,
+  },
+  quickDateButton: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    paddingVertical: Spacing.sm, marginTop: Spacing.sm,
+  },
+  quickDateText: { ...Typography.small, color: Colors.primary },
+  guestRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: Spacing.md, paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.divider,
+  },
+  guestLabel: { ...Typography.body, color: Colors.textPrimary },
+  guestCounter: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  guestButton: {
+    width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  guestCount: { ...Typography.bodyBold, color: Colors.textPrimary, minWidth: 24, textAlign: 'center' },
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm },
   priceLabel: { ...Typography.small, color: Colors.textSecondary },
   priceValue: { ...Typography.small, color: Colors.textPrimary },
@@ -230,5 +339,6 @@ const styles = StyleSheet.create({
   radioActive: { borderColor: Colors.primary, backgroundColor: Colors.primary },
   footer: { padding: Spacing.xl, borderTopWidth: 1, borderTopColor: Colors.divider },
   payButton: { backgroundColor: Colors.primary, paddingVertical: Spacing.base, borderRadius: Radius.md, alignItems: 'center' },
+  payButtonDisabled: { opacity: 0.5 },
   payText: { ...Typography.bodyBold, color: Colors.white },
 });
