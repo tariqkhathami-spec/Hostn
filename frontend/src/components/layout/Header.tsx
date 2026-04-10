@@ -25,7 +25,7 @@ export default function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/listings" className="text-sm font-medium text-gray-600 hover:text-primary-700 transition-colors">
+            <Link href="/search" className="text-sm font-medium text-gray-600 hover:text-primary-700 transition-colors">
               {lang === 'ar' ? 'تصفح العقارات' : 'Browse Properties'}
             </Link>
             <Link href="/blog" className="text-sm font-medium text-gray-600 hover:text-primary-700 transition-colors">
@@ -76,7 +76,7 @@ export default function Header() {
         {/* Mobile Nav */}
         {menuOpen && (
           <div className="md:hidden pb-4 space-y-3 border-t border-gray-100 pt-3">
-            <Link href="/listings" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-2">
+            <Link href="/search" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-2">
               {lang === 'ar' ? 'تصفح العقارات' : 'Browse Properties'}
             </Link>
             <Link href="/blog" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-gray-600 py-2">

@@ -24,7 +24,7 @@ export default function CategoryNav() {
           {categories.map((cat) => (
             <Link
               key={cat.value}
-              href={`/listings?type=${cat.value}`}
+              href={`/search?type=${cat.value}`}
               className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-[68px] sm:min-w-[80px] group"
             >
               <div

@@ -80,7 +80,7 @@ function BookingContent() {
       const res = await propertiesApi.getOne(id);
       setProperty(res.data.data);
     } catch {
-      router.push('/listings');
+      router.push('/search');
     } finally {
       setLoading(false);
     }
@@ -247,7 +247,7 @@ function BookingContent() {
           <div className="max-w-4xl mx-auto">
             {/* Back to property link */}
             {step === 1 && (
-              <Link href={`/listings/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4 transition-colors">
+              <Link href={`/search/${id}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-primary-600 mb-4 transition-colors">
                 <ChevronRight className="w-4 h-4 ltr:rotate-180" />
                 {isAr ? 'العودة للعقار' : 'Back to property'}
               </Link>
@@ -308,7 +308,7 @@ function BookingContent() {
                               {getNightLabel(nights, isAr ? 'ar' : 'en')}
                             </span>
                             <Link
-                              href={`/listings/${id}`}
+                              href={`/search/${id}`}
                               className="text-xs font-medium text-primary-600 hover:text-primary-700 underline"
                             >
                               {isAr ? 'تعديل' : 'Edit'}
@@ -333,7 +333,7 @@ function BookingContent() {
                                 : `${getAdultLabel(adultsCount, 'en')}${childrenCount > 0 ? `, ${getChildLabel(childrenCount, 'en')}` : ''}`}
                             </span>
                             <Link
-                              href={`/listings/${id}`}
+                              href={`/search/${id}`}
                               className="text-xs font-medium text-primary-600 hover:text-primary-700 underline"
                             >
                               {isAr ? 'تعديل' : 'Edit'}

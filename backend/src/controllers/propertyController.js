@@ -245,25 +245,29 @@ exports.getProperties = async (req, res, next) => {
 // @access  Public
 exports.getHomeFeed = async (req, res, next) => {
   try {
+    // Only show properties that have at least one active unit
+    const withUnits = await Unit.distinct('property', { isActive: true });
+    const baseFilter = { isActive: true, _id: { $in: withUnits } };
+
     const [featured, cities, luxury, families, business, topRated] = await Promise.all([
-      Property.find({ isActive: true, isFeatured: true })
+      Property.find({ ...baseFilter, isFeatured: true })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
         .limit(6),
-      Property.distinct('location.city', { isActive: true }),
-      Property.find({ isActive: true, tags: { $in: ['luxury'] } })
+      Property.distinct('location.city', { isActive: true, _id: { $in: withUnits } }),
+      Property.find({ ...baseFilter, tags: { $in: ['luxury'] } })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
         .limit(6),
-      Property.find({ isActive: true, tags: { $in: ['family', 'families'] } })
+      Property.find({ ...baseFilter, tags: { $in: ['family', 'families'] } })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
         .limit(6),
-      Property.find({ isActive: true, tags: { $in: ['business'] } })
+      Property.find({ ...baseFilter, tags: { $in: ['business'] } })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
         .limit(6),
-      Property.find({ isActive: true, 'ratings.count': { $gte: 1 } })
+      Property.find({ ...baseFilter, 'ratings.count': { $gte: 1 } })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
         .limit(6),
@@ -307,16 +311,19 @@ exports.getProperty = async (req, res, next) => {
     const property = await Property.findById(req.params.id)
       .populate('host', 'name avatar createdAt isVerified');
 
-    if (!property || !property.isActive) {
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    const isHost = req.user && property.host._id.toString() === req.user._id.toString();
+    const isAdmin = req.user && req.user.role === 'admin';
+
+    // Inactive properties are only visible to their owner or admins
+    if (!property.isActive && !isHost && !isAdmin) {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
     const propertyObj = property.toObject();
-
-    // Location privacy: hide exact coordinates from public view
-    // Only show exact location to the property host or users with confirmed bookings
-    const isHost = req.user && property.host._id.toString() === req.user._id.toString();
-    const isAdmin = req.user && req.user.role === 'admin';
 
     let hasConfirmedBooking = false;
     if (req.user && !isHost && !isAdmin) {
@@ -484,7 +491,7 @@ exports.getMyProperties = async (req, res, next) => {
 
     // Attach unit counts per property
     const propertyIds = properties.map(p => p._id);
-    const [totalCounts, activeCounts] = await Promise.all([
+    const [totalCounts, activeCounts, unitImages] = await Promise.all([
       Unit.aggregate([
         { $match: { property: { $in: propertyIds } } },
         { $group: { _id: '$property', count: { $sum: 1 } } },
@@ -493,16 +500,28 @@ exports.getMyProperties = async (req, res, next) => {
         { $match: { property: { $in: propertyIds }, isActive: true } },
         { $group: { _id: '$property', count: { $sum: 1 } } },
       ]),
+      // Grab first image from the first unit that has images (for property thumbnail)
+      Unit.aggregate([
+        { $match: { property: { $in: propertyIds }, 'images.0': { $exists: true } } },
+        { $sort: { isActive: -1, createdAt: 1 } },
+        { $group: { _id: '$property', image: { $first: { $arrayElemAt: ['$images', 0] } } } },
+      ]),
     ]);
     const totalMap = {};
     for (const c of totalCounts) totalMap[c._id.toString()] = c.count;
     const activeMap = {};
     for (const c of activeCounts) activeMap[c._id.toString()] = c.count;
+    const imageMap = {};
+    for (const c of unitImages) imageMap[c._id.toString()] = c.image;
 
     const data = properties.map(p => {
       const obj = p.toObject();
       obj.unitCount = totalMap[p._id.toString()] || 0;
       obj.activeUnitCount = activeMap[p._id.toString()] || 0;
+      // Use unit image if property has no images of its own
+      if ((!obj.images || obj.images.length === 0) && imageMap[p._id.toString()]) {
+        obj.unitImage = imageMap[p._id.toString()];
+      }
       return obj;
     });
 

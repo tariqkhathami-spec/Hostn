@@ -63,7 +63,7 @@ export default function CityBrowse() {
           {cities.map((city) => (
             <Link
               key={city.value}
-              href={`/listings?city=${city.value}`}
+              href={`/search?city=${city.value}`}
               className="group relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
             >
               <div

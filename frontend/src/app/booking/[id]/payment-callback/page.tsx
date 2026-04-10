@@ -84,7 +84,7 @@ function PaymentCallbackContent() {
                   <Link href="/dashboard">
                     <Button size="lg" className="w-full">View My Bookings</Button>
                   </Link>
-                  <Link href="/listings">
+                  <Link href="/search">
                     <Button variant="outline" size="lg" className="w-full">Browse More Properties</Button>
                   </Link>
                 </div>

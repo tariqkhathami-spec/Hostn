@@ -36,16 +36,41 @@ function overlapQuery(propertyId, checkInDate, checkOutDate, unitId) {
   return query;
 }
 
-// Helper: calculate pricing from a Unit's per-day rates
+// Helper: calculate pricing from a Unit's per-day rates (with per-date overrides)
 function calculateUnitPricing(unit, checkInDate, checkOutDate) {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   let subtotal = 0;
   let nights = 0;
 
+  // Build a lookup map from datePricing for O(1) per-date checks
+  const dateOverrides = new Map();
+  if (unit.datePricing && unit.datePricing.length > 0) {
+    for (const dp of unit.datePricing) {
+      const key = new Date(dp.date).toISOString().slice(0, 10);
+      dateOverrides.set(key, dp);
+    }
+  }
+
   const current = new Date(checkInDate);
   while (current < checkOutDate) {
-    const dayName = dayNames[current.getDay()];
-    subtotal += unit.pricing[dayName] || 0;
+    const dateKey = current.toISOString().slice(0, 10);
+    const override = dateOverrides.get(dateKey);
+
+    // If this date is blocked via datePricing, throw an error (safety check)
+    if (override && override.isBlocked) {
+      const err = new Error('DATES_BLOCKED');
+      err.blockedDate = dateKey;
+      throw err;
+    }
+
+    if (override && override.price != null) {
+      // Use the per-date override price
+      subtotal += override.price;
+    } else {
+      // Fall back to day-of-week price
+      const dayName = dayNames[current.getDay()];
+      subtotal += unit.pricing[dayName] || 0;
+    }
     nights++;
     current.setDate(current.getDate() + 1);
   }

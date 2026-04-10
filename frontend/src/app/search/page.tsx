@@ -4,16 +4,16 @@ import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import PropertyCard from '@/components/listings/PropertyCard';
+import UnitCard from '@/components/listings/UnitCard';
 import { useLanguage } from '@/context/LanguageContext';
-import { propertiesApi } from '@/lib/api';
+import { unitsApi } from '@/lib/api';
 import { CITIES } from '@/lib/constants';
 import Link from 'next/link';
 import {
   Search, MapPin, Calendar, Users, X, ChevronDown, Minus, Plus,
   Building, BedDouble, Star, Percent, Map, Droplets, Compass, Ruler,
 } from 'lucide-react';
-import { Property } from '@/types';
+import { Unit } from '@/types';
 import MiniCalendar from '@/components/ui/MiniCalendar';
 import { format, addDays } from 'date-fns';
 import { calculateNights, getNightLabel, getAdultLabel, getChildLabel } from '@/lib/utils';
@@ -107,7 +107,7 @@ function ListingsContent() {
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
 
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Search state ──
@@ -254,35 +254,27 @@ function ListingsContent() {
   };
 
   // ── Fetch ──
-  const fetchProperties = async () => {
+  const fetchUnits = async () => {
     setLoading(true);
     try {
-      const params: Record<string, unknown> = {};
+      const params: Record<string, string> = {};
       if (searchCity) params.city = searchCity;
-      if (selectedTypes.length > 0) params.type = selectedTypes;
+      if (selectedTypes.length > 0) params.type = selectedTypes.join(',');
       if (checkIn) params.checkIn = checkIn;
       if (checkOut) params.checkOut = checkOut;
-      if (priceRange < 4000) params.maxPrice = priceRange;
-      if (guests) params.guests = Number(guests);
-      if (minBedrooms) params.bedrooms = Number(minBedrooms);
-      if (minRating) params.rating = Number(minRating);
-      if (hasDiscount) params.discount = 1;
+      if (priceRange < 4000) params.maxPrice = String(priceRange);
+      if (guests) params.guests = String(adults + children);
+      if (minBedrooms) params.bedrooms = minBedrooms;
+      if (minRating) params.rating = minRating;
+      if (hasDiscount) params.discount = '1';
       if (district) params.district = district;
-      if (hasPool) params.pool = 1;
+      if (hasPool) params.pool = '1';
       if (direction) params.direction = direction;
-      if (areaRange < 1500) params.maxArea = areaRange;
-      const res = await propertiesApi.getAll(params);
-      let results = res.data.properties || res.data.data || [];
-      // Filter out properties whose minNights exceeds the selected stay duration
-      if (checkIn && checkOut) {
-        const selectedNights = Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24));
-        if (selectedNights > 0) {
-          results = results.filter((p: Property) => !p.rules?.minNights || p.rules.minNights <= selectedNights);
-        }
-      }
-      setProperties(results);
+      if (areaRange < 1500) params.maxArea = String(areaRange);
+      const res = await unitsApi.search(params);
+      setUnits(res.data.data || []);
     } catch {
-      setProperties([]);
+      setUnits([]);
     } finally {
       setLoading(false);
     }
@@ -290,15 +282,15 @@ function ListingsContent() {
 
   const handleSearch = () => {
     saveSearchCookies({ city: searchCity, type: selectedTypes.join(','), checkIn, checkOut, adults, children });
-    router.push('/listings');
+    router.push('/search');
     setOpenFilter(null);
-    fetchProperties();
+    fetchUnits();
   };
 
   const [autoSearch, setAutoSearch] = useState(0);
 
   // Fetch only after cookies are restored, and on every autoSearch trigger
-  useEffect(() => { if (ready) fetchProperties(); }, [ready, autoSearch]);
+  useEffect(() => { if (ready) fetchUnits(); }, [ready, autoSearch]);
 
   // Auto-search when search bar dropdowns are dismissed
   const prevShowCityRef = useRef(false);
@@ -754,7 +746,7 @@ function ListingsContent() {
               <button type="button" onClick={() => {
                 clearAllFilters();
                 saveSearchCookies({ city: searchCity, checkIn, checkOut, adults, children });
-                router.push('/listings');
+                router.push('/search');
               }}
                 className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors">
                 <X className="w-3 h-3" />
@@ -767,8 +759,8 @@ function ListingsContent() {
           {!loading && (
             <p className="text-sm text-gray-500 mb-4">
               {isAr
-                ? `${properties.length} \u0639\u0642\u0627\u0631`
-                : `${properties.length} ${properties.length === 1 ? 'property' : 'properties'} found`}
+                ? `${units.length} وحدة`
+                : `${units.length} ${units.length === 1 ? 'unit' : 'units'} found`}
             </p>
           )}
 
@@ -787,15 +779,15 @@ function ListingsContent() {
                 </div>
               ))}
             </div>
-          ) : properties.length === 0 ? (
+          ) : units.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-gray-500 text-lg">{isAr ? '\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0642\u0627\u0631\u0627\u062A' : 'No properties found'}</p>
-              <p className="text-sm text-gray-400 mt-2">{isAr ? '\u062D\u0627\u0648\u0644 \u062A\u0639\u062F\u064A\u0644 \u0645\u0639\u0627\u064A\u064A\u0631 \u0627\u0644\u0628\u062D\u062B' : 'Try adjusting your search criteria'}</p>
+              <p className="text-gray-500 text-lg">{isAr ? 'لا توجد وحدات' : 'No units found'}</p>
+              <p className="text-sm text-gray-400 mt-2">{isAr ? 'حاول تعديل معايير البحث' : 'Try adjusting your search criteria'}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {properties.map((property) => (
-                <PropertyCard key={property._id} property={property} checkIn={checkIn} checkOut={checkOut} />
+              {units.map((unit) => (
+                <UnitCard key={unit._id} unit={unit} checkIn={checkIn} checkOut={checkOut} />
               ))}
             </div>
           )}

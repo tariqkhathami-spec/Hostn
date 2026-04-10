@@ -235,6 +235,15 @@ const unitSchema = new mongoose.Schema(
       weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
     },
 
+    // ── Per-date price overrides ─────────────────────────────────────
+    datePricing: [
+      {
+        date: { type: Date, required: true },
+        price: { type: Number, min: 0 },         // override price (null = use day-of-week default)
+        isBlocked: { type: Boolean, default: false }, // true = unavailable
+      },
+    ],
+
     // ── Capacity ─────────────────────────────────────────────────
     capacity: {
       maxGuests: { type: Number, default: 1, min: 1 },
@@ -260,6 +269,7 @@ const unitSchema = new mongoose.Schema(
 // ── Indexes ──────────────────────────────────────────────────────────
 unitSchema.index({ property: 1, isActive: 1 });
 unitSchema.index({ property: 1, createdAt: 1 });
+unitSchema.index({ _id: 1, 'datePricing.date': 1 });
 
 // ── Virtuals ─────────────────────────────────────────────────────────
 unitSchema.virtual('name').get(function () {

@@ -29,6 +29,13 @@ export function middleware(request: NextRequest) {
   const role = payload?.role as Role | undefined;
   const isAuthenticated = !!role;
 
+  // Redirect old /listings URLs to /search (permanent)
+  if (pathname === '/listings' || pathname.startsWith('/listings/')) {
+    const newPath = pathname.replace(/^\/listings/, '/search');
+    const url = new URL(newPath + (request.nextUrl.search || ''), request.url);
+    return NextResponse.redirect(url, 308);
+  }
+
   // Auth pages: redirect authenticated users to their dashboard
   if (pathname.startsWith('/auth')) {
     if (isAuthenticated) {
@@ -69,5 +76,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/auth/:path*', '/dashboard/:path*', '/host/:path*', '/admin/:path*'],
+  matcher: ['/auth/:path*', '/dashboard/:path*', '/host/:path*', '/admin/:path*', '/listings/:path*', '/listings'],
 };

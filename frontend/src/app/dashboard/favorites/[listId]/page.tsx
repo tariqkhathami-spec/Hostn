@@ -724,7 +724,7 @@ export default function WishlistDetailPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <Heart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 mb-4">{isAr ? 'لا توجد عقارات في هذه القائمة بعد' : 'No properties in this list yet'}</p>
-          <Link href="/listings" className="inline-block bg-primary-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
+          <Link href="/search" className="inline-block bg-primary-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
             {isAr ? 'تصفح العقارات' : 'Browse Properties'}
           </Link>
         </div>
@@ -808,7 +808,7 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
         title={isAr ? 'إزالة من القائمة' : 'Remove from list'}>
         {removingId === property._id ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" /> : <Trash2 className="w-4 h-4 text-red-500" />}
       </button>
-      <Link href={`/listings/${property._id}`}>
+      <Link href={`/search/${property._id}`}>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
           <div className="relative aspect-[4/3] bg-gray-100">
             <Image src={primaryImage} alt={isAr && property.titleAr ? property.titleAr : property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" unoptimized />

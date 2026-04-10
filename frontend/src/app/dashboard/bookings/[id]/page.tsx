@@ -166,7 +166,7 @@ export default function BookingDetailPage() {
                   </div>
                 )}
                 <div className="p-5 flex-1">
-                  <Link href={`/listings/${property._id}`} className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors">
+                  <Link href={`/search/${property._id}`} className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors">
                     {isAr && property.titleAr ? property.titleAr : property.title}
                   </Link>
                   {unit && (

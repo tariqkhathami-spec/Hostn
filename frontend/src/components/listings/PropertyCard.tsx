@@ -62,7 +62,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
   const [clearingAll, setClearingAll] = useState(false);
   const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
 
-  const images = property.images.length > 0
+  const images = property.images && property.images.length > 0
     ? property.images.slice(0, 5)
     : [{ url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', isPrimary: true }];
 
@@ -78,26 +78,29 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
     setCurrentImageIndex((i) => (i === images.length - 1 ? 0 : i + 1));
   }, [images.length]);
 
+  const perNight = property.pricing?.perNight ?? 0;
+  const discountPct = property.pricing?.discountPercent ?? 0;
+
   const discountedPrice =
-    property.pricing.discountPercent > 0
-      ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent)
+    discountPct > 0
+      ? getDiscountedPrice(perNight, discountPct)
       : null;
 
   // Pricing: total, weekly, monthly
-  const effectivePrice = discountedPrice || property.pricing.perNight;
+  const effectivePrice = discountedPrice || perNight;
   const nights = (checkIn && checkOut) ? calculateNights(checkIn, checkOut) : 0;
   const totalPrice = nights > 0 ? effectivePrice * nights : 0;
 
   let displayPrice = effectivePrice;
-  let originalDisplayPrice = property.pricing.perNight;
+  let originalDisplayPrice = perNight;
   let priceUnitLabel: string;
   if (nights >= 30) {
     displayPrice = effectivePrice * 30;
-    originalDisplayPrice = property.pricing.perNight * 30;
+    originalDisplayPrice = perNight * 30;
     priceUnitLabel = isAr ? '/ شهر' : '/ month';
   } else if (nights >= 7) {
     displayPrice = effectivePrice * 7;
-    originalDisplayPrice = property.pricing.perNight * 7;
+    originalDisplayPrice = perNight * 7;
     priceUnitLabel = isAr ? '/ أسبوع' : '/ week';
   } else {
     priceUnitLabel = t('property.perNight');
@@ -274,7 +277,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
 
   return (
     <>
-    <Link href={`/listings/${property._id}`} className="group block">
+    <Link href={`/search/${property._id}`} className="group block">
       <div className="card overflow-hidden group-hover:scale-[1.01] transition-all duration-300">
         {/* Image Carousel */}
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gray-100 group/carousel">
@@ -359,18 +362,24 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
             )}
           </div>
           <div className="flex items-center gap-2.5 text-gray-500 text-xs mb-3">
+            {(property.capacity?.maxGuests ?? 0) > 0 && (
             <span className="flex items-center gap-1" title={isAr ? 'ضيوف' : 'Guests'}>
               <Users className="w-3 h-3" />
-              {property.capacity.maxGuests}
+              {property.capacity!.maxGuests}
             </span>
+            )}
+            {(property.capacity?.bedrooms ?? 0) > 0 && (
             <span className="flex items-center gap-1" title={isAr ? 'غرف نوم' : 'Bedrooms'}>
               <BedDouble className="w-3 h-3" />
-              {property.capacity.bedrooms}
+              {property.capacity!.bedrooms}
             </span>
+            )}
+            {(property.capacity?.bathrooms ?? 0) > 0 && (
             <span className="flex items-center gap-1" title={isAr ? 'حمامات' : 'Bathrooms'}>
               <Bath className="w-3 h-3" />
-              {property.capacity.bathrooms}
+              {property.capacity!.bathrooms}
             </span>
+            )}
             {property.area ? (
               <span className="flex items-center gap-1" title={isAr ? 'المساحة' : 'Area'}>
                 <Ruler className="w-3 h-3" />
@@ -388,19 +397,21 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
           )}
           <div className="flex items-center justify-between">
             <div>
-              {discountedPrice ? (
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                  <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(originalDisplayPrice)}</span>
-                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                </div>
-              ) : (
-                <div className="flex items-baseline gap-1">
-                  <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                  <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                </div>
-              )}
-              {nights > 0 && (
+              {perNight > 0 ? (
+                discountedPrice ? (
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                    <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(originalDisplayPrice)}</span>
+                    <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                    <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                  </div>
+                )
+              ) : null}
+              {nights > 0 && perNight > 0 && (
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {isAr
                     ? <><span>إجمالي{getNightLabel(nights, 'ar')}:</span> <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span></>
@@ -409,8 +420,8 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
                 </p>
               )}
             </div>
-            {property.ratings.count > 0 && (
-              <StarRating rating={property.ratings.average} count={property.ratings.count} />
+            {(property.ratings?.count ?? 0) > 0 && (
+              <StarRating rating={property.ratings!.average} count={property.ratings!.count} />
             )}
           </div>
         </div>

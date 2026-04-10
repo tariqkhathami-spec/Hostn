@@ -53,7 +53,7 @@ export default function HomePage() {
                 key={key}
                 onClick={() => {
                   saveSearchCookies({ type: key });
-                  router.push('/listings');
+                  router.push('/search');
                 }}
                 className="flex flex-col items-center gap-3 p-6 bg-gray-50 rounded-2xl hover:bg-primary-50 hover:border-primary-200 border-2 border-transparent transition-all"
               >

@@ -15,6 +15,7 @@ interface Property {
   type: string;
   location?: { city?: string; district?: string };
   images?: { url: string; isPrimary?: boolean }[];
+  unitImage?: { url: string };
   isActive: boolean;
   unitCount?: number;
   activeUnitCount?: number;
@@ -116,14 +117,17 @@ export default function HostListingsPage() {
             const hasUnits = (property.unitCount || 0) > 0;
             const activeUnits = property.activeUnitCount || 0;
             const totalUnits = property.unitCount || 0;
+            // Effective status: only truly active if has active units
+            const effectiveActive = property.isActive && hasUnits && activeUnits > 0;
+            const canToggle = hasUnits && activeUnits > 0;
 
             return (
               <div key={property._id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                 <div className="flex items-stretch">
                   {/* Image / placeholder */}
                   <div className="w-28 sm:w-36 flex-shrink-0 bg-gray-100 relative">
-                    {property.images && property.images[0]?.url ? (
-                      <img src={property.images[0].url} alt={displayName(property)} className="w-full h-full object-cover" />
+                    {(property.images?.[0]?.url || property.unitImage?.url) ? (
+                      <img src={property.images?.[0]?.url || property.unitImage!.url} alt={displayName(property)} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center min-h-[100px]">
                         <Building className="w-8 h-8 text-gray-300" />
@@ -149,11 +153,11 @@ export default function HostListingsPage() {
                         </div>
                         {/* Status badge */}
                         <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          property.isActive
+                          effectiveActive
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
-                          {property.isActive ? t.active[lang] : t.inactive[lang]}
+                          {effectiveActive ? t.active[lang] : t.inactive[lang]}
                         </span>
                       </div>
 
@@ -193,10 +197,16 @@ export default function HostListingsPage() {
                         </Link>
                       </div>
                       <button
-                        onClick={() => handleToggle(property._id)}
-                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                        onClick={() => canToggle && handleToggle(property._id)}
+                        disabled={!canToggle}
+                        className={`flex items-center gap-1 text-sm transition-colors ${
+                          canToggle
+                            ? 'text-gray-600 hover:text-primary-600 cursor-pointer'
+                            : 'text-gray-300 cursor-not-allowed'
+                        }`}
+                        title={!canToggle ? (isAr ? 'أضف وحدات أولاً' : 'Add units first') : ''}
                       >
-                        {property.isActive ? (
+                        {effectiveActive ? (
                           <ToggleRight className="w-5 h-5 text-emerald-500" />
                         ) : (
                           <ToggleLeft className="w-5 h-5 text-gray-400" />

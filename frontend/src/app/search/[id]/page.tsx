@@ -9,12 +9,11 @@ import ImageGallery from '@/components/property/ImageGallery';
 import AmenitiesList from '@/components/property/AmenitiesList';
 import ReviewsList from '@/components/property/ReviewsList';
 import BookingWidget from '@/components/property/BookingWidget';
-import UnitsList from '@/components/property/UnitsList';
-import { Property, User } from '@/types';
-import { propertiesApi, publicHostApi } from '@/lib/api';
+import { Unit, Property, User, AmenityType, PropertyImage } from '@/types';
+import { unitsApi, propertiesApi, publicHostApi } from '@/lib/api';
 import { getPropertyTypeLabel } from '@/lib/utils';
 import { CITIES, DISTRICTS } from '@/lib/constants';
-import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText } from 'lucide-react';
+import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText, ShieldCheck, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
@@ -31,23 +30,48 @@ import { usePageTitle } from '@/lib/usePageTitle';
 export default function PropertyDetailPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" /></div>}>
-      <PropertyDetailContent />
+      <UnitDetailContent />
     </Suspense>
   );
 }
 
-function PropertyDetailContent() {
+/** Map cancellation policy key to human-readable labels */
+function getCancellationLabel(policy: string | undefined, isAr: boolean): string {
+  const labels: Record<string, { en: string; ar: string }> = {
+    free: { en: 'Free cancellation', ar: 'إلغاء مجاني' },
+    flexible: { en: 'Flexible cancellation', ar: 'إلغاء مرن' },
+    normal: { en: 'Standard cancellation', ar: 'إلغاء عادي' },
+    restricted: { en: 'Restricted cancellation', ar: 'إلغاء مقيد' },
+  };
+  if (!policy) return isAr ? 'غير محدد' : 'Not specified';
+  const entry = labels[policy];
+  return entry ? (isAr ? entry.ar : entry.en) : policy;
+}
+
+function UnitDetailContent() {
   const { id } = useParams<{ id: string }>();
-  const [property, setProperty] = useState<Property | null>(null);
+  const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const { t, language } = useLanguage();
   const { user, isAuthenticated, toggleWishlist } = useAuth();
   const isAr = language === 'ar';
-  const displayTitle = property ? (isAr && property.titleAr ? property.titleAr : property.title) : '';
-  usePageTitle(displayTitle || (isAr ? 'تفاصيل العقار' : 'Property Details'));
 
-  // Wishlist state
+  // Extract the populated property from the unit
+  const property = unit?.property && typeof unit.property === 'object' ? (unit.property as Property) : null;
+  const host = property?.host && typeof property.host === 'object' ? (property.host as User) : null;
+
+  // Display title: unit name (bilingual), with property name as subtitle
+  const displayTitle = unit
+    ? (isAr && unit.nameAr ? unit.nameAr : unit.nameEn) || (isAr ? 'وحدة بدون اسم' : 'Unnamed unit')
+    : '';
+  const propertyTitle = property
+    ? (isAr && property.titleAr ? property.titleAr : property.title)
+    : '';
+
+  usePageTitle(displayTitle || (isAr ? 'تفاصيل الوحدة' : 'Unit Details'));
+
+  // Wishlist state (still tied to property)
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
@@ -74,39 +98,53 @@ function PropertyDetailContent() {
   }, []);
 
   useEffect(() => {
-    const fetchProperty = async () => {
+    const fetchUnit = async () => {
       try {
-        const res = await propertiesApi.getOne(id);
-        setProperty(res.data.data);
+        // First, try to load as a unit
+        const res = await unitsApi.getOne(id);
+        setUnit(res.data.data);
       } catch {
-        // 404
+        // If unit not found, try loading as a property → show first active unit
+        try {
+          const propRes = await propertiesApi.getOne(id);
+          const property = propRes.data.data;
+          if (property) {
+            // Fetch the first active unit for this property
+            const unitsRes = await unitsApi.getForProperty(id);
+            const units = unitsRes.data.data || [];
+            if (units.length > 0) {
+              // Load the full unit data for the first unit
+              const unitRes = await unitsApi.getOne(units[0]._id);
+              setUnit(unitRes.data.data);
+            }
+            // If property exists but has no units, leave unit as null (shows "not found")
+          }
+        } catch {
+          // Neither unit nor property found
+        }
       } finally {
         setLoading(false);
       }
     };
-    fetchProperty();
+    fetchUnit();
   }, [id]);
 
-  // Track wishlist state
+  // Track wishlist state (still uses property._id)
   useEffect(() => {
     if (property) setIsWishlisted(user?.wishlist?.includes(property._id) ?? false);
   }, [user?.wishlist, property]);
 
   // Fetch host stats
   useEffect(() => {
-    if (!property) return;
-    const h = property.host as User;
-    if (!h?._id) return;
-    publicHostApi.getProfile(h._id, { propertyLimit: 0, reviewLimit: 0 })
+    if (!host?._id) return;
+    publicHostApi.getProfile(host._id, { propertyLimit: 0, reviewLimit: 0 })
       .then(res => setHostStats(res.data.data.stats))
       .catch(() => {});
-  }, [property]);
-
-  // No intersection observer needed — tabs switch content directly
+  }, [host]);
 
   const handleShare = async () => {
     const url = window.location.href;
-    const title = (isAr && property?.titleAr ? property.titleAr : property?.title) || 'Hostn';
+    const title = displayTitle || 'Hostn';
     if (navigator.share) {
       try { await navigator.share({ title, url }); } catch { /* cancelled */ }
     } else {
@@ -135,6 +173,25 @@ function PropertyDetailContent() {
     }
   };
 
+  // ── Images: prefer unit images, fallback to property images ──
+  const galleryImages: PropertyImage[] = (() => {
+    if (unit?.images && unit.images.length > 0) {
+      return unit.images.map(img => ({
+        url: img.url,
+        caption: img.caption,
+        isPrimary: img.isPrimary ?? false,
+      }));
+    }
+    if (property?.images && property.images.length > 0) return property.images;
+    return [{ url: '/placeholder-property.jpg', isPrimary: true }];
+  })();
+
+  // ── Amenities: cast string[] to AmenityType[] ──
+  const unitAmenities: AmenityType[] = (unit?.amenities ?? []) as AmenityType[];
+
+  // ── Ratings: from property (units don't have reviews yet) ──
+  const ratings = property?.ratings;
+
   if (loading) {
     return (
       <>
@@ -157,48 +214,52 @@ function PropertyDetailContent() {
     );
   }
 
-  if (!property) {
+  if (!unit || !property) {
     return (
       <>
         <Header />
         <main className="container-custom py-20 text-center">
           <h1 className="text-2xl font-bold text-gray-700 mb-2">{t('property.notFound')}</h1>
-          <p className="text-gray-500">{isAr ? 'ربما تم حذف هذا العقار أو لم يعد متاحاً.' : 'This property may have been removed or is no longer available.'}</p>
-          <a href="/listings" className="btn-primary inline-flex mt-6">{t('property.browseProperties')}</a>
+          <p className="text-gray-500">{isAr ? 'ربما تم حذف هذه الوحدة أو لم تعد متاحة.' : 'This unit may have been removed or is no longer available.'}</p>
+          <a href="/search" className="btn-primary inline-flex mt-6">{t('property.browseProperties')}</a>
         </main>
         <Footer />
       </>
     );
   }
 
-  const host = property.host as User;
+  // ── Discount badge: from unit pricing ──
+  const discountPercent = (unit.pricing as Record<string, number> | undefined)?.discountPercent ?? 0;
 
   return (
     <>
       <Header />
       <main className="min-h-screen">
         <div className="container-custom py-8">
-          {/* Breadcrumb */}
+          {/* Breadcrumb: Home > Search > City > Unit Name */}
           <nav className="text-sm text-gray-500 mb-4">
             <a href="/" className="hover:text-primary-600">{t('breadcrumb.home')}</a>
             <span className="mx-2">/</span>
-            <a href="/listings" className="hover:text-primary-600">{t('breadcrumb.properties')}</a>
+            <a href="/search" className="hover:text-primary-600">{t('breadcrumb.properties')}</a>
             <span className="mx-2">/</span>
-            <a href={`/listings?city=${property.location.city}`} className="hover:text-primary-600">
+            <a href={`/search?city=${property.location.city}`} className="hover:text-primary-600">
               {isAr ? (CITIES.find(c => c.value.toLowerCase() === property.location.city.toLowerCase())?.ar || property.location.city) : property.location.city}
             </a>
             <span className="mx-2">/</span>
             <span className="text-gray-800 line-clamp-1">{displayTitle}</span>
           </nav>
 
-          {/* Title */}
+          {/* Title — unit name as main, property name as subtitle */}
           <div className="mb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{displayTitle}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{displayTitle}</h1>
+                {propertyTitle && (
+                  <p className="text-base text-gray-500 mb-2">{propertyTitle}</p>
+                )}
                 <div className="flex flex-wrap items-center gap-3 text-sm">
-                  {property.ratings.count > 0 && (
-                    <StarRating rating={property.ratings.average} count={property.ratings.count} size="md" />
+                  {ratings && ratings.count > 0 && (
+                    <StarRating rating={ratings.average} count={ratings.count} size="md" />
                   )}
                   <span className="flex items-center gap-1 text-gray-600">
                     <MapPin className="w-4 h-4 text-primary-500" />
@@ -210,9 +271,9 @@ function PropertyDetailContent() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {property.pricing.discountPercent > 0 && (
+                {discountPercent > 0 && (
                   <span className="badge bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1.5">
-                    🎉 {isAr ? `خصم ${property.pricing.discountPercent}%` : `${property.pricing.discountPercent}% Discount`}
+                    🎉 {isAr ? `خصم ${discountPercent}%` : `${discountPercent}% Discount`}
                   </span>
                 )}
                 <button onClick={handleShare} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title={isAr ? 'مشاركة' : 'Share'}>
@@ -225,9 +286,9 @@ function PropertyDetailContent() {
             </div>
           </div>
 
-          {/* Image gallery */}
+          {/* Image gallery — unit images with fallback */}
           <div className="mb-8">
-            <ImageGallery images={property.images} title={displayTitle} />
+            <ImageGallery images={galleryImages} title={displayTitle} />
           </div>
 
           {/* Segmented navigation — tab/pill style */}
@@ -263,13 +324,13 @@ function PropertyDetailContent() {
               {/* ── Tab: Specification ── */}
               {activeSection === 'specification' && (
                 <>
-                  {/* Quick stats */}
+                  {/* Quick stats — from unit data */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
-                      { Icon: Users, label: t('property.maxGuests'), value: property.capacity.maxGuests },
-                      { Icon: BedDouble, label: t('property.bedrooms'), value: property.capacity.bedrooms },
-                      { Icon: BedDouble, label: t('property.beds'), value: property.capacity.beds },
-                      { Icon: Bath, label: t('property.bathrooms'), value: property.capacity.bathrooms },
+                      { Icon: Users, label: t('property.maxGuests'), value: unit.capacity?.maxGuests ?? '—' },
+                      { Icon: BedDouble, label: t('property.bedrooms'), value: unit.bedrooms?.count ?? '—' },
+                      { Icon: Bath, label: t('property.bathrooms'), value: unit.bathroomCount ?? '—' },
+                      { Icon: BedDouble, label: t('property.beds'), value: ((unit.bedrooms?.singleBeds ?? 0) + (unit.bedrooms?.doubleBeds ?? 0)) || '—' },
                     ].map(({ Icon, label, value }) => (
                       <div key={label} className="bg-gray-50 rounded-2xl p-4 text-center">
                         <Icon className="w-5 h-5 text-primary-600 mx-auto mb-2" />
@@ -279,7 +340,7 @@ function PropertyDetailContent() {
                     ))}
                   </div>
 
-                  {/* Host info */}
+                  {/* Host info — from property.host */}
                   {host && typeof host === 'object' && (
                     <Link href={`/hosts/${host._id}`} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors group">
                       <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -311,48 +372,69 @@ function PropertyDetailContent() {
                     </Link>
                   )}
 
-                  {/* Description */}
+                  {/* Description — from unit */}
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.aboutThisPlace')}</h2>
-                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">{property.description}</p>
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                      {unit.description || (isAr ? 'لا يوجد وصف متاح.' : 'No description available.')}
+                    </p>
                   </div>
 
-                  {/* Amenities */}
-                  {property.amenities.length > 0 && (
+                  {/* Suitability */}
+                  {unit.suitability && (
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 mb-2">{isAr ? 'مناسبة لـ' : 'Suitable for'}</h2>
+                      <p className="text-gray-600">{unit.suitability}</p>
+                    </div>
+                  )}
+
+                  {/* Amenities — from unit */}
+                  {unitAmenities.length > 0 && (
                     <div>
                       <h2 className="text-xl font-bold text-gray-900 mb-4">
                         {t('property.whatThisPlaceOffers')}
                       </h2>
-                      <AmenitiesList amenities={property.amenities} showAll={showAllAmenities} />
-                      {property.amenities.length > 10 && (
+                      <AmenitiesList amenities={unitAmenities} showAll={showAllAmenities} />
+                      {unitAmenities.length > 10 && (
                         <button
                           onClick={() => setShowAllAmenities(!showAllAmenities)}
                           className="mt-4 text-sm font-semibold text-primary-600 hover:text-primary-700 underline"
                         >
-                          {showAllAmenities ? t('property.showLess') : `${t('property.showAll')} (${property.amenities.length})`}
+                          {showAllAmenities ? t('property.showLess') : `${t('property.showAll')} (${unitAmenities.length})`}
                         </button>
                       )}
                     </div>
                   )}
 
-                  {/* Units */}
-                  <UnitsList propertyId={property._id} />
+                  {/* Features — from unit */}
+                  {unit.features && unit.features.length > 0 && (
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'المميزات' : 'Features'}</h2>
+                      <div className="flex flex-wrap gap-2">
+                        {unit.features.map((feature) => (
+                          <span key={feature} className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
-              {/* ── Tab: Reviews ── */}
+              {/* ── Tab: Reviews — still uses property._id ── */}
               {activeSection === 'reviews' && (
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.guestReviews')}</h2>
                   <ReviewsList
                     propertyId={property._id}
-                    averageRating={property.ratings.average}
-                    reviewCount={property.ratings.count}
+                    averageRating={ratings?.average ?? 0}
+                    reviewCount={ratings?.count ?? 0}
                   />
                 </div>
               )}
 
-              {/* ── Tab: Location & Map ── */}
+              {/* ── Tab: Location & Map — from property ── */}
               {activeSection === 'location' && (
                 <div>
                   <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'الموقع والخريطة' : 'Location & Map'}</h2>
@@ -384,53 +466,85 @@ function PropertyDetailContent() {
                 </div>
               )}
 
-              {/* ── Tab: Terms & Policies ── */}
+              {/* ── Tab: Terms & Policies — unit cancellation + written rules, with property rules fallback ── */}
               {activeSection === 'terms' && (
-                <div>
+                <div className="space-y-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.houseRules')}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      {
-                        Icon: Clock,
-                        label: t('property.checkIn'),
-                        value: isAr ? `بعد ${property.rules.checkInTime}` : `After ${property.rules.checkInTime}`,
-                      },
-                      {
-                        Icon: Clock,
-                        label: t('property.checkOut'),
-                        value: isAr ? `قبل ${property.rules.checkOutTime}` : `Before ${property.rules.checkOutTime}`,
-                      },
-                      {
-                        Icon: Cigarette,
-                        label: t('property.smoking'),
-                        value: property.rules.smokingAllowed ? t('property.allowed') : t('property.notAllowed'),
-                      },
-                      {
-                        Icon: PawPrint,
-                        label: t('property.pets'),
-                        value: property.rules.petsAllowed ? t('property.allowed') : t('property.notAllowed'),
-                      },
-                      {
-                        Icon: Music,
-                        label: t('property.parties'),
-                        value: property.rules.partiesAllowed ? t('property.allowed') : t('property.notAllowed'),
-                      },
-                    ].map(({ Icon, label, value }) => (
-                      <div key={label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <Icon className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">
-                          <span className="font-medium">{label}:</span> {value}
-                        </span>
-                      </div>
-                    ))}
+
+                  {/* Cancellation policy — from unit */}
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ShieldCheck className="w-5 h-5 text-primary-600" />
+                      <h3 className="font-semibold text-gray-900">{isAr ? 'سياسة الإلغاء' : 'Cancellation Policy'}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">{getCancellationLabel(unit.cancellationPolicy, isAr)}</p>
+                    {unit.cancellationDescription && (
+                      <p className="text-sm text-gray-500 mt-1">{unit.cancellationDescription}</p>
+                    )}
                   </div>
 
+                  {/* Written rules — from unit */}
+                  {unit.writtenRules && (
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="w-5 h-5 text-primary-600" />
+                        <h3 className="font-semibold text-gray-900">{isAr ? 'قواعد الوحدة' : 'Unit Rules'}</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 whitespace-pre-line">{unit.writtenRules}</p>
+                    </div>
+                  )}
+
+                  {/* Property rules (legacy fallback) */}
+                  {property.rules && (
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">{isAr ? 'قواعد العقار' : 'Property Rules'}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                          property.rules.checkInTime && {
+                            Icon: Clock,
+                            label: t('property.checkIn'),
+                            value: isAr ? `بعد ${property.rules.checkInTime}` : `After ${property.rules.checkInTime}`,
+                          },
+                          property.rules.checkOutTime && {
+                            Icon: Clock,
+                            label: t('property.checkOut'),
+                            value: isAr ? `قبل ${property.rules.checkOutTime}` : `Before ${property.rules.checkOutTime}`,
+                          },
+                          property.rules.smokingAllowed !== undefined && {
+                            Icon: Cigarette,
+                            label: t('property.smoking'),
+                            value: property.rules.smokingAllowed ? t('property.allowed') : t('property.notAllowed'),
+                          },
+                          property.rules.petsAllowed !== undefined && {
+                            Icon: PawPrint,
+                            label: t('property.pets'),
+                            value: property.rules.petsAllowed ? t('property.allowed') : t('property.notAllowed'),
+                          },
+                          property.rules.partiesAllowed !== undefined && {
+                            Icon: Music,
+                            label: t('property.parties'),
+                            value: property.rules.partiesAllowed ? t('property.allowed') : t('property.notAllowed'),
+                          },
+                        ].filter(Boolean).map((item) => {
+                          const { Icon, label, value } = item as { Icon: typeof Clock; label: string; value: string };
+                          return (
+                            <div key={label} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                              <Icon className="w-4 h-4 text-gray-500" />
+                              <span className="text-sm text-gray-600">
+                                <span className="font-medium">{label}:</span> {value}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
             </div>
 
-            {/* Right column – Booking widget (BNPL is inside it) */}
+            {/* Right column – Booking widget (still receives property for backward compat) */}
             <div className="lg:col-span-1">
               <BookingWidget property={property} initialCheckIn={initialCheckIn} initialCheckOut={initialCheckOut} initialAdults={initialAdults} initialChildren={initialChildren} />
             </div>

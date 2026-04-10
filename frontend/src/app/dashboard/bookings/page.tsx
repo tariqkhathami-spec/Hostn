@@ -109,7 +109,7 @@ export default function MyBookingsPage() {
               : 'Start browsing properties and book your first stay'}
           </p>
           <Link
-            href="/listings"
+            href="/search"
             className="inline-flex items-center gap-2 bg-primary-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors"
           >
             {lang === 'ar' ? '\u062a\u0635\u0641\u062d \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a' : 'Browse Properties'}
