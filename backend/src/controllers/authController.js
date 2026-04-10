@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { sendVerificationCode } = require('../services/email');
+const authentica = require('../services/authentica');
 
 // Long-lived access token (30 days — matches refresh token lifetime)
 const generateAccessToken = (user) => {
@@ -329,10 +330,14 @@ exports.updateProfile = async (req, res, next) => {
         const cc = phoneCountryCode || '+966';
         const rawPhone = phone.startsWith(cc) ? phone.slice(cc.length) : phone;
 
-        const OTP = require('../models/OTP');
+        // Test accounts bypass OTP verification
+        const TEST_ACCOUNTS = { '500000001': true, '500000002': true, '500000003': true };
+        const isTestAccount = TEST_ACCOUNTS[rawPhone] && phoneVerificationCode === '0000';
         const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && phoneVerificationCode === '000000';
-        if (!isDevBypass) {
-          const result = await OTP.verifyCode(rawPhone, cc, phoneVerificationCode);
+
+        if (!isTestAccount && !isDevBypass) {
+          // Verify OTP via Authentica API (same as login flow)
+          const result = await authentica.verifyOTP(rawPhone, cc, phoneVerificationCode);
           if (!result.valid) {
             return res.status(400).json({ success: false, message: result.message || 'Invalid verification code' });
           }
