@@ -20,7 +20,6 @@ const propertySchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, 'Description is required'],
       maxlength: [5000, 'Description cannot exceed 5000 characters'],
     },
     type: {
@@ -85,16 +84,16 @@ const propertySchema = new mongoose.Schema(
       enum: ['north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest'],
     },
     pricing: {
-      perNight: { type: Number, required: true, min: 0 },
+      perNight: { type: Number, min: 0 },
       cleaningFee: { type: Number, default: 0 },
       discountPercent: { type: Number, default: 0, min: 0, max: 100 },
       weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
     },
     capacity: {
-      maxGuests: { type: Number, required: true, min: 1 },
-      bedrooms: { type: Number, default: 1 },
-      bathrooms: { type: Number, default: 1 },
-      beds: { type: Number, default: 1 },
+      maxGuests: { type: Number, min: 1 },
+      bedrooms: { type: Number },
+      bathrooms: { type: Number },
+      beds: { type: Number },
     },
     rules: {
       checkInTime: { type: String, default: '14:00' },
@@ -147,6 +146,7 @@ propertySchema.pre('save', function (next) {
 });
 
 propertySchema.virtual('discountedPrice').get(function () {
+  if (!this.pricing?.perNight) return undefined;
   if (this.pricing.discountPercent > 0) {
     return this.pricing.perNight * (1 - this.pricing.discountPercent / 100);
   }

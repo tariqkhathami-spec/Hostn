@@ -185,6 +185,10 @@ exports.getProperties = async (req, res, next) => {
       }
     }
 
+    // Only show properties that have at least one active unit
+    const propertiesWithActiveUnits = await Unit.distinct('property', { isActive: true });
+    query._id = { ...(query._id || {}), $in: propertiesWithActiveUnits };
+
     const MAX_LIMIT = 50;
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(Math.max(1, Number(limit) || 12), MAX_LIMIT);
@@ -477,7 +481,32 @@ exports.deleteProperty = async (req, res, next) => {
 exports.getMyProperties = async (req, res, next) => {
   try {
     const properties = await Property.find({ host: req.user._id }).sort('-createdAt');
-    res.json({ success: true, data: properties });
+
+    // Attach unit counts per property
+    const propertyIds = properties.map(p => p._id);
+    const [totalCounts, activeCounts] = await Promise.all([
+      Unit.aggregate([
+        { $match: { property: { $in: propertyIds } } },
+        { $group: { _id: '$property', count: { $sum: 1 } } },
+      ]),
+      Unit.aggregate([
+        { $match: { property: { $in: propertyIds }, isActive: true } },
+        { $group: { _id: '$property', count: { $sum: 1 } } },
+      ]),
+    ]);
+    const totalMap = {};
+    for (const c of totalCounts) totalMap[c._id.toString()] = c.count;
+    const activeMap = {};
+    for (const c of activeCounts) activeMap[c._id.toString()] = c.count;
+
+    const data = properties.map(p => {
+      const obj = p.toObject();
+      obj.unitCount = totalMap[p._id.toString()] || 0;
+      obj.activeUnitCount = activeMap[p._id.toString()] || 0;
+      return obj;
+    });
+
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
