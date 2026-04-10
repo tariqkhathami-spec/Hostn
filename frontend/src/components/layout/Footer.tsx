@@ -29,7 +29,7 @@ export default function Footer() {
               {lang === 'ar' ? 'روابط سريعة' : 'Quick Links'}
             </h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/listings" className="hover:text-white transition-colors">{lang === 'ar' ? 'تصفح العقارات' : 'Browse Properties'}</Link></li>
+              <li><Link href="/search" className="hover:text-white transition-colors">{lang === 'ar' ? 'تصفح العقارات' : 'Browse Properties'}</Link></li>
               <li><Link href="/blog" className="hover:text-white transition-colors">{lang === 'ar' ? 'المدونة' : 'Blog'}</Link></li>
               <li><Link href="/auth" className="hover:text-white transition-colors">{lang === 'ar' ? 'كن مضيفاً' : 'Become a Host'}</Link></li>
               <li>

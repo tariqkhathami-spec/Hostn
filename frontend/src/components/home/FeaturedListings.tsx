@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import { Property } from '@/types';
-import { propertiesApi } from '@/lib/api';
-import PropertyCard from '@/components/listings/PropertyCard';
+import { Unit } from '@/types';
+import { unitsApi } from '@/lib/api';
+import UnitCard from '@/components/listings/UnitCard';
 
 interface FeaturedListingsProps {
   title?: string;
@@ -22,7 +22,7 @@ export default function FeaturedListings({
   featured,
 }: FeaturedListingsProps) {
   const { t } = useLanguage();
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,8 +31,8 @@ export default function FeaturedListings({
         const params: Record<string, string> = { limit: '8' };
         if (city) params.city = city;
         if (featured) params.featured = 'true';
-        const res = await propertiesApi.getAll(params);
-        setProperties(res.data.data);
+        const res = await unitsApi.search(params);
+        setProperties(res.data.data || []);
       } catch {
         // fallback to empty
       } finally {
@@ -81,7 +81,7 @@ export default function FeaturedListings({
             <p className="text-gray-500 text-xs sm:text-sm">{subtitle}</p>
           </div>
           <Link
-            href={`/listings${city ? `?city=${city}` : featured ? '?featured=true' : ''}`}
+            href={`/search${city ? `?city=${city}` : featured ? '?featured=true' : ''}`}
             className="hidden md:flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
           >
             {t('featured.viewAll')}
@@ -90,14 +90,14 @@ export default function FeaturedListings({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {properties.map((property) => (
-            <PropertyCard key={property._id} property={property} />
+          {properties.map((unit) => (
+            <UnitCard key={unit._id} unit={unit} />
           ))}
         </div>
 
         <div className="mt-8 text-center md:hidden">
           <Link
-            href={`/listings${city ? `?city=${city}` : ''}`}
+            href={`/search${city ? `?city=${city}` : ''}`}
             className="btn-outline inline-flex items-center gap-2"
           >
             {t('featured.viewAllProperties')}

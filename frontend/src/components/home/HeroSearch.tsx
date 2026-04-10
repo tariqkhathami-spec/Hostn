@@ -61,7 +61,7 @@ export default function HeroSearch() {
   const handleSearch = () => {
     setShowCalendar(false);
     saveSearchCookies({ city, type: propertyType, checkIn, checkOut });
-    router.push('/listings');
+    router.push('/search');
   };
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -498,7 +498,7 @@ export default function HeroSearch() {
                   const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
                   saveSearchCookies({ city: c.value, checkIn: todayStr, checkOut: tomorrowStr });
                 }
-                router.push('/listings');
+                router.push('/search');
               }}
               className="bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm transition-all duration-300 border border-white/5 hover:border-white/15"
             >

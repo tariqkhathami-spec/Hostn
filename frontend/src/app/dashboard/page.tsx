@@ -217,7 +217,7 @@ export default function GuestDashboardPage() {
                 : 'No bookings yet'}
             </p>
             <Link
-              href="/listings"
+              href="/search"
               className="inline-block mt-3 text-sm text-primary-600 hover:text-primary-700"
             >
               {lang === 'ar' ? '\u062a\u0635\u0641\u062d \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062a' : 'Browse Properties'}

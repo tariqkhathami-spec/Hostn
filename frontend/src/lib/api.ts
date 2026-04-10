@@ -122,6 +122,9 @@ export const propertiesApi = {
 // UNITS (property sub-units)
 // ═══════════════════════════════════════════════════════════════════════════════
 export const unitsApi = {
+  /** Public unit search (for /search page) */
+  search: (params?: Record<string, string>) =>
+    api.get('/units/search', { params }),
   /** List active units for a property (public) */
   getForProperty: (propertyId: string, params?: Record<string, unknown>) =>
     api.get(`/properties/${propertyId}/units`, { params }),
@@ -141,6 +144,9 @@ export const unitsApi = {
   /** Duplicate a unit with optional field exclusions */
   duplicate: (id: string, exclude?: string[]) =>
     api.post(`/units/${id}/duplicate`, { exclude }),
+  /** Update unit pricing (day-of-week + date overrides) */
+  updatePricing: (id: string, data: Record<string, unknown>) =>
+    api.put(`/units/${id}/pricing`, data),
   /** Toggle unit active status (host-facing) */
   toggle: (id: string) => api.patch(`/units/${id}/toggle`),
 };

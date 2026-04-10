@@ -178,7 +178,7 @@ export default function FavoritesPage() {
             {isAr ? 'لم تحفظ أي عقارات بعد' : 'You haven\'t saved any properties yet'}
           </p>
           <Link
-            href="/listings"
+            href="/search"
             className="inline-block bg-primary-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors"
           >
             {isAr ? 'تصفح العقارات' : 'Browse Properties'}

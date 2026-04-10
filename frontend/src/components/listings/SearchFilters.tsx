@@ -100,7 +100,7 @@ export default function SearchFilters() {
     Object.entries(filters).forEach(([k, v]) => {
       if (v) params.set(k, v);
     });
-    router.push(`/listings?${params.toString()}`);
+    router.push(`/search?${params.toString()}`);
     setShowFilters(false);
   };
 
@@ -112,7 +112,7 @@ export default function SearchFilters() {
     setCitySearch('');
     setAdults(1);
     setChildren(0);
-    router.push('/listings');
+    router.push('/search');
   };
 
   const activeCount = Object.entries(filters).filter(
@@ -338,7 +338,7 @@ export default function SearchFilters() {
               Object.entries(newFilters).forEach(([k, v]) => {
                 if (v) params.set(k, v);
               });
-              router.push(`/listings?${params.toString()}`);
+              router.push(`/search?${params.toString()}`);
             }}
             className="hidden sm:block ltr:ml-auto rtl:mr-auto px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400 whitespace-nowrap"
           >
@@ -370,7 +370,7 @@ export default function SearchFilters() {
                 Object.entries(newFilters).forEach(([k, v]) => {
                   if (v) params.set(k, v);
                 });
-                router.push(`/listings?${params.toString()}`);
+                router.push(`/search?${params.toString()}`);
               }}
               className={`px-4 py-2 rounded-xl border text-sm font-medium whitespace-nowrap transition-all ${
                 filters.type === pt.value

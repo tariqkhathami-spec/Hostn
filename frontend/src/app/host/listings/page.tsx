@@ -15,6 +15,7 @@ interface Property {
   type: string;
   location?: { city?: string; district?: string };
   images?: { url: string; isPrimary?: boolean }[];
+  unitImage?: { url: string };
   isActive: boolean;
   unitCount?: number;
   activeUnitCount?: number;
@@ -125,8 +126,8 @@ export default function HostListingsPage() {
                 <div className="flex items-stretch">
                   {/* Image / placeholder */}
                   <div className="w-28 sm:w-36 flex-shrink-0 bg-gray-100 relative">
-                    {property.images && property.images[0]?.url ? (
-                      <img src={property.images[0].url} alt={displayName(property)} className="w-full h-full object-cover" />
+                    {(property.images?.[0]?.url || property.unitImage?.url) ? (
+                      <img src={property.images?.[0]?.url || property.unitImage!.url} alt={displayName(property)} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center min-h-[100px]">
                         <Building className="w-8 h-8 text-gray-300" />

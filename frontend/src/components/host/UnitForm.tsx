@@ -64,7 +64,7 @@ const t: Record<string, Record<string, string>> = {
   removePool:   { en: 'Remove', ar: 'حذف' },
 
   kitchenTitle: { en: 'Kitchen', ar: 'المطبخ' },
-  diningCap:    { en: 'Dining Seats', ar: 'سعة السفرة' },
+  diningCap:    { en: 'Dining Capacity (guests)', ar: 'سعة السفرة (ضيوف)' },
   kitchenAmns:  { en: 'Kitchen Amenities', ar: 'مستلزمات المطبخ' },
 
   livingTitle:  { en: 'Majlis / Living Rooms', ar: 'مجلس' },

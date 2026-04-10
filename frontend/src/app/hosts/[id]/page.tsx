@@ -5,11 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import PropertyCard from '@/components/listings/PropertyCard';
+import UnitCard from '@/components/listings/UnitCard';
 import StarRating from '@/components/ui/StarRating';
-import { publicHostApi } from '@/lib/api';
+import { publicHostApi, unitsApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
-import { Property, User } from '@/types';
+import { Property, User, Unit } from '@/types';
 import { BadgeCheck, Share2, Building2, Clock, CalendarDays, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -42,11 +42,12 @@ export default function HostProfilePage() {
   usePageTitle(data ? data.host.name : (isAr ? 'المضيف' : 'Host'));
   const [activeTab, setActiveTab] = useState<'reviews' | 'properties'>('reviews');
   const [reviewPage, setReviewPage] = useState(1);
-  const [propertyPage, setPropertyPage] = useState(1);
+  const [hostUnits, setHostUnits] = useState<Unit[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(false);
 
   const fetchData = async (rp = 1, pp = 1) => {
     try {
-      const res = await publicHostApi.getProfile(id, { reviewPage: rp, reviewLimit: 10, propertyPage: pp, propertyLimit: 6 });
+      const res = await publicHostApi.getProfile(id, { reviewPage: rp, reviewLimit: 10, propertyPage: pp, propertyLimit: 100 });
       setData(res.data.data);
     } catch {
       // 404 or error
@@ -60,18 +61,31 @@ export default function HostProfilePage() {
     fetchData();
   }, [id]);
 
+  // Fetch units for all host properties
+  useEffect(() => {
+    if (!data?.properties?.length) return;
+    const fetchUnits = async () => {
+      setUnitsLoading(true);
+      const allUnits: Unit[] = [];
+      for (const prop of data.properties) {
+        try {
+          const res = await unitsApi.getForProperty(prop._id);
+          const units = res.data.data || res.data.units || [];
+          allUnits.push(...units);
+        } catch {
+          // skip properties with no units or errors
+        }
+      }
+      setHostUnits(allUnits);
+      setUnitsLoading(false);
+    };
+    fetchUnits();
+  }, [data?.properties]);
+
   const handleReviewPageChange = async (page: number) => {
     setReviewPage(page);
     try {
-      const res = await publicHostApi.getProfile(id, { reviewPage: page, reviewLimit: 10, propertyPage, propertyLimit: 6 });
-      setData(res.data.data);
-    } catch { /* ignore */ }
-  };
-
-  const handlePropertyPageChange = async (page: number) => {
-    setPropertyPage(page);
-    try {
-      const res = await publicHostApi.getProfile(id, { reviewPage, reviewLimit: 10, propertyPage: page, propertyLimit: 6 });
+      const res = await publicHostApi.getProfile(id, { reviewPage: page, reviewLimit: 10, propertyPage: 1, propertyLimit: 100 });
       setData(res.data.data);
     } catch { /* ignore */ }
   };
@@ -112,14 +126,14 @@ export default function HostProfilePage() {
         <main className="container-custom py-20 text-center">
           <h1 className="text-2xl font-bold text-gray-700 mb-2">{isAr ? 'المضيف غير موجود' : 'Host not found'}</h1>
           <p className="text-gray-500">{isAr ? 'ربما تم حذف هذا الحساب أو لم يعد متاحاً.' : 'This host may not exist or is no longer available.'}</p>
-          <Link href="/listings" className="btn-primary inline-flex mt-6">{isAr ? 'تصفح العقارات' : 'Browse Properties'}</Link>
+          <Link href="/search" className="btn-primary inline-flex mt-6">{isAr ? 'تصفح العقارات' : 'Browse Properties'}</Link>
         </main>
         <Footer />
       </>
     );
   }
 
-  const { host, stats, reviews, reviewsPagination, properties, propertiesPagination } = data;
+  const { host, stats, reviews, reviewsPagination } = data;
 
   return (
     <>
@@ -207,7 +221,7 @@ export default function HostProfilePage() {
                   : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
             >
-              {isAr ? 'العقارات' : 'Properties'} ({stats.propertyCount})
+              {isAr ? 'الوحدات' : 'Units'} ({hostUnits.length || stats.propertyCount})
             </button>
           </div>
 
@@ -237,7 +251,7 @@ export default function HostProfilePage() {
                           </div>
                           <p className="text-xs text-gray-400 mb-2">
                             {review.property?.title && (
-                              <Link href={`/listings/${review.property._id}`} className="hover:text-primary-600">{isAr && review.property.titleAr ? review.property.titleAr : review.property.title}</Link>
+                              <Link href={`/search/${review.property._id}`} className="hover:text-primary-600">{isAr && review.property.titleAr ? review.property.titleAr : review.property.title}</Link>
                             )}
                             {' · '}
                             {new Date(review.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -271,38 +285,27 @@ export default function HostProfilePage() {
             </div>
           )}
 
-          {/* Properties tab */}
+          {/* Properties tab — now shows units */}
           {activeTab === 'properties' && (
             <div>
-              {properties.length === 0 ? (
-                <p className="text-gray-500 text-center py-12">{isAr ? 'لا توجد عقارات' : 'No properties yet'}</p>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {properties.map((prop) => (
-                      <PropertyCard key={prop._id} property={prop} />
-                    ))}
-                  </div>
-
-                  {/* Properties pagination */}
-                  {propertiesPagination.pages > 1 && (
-                    <div className="flex justify-center gap-2 pt-8">
-                      {Array.from({ length: propertiesPagination.pages }, (_, i) => i + 1).map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => handlePropertyPageChange(p)}
-                          className={`w-10 h-10 rounded-xl text-sm font-medium transition-colors ${
-                            p === propertiesPagination.page
-                              ? 'bg-primary-600 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      ))}
+              {unitsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="aspect-[4/3] bg-gray-200 rounded-xl mb-3" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-100 rounded w-1/2" />
                     </div>
-                  )}
-                </>
+                  ))}
+                </div>
+              ) : hostUnits.length === 0 ? (
+                <p className="text-gray-500 text-center py-12">{isAr ? 'لا توجد وحدات' : 'No units yet'}</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {hostUnits.map((unit) => (
+                    <UnitCard key={unit._id} unit={unit} />
+                  ))}
+                </div>
               )}
             </div>
           )}

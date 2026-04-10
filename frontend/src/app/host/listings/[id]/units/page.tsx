@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { unitsApi, propertiesApi } from '@/lib/api';
 import {
-  Plus, Loader2, ArrowLeft, Copy,
+  Plus, Loader2, ArrowLeft, Copy, Calendar,
   ToggleLeft, ToggleRight, Bed, Users, Droplets, Building,
   X, ImageOff, DollarSign, CalendarOff,
 } from 'lucide-react';
@@ -43,6 +43,7 @@ const t: Record<string, Record<string, string>> = {
   dupDates:     { en: 'Blocked dates', ar: 'التواريخ المحجوبة' },
   dupConfirm:   { en: 'Duplicate', ar: 'نسخ' },
   cancel:       { en: 'Cancel', ar: 'إلغاء' },
+  pricing:      { en: 'Pricing', ar: 'الأسعار' },
 };
 
 export default function UnitsListPage() {
@@ -229,6 +230,13 @@ export default function UnitsListPage() {
                       className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
                     >
                       {t.edit[lang]}
+                    </Link>
+                    <Link
+                      href={`/host/listings/${propertyId}/units/${unit._id}/pricing`}
+                      className="text-sm text-gray-600 hover:text-primary-600 transition-colors flex items-center gap-1"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      {t.pricing[lang]}
                     </Link>
                     <button
                       onClick={() => openDupDialog(unit._id)}
