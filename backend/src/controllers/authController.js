@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { sendVerificationCode } = require('../services/email');
+const authentica = require('../services/authentica');
 
 // Long-lived access token (30 days — matches refresh token lifetime)
 const generateAccessToken = (user) => {
@@ -295,13 +296,11 @@ exports.updateProfile = async (req, res, next) => {
         }
       );
 
-      // Send verification email
-      try {
-        const lang = req.headers['accept-language']?.startsWith('ar') ? 'ar' : 'en';
-        await sendVerificationCode(normalizedEmail, code, lang);
-      } catch (emailErr) {
+      // Send verification email (non-blocking — code is already saved to DB)
+      const lang = req.headers['accept-language']?.startsWith('ar') ? 'ar' : 'en';
+      sendVerificationCode(normalizedEmail, code, lang).catch((emailErr) => {
         console.error('[EMAIL] Failed to send verification email:', emailErr.message);
-      }
+      });
 
       return res.json({
         success: true,
@@ -331,23 +330,30 @@ exports.updateProfile = async (req, res, next) => {
         const cc = phoneCountryCode || '+966';
         const rawPhone = phone.startsWith(cc) ? phone.slice(cc.length) : phone;
 
-        const OTP = require('../models/OTP');
+        // Test accounts bypass OTP verification
+        const TEST_ACCOUNTS = { '500000001': true, '500000002': true, '500000003': true };
+        const isTestAccount = TEST_ACCOUNTS[rawPhone] && phoneVerificationCode === '0000';
         const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && phoneVerificationCode === '000000';
-        if (!isDevBypass) {
-          const result = await OTP.verifyCode(rawPhone, cc, phoneVerificationCode);
+
+        if (!isTestAccount && !isDevBypass) {
+          // Verify OTP via Authentica API (same as login flow)
+          const result = await authentica.verifyOTP(rawPhone, cc, phoneVerificationCode);
           if (!result.valid) {
             return res.status(400).json({ success: false, message: result.message || 'Invalid verification code' });
           }
         }
 
-        // Check phone not already taken
-        const existingPhoneUser = await User.findOne({ phone, _id: { $ne: req.user._id } });
+        // Check phone not already taken (check both raw and full formats)
+        const existingPhoneUser = await User.findOne({
+          phone: { $in: [rawPhone, phone, `0${rawPhone}`] },
+          _id: { $ne: req.user._id },
+        });
         if (existingPhoneUser) {
           return res.status(400).json({ success: false, message: 'Phone already linked to another account' });
         }
 
-        // Apply phone change along with any other profile fields
-        const updates = { phone, phoneVerified: true };
+        // Apply phone change — store raw phone (without country code) for consistency
+        const updates = { phone: rawPhone, phoneVerified: true };
         if (name !== undefined) updates.name = name;
         if (avatar !== undefined) updates.avatar = avatar;
 

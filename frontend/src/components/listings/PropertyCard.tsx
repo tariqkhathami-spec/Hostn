@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MapPin, Users, BedDouble, Bath, Ruler, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
+import { Heart, MapPin, Users, BedDouble, Bath, Ruler, ChevronLeft, ChevronRight, BadgeCheck, Plus, Loader2, X, Check, Trash2, Layers } from 'lucide-react';
 import { Property, User, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel, getDiscountedPrice, getGuestLabel, calculateNights, getNightLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
@@ -280,7 +280,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
         <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gray-100 group/carousel">
           <Image
             src={images[currentImageIndex]?.url || images[0].url}
-            alt={property.title}
+            alt={isAr && property.titleAr ? property.titleAr : property.title}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -347,7 +347,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
         {/* Content */}
         <div className="p-4">
           <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2 group-hover:text-primary-600 transition-colors">
-            {property.title}
+            {isAr && property.titleAr ? property.titleAr : property.title}
           </h3>
           <div className="flex items-center gap-1 text-gray-500 text-xs mb-2">
             <MapPin className="w-3 h-3 flex-shrink-0" />
@@ -378,6 +378,14 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
               </span>
             ) : null}
           </div>
+          {property.activeUnitCount != null && property.activeUnitCount > 0 && (
+            <div className="flex items-center gap-1 mb-3">
+              <span className="inline-flex items-center gap-1 text-xs text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                <Layers className="w-3 h-3" />
+                {isAr ? `${property.activeUnitCount} وحدات متاحة` : `${property.activeUnitCount} units available`}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               {discountedPrice ? (

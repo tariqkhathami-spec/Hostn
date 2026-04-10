@@ -1,6 +1,8 @@
+const mongoose = require('mongoose');
 const Property = require('../models/Property');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
+const Unit = require('../models/Unit');
 
 // @desc    Get host dashboard stats
 // @route   GET /api/host/stats
@@ -92,7 +94,7 @@ exports.getRecentBookings = async (req, res, next) => {
     const propertyIds = properties.map((p) => p._id);
 
     const bookings = await Booking.find({ property: { $in: propertyIds } })
-      .populate('property', 'title images location type')
+      .populate('property', 'title titleAr images location type')
       .populate('guest', 'name email phone avatar')
       .sort('-createdAt')
       .limit(Math.min(parseInt(req.query.limit) || 10, 50));
@@ -186,7 +188,7 @@ exports.getEarnings = async (req, res, next) => {
       status: { $in: ['confirmed', 'completed'] },
       createdAt: { $gte: startDate, $lte: endDate },
     })
-      .populate('property', 'title type')
+      .populate('property', 'title titleAr type')
       .sort('createdAt');
 
     // Monthly breakdown
@@ -273,14 +275,29 @@ exports.getCalendar = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, unitId } = req.query;
     const start = startDate ? new Date(startDate) : new Date();
     const end = endDate
       ? new Date(endDate)
       : new Date(start.getFullYear(), start.getMonth() + 3, 0);
 
-    // Get bookings for this period
-    const bookings = await Booking.find({
+    // If unitId is provided, validate and load the unit
+    let unit = null;
+    if (unitId) {
+      if (!mongoose.Types.ObjectId.isValid(unitId)) {
+        return res.status(400).json({ success: false, message: 'Invalid unit ID' });
+      }
+      unit = await Unit.findById(unitId);
+      if (!unit) {
+        return res.status(404).json({ success: false, message: 'Unit not found' });
+      }
+      if (unit.property.toString() !== req.params.propertyId) {
+        return res.status(400).json({ success: false, message: 'Unit does not belong to this property' });
+      }
+    }
+
+    // Build booking query
+    const bookingQuery = {
       property: req.params.propertyId,
       status: { $in: ['pending', 'confirmed'] },
       $or: [
@@ -288,33 +305,49 @@ exports.getCalendar = async (req, res, next) => {
         { checkOut: { $gte: start, $lte: end } },
         { checkIn: { $lte: start }, checkOut: { $gte: end } },
       ],
-    })
+    };
+    if (unitId) {
+      bookingQuery.unit = unitId;
+    }
+
+    // Get bookings for this period
+    const bookings = await Booking.find(bookingQuery)
       .populate('guest', 'name email')
+      .populate('unit', 'nameEn nameAr')
       .sort('checkIn');
 
-    // Blocked dates from property
-    const blockedDates = (property.unavailableDates || []).filter(
+    // Blocked dates from unit or property
+    const unavailableSource = unit ? unit.unavailableDates : property.unavailableDates;
+    const blockedDates = (unavailableSource || []).filter(
       (d) =>
         (d.start >= start && d.start <= end) ||
         (d.end >= start && d.end <= end) ||
         (d.start <= start && d.end >= end)
     );
 
+    const responseData = {
+      propertyId: property._id,
+      propertyTitle: property.title,
+      bookings: bookings.map((b) => ({
+        _id: b._id,
+        checkIn: b.checkIn,
+        checkOut: b.checkOut,
+        status: b.status,
+        guest: b.guest,
+        total: b.pricing?.total,
+        unit: b.unit || null,
+      })),
+      blockedDates,
+    };
+
+    if (unit) {
+      responseData.unitId = unit._id;
+      responseData.unitName = unit.nameEn;
+    }
+
     res.json({
       success: true,
-      data: {
-        propertyId: property._id,
-        propertyTitle: property.title,
-        bookings: bookings.map((b) => ({
-          _id: b._id,
-          checkIn: b.checkIn,
-          checkOut: b.checkOut,
-          status: b.status,
-          guest: b.guest,
-          total: b.pricing?.total,
-        })),
-        blockedDates,
-      },
+      data: responseData,
     });
   } catch (error) {
     next(error);
@@ -326,7 +359,7 @@ exports.getCalendar = async (req, res, next) => {
 // @access  Private (Host)
 exports.blockDates = async (req, res, next) => {
   try {
-    const { startDate, endDate, action } = req.body;
+    const { startDate, endDate, action, unitId } = req.body;
 
     const property = await Property.findById(req.params.propertyId);
     if (!property) {
@@ -336,9 +369,24 @@ exports.blockDates = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // If unitId is provided, load and validate the unit
+    let unit = null;
+    if (unitId) {
+      unit = await Unit.findById(unitId);
+      if (!unit) {
+        return res.status(404).json({ success: false, message: 'Unit not found' });
+      }
+      if (unit.property.toString() !== req.params.propertyId) {
+        return res.status(400).json({ success: false, message: 'Unit does not belong to this property' });
+      }
+    }
+
+    // Determine which document to update (unit or property)
+    const target = unit || property;
+
     if (action === 'block') {
       // Check for existing bookings in this range
-      const conflicting = await Booking.findOne({
+      const conflictQuery = {
         property: req.params.propertyId,
         status: { $in: ['pending', 'confirmed'] },
         $or: [
@@ -346,7 +394,12 @@ exports.blockDates = async (req, res, next) => {
           { checkOut: { $gt: new Date(startDate), $lte: new Date(endDate) } },
           { checkIn: { $lte: new Date(startDate) }, checkOut: { $gte: new Date(endDate) } },
         ],
-      });
+      };
+      if (unitId) {
+        conflictQuery.unit = unitId;
+      }
+
+      const conflicting = await Booking.findOne(conflictQuery);
 
       if (conflicting) {
         return res.status(400).json({
@@ -355,12 +408,12 @@ exports.blockDates = async (req, res, next) => {
         });
       }
 
-      property.unavailableDates.push({
+      target.unavailableDates.push({
         start: new Date(startDate),
         end: new Date(endDate),
       });
     } else if (action === 'unblock') {
-      property.unavailableDates = property.unavailableDates.filter(
+      target.unavailableDates = target.unavailableDates.filter(
         (d) =>
           !(
             d.start.getTime() === new Date(startDate).getTime() &&
@@ -369,11 +422,11 @@ exports.blockDates = async (req, res, next) => {
       );
     }
 
-    await property.save();
+    await target.save();
 
     res.json({
       success: true,
-      data: { unavailableDates: property.unavailableDates },
+      data: { unavailableDates: target.unavailableDates },
       message: action === 'block' ? 'Dates blocked successfully' : 'Dates unblocked successfully',
     });
   } catch (error) {
@@ -405,7 +458,7 @@ exports.getHostReviews = async (req, res, next) => {
     const total = await Review.countDocuments(query);
 
     const reviews = await Review.find(query)
-      .populate('property', 'title images type location')
+      .populate('property', 'title titleAr images type location')
       .populate('guest', 'name avatar email')
       .sort('-createdAt')
       .skip(skip)
@@ -470,6 +523,20 @@ exports.togglePropertyStatus = async (req, res, next) => {
     }
     if (property.host.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // If trying to activate, check if property has units but none are active
+    if (!property.isActive) {
+      const totalUnits = await Unit.countDocuments({ property: property._id });
+      if (totalUnits > 0) {
+        const activeUnits = await Unit.countDocuments({ property: property._id, isActive: true });
+        if (activeUnits === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot activate property — all units are inactive. Activate at least one unit first.',
+          });
+        }
+      }
     }
 
     property.isActive = !property.isActive;
@@ -561,7 +628,7 @@ exports.getHostBookings = async (req, res, next) => {
     }
 
     const bookings = await Booking.find(query)
-      .populate('property', 'title images location type tags')
+      .populate('property', 'title titleAr images location type tags')
       .populate('guest', 'name phone avatar')
       .sort('-createdAt')
       .limit(20)
@@ -606,7 +673,7 @@ exports.getUpcomingGuests = async (req, res, next) => {
       status: { $in: ['confirmed', 'pending'] },
       checkIn: { $gte: now },
     })
-      .populate('property', 'title tags')
+      .populate('property', 'title titleAr tags')
       .populate('guest', 'name phone')
       .sort('checkIn')
       .limit(10);
@@ -668,6 +735,9 @@ exports.getHostCalendarAll = async (req, res, next) => {
     const properties = await Property.find({ host: req.user._id }).select('_id title tags isActive');
     const propertyIds = properties.map(p => p._id);
 
+    // Fetch units for all properties
+    const units = await Unit.find({ property: { $in: propertyIds } }).select('_id property nameEn nameAr isActive unavailableDates');
+
     const bookings = await Booking.find({
       property: { $in: propertyIds },
       status: { $in: ['pending', 'confirmed'] },
@@ -676,6 +746,46 @@ exports.getHostCalendarAll = async (req, res, next) => {
         { checkOut: { $gte: startDate, $lte: endDate } },
         { checkIn: { $lte: startDate }, checkOut: { $gte: endDate } },
       ],
+    });
+
+    // Helper: compute booked date strings from a list of bookings
+    const computeBookedDates = (bookingList) => {
+      const bookedDates = [];
+      bookingList.forEach(b => {
+        const start = new Date(Math.max(b.checkIn.getTime(), startDate.getTime()));
+        const end = new Date(Math.min(b.checkOut.getTime(), endDate.getTime()));
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          bookedDates.push(d.toISOString().split('T')[0]);
+        }
+      });
+      return [...new Set(bookedDates)];
+    };
+
+    // Helper: compute blocked date strings from unavailableDates array
+    const computeBlockedDates = (unavailableDates) => {
+      const blocked = [];
+      (unavailableDates || []).forEach(d => {
+        if (
+          (d.start >= startDate && d.start <= endDate) ||
+          (d.end >= startDate && d.end <= endDate) ||
+          (d.start <= startDate && d.end >= endDate)
+        ) {
+          const s = new Date(Math.max(d.start.getTime(), startDate.getTime()));
+          const e = new Date(Math.min(d.end.getTime(), endDate.getTime()));
+          for (let day = new Date(s); day <= e; day.setDate(day.getDate() + 1)) {
+            blocked.push(day.toISOString().split('T')[0]);
+          }
+        }
+      });
+      return [...new Set(blocked)];
+    };
+
+    // Group units by property
+    const unitsByProperty = {};
+    units.forEach(u => {
+      const pid = u.property.toString();
+      if (!unitsByProperty[pid]) unitsByProperty[pid] = [];
+      unitsByProperty[pid].push(u);
     });
 
     // Group by tag
@@ -690,24 +800,35 @@ exports.getHostCalendarAll = async (req, res, next) => {
         };
       }
 
-      // Find booked dates for this property/unit
-      const unitBookings = bookings.filter(b => b.property.toString() === p._id.toString());
-      const bookedDates = [];
-      unitBookings.forEach(b => {
-        const start = new Date(Math.max(b.checkIn.getTime(), startDate.getTime()));
-        const end = new Date(Math.min(b.checkOut.getTime(), endDate.getTime()));
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          bookedDates.push(d.toISOString().split('T')[0]);
-        }
-      });
+      const pid = p._id.toString();
+      const propertyUnits = unitsByProperty[pid];
 
-      groups[groupTag].units.push({
-        unitId: p._id,
-        unitName: p.title,
-        unitCode: p._id.toString().slice(-5),
-        isListed: p.isActive,
-        bookedDates: [...new Set(bookedDates)],
-      });
+      if (propertyUnits && propertyUnits.length > 0) {
+        // Property has real units - create a sub-entry for each
+        propertyUnits.forEach(u => {
+          const unitBookings = bookings.filter(
+            b => b.property.toString() === pid && b.unit && b.unit.toString() === u._id.toString()
+          );
+          groups[groupTag].units.push({
+            unitId: u._id,
+            unitName: u.nameEn || u.nameAr || p.title,
+            unitCode: u._id.toString().slice(-5),
+            isListed: u.isActive,
+            bookedDates: computeBookedDates(unitBookings),
+            blockedDates: computeBlockedDates(u.unavailableDates),
+          });
+        });
+      } else {
+        // No units - property itself is the "unit" (existing behavior)
+        const unitBookings = bookings.filter(b => b.property.toString() === pid);
+        groups[groupTag].units.push({
+          unitId: p._id,
+          unitName: p.title,
+          unitCode: p._id.toString().slice(-5),
+          isListed: p.isActive,
+          bookedDates: computeBookedDates(unitBookings),
+        });
+      }
     });
 
     res.json({ success: true, data: Object.values(groups) });

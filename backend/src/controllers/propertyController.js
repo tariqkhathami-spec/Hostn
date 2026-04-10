@@ -1,10 +1,12 @@
 const Property = require('../models/Property');
+const Unit = require('../models/Unit');
 const { escapeRegex } = require('../middleware/validate');
 const { cacheGet, cacheSet, cacheDel } = require('../config/cache');
 
 // Fields a host is allowed to update on their own property.
 const ALLOWED_UPDATE_FIELDS = [
   'title',
+  'titleAr',
   'description',
   'type',
   'location',
@@ -91,6 +93,8 @@ exports.getProperties = async (req, res, next) => {
     if (checkIn && checkOut) {
       const checkInDate = new Date(checkIn);
       const checkOutDate = new Date(checkOut);
+
+      // Exclude properties with blocked dates at property level
       query.unavailableDates = {
         $not: {
           $elemMatch: {
@@ -113,9 +117,77 @@ exports.getProperties = async (req, res, next) => {
       });
 
       if (bookedPropertyIds.length > 0) {
-        query._id = { ...(query._id || {}), $nin: bookedPropertyIds };
+        // Check which booked properties have units with availability
+        const propertiesWithUnits = await Unit.distinct('property', {
+          property: { $in: bookedPropertyIds },
+          isActive: true,
+        });
+
+        if (propertiesWithUnits.length > 0) {
+          // For each property with units, find units that are booked for these dates
+          const fullyBookedUnits = await Booking.distinct('unit', {
+            property: { $in: propertiesWithUnits },
+            unit: { $ne: null },
+            status: { $in: ['pending', 'confirmed'] },
+            $or: [
+              { checkIn: { $lt: checkOutDate, $gte: checkInDate } },
+              { checkOut: { $gt: checkInDate, $lte: checkOutDate } },
+              { checkIn: { $lte: checkInDate }, checkOut: { $gte: checkOutDate } },
+            ],
+          });
+
+          // Also check units with blocked dates
+          const blockedUnits = await Unit.distinct('_id', {
+            property: { $in: propertiesWithUnits },
+            isActive: true,
+            unavailableDates: {
+              $elemMatch: { start: { $lt: checkOutDate }, end: { $gt: checkInDate } },
+            },
+          });
+
+          // Combine booked + blocked units
+          const unavailableUnitIds = new Set([
+            ...fullyBookedUnits.map(id => id.toString()),
+            ...blockedUnits.map(id => id.toString()),
+          ]);
+
+          // For each property with units, check if at least one unit is still available
+          const allUnitsPerProperty = await Unit.find({
+            property: { $in: propertiesWithUnits },
+            isActive: true,
+          }).select('_id property');
+
+          const unitsByProperty = {};
+          for (const u of allUnitsPerProperty) {
+            const pid = u.property.toString();
+            if (!unitsByProperty[pid]) unitsByProperty[pid] = [];
+            unitsByProperty[pid].push(u._id.toString());
+          }
+
+          const recoveredPropertyIds = [];
+          for (const [pid, unitIds] of Object.entries(unitsByProperty)) {
+            const hasAvailable = unitIds.some(uid => !unavailableUnitIds.has(uid));
+            if (hasAvailable) recoveredPropertyIds.push(pid);
+          }
+
+          // Remove recovered properties from the exclusion list
+          const finalExcluded = bookedPropertyIds
+            .map(id => id.toString())
+            .filter(id => !recoveredPropertyIds.includes(id));
+
+          if (finalExcluded.length > 0) {
+            query._id = { ...(query._id || {}), $nin: finalExcluded };
+          }
+        } else {
+          // No properties with units — use original exclusion
+          query._id = { ...(query._id || {}), $nin: bookedPropertyIds };
+        }
       }
     }
+
+    // Only show properties that have at least one active unit
+    const propertiesWithActiveUnits = await Unit.distinct('property', { isActive: true });
+    query._id = { ...(query._id || {}), $in: propertiesWithActiveUnits };
 
     const MAX_LIMIT = 50;
     const safePage = Math.max(1, Number(page) || 1);
@@ -129,6 +201,17 @@ exports.getProperties = async (req, res, next) => {
       .skip(skip)
       .limit(safeLimit);
 
+    // Get active unit counts for returned properties
+    const propertyIds = properties.map(p => p._id);
+    const unitCounts = await Unit.aggregate([
+      { $match: { property: { $in: propertyIds }, isActive: true } },
+      { $group: { _id: '$property', count: { $sum: 1 } } },
+    ]);
+    const unitCountMap = {};
+    for (const uc of unitCounts) {
+      unitCountMap[uc._id.toString()] = uc.count;
+    }
+
     // Strip exact coordinates from search results (privacy)
     const sanitizedProperties = properties.map(p => {
       const obj = p.toObject();
@@ -138,6 +221,7 @@ exports.getProperties = async (req, res, next) => {
       if (obj.location) {
         delete obj.location.address;
       }
+      obj.activeUnitCount = unitCountMap[p._id.toString()] || 0;
       return obj;
     });
 
@@ -280,6 +364,12 @@ exports.getProperty = async (req, res, next) => {
       end: b.checkOut,
     }));
 
+    // Include active unit count
+    propertyObj.activeUnitCount = await Unit.countDocuments({
+      property: property._id,
+      isActive: true,
+    });
+
     res.json({ success: true, data: propertyObj });
   } catch (error) {
     next(error);
@@ -391,7 +481,32 @@ exports.deleteProperty = async (req, res, next) => {
 exports.getMyProperties = async (req, res, next) => {
   try {
     const properties = await Property.find({ host: req.user._id }).sort('-createdAt');
-    res.json({ success: true, data: properties });
+
+    // Attach unit counts per property
+    const propertyIds = properties.map(p => p._id);
+    const [totalCounts, activeCounts] = await Promise.all([
+      Unit.aggregate([
+        { $match: { property: { $in: propertyIds } } },
+        { $group: { _id: '$property', count: { $sum: 1 } } },
+      ]),
+      Unit.aggregate([
+        { $match: { property: { $in: propertyIds }, isActive: true } },
+        { $group: { _id: '$property', count: { $sum: 1 } } },
+      ]),
+    ]);
+    const totalMap = {};
+    for (const c of totalCounts) totalMap[c._id.toString()] = c.count;
+    const activeMap = {};
+    for (const c of activeCounts) activeMap[c._id.toString()] = c.count;
+
+    const data = properties.map(p => {
+      const obj = p.toObject();
+      obj.unitCount = totalMap[p._id.toString()] || 0;
+      obj.activeUnitCount = activeMap[p._id.toString()] || 0;
+      return obj;
+    });
+
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -471,8 +586,8 @@ exports.getSuggestions = async (req, res, next) => {
     const regex = new RegExp(escapeRegex(String(q)), 'i');
 
     const [properties, cities] = await Promise.all([
-      Property.find({ isActive: true, title: regex })
-        .select('title location.city type pricing.perNight images')
+      Property.find({ isActive: true, $or: [{ title: regex }, { titleAr: regex }] })
+        .select('title titleAr location.city type pricing.perNight images')
         .limit(5),
       Property.distinct('location.city', { isActive: true, 'location.city': regex }),
     ]);

@@ -35,6 +35,7 @@ const paymentMethodRoutes = require('./routes/paymentMethods');
 const couponRoutes = require('./routes/coupons');
 const bnplRoutes = require('./routes/bnpl');
 const blogRoutes = require('./routes/blog');
+const unitRoutes = require('./routes/units');
 
 // ── App setup ────────────────────────────────────────────────────────────────
 const app = express();
@@ -193,6 +194,8 @@ app.use('/api/v1/payment-methods', paymentMethodRoutes);
 app.use('/api/v1/coupons', couponRoutes);
 app.use('/api/v1/bnpl', bnplRoutes);
 app.use('/api/v1/blog', blogRoutes);
+app.use('/api/v1/properties/:propertyId/units', unitRoutes);
+app.use('/api/v1/units', unitRoutes);
 app.use('/api/v1/hosts', require('./routes/publicHost'));
 app.use('/api/v1/seed', require('./routes/seed'));
 

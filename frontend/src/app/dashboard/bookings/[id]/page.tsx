@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { bookingsApi } from '@/lib/api';
-import { Booking, Property, User } from '@/types';
+import { Booking, BookingUnit, Property, User } from '@/types';
 import {
   ArrowLeft,
   Loader2,
@@ -86,13 +86,15 @@ export default function BookingDetailPage() {
   if (!booking) return null;
 
   const property = typeof booking.property === 'object' ? (booking.property as Property) : null;
+  const unit = booking.unit && typeof booking.unit === 'object' ? (booking.unit as BookingUnit) : null;
   const guest = typeof booking.guest === 'object' ? (booking.guest as User) : null;
   const host = property && typeof property.host === 'object' ? (property.host as User) : null;
   const status = statusConfig[booking.status] || statusConfig.pending;
   const paymentStatus = paymentStatusConfig[booking.paymentStatus] || paymentStatusConfig.unpaid;
   const pricing = booking.pricing;
   const nights = pricing?.nights || Math.ceil((new Date(booking.checkOut).getTime() - new Date(booking.checkIn).getTime()) / (1000 * 60 * 60 * 24));
-  const primaryImage = property?.images?.find(img => img.isPrimary)?.url || property?.images?.[0]?.url;
+  const unitImage = unit?.images?.find(img => img.isPrimary)?.url || unit?.images?.[0]?.url;
+  const primaryImage = unitImage || property?.images?.find(img => img.isPrimary)?.url || property?.images?.[0]?.url;
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US', {
@@ -156,7 +158,7 @@ export default function BookingDetailPage() {
                   <div className="relative w-full sm:w-48 h-40 sm:h-auto flex-shrink-0">
                     <Image
                       src={primaryImage}
-                      alt={property.title}
+                      alt={isAr && property.titleAr ? property.titleAr : property.title}
                       fill
                       className="object-cover"
                       unoptimized
@@ -165,8 +167,13 @@ export default function BookingDetailPage() {
                 )}
                 <div className="p-5 flex-1">
                   <Link href={`/listings/${property._id}`} className="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors">
-                    {property.title}
+                    {isAr && property.titleAr ? property.titleAr : property.title}
                   </Link>
+                  {unit && (
+                    <p className="text-sm font-medium text-primary-600 mt-1">
+                      {isAr ? unit.nameAr || unit.nameEn : unit.nameEn || unit.nameAr}
+                    </p>
+                  )}
                   <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-2">
                     <MapPin className="w-4 h-4 flex-shrink-0" />
                     <span>
@@ -174,11 +181,11 @@ export default function BookingDetailPage() {
                       {translateCity(property.location?.city || '')}
                     </span>
                   </div>
-                  {property.capacity && (
+                  {(unit?.capacity || property.capacity) && (
                     <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
                       <span className="flex items-center gap-1">
                         <BedDouble className="w-4 h-4" />
-                        {property.capacity.bedrooms} {property.capacity.bedrooms !== 1 ? (isAr ? 'غرف' : 'beds') : (isAr ? 'غرفة' : 'bed')}
+                        {(unit?.capacity?.bedrooms ?? property.capacity?.bedrooms) || 0} {((unit?.capacity?.bedrooms ?? property.capacity?.bedrooms) || 0) !== 1 ? (isAr ? 'غرف' : 'beds') : (isAr ? 'غرفة' : 'bed')}
                       </span>
                     </div>
                   )}

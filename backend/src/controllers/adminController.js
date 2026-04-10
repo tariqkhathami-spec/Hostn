@@ -412,7 +412,7 @@ exports.getBookings = async (req, res, next) => {
     if (status) query.status = status;
 
     const bookings = await Booking.find(query)
-      .populate('property', 'title images location')
+      .populate('property', 'title titleAr images location')
       .populate('guest', 'name email phone')
       .sort('-createdAt')
       .skip((page - 1) * limit)
@@ -522,7 +522,7 @@ exports.getPayments = async (req, res, next) => {
     const payments = await Payment.find(query)
       .populate('user', 'name email')
       .populate('booking', 'checkIn checkOut')
-      .populate('property', 'title')
+      .populate('property', 'title titleAr')
       .sort('-createdAt')
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -576,6 +576,51 @@ exports.refundPayment = async (req, res, next) => {
     });
 
     res.json({ success: true, data: payment });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Unit Management ─────────────────────────────────────────────────────────
+
+// @desc    Get all units for a property (admin — includes inactive)
+// @route   GET /api/admin/properties/:propertyId/units
+// @access  Private (Admin)
+exports.getPropertyUnits = async (req, res, next) => {
+  try {
+    const Unit = require('../models/Unit');
+    const { page = 1, limit = 20 } = req.query;
+
+    const units = await Unit.find({ property: req.params.propertyId })
+      .sort('-createdAt')
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Unit.countDocuments({ property: req.params.propertyId });
+
+    res.json({
+      success: true,
+      data: units,
+      pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle unit active status
+// @route   PATCH /api/admin/units/:id/toggle
+// @access  Private (Admin)
+exports.toggleUnitStatus = async (req, res, next) => {
+  try {
+    const Unit = require('../models/Unit');
+    const unit = await Unit.findById(req.params.id);
+    if (!unit) return res.status(404).json({ success: false, message: 'Unit not found' });
+
+    unit.isActive = !unit.isActive;
+    await unit.save();
+
+    res.json({ success: true, data: unit });
   } catch (error) {
     next(error);
   }

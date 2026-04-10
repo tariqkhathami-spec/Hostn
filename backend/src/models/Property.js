@@ -13,9 +13,13 @@ const propertySchema = new mongoose.Schema(
       trim: true,
       maxlength: [200, 'Title cannot exceed 200 characters'],
     },
+    titleAr: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Arabic title cannot exceed 200 characters'],
+    },
     description: {
       type: String,
-      required: [true, 'Description is required'],
       maxlength: [5000, 'Description cannot exceed 5000 characters'],
     },
     type: {
@@ -80,16 +84,16 @@ const propertySchema = new mongoose.Schema(
       enum: ['north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest'],
     },
     pricing: {
-      perNight: { type: Number, required: true, min: 0 },
+      perNight: { type: Number, min: 0 },
       cleaningFee: { type: Number, default: 0 },
       discountPercent: { type: Number, default: 0, min: 0, max: 100 },
       weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
     },
     capacity: {
-      maxGuests: { type: Number, required: true, min: 1 },
-      bedrooms: { type: Number, default: 1 },
-      bathrooms: { type: Number, default: 1 },
-      beds: { type: Number, default: 1 },
+      maxGuests: { type: Number, min: 1 },
+      bedrooms: { type: Number },
+      bathrooms: { type: Number },
+      beds: { type: Number },
     },
     rules: {
       checkInTime: { type: String, default: '14:00' },
@@ -128,7 +132,7 @@ propertySchema.index({ type: 1 });
 propertySchema.index({ 'pricing.perNight': 1 });
 propertySchema.index({ 'ratings.average': -1 });
 propertySchema.index({ isFeatured: 1 });
-propertySchema.index({ title: 'text', description: 'text', 'location.city': 'text' });
+propertySchema.index({ title: 'text', titleAr: 'text', description: 'text', 'location.city': 'text' });
 
 // Sync coordinates to GeoJSON on save
 propertySchema.pre('save', function (next) {
@@ -142,10 +146,20 @@ propertySchema.pre('save', function (next) {
 });
 
 propertySchema.virtual('discountedPrice').get(function () {
+  if (!this.pricing?.perNight) return undefined;
   if (this.pricing.discountPercent > 0) {
     return this.pricing.perNight * (1 - this.pricing.discountPercent / 100);
   }
   return this.pricing.perNight;
+});
+
+// Virtual: count of active units (populated via Unit model)
+propertySchema.virtual('units', {
+  ref: 'Unit',
+  localField: '_id',
+  foreignField: 'property',
+  count: true,
+  match: { isActive: true },
 });
 
 propertySchema.set('toJSON', { virtuals: true });

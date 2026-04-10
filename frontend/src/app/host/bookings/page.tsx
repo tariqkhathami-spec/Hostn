@@ -12,6 +12,7 @@ interface Booking {
   _id: string;
   guest?: { name: string; email: string };
   property?: { title: string };
+  unit?: { _id: string; nameEn: string; nameAr: string } | null;
   checkIn: string;
   checkOut: string;
   status: string;
@@ -23,6 +24,7 @@ const t: Record<string, Record<string, string>> = {
   title: { en: 'Bookings', ar: '\u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' },
   guest: { en: 'Guest', ar: '\u0627\u0644\u0636\u064a\u0641' },
   property: { en: 'Property', ar: '\u0627\u0644\u0639\u0642\u0627\u0631' },
+  unit: { en: 'Unit', ar: '\u0627\u0644\u0648\u062d\u062f\u0629' },
   checkIn: { en: 'Check-in', ar: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644' },
   checkOut: { en: 'Check-out', ar: '\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062e\u0631\u0648\u062c' },
   status: { en: 'Status', ar: '\u0627\u0644\u062d\u0627\u0644\u0629' },
@@ -128,6 +130,7 @@ export default function HostBookingsPage() {
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="text-start p-3 font-medium text-gray-600">{t.guest[lang]}</th>
                   <th className="text-start p-3 font-medium text-gray-600">{t.property[lang]}</th>
+                  <th className="text-start p-3 font-medium text-gray-600">{t.unit[lang]}</th>
                   <th className="text-start p-3 font-medium text-gray-600">{t.checkIn[lang]}</th>
                   <th className="text-start p-3 font-medium text-gray-600">{t.checkOut[lang]}</th>
                   <th className="text-start p-3 font-medium text-gray-600">{t.status[lang]}</th>
@@ -140,6 +143,11 @@ export default function HostBookingsPage() {
                   <tr key={booking._id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="p-3 text-gray-900">{booking.guest?.name || '-'}</td>
                     <td className="p-3 text-gray-700">{booking.property?.title || '-'}</td>
+                    <td className="p-3 text-gray-600">
+                      {booking.unit
+                        ? (lang === 'ar' ? booking.unit.nameAr || booking.unit.nameEn : booking.unit.nameEn || booking.unit.nameAr)
+                        : '-'}
+                    </td>
                     <td className="p-3 text-gray-600">
                       {new Date(booking.checkIn).toLocaleDateString(lang === 'ar' ? 'ar-u-nu-latn' : 'en-US')}
                     </td>

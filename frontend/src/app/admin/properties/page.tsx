@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
-import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '@/lib/usePageTitle';
 
@@ -56,6 +56,44 @@ export default function AdminPropertiesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [expandedPropertyId, setExpandedPropertyId] = useState<string | null>(null);
+  const [units, setUnits] = useState<any[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(false);
+
+  const loadUnits = async (propertyId: string) => {
+    if (expandedPropertyId === propertyId) {
+      setExpandedPropertyId(null);
+      return;
+    }
+    setExpandedPropertyId(propertyId);
+    setUnitsLoading(true);
+    try {
+      const res = await adminApi.getPropertyUnits(propertyId);
+      setUnits(res.data.data || []);
+    } catch {
+      toast.error(isAr ? 'فشل تحميل الوحدات' : 'Failed to load units');
+    } finally {
+      setUnitsLoading(false);
+    }
+  };
+
+  const toggleUnit = async (unitId: string) => {
+    try {
+      await adminApi.toggleUnit(unitId);
+      if (expandedPropertyId) {
+        setUnitsLoading(true);
+        try {
+          const res = await adminApi.getPropertyUnits(expandedPropertyId);
+          setUnits(res.data.data || []);
+        } finally {
+          setUnitsLoading(false);
+        }
+      }
+      toast.success(isAr ? 'تم التحديث' : 'Updated');
+    } catch {
+      toast.error(isAr ? 'فشل التحديث' : 'Failed to update');
+    }
+  };
 
   const loadProperties = useCallback(async () => {
     setLoading(true);
@@ -174,12 +212,14 @@ export default function AdminPropertiesPage() {
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0645\u062f\u064a\u0646\u0629' : 'City'}</th>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0625\u0646\u0634\u0627\u0621' : 'Created'}</th>
+                  <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0627\u0644\u0648\u062d\u062f\u0627\u062a' : 'Units'}</th>
                   <th className="text-start px-4 py-3 font-medium text-gray-600">{isAr ? '\u0625\u062c\u0631\u0627\u0621\u0627\u062a' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {properties.map((prop) => (
-                  <tr key={prop._id} className="hover:bg-gray-50">
+                  <React.Fragment key={prop._id}>
+                  <tr className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{prop.title}</td>
                     <td className="px-4 py-3 text-gray-600">{prop.host?.name || prop.hostName || '-'}</td>
                     <td className="px-4 py-3 text-gray-600">{prop.city}</td>
@@ -190,6 +230,14 @@ export default function AdminPropertiesPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       {new Date(prop.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => loadUnits(prop._id)}
+                        className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        {expandedPropertyId === prop._id ? (isAr ? '\u0625\u062e\u0641\u0627\u0621' : 'Hide') : (isAr ? '\u0639\u0631\u0636' : 'View')}
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -216,6 +264,54 @@ export default function AdminPropertiesPage() {
                       </div>
                     </td>
                   </tr>
+                  {expandedPropertyId === prop._id && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-3 bg-gray-50">
+                        {unitsLoading ? (
+                          <div className="flex justify-center py-4">
+                            <Loader2 className="w-5 h-5 animate-spin text-primary-600" />
+                          </div>
+                        ) : units.length === 0 ? (
+                          <p className="text-sm text-gray-400 text-center py-3">{isAr ? '\u0644\u0627 \u062a\u0648\u062c\u062f \u0648\u062d\u062f\u0627\u062a' : 'No units'}</p>
+                        ) : (
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-gray-500">
+                                <th className="text-start py-1.5 font-medium">{isAr ? '\u0627\u0644\u0627\u0633\u0645 (EN)' : 'Name (EN)'}</th>
+                                <th className="text-start py-1.5 font-medium">{isAr ? '\u0627\u0644\u0627\u0633\u0645 (AR)' : 'Name (AR)'}</th>
+                                <th className="text-start py-1.5 font-medium">{isAr ? '\u0627\u0644\u062d\u0627\u0644\u0629' : 'Status'}</th>
+                                <th className="text-start py-1.5 font-medium">{isAr ? '\u0627\u0644\u0633\u0639\u0629' : 'Capacity'}</th>
+                                <th className="text-start py-1.5 font-medium">{isAr ? '\u0625\u062c\u0631\u0627\u0621' : 'Action'}</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {units.map((unit: any) => (
+                                <tr key={unit._id}>
+                                  <td className="py-2 text-gray-900">{unit.nameEn || '-'}</td>
+                                  <td className="py-2 text-gray-900">{unit.nameAr || '-'}</td>
+                                  <td className="py-2">
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${unit.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                      {unit.isActive ? (isAr ? '\u0646\u0634\u0637' : 'Active') : (isAr ? '\u0645\u0639\u0637\u0644' : 'Inactive')}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 text-gray-600">{unit.capacity?.maxGuests || '-'}</td>
+                                  <td className="py-2">
+                                    <button
+                                      onClick={() => toggleUnit(unit._id)}
+                                      className={`px-2 py-0.5 text-[10px] font-medium rounded ${unit.isActive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
+                                    >
+                                      {unit.isActive ? (isAr ? '\u062a\u0639\u0637\u064a\u0644' : 'Deactivate') : (isAr ? '\u062a\u0641\u0639\u064a\u0644' : 'Activate')}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
                 ))}
               </tbody>
             </table>

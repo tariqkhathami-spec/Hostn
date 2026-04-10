@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import BnplWidget from '@/components/payment/BnplWidget';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { saveSearchCookies } from '@/lib/searchCookies';
-import { bookingsApi } from '@/lib/api';
+import { bookingsApi, unitsApi } from '@/lib/api';
 
 interface BookingWidgetProps {
   property: Property;
@@ -38,6 +38,24 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   const guests = adults + children;
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
+
+  // ── Unit selection ──
+  interface UnitOption { _id: string; nameEn?: string; nameAr?: string; pricing?: Record<string, number>; capacity?: { maxGuests?: number } }
+  const [units, setUnits] = useState<UnitOption[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  const selectedUnit = units.find((u) => u._id === selectedUnitId) || null;
+
+  // Fetch units for this property
+  useEffect(() => {
+    unitsApi.getForProperty(property._id, { limit: 50 })
+      .then((res) => {
+        const data: UnitOption[] = res.data.data || [];
+        setUnits(data);
+        // Auto-select first unit if only one exists
+        if (data.length === 1) setSelectedUnitId(data[0]._id);
+      })
+      .catch(() => {});
+  }, [property._id]);
 
   // Persist dates and guests to cookies whenever they change
   const mountedRef = useRef(false);
@@ -64,16 +82,42 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   };
 
   const nights = checkIn && checkOut ? calculateNights(checkIn, checkOut) : 0;
-  // Always use original perNight; discount is shown as a separate line item
-  const pricePerNight = property.pricing.perNight;
 
-  const subtotal = nights * pricePerNight;
-  const cleaningFee = property.pricing.cleaningFee || 0;
+  // ── Calculate pricing: unit per-day rates vs property flat rate ──
+  const hasUnit = !!selectedUnit;
+  let pricePerNight: number;
+  let subtotal: number;
+  let cleaningFee: number;
+  let discount: number;
+
+  if (hasUnit && selectedUnit.pricing && nights > 0) {
+    // Sum per-day prices for the selected date range
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    let sum = 0;
+    const start = new Date(checkIn);
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      sum += selectedUnit.pricing[dayNames[d.getDay()]] || 0;
+    }
+    subtotal = sum;
+    pricePerNight = Math.round(sum / nights);
+    cleaningFee = selectedUnit.pricing.cleaningFee || 0;
+    let discPct = selectedUnit.pricing.discountPercent || 0;
+    if (nights >= 7 && (selectedUnit.pricing.weeklyDiscount || 0) > discPct) {
+      discPct = selectedUnit.pricing.weeklyDiscount || 0;
+    }
+    discount = discPct > 0 ? Math.round(subtotal * (discPct / 100)) : 0;
+  } else {
+    pricePerNight = property.pricing.perNight;
+    subtotal = nights * pricePerNight;
+    cleaningFee = property.pricing.cleaningFee || 0;
+    discount = property.pricing.discountPercent > 0
+      ? Math.round(subtotal * (property.pricing.discountPercent / 100))
+      : 0;
+  }
+
   const serviceFee = Math.round(subtotal * 0.1);
-  const discount = property.pricing.discountPercent > 0
-    ? Math.round(subtotal * (property.pricing.discountPercent / 100))
-    : 0;
-  // Saudi Arabia 15% VAT — applied on taxable amount (after discount)
   const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
   const vat = Math.round(taxableAmount * 0.15);
   const total = taxableAmount + vat;
@@ -93,8 +137,15 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
         : `Minimum stay is ${getNightLabel(property.rules.minNights, 'en')}`);
       return;
     }
-    if (guests > property.capacity.maxGuests) {
-      toast.error(isAr ? `الحد الأقصى ${getGuestLabel(property.capacity.maxGuests, 'ar')}` : `Maximum ${property.capacity.maxGuests} guests allowed`);
+    const maxGuestsAllowed = selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests;
+    if (guests > maxGuestsAllowed) {
+      toast.error(isAr ? `الحد الأقصى ${getGuestLabel(maxGuestsAllowed, 'ar')}` : `Maximum ${maxGuestsAllowed} guests allowed`);
+      return;
+    }
+
+    // If property has units, require a unit selection
+    if (units.length > 0 && !selectedUnitId) {
+      toast.error(isAr ? 'يرجى اختيار وحدة' : 'Please select a unit');
       return;
     }
 
@@ -106,6 +157,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       try {
         const holdRes = await bookingsApi.createHold({
           propertyId: property._id,
+          ...(selectedUnitId ? { unitId: selectedUnitId } : {}),
           checkIn,
           checkOut,
           guests: { adults, children, infants: 0 },
@@ -128,6 +180,12 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       }
     }
 
+    // Store selected unit for the booking page
+    if (selectedUnitId) {
+      localStorage.setItem(`hostn_unit_${property._id}`, selectedUnitId);
+    } else {
+      localStorage.removeItem(`hostn_unit_${property._id}`);
+    }
     router.push(`/booking/${property._id}`);
   };
 
@@ -168,6 +226,27 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
           />
         )}
       </div>
+
+      {/* Unit selector (only shown when property has units) */}
+      {units.length > 0 && (
+        <div className="mb-3">
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+            {isAr ? 'اختر الوحدة' : 'Select Unit'}
+          </label>
+          <select
+            value={selectedUnitId}
+            onChange={(e) => setSelectedUnitId(e.target.value)}
+            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-800 bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-colors"
+          >
+            <option value="">{isAr ? '— اختر وحدة —' : '— Choose a unit —'}</option>
+            {units.map((u) => (
+              <option key={u._id} value={u._id}>
+                {isAr ? (u.nameAr || u.nameEn || u._id) : (u.nameEn || u.nameAr || u._id)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Date inputs */}
       <div className="border-2 border-gray-200 rounded-xl overflow-hidden mb-3 transition-colors relative">
@@ -238,7 +317,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
                 <Minus className="w-3 h-3" />
               </button>
               <span className="w-5 text-center text-sm font-medium">{adults}</span>
-              <button type="button" onClick={() => setAdults((a) => Math.min(property.capacity.maxGuests - children, a + 1))} disabled={guests >= property.capacity.maxGuests}
+              <button type="button" onClick={() => setAdults((a) => Math.min((selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests) - children, a + 1))} disabled={guests >= (selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests)}
                 className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Plus className="w-3 h-3" />
               </button>
@@ -256,7 +335,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
                 <Minus className="w-3 h-3" />
               </button>
               <span className="w-5 text-center text-sm font-medium">{children}</span>
-              <button type="button" onClick={() => setChildren((c) => Math.min(property.capacity.maxGuests - adults, c + 1))} disabled={guests >= property.capacity.maxGuests}
+              <button type="button" onClick={() => setChildren((c) => Math.min((selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests) - adults, c + 1))} disabled={guests >= (selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests)}
                 className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Plus className="w-3 h-3" />
               </button>
@@ -301,7 +380,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-green-600">
-              <span>{t('booking.discount')} ({property.pricing.discountPercent}%)</span>
+              <span>{t('booking.discount')}</span>
               <span dir="ltr"><SarSymbol /> -{formatPriceNumber(discount)}</span>
             </div>
           )}

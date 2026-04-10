@@ -58,7 +58,7 @@ exports.getPublicHostProfile = async (req, res, next) => {
     const reviewSkip = (safeReviewPage - 1) * safeReviewLimit;
     const reviews = await Review.find({ property: { $in: propertyIds } })
       .populate('guest', 'name avatar')
-      .populate('property', 'title')
+      .populate('property', 'title titleAr')
       .sort('-createdAt')
       .skip(reviewSkip)
       .limit(safeReviewLimit);
@@ -68,7 +68,7 @@ exports.getPublicHostProfile = async (req, res, next) => {
     // Paginated properties
     const propSkip = (safePropPage - 1) * safePropLimit;
     const properties = await Property.find({ host: req.params.id, isActive: true })
-      .select('title images location type pricing capacity ratings tags isFeatured')
+      .select('title titleAr images location type pricing capacity ratings tags isFeatured')
       .sort('-ratings.average')
       .skip(propSkip)
       .limit(safePropLimit);

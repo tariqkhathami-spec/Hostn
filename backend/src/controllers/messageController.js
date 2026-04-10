@@ -19,7 +19,7 @@ exports.getConversations = async (req, res) => {
     })
       .populate('participants', 'name avatar role')
       .populate('booking', 'checkIn checkOut status')
-      .populate('property', 'title images location.city')
+      .populate('property', 'title titleAr images location.city')
       .sort({ updatedAt: -1 })
       .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit));
@@ -94,7 +94,7 @@ exports.createConversation = async (req, res) => {
     });
 
     await conversation.populate('participants', 'name avatar role');
-    await conversation.populate('property', 'title images location.city');
+    await conversation.populate('property', 'title titleAr images location.city');
 
     res.status(201).json({ success: true, data: conversation });
   } catch (error) {

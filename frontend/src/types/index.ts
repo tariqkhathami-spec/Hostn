@@ -98,6 +98,7 @@ export interface Property {
   _id: string;
   host: User | string;
   title: string;
+  titleAr?: string;
   description: string;
   type: PropertyType;
   location: Location;
@@ -114,7 +115,57 @@ export interface Property {
   bookedDates?: { start: string; end: string }[];
   area?: number;
   direction?: string;
+  activeUnitCount?: number;
   createdAt: string;
+}
+
+// ─── Unit Types ─────────────────────────────────────────────────────────────
+
+export interface UnitPool {
+  _id?: string;
+  type: string;
+  variableDepth?: boolean;
+  depthMin?: number;
+  depthMax?: number;
+  depth?: number;
+  lengthM?: number;
+  widthM?: number;
+}
+
+export interface Unit {
+  _id: string;
+  property: Property | string;
+  isActive: boolean;
+  nameEn?: string;
+  nameAr?: string;
+  description?: string;
+  area?: number;
+  suitability?: string;
+  depositPercent?: number;
+  insuranceOnArrival?: boolean;
+  insuranceAmount?: number;
+  writtenRules?: string;
+  cancellationPolicy?: string;
+  cancellationDescription?: string;
+  hasLivingRooms?: boolean;
+  livingRooms?: { main?: number; additional?: number; outdoor?: number; outdoorRoom?: number };
+  hasBedrooms?: boolean;
+  bedrooms?: { count?: number; singleBeds?: number; doubleBeds?: number };
+  bathroomCount?: number;
+  bathroomAmenities?: string[];
+  hasKitchen?: boolean;
+  kitchen?: { diningCapacity?: number; amenities?: string[] };
+  hasPool?: boolean;
+  pools?: UnitPool[];
+  amenities?: string[];
+  features?: string[];
+  images?: { url: string; caption?: string; isPrimary?: boolean }[];
+  pricing?: Record<string, number>;
+  capacity?: { maxGuests?: number };
+  ratings?: Ratings;
+  unavailableDates?: { start: string; end: string }[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface GuestCount {
@@ -135,9 +186,19 @@ export interface BookingPricing {
 
 export type BookingStatus = 'held' | 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
 
+export interface BookingUnit {
+  _id: string;
+  nameEn: string;
+  nameAr: string;
+  images?: { url: string; caption?: string; isPrimary?: boolean }[];
+  capacity?: { maxGuests: number; bedrooms: number; bathrooms: number };
+  pricing?: Record<string, number>;
+}
+
 export interface Booking {
   _id: string;
   property: Property | string;
+  unit?: BookingUnit | string | null;
   guest: User | string;
   checkIn: string;
   checkOut: string;

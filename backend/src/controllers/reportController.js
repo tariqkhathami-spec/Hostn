@@ -170,7 +170,7 @@ exports.getReport = async (req, res) => {
     if (report.targetType === 'property') {
       await report.populate({
         path: 'targetId',
-        select: 'title host location images isActive',
+        select: 'title titleAr host location images isActive',
         model: 'Property',
       });
     } else if (report.targetType === 'user') {

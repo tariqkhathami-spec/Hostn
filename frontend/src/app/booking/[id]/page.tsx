@@ -124,8 +124,9 @@ function BookingContent() {
 
     setProcessing(true);
     try {
-      // Use holdId if available (silent reservation hold from BookingWidget)
+      // Use holdId and unitId if available from BookingWidget
       const holdId = typeof window !== 'undefined' ? localStorage.getItem(`hostn_hold_${id}`) : null;
+      const unitId = typeof window !== 'undefined' ? localStorage.getItem(`hostn_unit_${id}`) : null;
 
       // Step 1: Create booking (converts hold if valid, otherwise creates fresh)
       const bookingRes = await bookingsApi.create({
@@ -135,10 +136,12 @@ function BookingContent() {
         guests: { adults: adultsCount, children: childrenCount, infants: 0 },
         specialRequests,
         ...(holdId ? { holdId } : {}),
+        ...(unitId ? { unitId } : {}),
       });
 
-      // Clean up holdId from localStorage
+      // Clean up holdId and unitId from localStorage
       if (holdId) localStorage.removeItem(`hostn_hold_${id}`);
+      if (unitId) localStorage.removeItem(`hostn_unit_${id}`);
 
       const newBookingId = bookingRes.data.data._id;
       setBookingId(newBookingId);
@@ -542,7 +545,7 @@ function BookingContent() {
                       <div className="relative w-24 h-20 rounded-xl overflow-hidden flex-shrink-0">
                         <Image
                           src={primaryImage}
-                          alt={property.title}
+                          alt={isAr && property.titleAr ? property.titleAr : property.title}
                           fill
                           className="object-cover"
                           unoptimized
@@ -550,7 +553,7 @@ function BookingContent() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm line-clamp-2">{property.title}</p>
+                      <p className="font-semibold text-gray-900 text-sm line-clamp-2">{isAr && property.titleAr ? property.titleAr : property.title}</p>
                       <p className="text-xs text-gray-500 mt-1">{isAr ? (CITIES.find(c => c.value === property.location.city)?.ar || property.location.city) : property.location.city}</p>
                     </div>
                   </div>

@@ -811,7 +811,7 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
       <Link href={`/listings/${property._id}`}>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
           <div className="relative aspect-[4/3] bg-gray-100">
-            <Image src={primaryImage} alt={property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" unoptimized />
+            <Image src={primaryImage} alt={isAr && property.titleAr ? property.titleAr : property.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" unoptimized />
             <div className="absolute bottom-3 ltr:left-3 rtl:right-3">
               <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">{getPropertyTypeLabel(property.type, lang)}</span>
             </div>
@@ -822,7 +822,7 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
             )}
           </div>
           <div className="p-4">
-            <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{property.title}</h3>
+            <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{isAr && property.titleAr ? property.titleAr : property.title}</h3>
             <div className="flex items-center gap-1 text-gray-500 text-xs mb-2">
               <MapPin className="w-3 h-3 flex-shrink-0" />
               <span>{property.location.district ? `${translateDistrict(property.location.district, property.location.city)}, ` : ''}{translateCity(property.location.city)}</span>

@@ -1,13 +1,15 @@
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
+const Unit = require('../models/Unit');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const { emitToUser, emitToProperty } = require('../config/socket');
 
 // Helper: overlap query for date-range conflicts (includes active holds)
-function overlapQuery(propertyId, checkInDate, checkOutDate) {
-  return {
+// When unitId is provided, checks unit-level availability instead of property-level.
+function overlapQuery(propertyId, checkInDate, checkOutDate, unitId) {
+  const query = {
     property: propertyId,
     $and: [
       // Active bookings OR non-expired holds
@@ -27,6 +29,43 @@ function overlapQuery(propertyId, checkInDate, checkOutDate) {
       },
     ],
   };
+  // If a unit is specified, only check for conflicts on that specific unit
+  if (unitId) {
+    query.unit = unitId;
+  }
+  return query;
+}
+
+// Helper: calculate pricing from a Unit's per-day rates
+function calculateUnitPricing(unit, checkInDate, checkOutDate) {
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  let subtotal = 0;
+  let nights = 0;
+
+  const current = new Date(checkInDate);
+  while (current < checkOutDate) {
+    const dayName = dayNames[current.getDay()];
+    subtotal += unit.pricing[dayName] || 0;
+    nights++;
+    current.setDate(current.getDate() + 1);
+  }
+
+  const perNight = nights > 0 ? Math.round(subtotal / nights) : 0;
+  const cleaningFee = unit.pricing.cleaningFee || 0;
+  const serviceFee = Math.round(subtotal * 0.1);
+
+  let discountPercent = unit.pricing.discountPercent || 0;
+  // Apply weekly discount if stay is 7+ nights and it's higher
+  if (nights >= 7 && (unit.pricing.weeklyDiscount || 0) > discountPercent) {
+    discountPercent = unit.pricing.weeklyDiscount;
+  }
+
+  const discount = discountPercent > 0 ? Math.round(subtotal * (discountPercent / 100)) : 0;
+  const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
+  const vat = Math.round(taxableAmount * 0.15);
+  const total = taxableAmount + vat;
+
+  return { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
 }
 
 // Detect once at startup whether the MongoDB deployment supports transactions
@@ -39,7 +78,7 @@ async function tryTransactionBooking(bookingData, checkInDate, checkOutDate) {
     let booking;
     await session.withTransaction(async () => {
       const conflicting = await Booking.findOne(
-        overlapQuery(bookingData.property, checkInDate, checkOutDate)
+        overlapQuery(bookingData.property, checkInDate, checkOutDate, bookingData.unit || null)
       ).session(session);
 
       if (conflicting) {
@@ -73,7 +112,7 @@ async function tryTransactionBooking(bookingData, checkInDate, checkOutDate) {
 async function fallbackBooking(bookingData, checkInDate, checkOutDate) {
   // Step 1: Pre-check
   const conflicting = await Booking.findOne(
-    overlapQuery(bookingData.property, checkInDate, checkOutDate)
+    overlapQuery(bookingData.property, checkInDate, checkOutDate, bookingData.unit || null)
   );
   if (conflicting) {
     throw new Error('DATES_UNAVAILABLE');
@@ -84,7 +123,7 @@ async function fallbackBooking(bookingData, checkInDate, checkOutDate) {
 
   // Step 3: Post-create verification — find all active bookings that overlap
   const overlapping = await Booking.find({
-    ...overlapQuery(bookingData.property, checkInDate, checkOutDate),
+    ...overlapQuery(bookingData.property, checkInDate, checkOutDate, bookingData.unit || null),
     _id: { $ne: booking._id }, // exclude self
   }).select('_id createdAt');
 
@@ -103,7 +142,7 @@ async function fallbackBooking(bookingData, checkInDate, checkOutDate) {
 // @access  Private
 exports.createHold = async (req, res, next) => {
   try {
-    const { propertyId, checkIn, checkOut, guests } = req.body;
+    const { propertyId, unitId, checkIn, checkOut, guests } = req.body;
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
@@ -120,6 +159,15 @@ exports.createHold = async (req, res, next) => {
       return res.status(404).json({ success: false, code: 'PROPERTY_NOT_FOUND', message: 'Property not found' });
     }
 
+    // Validate unit if provided
+    let unit = null;
+    if (unitId) {
+      unit = await Unit.findById(unitId);
+      if (!unit || !unit.isActive || unit.property.toString() !== propertyId) {
+        return res.status(404).json({ success: false, code: 'UNIT_NOT_FOUND', message: 'Unit not found' });
+      }
+    }
+
     if (property.host.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, code: 'OWN_PROPERTY', message: 'Cannot hold your own property' });
     }
@@ -130,34 +178,41 @@ exports.createHold = async (req, res, next) => {
       { status: 'cancelled', cancelledAt: new Date() }
     );
 
-    // Check availability (includes active holds by other users)
-    const conflicting = await Booking.findOne(overlapQuery(propertyId, checkInDate, checkOutDate));
+    // Check availability (unit-level if unitId provided, otherwise property-level)
+    const conflicting = await Booking.findOne(overlapQuery(propertyId, checkInDate, checkOutDate, unitId || null));
     if (conflicting) {
-      return res.status(400).json({ success: false, code: 'DATES_UNAVAILABLE', message: 'Property not available for selected dates' });
+      return res.status(400).json({ success: false, code: 'DATES_UNAVAILABLE', message: unit ? 'Unit not available for selected dates' : 'Property not available for selected dates' });
     }
 
-    // Calculate pricing
-    const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-    const perNight = property.pricing.perNight;
-    const subtotal = perNight * nights;
-    const cleaningFee = property.pricing.cleaningFee || 0;
-    const serviceFee = Math.round(subtotal * 0.1);
-    const discount = property.pricing.discountPercent > 0
-      ? Math.round(subtotal * (property.pricing.discountPercent / 100))
-      : 0;
-    const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
-    const vat = Math.round(taxableAmount * 0.15);
-    const total = taxableAmount + vat;
+    // Calculate pricing — from unit's per-day rates or property's flat rate
+    let pricing;
+    if (unit) {
+      pricing = calculateUnitPricing(unit, checkInDate, checkOutDate);
+    } else {
+      const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+      const perNight = property.pricing.perNight;
+      const subtotal = perNight * nights;
+      const cleaningFee = property.pricing.cleaningFee || 0;
+      const serviceFee = Math.round(subtotal * 0.1);
+      const discount = property.pricing.discountPercent > 0
+        ? Math.round(subtotal * (property.pricing.discountPercent / 100))
+        : 0;
+      const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
+      const vat = Math.round(taxableAmount * 0.15);
+      const total = taxableAmount + vat;
+      pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
+    }
 
     const holdExpiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
     const hold = await Booking.create({
       property: propertyId,
+      unit: unitId || null,
       guest: req.user._id,
       checkIn: checkInDate,
       checkOut: checkOutDate,
       guests: guests || { adults: 1, children: 0, infants: 0 },
-      pricing: { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total },
+      pricing,
       status: 'held',
       holdExpiresAt,
     });
@@ -173,7 +228,7 @@ exports.createHold = async (req, res, next) => {
 // @access  Private
 exports.createBooking = async (req, res, next) => {
   try {
-    const { propertyId, checkIn, checkOut, guests, specialRequests, holdId } = req.body;
+    const { propertyId, unitId, checkIn, checkOut, guests, specialRequests, holdId } = req.body;
 
     // ── Convert hold → booking (if holdId provided) ─────────────────
     if (holdId) {
@@ -186,7 +241,7 @@ exports.createBooking = async (req, res, next) => {
           hold.holdExpiresAt = undefined;
           await hold.save();
 
-          await hold.populate('property', 'title images location');
+          await hold.populate('property', 'title titleAr images location');
           await hold.populate('guest', 'name email');
 
           const property = await Property.findById(hold.property._id || hold.property);
@@ -246,6 +301,15 @@ exports.createBooking = async (req, res, next) => {
       return res.status(404).json({ success: false, code: 'PROPERTY_NOT_FOUND', message: 'Property not found' });
     }
 
+    // Validate unit if provided
+    let unit = null;
+    if (unitId) {
+      unit = await Unit.findById(unitId);
+      if (!unit || !unit.isActive || unit.property.toString() !== propertyId) {
+        return res.status(404).json({ success: false, code: 'UNIT_NOT_FOUND', message: 'Unit not found' });
+      }
+    }
+
     // Check if user is trying to book their own property
     if (property.host.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, code: 'OWN_PROPERTY', message: 'Cannot book your own property' });
@@ -256,24 +320,37 @@ exports.createBooking = async (req, res, next) => {
     if (!guests?.adults || guests.adults < 1) {
       return res.status(400).json({ success: false, code: 'NO_ADULTS', message: 'At least one adult guest required' });
     }
-    if (totalGuests > property.capacity.maxGuests) {
+    // Use unit capacity if available, otherwise property capacity
+    const maxGuests = unit ? (unit.capacity?.maxGuests || property.capacity.maxGuests) : property.capacity.maxGuests;
+    if (totalGuests > maxGuests) {
       return res.status(400).json({
         success: false,
         code: 'MAX_CAPACITY',
-        message: `Exceeds max capacity of ${property.capacity.maxGuests} guests`,
-        params: { max: property.capacity.maxGuests },
+        message: `Exceeds max capacity of ${maxGuests} guests`,
+        params: { max: maxGuests },
       });
     }
 
     // ── Check blocked dates ──────────────────────────────────────────
+    // Check property-level blocked dates
     const blockedConflict = property.unavailableDates?.some((range) => {
       const start = new Date(range.start);
       const end = new Date(range.end);
       return start < checkOutDate && end > checkInDate;
     });
-
     if (blockedConflict) {
       return res.status(400).json({ success: false, code: 'DATES_BLOCKED', message: 'Property is blocked for selected dates' });
+    }
+    // Check unit-level blocked dates
+    if (unit) {
+      const unitBlocked = unit.unavailableDates?.some((range) => {
+        const start = new Date(range.start);
+        const end = new Date(range.end);
+        return start < checkOutDate && end > checkInDate;
+      });
+      if (unitBlocked) {
+        return res.status(400).json({ success: false, code: 'DATES_BLOCKED', message: 'Unit is blocked for selected dates' });
+      }
     }
 
     // ── Night count validation ────────────────────────────────────────
@@ -297,27 +374,32 @@ exports.createBooking = async (req, res, next) => {
     }
 
     // ── Calculate pricing ────────────────────────────────────────────
-    // Always use original perNight; discount is a separate line item
-    const perNight = property.pricing.perNight;
-    const subtotal = perNight * nights;
-    const cleaningFee = property.pricing.cleaningFee || 0;
-    const serviceFee = Math.round(subtotal * 0.1);
-    const discount = property.pricing.discountPercent > 0
-      ? Math.round(subtotal * (property.pricing.discountPercent / 100))
-      : 0;
-    // Saudi Arabia 15% VAT — applied on taxable amount (after discount)
-    const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
-    const vat = Math.round(taxableAmount * 0.15);
-    const total = taxableAmount + vat;
+    let pricing;
+    if (unit) {
+      pricing = calculateUnitPricing(unit, checkInDate, checkOutDate);
+    } else {
+      const perNight = property.pricing.perNight;
+      const subtotal = perNight * nights;
+      const cleaningFee = property.pricing.cleaningFee || 0;
+      const serviceFee = Math.round(subtotal * 0.1);
+      const discount = property.pricing.discountPercent > 0
+        ? Math.round(subtotal * (property.pricing.discountPercent / 100))
+        : 0;
+      const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
+      const vat = Math.round(taxableAmount * 0.15);
+      const total = taxableAmount + vat;
+      pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
+    }
 
     // ── Create booking (atomic transaction or fallback) ──────────────
     const bookingData = {
       property: propertyId,
+      unit: unitId || null,
       guest: req.user._id,
       checkIn: checkInDate,
       checkOut: checkOutDate,
       guests,
-      pricing: { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total },
+      pricing,
       specialRequests,
     };
 
@@ -339,7 +421,7 @@ exports.createBooking = async (req, res, next) => {
     }
 
     // ── Populate & respond ──────────────────────────────────────────
-    await booking.populate('property', 'title images location');
+    await booking.populate('property', 'title titleAr images location');
     await booking.populate('guest', 'name email');
 
     // ── Real-time: push booking to host + update property watchers ──
@@ -385,7 +467,8 @@ exports.createBooking = async (req, res, next) => {
 exports.getMyBookings = async (req, res, next) => {
   try {
     const bookings = await Booking.find({ guest: req.user._id, status: { $ne: 'held' } })
-      .populate('property', 'title images location type pricing')
+      .populate('property', 'title titleAr images location type pricing')
+      .populate('unit', 'nameEn nameAr images')
       .sort('-createdAt');
 
     res.json({ success: true, data: bookings });
@@ -403,7 +486,8 @@ exports.getHostBookings = async (req, res, next) => {
     const propertyIds = hostProperties.map((p) => p._id);
 
     const bookings = await Booking.find({ property: { $in: propertyIds }, status: { $ne: 'held' } })
-      .populate('property', 'title images location')
+      .populate('property', 'title titleAr images location')
+      .populate('unit', 'nameEn nameAr images')
       .populate('guest', 'name email phone avatar')
       .sort('-createdAt');
 
@@ -421,9 +505,10 @@ exports.getBooking = async (req, res, next) => {
     const booking = await Booking.findById(req.params.id)
       .populate({
         path: 'property',
-        select: 'title images location type pricing rules capacity host',
+        select: 'title titleAr images location type pricing rules capacity host',
         populate: { path: 'host', select: 'name avatar isVerified _id' },
       })
+      .populate('unit', 'nameEn nameAr images capacity pricing')
       .populate('guest', 'name email phone avatar');
 
     if (!booking) {

@@ -1,41 +1,111 @@
 const nodemailer = require('nodemailer');
 
 /**
- * Create mail transporter.
- * Uses SMTP_* env vars in production, falls back to console logging in dev.
+ * Email service — sends via Resend API (preferred) or SMTP (fallback).
+ *
+ * Priority:
+ *  1. RESEND_API_KEY → uses Resend HTTP API (works from any cloud, no port issues)
+ *  2. SMTP_HOST + SMTP_USER + SMTP_PASS → uses Nodemailer SMTP
+ *  3. No config → console.log (dev mode)
  */
+
+// ── Resend (HTTP API) ──────────────────────────────────────────────────
+let resendClient = null;
+if (process.env.RESEND_API_KEY) {
+  const { Resend } = require('resend');
+  resendClient = new Resend(process.env.RESEND_API_KEY);
+  console.log('[EMAIL] Resend API configured');
+}
+
+// ── SMTP (Nodemailer) ─────────────────────────────────────────────────
 const createTransporter = () => {
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    // Brevo (smtp-relay.brevo.com) and many providers block port 587 from
+    // cloud platforms. Try port 465 (implicit SSL) as primary, fall back to
+    // the configured port.
+    const configuredPort = parseInt(process.env.SMTP_PORT || '587', 10);
+    const usePort = configuredPort === 587 ? 465 : configuredPort;
+    const useSecure = usePort === 465 ? true : process.env.SMTP_SECURE === 'true';
+
+    console.log(`[EMAIL] SMTP transporter: ${process.env.SMTP_HOST}:${usePort} (secure: ${useSecure})`);
+
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
+      port: usePort,
+      secure: useSecure,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
     });
   }
   return null;
 };
 
 /**
+ * Send an email via Resend API.
+ */
+const sendViaResend = async ({ to, subject, html, text, from }) => {
+  console.log(`[EMAIL] Sending to ${to} via Resend API`);
+  const { data, error } = await resendClient.emails.send({
+    from,
+    to: [to],
+    subject,
+    html,
+    text,
+  });
+  if (error) {
+    console.error(`[EMAIL] Resend error: ${error.message}`);
+    throw new Error(error.message);
+  }
+  console.log(`[EMAIL] Resend OK — id: ${data.id}`);
+  return { messageId: data.id, accepted: [to] };
+};
+
+/**
+ * Send an email via SMTP.
+ */
+const sendViaSMTP = async ({ to, subject, html, text, from }) => {
+  const transporter = createTransporter();
+  if (!transporter) return null; // no SMTP configured
+
+  console.log(`[EMAIL] Sending to ${to} via SMTP ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
+  try {
+    const info = await transporter.sendMail({ from, to, subject, html, text });
+    console.log(`[EMAIL] SMTP OK — messageId: ${info.messageId}`);
+    return info;
+  } catch (err) {
+    console.error(`[EMAIL] SMTP failed — code: ${err.code}, message: ${err.message}`);
+    throw err;
+  }
+};
+
+/**
  * Send an email.
- * Falls back to console.log when no SMTP is configured.
+ * Tries Resend first, then SMTP, then falls back to console logging.
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-  const transporter = createTransporter();
+  const from = process.env.SMTP_FROM || 'Hostn <noreply@hostn.co>';
 
-  if (!transporter) {
-    console.log(`[DEV EMAIL] To: ${to}`);
-    console.log(`[DEV EMAIL] Subject: ${subject}`);
-    console.log(`[DEV EMAIL] Body: ${text || html}`);
-    return { accepted: [to], dev: true };
+  // 1. Resend API (preferred — HTTP-based, no port issues)
+  if (resendClient) {
+    return sendViaResend({ to, subject, html, text, from });
   }
 
-  const from = process.env.SMTP_FROM || 'Hostn <noreply@hostn.co>';
-  const info = await transporter.sendMail({ from, to, subject, html, text });
-  return info;
+  // 2. SMTP
+  const transporter = createTransporter();
+  if (transporter) {
+    return sendViaSMTP({ to, subject, html, text, from });
+  }
+
+  // 3. Dev fallback
+  console.log(`[DEV EMAIL] To: ${to}`);
+  console.log(`[DEV EMAIL] Subject: ${subject}`);
+  console.log(`[DEV EMAIL] Body: ${text || html}`);
+  return { accepted: [to], dev: true };
 };
 
 /**

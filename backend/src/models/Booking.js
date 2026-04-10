@@ -7,6 +7,11 @@ const bookingSchema = new mongoose.Schema(
       ref: 'Property',
       required: true,
     },
+    unit: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Unit',
+      default: null,
+    },
     guest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -67,6 +72,7 @@ bookingSchema.index({ guest: 1, status: 1 });     // my-bookings filtered by sta
 bookingSchema.index({ property: 1, checkIn: 1, checkOut: 1 }); // date overlap queries
 bookingSchema.index({ createdAt: -1 });            // sort by newest
 bookingSchema.index({ status: 1, holdExpiresAt: 1 }); // hold expiry queries
+bookingSchema.index({ unit: 1, checkIn: 1, checkOut: 1 }); // unit-level availability
 
 // Validate checkOut > checkIn
 bookingSchema.pre('save', function (next) {

@@ -11,6 +11,8 @@ const {
   updateHost,
   getProperties,
   moderateProperty,
+  getPropertyUnits,
+  toggleUnitStatus,
   getBookings,
   updateBooking,
   deleteBooking,
@@ -18,6 +20,7 @@ const {
   refundPayment,
   getLogs,
 } = require('../controllers/adminController');
+const { mongoIdParam } = require('../middleware/validate');
 
 // All admin routes require auth + admin role
 router.use(protect);
@@ -38,6 +41,10 @@ router.patch('/hosts/:id', authorizePermission(PERMISSIONS.MANAGE_USERS), update
 // Properties — super + support
 router.get('/properties', authorizePermission(PERMISSIONS.VIEW_PROPERTIES), getProperties);
 router.post('/properties/:id/moderate', authorizePermission(PERMISSIONS.MODERATE_PROPERTIES), moderateProperty);
+
+// Units
+router.get('/properties/:propertyId/units', mongoIdParam('propertyId'), authorizePermission(PERMISSIONS.VIEW_PROPERTIES), getPropertyUnits);
+router.patch('/units/:id/toggle', mongoIdParam(), authorizePermission(PERMISSIONS.MODERATE_PROPERTIES), toggleUnitStatus);
 
 // Bookings — super + support + finance (view), super + support (manage)
 router.get('/bookings', authorizePermission(PERMISSIONS.VIEW_BOOKINGS), getBookings);

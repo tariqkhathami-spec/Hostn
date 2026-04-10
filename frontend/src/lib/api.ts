@@ -119,6 +119,33 @@ export const propertiesApi = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// UNITS (property sub-units)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const unitsApi = {
+  /** List active units for a property (public) */
+  getForProperty: (propertyId: string, params?: Record<string, unknown>) =>
+    api.get(`/properties/${propertyId}/units`, { params }),
+  /** List ALL units for a property including inactive (host dashboard) */
+  getManage: (propertyId: string, params?: Record<string, unknown>) =>
+    api.get(`/properties/${propertyId}/units/manage`, { params }),
+  /** Get single unit with populated property + host */
+  getOne: (id: string) => api.get(`/units/${id}`),
+  /** Create a new unit under a property */
+  create: (propertyId: string, data: Record<string, unknown>) =>
+    api.post(`/properties/${propertyId}/units`, data),
+  /** Update a unit */
+  update: (id: string, data: Record<string, unknown>) =>
+    api.put(`/units/${id}`, data),
+  /** Soft-delete a unit */
+  remove: (id: string) => api.delete(`/units/${id}`),
+  /** Duplicate a unit with optional field exclusions */
+  duplicate: (id: string, exclude?: string[]) =>
+    api.post(`/units/${id}/duplicate`, { exclude }),
+  /** Toggle unit active status (host-facing) */
+  toggle: (id: string) => api.patch(`/units/${id}/toggle`),
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // BOOKINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 export const bookingsApi = {
@@ -142,8 +169,8 @@ export const hostApi = {
   getNotifications: () => api.get('/host/notifications'),
   getEarnings: (params?: { year?: number }) =>
     api.get('/host/earnings', { params }),
-  getCalendar: (propertyId: string) => api.get(`/host/calendar/${propertyId}`),
-  blockDates: (propertyId: string, data: { startDate: string; endDate: string; action: string }) =>
+  getCalendar: (propertyId: string, params?: Record<string, string>) => api.get(`/host/calendar/${propertyId}`, { params }),
+  blockDates: (propertyId: string, data: { startDate: string; endDate: string; action: string; unitId?: string }) =>
     api.put(`/host/calendar/${propertyId}/block`, data),
   getReviews: (params?: Record<string, unknown>) =>
     api.get('/host/reviews', { params }),
@@ -274,6 +301,10 @@ export const adminApi = {
   // Payments
   getPayments: (params?: Record<string, unknown>) => api.get('/admin/payments', { params }),
   refundPayment: (id: string, data: { reason: string }) => api.post(`/admin/payments/${id}/refund`, data),
+  // Units
+  getPropertyUnits: (propertyId: string, params?: Record<string, unknown>) =>
+    api.get(`/admin/properties/${propertyId}/units`, { params }),
+  toggleUnit: (id: string) => api.patch(`/admin/units/${id}/toggle`),
   // Logs
   getLogs: (params?: Record<string, unknown>) => api.get('/admin/logs', { params }),
 };

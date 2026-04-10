@@ -20,7 +20,7 @@ interface HostReview {
   comment: string;
   createdAt: string;
   guest: { _id: string; name: string; avatar?: string };
-  property: { _id: string; title: string };
+  property: { _id: string; title: string; titleAr?: string };
 }
 
 interface HostData {
@@ -237,7 +237,7 @@ export default function HostProfilePage() {
                           </div>
                           <p className="text-xs text-gray-400 mb-2">
                             {review.property?.title && (
-                              <Link href={`/listings/${review.property._id}`} className="hover:text-primary-600">{review.property.title}</Link>
+                              <Link href={`/listings/${review.property._id}`} className="hover:text-primary-600">{isAr && review.property.titleAr ? review.property.titleAr : review.property.title}</Link>
                             )}
                             {' · '}
                             {new Date(review.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}

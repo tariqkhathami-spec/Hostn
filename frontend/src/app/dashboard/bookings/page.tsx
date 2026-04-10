@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { bookingsApi } from '@/lib/api';
 import { useSocketEvent } from '@/lib/useSocket';
-import { Booking } from '@/types';
+import { Booking, BookingUnit } from '@/types';
 import { BookOpen, Loader2, ArrowRight, AlertCircle } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -123,6 +123,7 @@ export default function MyBookingsPage() {
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {bookings.map((booking) => {
             const property = typeof booking.property === 'object' ? booking.property : null;
+            const unit = booking.unit && typeof booking.unit === 'object' ? (booking.unit as BookingUnit) : null;
             const total = booking.pricing?.total || 0;
 
             return (
@@ -135,6 +136,11 @@ export default function MyBookingsPage() {
                   <p className="font-semibold text-gray-900 truncate">
                     {property?.title || (lang === 'ar' ? '\u062d\u062c\u0632' : 'Booking')}
                   </p>
+                  {unit && (
+                    <p className="text-xs text-primary-600 font-medium truncate mt-0.5">
+                      {lang === 'ar' ? unit.nameAr || unit.nameEn : unit.nameEn || unit.nameAr}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-500 mt-1">
                     {new Date(booking.checkIn).toLocaleDateString(
                       lang === 'ar' ? 'ar-u-nu-latn' : 'en-US',

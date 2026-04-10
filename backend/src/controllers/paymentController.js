@@ -49,7 +49,7 @@ exports.initiatePayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Booking ID is required' });
     }
 
-    const booking = await Booking.findById(bookingId).populate('property', 'title');
+    const booking = await Booking.findById(bookingId).populate('property', 'title titleAr');
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }

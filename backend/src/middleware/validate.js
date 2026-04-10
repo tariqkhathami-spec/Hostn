@@ -77,6 +77,7 @@ const propertySearchRules = [
 
 const createBookingRules = [
   body('propertyId').isMongoId().withMessage('Invalid property ID'),
+  body('unitId').optional().isMongoId().withMessage('Invalid unit ID'),
   body('checkIn').isISO8601().withMessage('Check-in must be a valid date'),
   body('checkOut').isISO8601().withMessage('Check-out must be a valid date'),
   body('guests.adults').isInt({ min: 1 }).withMessage('At least one adult required'),
@@ -88,6 +89,7 @@ const createBookingRules = [
 
 const holdBookingRules = [
   body('propertyId').isMongoId().withMessage('Invalid property ID'),
+  body('unitId').optional().isMongoId().withMessage('Invalid unit ID'),
   body('checkIn').isISO8601().withMessage('Check-in must be a valid date'),
   body('checkOut').isISO8601().withMessage('Check-out must be a valid date'),
   body('guests.adults').optional().isInt({ min: 1 }).withMessage('At least one adult required'),
@@ -129,6 +131,7 @@ const blockDatesRules = [
   body('startDate').isISO8601().withMessage('Start date must be a valid date'),
   body('endDate').isISO8601().withMessage('End date must be a valid date'),
   body('action').isIn(['block', 'unblock']).withMessage('Action must be block or unblock'),
+  body('unitId').optional().isMongoId().withMessage('Invalid unit ID'),
   handleValidation,
 ];
 

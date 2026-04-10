@@ -39,7 +39,7 @@ exports.createTabbyCheckout = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Booking ID is required' });
     }
 
-    const booking = await Booking.findById(bookingId).populate('property', 'title location');
+    const booking = await Booking.findById(bookingId).populate('property', 'title titleAr location');
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
@@ -265,7 +265,7 @@ exports.createTamaraCheckout = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Booking ID is required' });
     }
 
-    const booking = await Booking.findById(bookingId).populate('property', 'title location');
+    const booking = await Booking.findById(bookingId).populate('property', 'title titleAr location');
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
