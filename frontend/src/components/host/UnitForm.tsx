@@ -4,12 +4,12 @@ import { useState, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { uploadApi } from '@/lib/api';
 import {
-  Loader2, X, ImagePlus, Plus, Minus, Trash2, Check,
+  Loader2, X, ImagePlus, Plus, Minus, Trash2, Check, Lock,
   BedDouble, Bath, Waves, UtensilsCrossed, Armchair,
   Droplets, Sparkles, Thermometer, Shirt, Package,
   Tv, Flame, Fan, Music, Dumbbell, Gamepad2, Film,
   Lightbulb, TreePine, Mountain, Umbrella, Sun, Eye,
-  Wifi, Car, Shield, Briefcase, Scissors, Tent,
+  Wifi, Car, Shield, Briefcase, Scissors, Tent, Users,
   type LucideIcon,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -25,6 +25,8 @@ const t: Record<string, Record<string, string>> = {
   description:  { en: 'Description', ar: 'الوصف' },
   area:         { en: 'Area (m²)', ar: 'المساحة (م²)' },
   suitability:  { en: 'Suitable for', ar: 'مناسبة لـ' },
+  families:     { en: 'Families', ar: 'عائلات' },
+  singles:      { en: 'Singles', ar: 'أفراد' },
   maxGuests:    { en: 'Max Guests', ar: 'أقصى عدد ضيوف' },
 
   photos:       { en: 'Photos', ar: 'الصور' },
@@ -41,25 +43,31 @@ const t: Record<string, Record<string, string>> = {
   doubleBeds:   { en: 'Double Beds', ar: 'أسرّة مزدوجة' },
 
   bathroomTitle:{ en: 'Bathrooms', ar: 'الحمامات' },
+  bathroomReq:  { en: 'Required', ar: 'مطلوب' },
   bathroomCount:{ en: 'Count', ar: 'العدد' },
   bathroomAmns: { en: 'Bathroom Amenities', ar: 'مستلزمات الحمام' },
 
   poolsTitle:   { en: 'Pools', ar: 'المسابح' },
   addPool:      { en: 'Add Pool', ar: 'إضافة مسبح' },
-  poolType:     { en: 'Pool Type', ar: 'نوع المسبح' },
-  varDepth:     { en: 'Variable Depth', ar: 'عمق متغير' },
+  pool:         { en: 'Pool', ar: 'مسبح' },
+  poolType:     { en: 'Type', ar: 'النوع' },
+  dimensions:   { en: 'Dimensions', ar: 'الأبعاد' },
+  depthSetting: { en: 'Depth', ar: 'العمق' },
+  varDepth:     { en: 'Variable depth', ar: 'عمق متغير' },
+  fixedDepth:   { en: 'Fixed depth', ar: 'عمق ثابت' },
   depth:        { en: 'Depth (m)', ar: 'العمق (م)' },
-  depthMin:     { en: 'Min Depth (m)', ar: 'أقل عمق (م)' },
-  depthMax:     { en: 'Max Depth (m)', ar: 'أقصى عمق (م)' },
+  depthMin:     { en: 'Min (m)', ar: 'أقل (م)' },
+  depthMax:     { en: 'Max (m)', ar: 'أقصى (م)' },
   length:       { en: 'Length (m)', ar: 'الطول (م)' },
   width:        { en: 'Width (m)', ar: 'العرض (م)' },
-  isEmpty:      { en: 'Empty', ar: 'فارغ' },
+  isEmpty:      { en: 'Empty (no water)', ar: 'فارغ (بدون ماء)' },
+  removePool:   { en: 'Remove', ar: 'حذف' },
 
   kitchenTitle: { en: 'Kitchen', ar: 'المطبخ' },
-  diningCap:    { en: 'Dining Capacity', ar: 'سعة الطعام' },
+  diningCap:    { en: 'Dining Seats', ar: 'سعة السفرة' },
   kitchenAmns:  { en: 'Kitchen Amenities', ar: 'مستلزمات المطبخ' },
 
-  livingTitle:  { en: 'Living Rooms', ar: 'غرف المعيشة' },
+  livingTitle:  { en: 'Majlis / Living Rooms', ar: 'مجلس' },
   mainLiving:   { en: 'Main', ar: 'رئيسية' },
   additional:   { en: 'Additional', ar: 'إضافية' },
   outdoor:      { en: 'Outdoor', ar: 'خارجية' },
@@ -84,20 +92,14 @@ const t: Record<string, Record<string, string>> = {
 /* ══════════════════════════════════════════════════════════════════════
    ENUM / DATA
    ══════════════════════════════════════════════════════════════════════ */
-const SUITABILITY_OPTIONS = [
-  { value: 'family', en: 'Families', ar: 'عائلات' },
-  { value: 'singles', en: 'Singles', ar: 'أفراد' },
-  { value: 'both', en: 'Both', ar: 'الكل' },
-];
 
-/* ── Main amenity toggle definitions ── */
+/* ── Main amenity toggle definitions (bathrooms excluded — always shown) ── */
 interface MainToggle { key: string; en: string; ar: string; icon: LucideIcon }
 const MAIN_TOGGLES: MainToggle[] = [
-  { key: 'hasBedrooms',    en: 'Bedrooms',     ar: 'غرف النوم',   icon: BedDouble },
-  { key: 'hasBathrooms',   en: 'Bathrooms',    ar: 'الحمامات',    icon: Bath },
-  { key: 'hasPool',        en: 'Pool',         ar: 'مسبح',        icon: Waves },
-  { key: 'hasKitchen',     en: 'Kitchen',      ar: 'المطبخ',      icon: UtensilsCrossed },
-  { key: 'hasLivingRooms', en: 'Living Room',  ar: 'غرف المعيشة', icon: Armchair },
+  { key: 'hasBedrooms',    en: 'Bedrooms',       ar: 'غرف النوم', icon: BedDouble },
+  { key: 'hasPool',        en: 'Pool',            ar: 'مسبح',      icon: Waves },
+  { key: 'hasKitchen',     en: 'Kitchen',         ar: 'المطبخ',    icon: UtensilsCrossed },
+  { key: 'hasLivingRooms', en: 'Majlis',          ar: 'مجلس',      icon: Armchair },
 ];
 
 /* ── Cancellation policies (radio cards) ── */
@@ -259,7 +261,6 @@ export interface UnitFormData {
   hasKitchen: boolean;
   diningCapacity: string;
   hasPool: boolean;
-  // pricing (kept for backward compat; hidden in form)
   priceSun: string; priceMon: string; priceTue: string; priceWed: string;
   priceThu: string; priceFri: string; priceSat: string;
   cleaningFee: string; discountPercent: string; weeklyDiscount: string;
@@ -272,7 +273,7 @@ export const defaultFormData: UnitFormData = {
   cancellationPolicy: 'flexible', cancellationDescription: '', writtenRules: '',
   hasLivingRooms: false, livingMain: '0', livingAdditional: '0', livingOutdoor: '0', livingOutdoorRoom: '0',
   hasBedrooms: false, bedroomCount: '0', singleBeds: '0', doubleBeds: '0',
-  bathroomCount: '0', hasKitchen: false, diningCapacity: '0', hasPool: false,
+  bathroomCount: '1', hasKitchen: false, diningCapacity: '0', hasPool: false,
   priceSun: '0', priceMon: '0', priceTue: '0', priceWed: '0',
   priceThu: '0', priceFri: '0', priceSat: '0',
   cleaningFee: '0', discountPercent: '0', weeklyDiscount: '0',
@@ -280,7 +281,7 @@ export const defaultFormData: UnitFormData = {
 };
 
 /* ══════════════════════════════════════════════════════════════════════
-   NUMBER STEPPER COMPONENT
+   NUMBER STEPPER (keyboard + buttons)
    ══════════════════════════════════════════════════════════════════════ */
 function NumberStepper({ value, onChange, min = 0, max = 99, label }: {
   value: number; onChange: (v: number) => void; min?: number; max?: number; label?: string;
@@ -293,7 +294,18 @@ function NumberStepper({ value, onChange, min = 0, max = 99, label }: {
           className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors">
           <Minus className="w-4 h-4" />
         </button>
-        <span className="w-10 text-center text-sm font-semibold text-gray-900 select-none">{value}</span>
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => {
+            const v = parseInt(e.target.value);
+            if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)));
+            else if (e.target.value === '') onChange(min);
+          }}
+          className="w-12 text-center text-sm font-semibold text-gray-900 bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          min={min}
+          max={max}
+        />
         <button type="button" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}
           className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors">
           <Plus className="w-4 h-4" />
@@ -344,9 +356,6 @@ export default function UnitForm({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // hasBathrooms is derived from bathroomCount > 0 for backward compat
-  const hasBathrooms = Number(form.bathroomCount) > 0 || bathroomAmenities.length > 0;
-
   /* ── Helpers ─────────────────────────────────── */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -361,23 +370,16 @@ export default function UnitForm({
     setForm({ ...form, [key]: String(val) });
   };
 
-  /* ── Main toggle handler (hasBathrooms is special) ── */
-  const handleMainToggle = (key: string) => {
-    if (key === 'hasBathrooms') {
-      // Toggle by setting bathroom count to 1 or 0
-      if (hasBathrooms) {
-        setForm({ ...form, bathroomCount: '0' });
-        setBathroomAmenities([]);
-      } else {
-        setForm({ ...form, bathroomCount: '1' });
-      }
-    } else {
-      toggleBool(key as keyof UnitFormData);
-    }
-  };
-  const isMainToggleActive = (key: string) => {
-    if (key === 'hasBathrooms') return hasBathrooms;
-    return !!form[key as keyof UnitFormData];
+  /* ── Suitability helpers (multi-toggle → single backend value) ── */
+  const suitFamilies = form.suitability === 'family' || form.suitability === 'both';
+  const suitSingles = form.suitability === 'singles' || form.suitability === 'both';
+  const toggleSuit = (which: 'family' | 'singles') => {
+    let f = suitFamilies, s = suitSingles;
+    if (which === 'family') f = !f;
+    else s = !s;
+    // at least one must be selected
+    if (!f && !s) return;
+    setForm({ ...form, suitability: f && s ? 'both' : f ? 'family' : 'singles' });
   };
 
   /* ── Image upload ── */
@@ -440,19 +442,16 @@ export default function UnitForm({
         amenities,
         features,
         pricing: {
-          sunday: Number(form.priceSun) || 0,
-          monday: Number(form.priceMon) || 0,
-          tuesday: Number(form.priceTue) || 0,
-          wednesday: Number(form.priceWed) || 0,
-          thursday: Number(form.priceThu) || 0,
-          friday: Number(form.priceFri) || 0,
+          sunday: Number(form.priceSun) || 0, monday: Number(form.priceMon) || 0,
+          tuesday: Number(form.priceTue) || 0, wednesday: Number(form.priceWed) || 0,
+          thursday: Number(form.priceThu) || 0, friday: Number(form.priceFri) || 0,
           saturday: Number(form.priceSat) || 0,
           cleaningFee: Number(form.cleaningFee) || 0,
           discountPercent: Number(form.discountPercent) || 0,
           weeklyDiscount: Number(form.weeklyDiscount) || 0,
         },
         capacity: { maxGuests: Number(form.maxGuests) || 1 },
-        bathroomCount: Number(form.bathroomCount) || 0,
+        bathroomCount: Math.max(1, Number(form.bathroomCount) || 1),
         hasLivingRooms: form.hasLivingRooms,
         livingRooms: form.hasLivingRooms
           ? { main: Number(form.livingMain) || 0, additional: Number(form.livingAdditional) || 0, outdoor: Number(form.livingOutdoor) || 0, outdoorRoom: Number(form.livingOutdoorRoom) || 0 }
@@ -488,7 +487,7 @@ export default function UnitForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* ── 1. Basic Info ─────────────────────────────────── */}
+      {/* ══ 1. Basic Info ══════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className={sectionTitle}>{t.basicInfo[lang]}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -505,16 +504,29 @@ export default function UnitForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">{t.description[lang]}</label>
           <textarea name="description" value={form.description} onChange={handleChange} rows={3} className={inputClass} />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.area[lang]}</label>
             <input name="area" type="number" min="0" value={form.area} onChange={handleChange} className={inputClass} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.suitability[lang]}</label>
-            <select name="suitability" value={form.suitability} onChange={handleChange} className={inputClass}>
-              {SUITABILITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o[lang]}</option>)}
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.suitability[lang]}</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => toggleSuit('family')}
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 text-sm transition-all ${
+                  suitFamilies ? 'border-primary-500 bg-primary-50 text-primary-700 font-medium' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}>
+                <Users className="w-4 h-4" />
+                {t.families[lang]}
+              </button>
+              <button type="button" onClick={() => toggleSuit('singles')}
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 text-sm transition-all ${
+                  suitSingles ? 'border-primary-500 bg-primary-50 text-primary-700 font-medium' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}>
+                <Users className="w-4 h-4" />
+                {t.singles[lang]}
+              </button>
+            </div>
           </div>
           <div>
             <NumberStepper label={t.maxGuests[lang]} value={Number(form.maxGuests) || 1}
@@ -523,45 +535,42 @@ export default function UnitForm({
         </div>
       </div>
 
-      {/* ── 2. Photos ─────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className={sectionTitle}>{t.photos[lang]}</h2>
-        <p className="text-xs text-gray-500 mb-3">{t.uploadHint[lang]}</p>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
-          {images.map((img, idx) => (
-            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
-              <Image src={img.url} alt="" fill className="object-cover" unoptimized />
-              {img.isPrimary && (
-                <span className="absolute top-1.5 start-1.5 text-[10px] bg-primary-600 text-white px-1.5 py-0.5 rounded font-medium">{t.main[lang]}</span>
-              )}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
-                {!img.isPrimary && (
-                  <button type="button" onClick={() => setPrimaryImage(idx)} className="p-1.5 bg-white rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-100">{t.main[lang]}</button>
-                )}
-                <button type="button" onClick={() => removeImage(idx)} className="p-1.5 bg-white rounded-lg text-red-600 hover:bg-red-50"><X className="w-3.5 h-3.5" /></button>
-              </div>
-            </div>
-          ))}
-          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-primary-400 hover:text-primary-500 transition-colors disabled:opacity-50">
-            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
-            <span className="text-[10px]">{uploading ? t.uploading[lang] : (isAr ? 'إضافة' : 'Add')}</span>
-          </button>
+      {/* ══ 2. Bathrooms (mandatory — always shown) ═══════ */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+        <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+          <Bath className="w-5 h-5 text-primary-500" />
+          {t.bathroomTitle[lang]}
+          <span className="flex items-center gap-1 text-xs font-normal text-gray-400 ms-auto">
+            <Lock className="w-3 h-3" /> {t.bathroomReq[lang]}
+          </span>
+        </h2>
+        <NumberStepper label={t.bathroomCount[lang]} value={Math.max(1, Number(form.bathroomCount))}
+          onChange={(v) => setStepper('bathroomCount', v)} min={1} />
+        <p className="text-xs font-medium text-gray-600 pt-2">{t.bathroomAmns[lang]}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {BATHROOM_AMENITIES.map((a) => {
+            const Icon = a.icon;
+            return (
+              <button key={a.value} type="button" onClick={() => toggleInArray(bathroomAmenities, setBathroomAmenities, a.value)}
+                className={iconToggleBtn(bathroomAmenities.includes(a.value))}>
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span>{a[lang]}</span>
+              </button>
+            );
+          })}
         </div>
-        <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" multiple onChange={handleImageUpload} className="hidden" />
       </div>
 
-      {/* ── 3. Main Amenities (toggle grid) ───────────────── */}
+      {/* ══ 3. Main Amenities toggle grid ═════════════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.mainAmenities[lang]}</h2>
         <p className="text-xs text-gray-500 mb-4">{t.mainAmHint[lang]}</p>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {MAIN_TOGGLES.map((tog) => {
-            const active = isMainToggleActive(tog.key);
+            const active = !!form[tog.key as keyof UnitFormData];
             const Icon = tog.icon;
             return (
-              <button key={tog.key} type="button" onClick={() => handleMainToggle(tog.key)}
+              <button key={tog.key} type="button" onClick={() => toggleBool(tog.key as keyof UnitFormData)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   active
                     ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
@@ -574,155 +583,144 @@ export default function UnitForm({
             );
           })}
         </div>
+      </div>
 
-        {/* ── Bedroom detail card ── */}
-        {form.hasBedrooms && (
-          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <BedDouble className="w-4 h-4 text-primary-500" /> {t.bedroomsTitle[lang]}
-            </h3>
-            <div className="flex flex-wrap gap-6">
-              <NumberStepper label={t.bedroomCount[lang]} value={Number(form.bedroomCount)} onChange={(v) => setStepper('bedroomCount', v)} />
-              <NumberStepper label={t.singleBeds[lang]} value={Number(form.singleBeds)} onChange={(v) => setStepper('singleBeds', v)} />
-              <NumberStepper label={t.doubleBeds[lang]} value={Number(form.doubleBeds)} onChange={(v) => setStepper('doubleBeds', v)} />
-            </div>
+      {/* ══ Bedroom detail card ═══════════════════════════ */}
+      {form.hasBedrooms && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <BedDouble className="w-5 h-5 text-primary-500" /> {t.bedroomsTitle[lang]}
+          </h2>
+          <div className="flex flex-wrap gap-6">
+            <NumberStepper label={t.bedroomCount[lang]} value={Number(form.bedroomCount)} onChange={(v) => setStepper('bedroomCount', v)} />
+            <NumberStepper label={t.singleBeds[lang]} value={Number(form.singleBeds)} onChange={(v) => setStepper('singleBeds', v)} />
+            <NumberStepper label={t.doubleBeds[lang]} value={Number(form.doubleBeds)} onChange={(v) => setStepper('doubleBeds', v)} />
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── Bathroom detail card ── */}
-        {hasBathrooms && (
-          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Bath className="w-4 h-4 text-primary-500" /> {t.bathroomTitle[lang]}
-            </h3>
-            <NumberStepper label={t.bathroomCount[lang]} value={Number(form.bathroomCount)} onChange={(v) => setStepper('bathroomCount', v)} min={1} />
-            <p className="text-xs font-medium text-gray-600 mt-3">{t.bathroomAmns[lang]}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {BATHROOM_AMENITIES.map((a) => {
-                const Icon = a.icon;
-                return (
-                  <button key={a.value} type="button" onClick={() => toggleInArray(bathroomAmenities, setBathroomAmenities, a.value)}
-                    className={iconToggleBtn(bathroomAmenities.includes(a.value))}>
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{a[lang]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      {/* ══ Pool detail card ══════════════════════════════ */}
+      {form.hasPool && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <Waves className="w-5 h-5 text-primary-500" /> {t.poolsTitle[lang]}
+          </h2>
 
-        {/* ── Pool detail card ── */}
-        {form.hasPool && (
-          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Waves className="w-4 h-4 text-primary-500" /> {t.poolsTitle[lang]}
-            </h3>
-
-            {pools.map((pool, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-white relative">
+          {pools.map((pool, idx) => (
+            <div key={idx} className="border border-gray-200 rounded-xl overflow-hidden">
+              {/* Pool header */}
+              <div className="bg-gray-50 px-4 py-2.5 flex items-center justify-between border-b border-gray-200">
+                <span className="text-sm font-medium text-gray-700">{t.pool[lang]} {idx + 1}</span>
                 <button type="button" onClick={() => removePool(idx)}
-                  className="absolute top-2 end-2 p-1 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">{t.poolType[lang]}</label>
-                    <select value={pool.type} onChange={(e) => updatePool(idx, 'type', e.target.value)} className={inputClass}>
-                      {POOL_TYPES.map((pt) => <option key={pt.value} value={pt.value}>{pt[lang]}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">{t.length[lang]}</label>
-                    <input type="number" min="0" step="0.1" value={pool.lengthM || ''} onChange={(e) => updatePool(idx, 'lengthM', Number(e.target.value) || undefined)} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">{t.width[lang]}</label>
-                    <input type="number" min="0" step="0.1" value={pool.widthM || ''} onChange={(e) => updatePool(idx, 'widthM', Number(e.target.value) || undefined)} className={inputClass} />
+                  className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" /> {t.removePool[lang]}
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Type */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t.poolType[lang]}</label>
+                  <select value={pool.type} onChange={(e) => updatePool(idx, 'type', e.target.value)} className={inputClass}>
+                    {POOL_TYPES.map((pt) => <option key={pt.value} value={pt.value}>{pt[lang]}</option>)}
+                  </select>
+                </div>
+                {/* Dimensions */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">{t.dimensions[lang]}</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <input type="number" min="0" step="0.1" value={pool.lengthM || ''} onChange={(e) => updatePool(idx, 'lengthM', Number(e.target.value) || undefined)}
+                        className={inputClass} placeholder={t.length[lang]} />
+                    </div>
+                    <div className="relative">
+                      <input type="number" min="0" step="0.1" value={pool.widthM || ''} onChange={(e) => updatePool(idx, 'widthM', Number(e.target.value) || undefined)}
+                        className={inputClass} placeholder={t.width[lang]} />
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-4 mb-3">
-                  <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
-                    <input type="checkbox" checked={pool.variableDepth} onChange={() => updatePool(idx, 'variableDepth', !pool.variableDepth)}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600" />
-                    {t.varDepth[lang]}
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
-                    <input type="checkbox" checked={pool.isEmpty} onChange={() => updatePool(idx, 'isEmpty', !pool.isEmpty)}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600" />
-                    {t.isEmpty[lang]}
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
+                {/* Depth */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">{t.depthSetting[lang]}</label>
+                  <div className="flex gap-3 mb-3">
+                    <button type="button" onClick={() => updatePool(idx, 'variableDepth', false)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${!pool.variableDepth ? 'bg-primary-100 text-primary-700 border border-primary-300' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                      {t.fixedDepth[lang]}
+                    </button>
+                    <button type="button" onClick={() => updatePool(idx, 'variableDepth', true)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${pool.variableDepth ? 'bg-primary-100 text-primary-700 border border-primary-300' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                      {t.varDepth[lang]}
+                    </button>
+                  </div>
                   {pool.variableDepth ? (
-                    <>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">{t.depthMin[lang]}</label>
-                        <input type="number" min="0" step="0.1" value={pool.depthMin || ''} onChange={(e) => updatePool(idx, 'depthMin', Number(e.target.value) || undefined)} className={inputClass} />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">{t.depthMax[lang]}</label>
-                        <input type="number" min="0" step="0.1" value={pool.depthMax || ''} onChange={(e) => updatePool(idx, 'depthMax', Number(e.target.value) || undefined)} className={inputClass} />
-                      </div>
-                    </>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="number" min="0" step="0.1" value={pool.depthMin || ''} onChange={(e) => updatePool(idx, 'depthMin', Number(e.target.value) || undefined)}
+                        className={inputClass} placeholder={t.depthMin[lang]} />
+                      <input type="number" min="0" step="0.1" value={pool.depthMax || ''} onChange={(e) => updatePool(idx, 'depthMax', Number(e.target.value) || undefined)}
+                        className={inputClass} placeholder={t.depthMax[lang]} />
+                    </div>
                   ) : (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">{t.depth[lang]}</label>
-                      <input type="number" min="0" step="0.1" value={pool.depth || ''} onChange={(e) => updatePool(idx, 'depth', Number(e.target.value) || undefined)} className={inputClass} />
+                    <div className="max-w-[200px]">
+                      <input type="number" min="0" step="0.1" value={pool.depth || ''} onChange={(e) => updatePool(idx, 'depth', Number(e.target.value) || undefined)}
+                        className={inputClass} placeholder={t.depth[lang]} />
                     </div>
                   )}
                 </div>
+                {/* Empty toggle */}
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="checkbox" checked={pool.isEmpty} onChange={() => updatePool(idx, 'isEmpty', !pool.isEmpty)}
+                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                  {t.isEmpty[lang]}
+                </label>
               </div>
-            ))}
-
-            <button type="button" onClick={addPool}
-              className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium">
-              <Plus className="w-4 h-4" /> {t.addPool[lang]}
-            </button>
-          </div>
-        )}
-
-        {/* ── Kitchen detail card ── */}
-        {form.hasKitchen && (
-          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <UtensilsCrossed className="w-4 h-4 text-primary-500" /> {t.kitchenTitle[lang]}
-            </h3>
-            <NumberStepper label={t.diningCap[lang]} value={Number(form.diningCapacity)} onChange={(v) => setStepper('diningCapacity', v)} />
-            <p className="text-xs font-medium text-gray-600 mt-3">{t.kitchenAmns[lang]}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {KITCHEN_AMENITIES.map((a) => {
-                const Icon = a.icon;
-                return (
-                  <button key={a.value} type="button" onClick={() => toggleInArray(kitchenAmenities, setKitchenAmenities, a.value)}
-                    className={iconToggleBtn(kitchenAmenities.includes(a.value))}>
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span>{a[lang]}</span>
-                  </button>
-                );
-              })}
             </div>
-          </div>
-        )}
+          ))}
 
-        {/* ── Living room detail card ── */}
-        {form.hasLivingRooms && (
-          <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Armchair className="w-4 h-4 text-primary-500" /> {t.livingTitle[lang]}
-            </h3>
-            <div className="flex flex-wrap gap-6">
-              <NumberStepper label={t.mainLiving[lang]} value={Number(form.livingMain)} onChange={(v) => setStepper('livingMain', v)} />
-              <NumberStepper label={t.additional[lang]} value={Number(form.livingAdditional)} onChange={(v) => setStepper('livingAdditional', v)} />
-              <NumberStepper label={t.outdoor[lang]} value={Number(form.livingOutdoor)} onChange={(v) => setStepper('livingOutdoor', v)} />
-              <NumberStepper label={t.annex[lang]} value={Number(form.livingOutdoorRoom)} onChange={(v) => setStepper('livingOutdoorRoom', v)} />
-            </div>
-          </div>
-        )}
-      </div>
+          <button type="button" onClick={addPool}
+            className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium px-4 py-2 border-2 border-dashed border-primary-300 rounded-xl hover:bg-primary-50 transition-all w-full justify-center">
+            <Plus className="w-4 h-4" /> {t.addPool[lang]}
+          </button>
+        </div>
+      )}
 
-      {/* ── 4. Additional Amenities ───────────────────────── */}
+      {/* ══ Kitchen detail card ═══════════════════════════ */}
+      {form.hasKitchen && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <UtensilsCrossed className="w-5 h-5 text-primary-500" /> {t.kitchenTitle[lang]}
+          </h2>
+          <NumberStepper label={t.diningCap[lang]} value={Number(form.diningCapacity)} onChange={(v) => setStepper('diningCapacity', v)} />
+          <p className="text-xs font-medium text-gray-600 pt-2">{t.kitchenAmns[lang]}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {KITCHEN_AMENITIES.map((a) => {
+              const Icon = a.icon;
+              return (
+                <button key={a.value} type="button" onClick={() => toggleInArray(kitchenAmenities, setKitchenAmenities, a.value)}
+                  className={iconToggleBtn(kitchenAmenities.includes(a.value))}>
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{a[lang]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ══ Living room (Majlis) detail card ══════════════ */}
+      {form.hasLivingRooms && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <Armchair className="w-5 h-5 text-primary-500" /> {t.livingTitle[lang]}
+          </h2>
+          <div className="flex flex-wrap gap-6">
+            <NumberStepper label={t.mainLiving[lang]} value={Number(form.livingMain)} onChange={(v) => setStepper('livingMain', v)} />
+            <NumberStepper label={t.additional[lang]} value={Number(form.livingAdditional)} onChange={(v) => setStepper('livingAdditional', v)} />
+            <NumberStepper label={t.outdoor[lang]} value={Number(form.livingOutdoor)} onChange={(v) => setStepper('livingOutdoor', v)} />
+            <NumberStepper label={t.annex[lang]} value={Number(form.livingOutdoorRoom)} onChange={(v) => setStepper('livingOutdoorRoom', v)} />
+          </div>
+        </div>
+      )}
+
+      {/* ══ 4. Additional Amenities ═══════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.addlAmenities[lang]}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -739,7 +737,7 @@ export default function UnitForm({
         </div>
       </div>
 
-      {/* ── 5. Features (big icons) ──────────────────────── */}
+      {/* ══ 5. Features (big icons) ══════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.featuresTitle[lang]}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -761,7 +759,7 @@ export default function UnitForm({
         </div>
       </div>
 
-      {/* ── 6. Insurance ─────────────────────────────────── */}
+      {/* ══ 6. Insurance ═════════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className={sectionTitle}>{t.insuranceTitle[lang]}</h2>
         <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
@@ -777,7 +775,7 @@ export default function UnitForm({
         )}
       </div>
 
-      {/* ── 7. Cancellation Policy (radio cards) ─────────── */}
+      {/* ══ 7. Cancellation Policy (radio cards) ═════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.cancelTitle[lang]}</h2>
         <div className="space-y-3">
@@ -805,14 +803,42 @@ export default function UnitForm({
         </div>
       </div>
 
-      {/* ── 8. Written Rules ─────────────────────────────── */}
+      {/* ══ 8. Written Rules ═════════════════════════════ */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.rulesTitle[lang]}</h2>
         <textarea name="writtenRules" value={form.writtenRules} onChange={handleChange} rows={4} className={inputClass}
           placeholder={isAr ? 'أضف قواعد الوحدة هنا...' : 'Add unit rules here...'} />
       </div>
 
-      {/* ── Submit ─────────────────────────────────────────── */}
+      {/* ══ 9. Photos (at the end) ═══════════════════════ */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className={sectionTitle}>{t.photos[lang]}</h2>
+        <p className="text-xs text-gray-500 mb-3">{t.uploadHint[lang]}</p>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
+          {images.map((img, idx) => (
+            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
+              <Image src={img.url} alt="" fill className="object-cover" unoptimized />
+              {img.isPrimary && (
+                <span className="absolute top-1.5 start-1.5 text-[10px] bg-primary-600 text-white px-1.5 py-0.5 rounded font-medium">{t.main[lang]}</span>
+              )}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+                {!img.isPrimary && (
+                  <button type="button" onClick={() => setPrimaryImage(idx)} className="p-1.5 bg-white rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-100">{t.main[lang]}</button>
+                )}
+                <button type="button" onClick={() => removeImage(idx)} className="p-1.5 bg-white rounded-lg text-red-600 hover:bg-red-50"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+            className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-primary-400 hover:text-primary-500 transition-colors disabled:opacity-50">
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+            <span className="text-[10px]">{uploading ? t.uploading[lang] : (isAr ? 'إضافة' : 'Add')}</span>
+          </button>
+        </div>
+        <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" multiple onChange={handleImageUpload} className="hidden" />
+      </div>
+
+      {/* ══ Submit ════════════════════════════════════════ */}
       <button
         type="submit"
         disabled={submitting}
