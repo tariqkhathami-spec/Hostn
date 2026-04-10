@@ -10,9 +10,27 @@ export const hostService = {
   // Properties
   getProperties: () => api.get<{ data: Property[] }>('/host/properties').then(r => r.data),
   getProperty: (id: string) => api.get<{ data: Property }>(`/host/properties/${id}`).then(r => r.data),
-  getUnit: (id: string) => api.get<{ data: Unit }>(`/host/units/${id}`).then(r => r.data),
-  updateUnit: (id: string, data: Partial<Unit>) => api.patch(`/host/units/${id}`, data).then(r => r.data),
+  /** @deprecated Use getUnit instead — kept for screens still using /host/units/:id */
+  getUnitLegacy: (id: string) => api.get<{ data: Unit }>(`/host/units/${id}`).then(r => r.data),
+  /** @deprecated Use updateUnit instead — kept for screens still using PATCH /host/units/:id */
+  updateUnitLegacy: (id: string, data: Partial<Unit>) => api.patch(`/host/units/${id}`, data).then(r => r.data),
   toggleUnitStatus: (id: string, status: 'listed' | 'unlisted') => api.patch(`/host/units/${id}/status`, { status }).then(r => r.data),
+
+  // ── Units ───────────────────────────────────────────────────
+  getUnitsForProperty: (propertyId: string) =>
+    api.get(`/properties/${propertyId}/units/manage`).then((r: any) => r.data),
+  getUnit: (id: string) =>
+    api.get(`/units/${id}`).then((r: any) => r.data),
+  createUnit: (propertyId: string, data: Record<string, unknown>) =>
+    api.post(`/properties/${propertyId}/units`, data).then((r: any) => r.data),
+  updateUnit: (id: string, data: Record<string, unknown>) =>
+    api.put(`/units/${id}`, data).then((r: any) => r.data),
+  deleteUnit: (id: string) =>
+    api.delete(`/units/${id}`).then((r: any) => r.data),
+  duplicateUnit: (id: string) =>
+    api.post(`/units/${id}/duplicate`).then((r: any) => r.data),
+  toggleUnit: (id: string) =>
+    api.patch(`/units/${id}/toggle`).then((r: any) => r.data),
 
   // Bookings
   getBookings: (params?: { status?: string; page?: number }) => api.get<{ data: Booking[] }>('/host/bookings', { params }).then(r => r.data),
@@ -86,7 +104,10 @@ export const hostService = {
 
   // Pricing & Offers
   getUnitPricing: (unitId: string) => api.get(`/host/units/${unitId}/pricing`).then(r => r.data),
-  updateUnitPricing: (unitId: string, data: Record<string, unknown>) => api.put(`/host/units/${unitId}/pricing`, data).then(r => r.data),
+  /** @deprecated Use updateUnitPricing instead — kept for screens still using /host/units/:id/pricing */
+  updateUnitPricingLegacy: (unitId: string, data: Record<string, unknown>) => api.put(`/host/units/${unitId}/pricing`, data).then(r => r.data),
+  updateUnitPricing: (id: string, data: Record<string, unknown>) =>
+    api.put(`/units/${id}/pricing`, data).then((r: any) => r.data),
   getUnitDiscounts: (unitId: string) => api.get(`/host/units/${unitId}/discounts`).then(r => r.data),
   updateDiscount: (unitId: string, type: string, data: Record<string, unknown>) => api.post(`/host/units/${unitId}/discounts/${type}`, data).then(r => r.data),
   toggleDiscount: (unitId: string, type: string) => api.patch(`/host/units/${unitId}/discounts/${type}/toggle`).then(r => r.data),

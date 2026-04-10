@@ -168,6 +168,23 @@ export const ALL_AMENITIES: AmenityOption[] = [
   { value: 'hot_tub', en: 'Hot Tub', ar: 'جاكوزي', icon: 'water' },
 ];
 
+export interface DirectionOption {
+  value: string;
+  en: string;
+  ar: string;
+}
+
+export const DIRECTIONS: DirectionOption[] = [
+  { value: 'north', en: 'North', ar: 'شمال' },
+  { value: 'south', en: 'South', ar: 'جنوب' },
+  { value: 'east', en: 'East', ar: 'شرق' },
+  { value: 'west', en: 'West', ar: 'غرب' },
+  { value: 'northeast', en: 'Northeast', ar: 'شمال شرق' },
+  { value: 'northwest', en: 'Northwest', ar: 'شمال غرب' },
+  { value: 'southeast', en: 'Southeast', ar: 'جنوب شرق' },
+  { value: 'southwest', en: 'Southwest', ar: 'جنوب غرب' },
+];
+
 export const TIME_OPTIONS: string[] = [
   '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
   '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',

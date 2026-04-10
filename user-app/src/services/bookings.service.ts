@@ -14,6 +14,7 @@ export const bookingsService = {
 
   createHold(data: {
     propertyId: string;
+    unitId?: string;
     checkIn: string;
     checkOut: string;
     guests: { adults: number; children: number; infants: number };
@@ -23,6 +24,7 @@ export const bookingsService = {
 
   create(data: {
     propertyId: string;
+    unitId?: string;
     checkIn: string;
     checkOut: string;
     guests: { adults: number; children: number; infants: number };

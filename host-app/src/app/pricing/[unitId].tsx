@@ -50,7 +50,7 @@ export default function UnitPricingDetailScreen() {
     isLoading: unitLoading,
   } = useQuery({
     queryKey: ['unit', unitId],
-    queryFn: () => hostService.getUnit(unitId!),
+    queryFn: () => hostService.getUnitLegacy(unitId!),
     enabled: !!unitId,
     retry: false,
   });
@@ -104,7 +104,7 @@ export default function UnitPricingDetailScreen() {
 
   // Mutations
   const updatePricingMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => hostService.updateUnitPricing(unitId!, data),
+    mutationFn: (data: Record<string, unknown>) => hostService.updateUnitPricingLegacy(unitId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unitPricing', unitId] });
       setExpandedRate(null);

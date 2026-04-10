@@ -1,14 +1,13 @@
 import React from 'react';
-import { Alert, ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PropertyWizard, {
   type PropertyFormData,
   defaultForm,
 } from '../../components/property/PropertyWizard';
 import { hostService } from '../../services/host.service';
 import { getLocale } from '../../utils/i18n';
-import { Colors, Typography, Spacing } from '../../constants/theme';
 
 export default function AddUnitScreen() {
   const router = useRouter();
@@ -17,7 +16,8 @@ export default function AddUnitScreen() {
   const l = (obj: { en: string; ar: string }) => (locale === 'ar' ? obj.ar : obj.en);
 
   // Get parent property info from route params
-  const { groupTag, city, district, type } = useLocalSearchParams<{
+  const { propertyId, groupTag, city, district, type } = useLocalSearchParams<{
+    propertyId: string;
     groupTag: string;
     city: string;
     district: string;
@@ -33,9 +33,19 @@ export default function AddUnitScreen() {
   };
 
   const mutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => hostService.createProperty(data),
+    mutationFn: (data: Record<string, unknown>) => {
+      // Use new Unit API when propertyId is provided, fall back to legacy
+      if (propertyId) {
+        return hostService.createUnit(propertyId, data);
+      }
+      // Legacy path: create as property with groupTag for backward compat
+      return hostService.createProperty(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
+      if (propertyId) {
+        queryClient.invalidateQueries({ queryKey: ['units', propertyId] });
+      }
       Alert.alert(
         l({ en: 'Success', ar: 'تم بنجاح' }),
         l({ en: 'Unit added successfully', ar: 'تمت إضافة الوحدة بنجاح' }),
@@ -83,9 +93,13 @@ export default function AddUnitScreen() {
       },
       amenities: form.amenities,
       images: form.images,
-      // Tag with the same group tag so backend groups this unit with the parent property
-      tags: groupTag ? [groupTag] : [],
     };
+
+    // Legacy groupTag path for backward compat when no propertyId
+    if (!propertyId && groupTag) {
+      payload.tags = [groupTag];
+    }
+
     mutation.mutate(payload);
   };
 

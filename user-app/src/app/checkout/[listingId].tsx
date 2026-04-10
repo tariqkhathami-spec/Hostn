@@ -48,9 +48,26 @@ export default function CheckoutScreen() {
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ['listing', listingId],
-    queryFn: () => listingsService.getById(listingId!),
+    queryFn: async () => {
+      // Try fetching as unit first; fall back to property
+      try {
+        const unit = await listingsService.getUnit(listingId!);
+        if (unit) return unit;
+      } catch {
+        // Not a unit — fall back to property lookup
+      }
+      return listingsService.getById(listingId!);
+    },
     enabled: !!listingId,
   });
+
+  // Detect if the listing is a unit (has a parent property reference)
+  const isUnit = !!(listing as any)?.property;
+  const parentPropertyId = isUnit
+    ? (typeof (listing as any).property === 'string'
+        ? (listing as any).property
+        : (listing as any).property?._id || (listing as any).property?.id)
+    : undefined;
 
   // Calendar date selection — matches web MiniCalendar logic
   const handleDayPress = useCallback((day: DateData) => {
@@ -180,7 +197,8 @@ export default function CheckoutScreen() {
     setHoldLoading(true);
     try {
       const res = await bookingsService.createHold({
-        propertyId: listingId!,
+        propertyId: isUnit ? parentPropertyId! : listingId!,
+        ...(isUnit ? { unitId: listingId! } : {}),
         checkIn,
         checkOut,
         guests: { adults, children, infants: 0 },
@@ -213,7 +231,8 @@ export default function CheckoutScreen() {
       if (!currentHoldId) {
         try {
           const holdRes = await bookingsService.createHold({
-            propertyId: listingId!,
+            propertyId: isUnit ? parentPropertyId! : listingId!,
+            ...(isUnit ? { unitId: listingId! } : {}),
             checkIn,
             checkOut,
             guests: { adults, children, infants: 0 },
@@ -225,7 +244,8 @@ export default function CheckoutScreen() {
       }
 
       return bookingsService.create({
-        propertyId: listingId!,
+        propertyId: isUnit ? parentPropertyId! : listingId!,
+        ...(isUnit ? { unitId: listingId! } : {}),
         checkIn,
         checkOut,
         guests: { adults, children, infants: 0 },

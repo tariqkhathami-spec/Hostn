@@ -29,4 +29,16 @@ export const listingsService = {
       .get(`/reviews`, { params: { property: propertyId, page, limit: 10 } })
       .then((r) => r.data);
   },
+
+  // ── Units ───────────────────────────────────────────────────
+  searchUnits(params: Record<string, string | number>) {
+    return api.get('/units/search', { params }).then((r) => r.data);
+  },
+
+  getUnit(id: string) {
+    return api.get(`/units/${id}`).then((r) => {
+      const d = r.data as any;
+      return d.data ?? d;
+    });
+  },
 };
