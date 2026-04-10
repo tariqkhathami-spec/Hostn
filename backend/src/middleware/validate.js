@@ -51,11 +51,12 @@ const changePasswordRules = [
 
 const createPropertyRules = [
   body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 200 }).withMessage('Title too long'),
-  body('description').trim().notEmpty().withMessage('Description is required').isLength({ max: 5000 }),
+  body('description').optional().trim().isLength({ max: 5000 }).withMessage('Description too long'),
   body('type').isIn(['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel']).withMessage('Invalid property type'),
   body('location.city').trim().notEmpty().withMessage('City is required'),
-  body('pricing.perNight').isFloat({ min: 1 }).withMessage('Price per night must be positive'),
-  body('capacity.maxGuests').isInt({ min: 1 }).withMessage('Max guests must be at least 1'),
+  body('pricing.perNight').optional().isFloat({ min: 0 }).withMessage('Price per night must be positive'),
+  body('capacity.maxGuests').optional().isInt({ min: 1 }).withMessage('Max guests must be at least 1'),
+  body('direction').optional().isIn(['north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest', '']).withMessage('Invalid direction'),
   handleValidation,
 ];
 
