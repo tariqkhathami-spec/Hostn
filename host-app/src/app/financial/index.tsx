@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { hostService } from '../../services/host.service';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 
@@ -24,10 +26,32 @@ const menuItems: MenuItem[] = [
 export default function FinancialMenuScreen() {
   const router = useRouter();
 
+  const statsQuery = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => hostService.getStats(),
+    retry: false,
+  });
+  const totalEarnings = statsQuery.data?.data?.totalEarnings;
+
   return (
     <ScreenWrapper>
-      <HeaderBar title="المعاملات المالية" showBack />
+      <HeaderBar title="\u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629" showBack />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* Earnings Summary Card */}
+        <View style={styles.earningsCard}>
+          <View style={styles.earningsIconCircle}>
+            <Ionicons name="wallet-outline" size={28} color={Colors.primary} />
+          </View>
+          {statsQuery.isLoading ? (
+            <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.sm }} />
+          ) : (
+            <Text style={styles.earningsAmount}>
+              {(totalEarnings ?? 0).toLocaleString('en-US')} {'\u0631\u064A\u0627\u0644'}
+            </Text>
+          )}
+          <Text style={styles.earningsLabel}>{'\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D'}</Text>
+        </View>
+
         {menuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
@@ -57,6 +81,35 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: Spacing.base,
     gap: Spacing.sm,
+  },
+  earningsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary200,
+    ...Shadows.card,
+  },
+  earningsIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  earningsAmount: {
+    ...Typography.h2,
+    color: Colors.primary,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  earningsLabel: {
+    ...Typography.small,
+    color: Colors.textSecondary,
   },
   menuCard: {
     backgroundColor: Colors.white,

@@ -42,6 +42,14 @@ export default function DashboardScreen() {
     }
   }, [npsQuery.data]);
 
+  // --- Stats overview ---
+  const statsQuery = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => hostService.getStats(),
+    retry: false,
+  });
+  const stats = statsQuery.data?.data;
+
   // --- Data queries (retry: false to avoid looping on guest role) ---
   const bookingsQuery = useQuery({
     queryKey: ['bookings', 'recent'],
@@ -178,6 +186,46 @@ export default function DashboardScreen() {
             color={Colors.primary}
             style={{ marginVertical: Spacing.xl }}
           />
+        )}
+
+        {/* Stats Overview */}
+        {stats && (
+          <View style={styles.statsGrid}>
+            {[
+              {
+                icon: 'business-outline' as const,
+                value: stats.totalProperties ?? 0,
+                label: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062A',
+                color: Colors.primary,
+              },
+              {
+                icon: 'calendar-outline' as const,
+                value: stats.activeBookings ?? 0,
+                label: '\u0627\u0644\u062D\u062C\u0648\u0632\u0627\u062A \u0627\u0644\u0646\u0634\u0637\u0629',
+                color: Colors.success,
+              },
+              {
+                icon: 'wallet-outline' as const,
+                value: `${(stats.totalEarnings ?? 0).toLocaleString('en-US')} \u0631\u064A\u0627\u0644`,
+                label: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D',
+                color: Colors.gold500,
+              },
+              {
+                icon: 'star-outline' as const,
+                value: stats.averageRating ?? '-',
+                label: '\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u062A\u0642\u064A\u064A\u0645',
+                color: Colors.warning,
+              },
+            ].map((stat) => (
+              <View key={stat.label} style={styles.statCard}>
+                <View style={[styles.statIconCircle, { backgroundColor: stat.color + '15' }]}>
+                  <Ionicons name={stat.icon} size={22} color={stat.color} />
+                </View>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
         )}
 
         {/* Weekly Report Banner */}
@@ -413,6 +461,42 @@ const styles = StyleSheet.create({
     borderTopRightRadius: Radius.xl,
     padding: Spacing.base,
     marginTop: -Spacing.md,
+  },
+
+  /* ---- Stats Grid ---- */
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  statCard: {
+    width: '48%' as any,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+    alignItems: 'center',
+    ...Shadows.card,
+  },
+  statIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  statValue: {
+    ...Typography.h3,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  statLabel: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
 
   /* ---- Weekly Report Banner ---- */

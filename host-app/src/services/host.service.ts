@@ -37,6 +37,10 @@ export const hostService = {
   // Calendar
   getCalendarData: (year: number, month: number) =>
     api.get(`/host/calendar`, { params: { year, month: month + 1 } }).then(r => r.data),
+  blockDates: (propertyId: string, dates: { start: string; end: string }) =>
+    api.put(`/host/calendar/${propertyId}/block`, dates).then(r => r.data),
+  unblockDates: (propertyId: string, dates: { start: string; end: string }) =>
+    api.put(`/host/calendar/${propertyId}/unblock`, dates).then(r => r.data),
 
   // Notifications
   getNotifications: (params?: { filter?: string; page?: number }) => api.get('/host/notifications', { params }).then(r => r.data),

@@ -158,6 +158,7 @@ export interface CalendarUnit {
   unitCode: string;
   isListed: boolean;
   bookedDates: string[];
+  blockedDates?: string[];
 }
 
 export interface CalendarProperty {

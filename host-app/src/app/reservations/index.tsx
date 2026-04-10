@@ -8,9 +8,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../services/host.service';
 import { Booking } from '../../types';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
@@ -39,9 +41,44 @@ const statusFilters: StatusFilter[] = [
 
 export default function ReservationsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [page] = useState(1);
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      hostService.updateBookingStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingGuests'] });
+    },
+    onError: () => {
+      Alert.alert('\u062E\u0637\u0623', '\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629');
+    },
+  });
+
+  const handleAccept = useCallback((id: string) => {
+    Alert.alert(
+      '\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0642\u0628\u0648\u0644',
+      '\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0642\u0628\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u062C\u0632\u061F',
+      [
+        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+        { text: '\u0642\u0628\u0648\u0644', onPress: () => statusMutation.mutate({ id, status: 'confirmed' }) },
+      ],
+    );
+  }, [statusMutation]);
+
+  const handleDecline = useCallback((id: string) => {
+    Alert.alert(
+      '\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0631\u0641\u0636',
+      '\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0631\u0641\u0636 \u0647\u0630\u0627 \u0627\u0644\u062D\u062C\u0632\u061F',
+      [
+        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+        { text: '\u0631\u0641\u0636', style: 'destructive', onPress: () => statusMutation.mutate({ id, status: 'cancelled' }) },
+      ],
+    );
+  }, [statusMutation]);
 
   const statusParam = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
 
@@ -118,9 +155,29 @@ export default function ReservationsScreen() {
           <Text style={styles.amount}>{formatCurrency(item.totalAmount)}</Text>
           <StatusBadge status={item.status} />
         </View>
+
+        {/* Accept / Decline actions for pending bookings */}
+        {(item.status === 'waiting' || item.status === 'pending') && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.acceptBtn}
+              onPress={() => handleAccept(item.id)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="checkmark" size={18} color={Colors.white} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.declineBtn}
+              onPress={() => handleDecline(item.id)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={18} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        )}
       </TouchableOpacity>
     ),
-    [handleBookingPress]
+    [handleBookingPress, handleAccept, handleDecline]
   );
 
   const isLoading = activeTab === 'recent' ? bookingsLoading : upcomingLoading;
@@ -348,5 +405,29 @@ const styles = StyleSheet.create({
   amount: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
+  },
+  actionRow: {
+    flexDirection: 'row-reverse',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  acceptBtn: {
+    backgroundColor: Colors.success,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  declineBtn: {
+    backgroundColor: Colors.error,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
