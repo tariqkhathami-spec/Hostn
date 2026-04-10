@@ -12,11 +12,22 @@ export const bookingsService = {
     return api.get<Booking>(`/bookings/${id}`).then((r) => r.data);
   },
 
+  createHold(data: {
+    propertyId: string;
+    checkIn: string;
+    checkOut: string;
+    guests: { adults: number; children: number; infants: number };
+  }) {
+    return api.post('/bookings/hold', data).then((r) => r.data);
+  },
+
   create(data: {
     propertyId: string;
     checkIn: string;
     checkOut: string;
-    guests: number;
+    guests: { adults: number; children: number; infants: number };
+    specialRequests?: string;
+    holdId?: string;
     paymentMethod?: string;
     couponCode?: string;
   }) {

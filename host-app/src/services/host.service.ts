@@ -123,6 +123,16 @@ export const hostService = {
   addSuggestion: (text: string) => api.post('/host/suggestions', { text }).then(r => r.data),
   voteSuggestion: (id: string, vote: string) => api.post(`/host/suggestions/${id}/vote`, { vote }).then(r => r.data),
 
+  // Property CRUD
+  createProperty: (data: Record<string, unknown>) =>
+    api.post('/properties', data).then((r: any) => r.data),
+  updateProperty: (id: string, data: Record<string, unknown>) =>
+    api.put(`/properties/${id}`, data).then((r: any) => r.data),
+  uploadImage: (formData: FormData) =>
+    api.post('/upload/single', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r: any) => r.data),
+
   // Legal & Support
   getTerms: () => api.get('/host/terms').then(r => r.data),
   signTerms: () => api.post('/host/terms/sign').then(r => r.data),

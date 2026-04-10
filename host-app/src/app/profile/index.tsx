@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatPhoneDisplay } from '../../utils/format';
 import {
   View,
   Text,
@@ -96,7 +97,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.headerName}>{profile?.name || ''}</Text>
           <Text style={styles.headerEmail}>{profile?.email || ''}</Text>
-          <Text style={styles.headerPhone}>{profile?.phone || ''}</Text>
+          <Text style={styles.headerPhone}>{formatPhoneDisplay(profile?.phone || '')}</Text>
         </View>
 
         {/* 2x2 Action Grid */}

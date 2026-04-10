@@ -5,6 +5,8 @@ interface SearchState {
   cityName: string | null;
   propertyType: string | null;
   guests: number;
+  adults: number;
+  children: number;
   checkIn: string | null;
   checkOut: string | null;
 
@@ -24,6 +26,8 @@ interface SearchState {
   setCity: (id: string, name: string) => void;
   setPropertyType: (type: string | null) => void;
   setGuests: (count: number) => void;
+  setAdults: (count: number) => void;
+  setChildren: (count: number) => void;
   setDates: (checkIn: string, checkOut: string) => void;
   setMinPrice: (price: number | null) => void;
   setMaxPrice: (price: number | null) => void;
@@ -59,6 +63,8 @@ export const useSearchStore = create<SearchState>((set) => ({
   cityName: null,
   propertyType: null,
   guests: 1,
+  adults: 1,
+  children: 0,
   checkIn: null,
   checkOut: null,
   ...defaultFilters,
@@ -66,6 +72,14 @@ export const useSearchStore = create<SearchState>((set) => ({
   setCity: (id, name) => set({ city: id, cityName: name }),
   setPropertyType: (type) => set({ propertyType: type }),
   setGuests: (count) => set({ guests: Math.max(1, count) }),
+  setAdults: (count) => set((state) => {
+    const newAdults = Math.max(1, count);
+    return { adults: newAdults, guests: newAdults + state.children };
+  }),
+  setChildren: (count) => set((state) => {
+    const newChildren = Math.max(0, count);
+    return { children: newChildren, guests: state.adults + newChildren };
+  }),
   setDates: (checkIn, checkOut) => set({ checkIn, checkOut }),
   setMinPrice: (price) => set({ minPrice: price }),
   setMaxPrice: (price) => set({ maxPrice: price }),
@@ -85,6 +99,8 @@ export const useSearchStore = create<SearchState>((set) => ({
       cityName: null,
       propertyType: null,
       guests: 1,
+      adults: 1,
+      children: 0,
       checkIn: null,
       checkOut: null,
       ...defaultFilters,

@@ -186,7 +186,11 @@ export default function BookingDetailScreen() {
           <Text style={styles.sectionTitle}>{t('booking.guests')}</Text>
           <View style={styles.infoRow}>
             <Ionicons name="people-outline" size={20} color={Colors.textSecondary} />
-            <Text style={styles.infoValue}>{booking.guests} {booking.guests !== 1 ? t('listing.guests') : t('booking.guest')}</Text>
+            <Text style={styles.infoValue}>
+              {typeof booking.guests === 'object'
+                ? `${(booking.guests as any).adults ?? 0} ${((booking.guests as any).adults ?? 0) !== 1 ? t('listing.guests') : t('booking.guest')}${((booking.guests as any).children ?? 0) > 0 ? `, ${(booking.guests as any).children} ${t('booking.guest')}` : ''}`
+                : `${booking.guests} ${booking.guests !== 1 ? t('listing.guests') : t('booking.guest')}`}
+            </Text>
           </View>
         </View>
 

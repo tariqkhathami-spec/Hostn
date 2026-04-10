@@ -23,3 +23,17 @@ export function formatNumber(num: number): string {
   }
   return num.toLocaleString();
 }
+
+/**
+ * Format a phone number for display.
+ * Backend now stores phone as raw (e.g. "500000001") without country code.
+ * This handles both old format (with +966) and new raw format gracefully.
+ */
+export function formatPhoneDisplay(phone: string): string {
+  if (!phone) return '';
+  if (phone.startsWith('+')) return phone;
+  if (phone.startsWith('966')) return `+${phone}`;
+  if (phone.length === 9 && phone.startsWith('5')) return `+966${phone}`;
+  if (phone.length === 10 && phone.startsWith('05')) return `+966${phone.slice(1)}`;
+  return phone;
+}

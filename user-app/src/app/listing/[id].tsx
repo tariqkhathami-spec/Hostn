@@ -9,10 +9,6 @@ import {
   Share,
   ActivityIndicator,
   Dimensions,
-  Platform,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  LayoutChangeEvent,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,6 +32,7 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const isAr = language === 'ar';
 
   const { data: listing, isLoading } = useQuery({
     queryKey: ['listing', id],
@@ -51,29 +48,15 @@ export default function ListingDetailScreen() {
 
   const reviews = reviewsData?.data ?? reviewsData ?? [];
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const sectionPositions = useRef<Record<string, number>>({});
-  const [activeSegment, setActiveSegment] = useState(0);
+  // Tab-paging instead of scroll — matches web's 8bc861f
+  const [activeTab, setActiveTab] = useState<'specifications' | 'reviews' | 'location' | 'policies'>('specifications');
 
   const NAV_SEGMENTS = [
-    { key: 'specifications', label: t('detail.specifications' as any) },
-    { key: 'reviews', label: t('detail.guestReviews' as any) },
-    { key: 'location', label: t('detail.locationMap' as any) },
-    { key: 'policies', label: t('detail.termsPolicies' as any) },
+    { key: 'specifications' as const, label: isAr ? 'المواصفات' : 'Specs', icon: 'clipboard-outline' as const },
+    { key: 'reviews' as const, label: isAr ? 'التقييمات' : 'Reviews', icon: 'star-outline' as const },
+    { key: 'location' as const, label: isAr ? 'الموقع' : 'Location', icon: 'location-outline' as const },
+    { key: 'policies' as const, label: isAr ? 'الشروط' : 'Terms', icon: 'document-text-outline' as const },
   ];
-
-  const handleSegmentPress = useCallback((index: number) => {
-    setActiveSegment(index);
-    const key = NAV_SEGMENTS[index].key;
-    const y = sectionPositions.current[key];
-    if (y !== undefined && scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ y: y - 60, animated: true });
-    }
-  }, []);
-
-  const handleSectionLayout = useCallback((key: string, event: LayoutChangeEvent) => {
-    sectionPositions.current[key] = event.nativeEvent.layout.y;
-  }, []);
 
   const isFavorite = user?.wishlist?.includes(id!) ?? false;
 
@@ -131,9 +114,23 @@ export default function ListingDetailScreen() {
     return t(key) ?? type;
   };
 
+  // Extract map coordinates
+  const coords = listing.location?.coordinates ?? listing.location?.geoJSON?.coordinates;
+  let lat: number | undefined;
+  let lng: number | undefined;
+  if (coords) {
+    if (Array.isArray(coords)) {
+      lng = coords[0];
+      lat = coords[1];
+    } else if (typeof coords === 'object') {
+      lat = (coords as any).lat;
+      lng = (coords as any).lng;
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }} nestedScrollEnabled>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }} nestedScrollEnabled>
         {/* Image Gallery */}
         <View style={styles.imageContainer}>
           <FlatList
@@ -173,23 +170,7 @@ export default function ListingDetailScreen() {
           </View>
         </View>
 
-        {/* Segmented Navigation */}
-        <View style={styles.segmentedNavContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.segmentedNavContent}>
-            {NAV_SEGMENTS.map((seg, idx) => (
-              <Pressable
-                key={seg.key}
-                style={[styles.segmentPill, activeSegment === idx && styles.segmentPillActive]}
-                onPress={() => handleSegmentPress(idx)}
-              >
-                <Text style={[styles.segmentText, activeSegment === idx && styles.segmentTextActive]}>
-                  {seg.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-
+        {/* Header info — always visible */}
         <View style={styles.content}>
           {/* Discount & Type badges */}
           <View style={styles.badgesRow}>
@@ -237,158 +218,193 @@ export default function ListingDetailScreen() {
               <Text style={styles.statLabel}>{t('listing.baths')}</Text>
             </View>
           </View>
+        </View>
 
-          {/* Description / Specifications */}
-          <View style={styles.section} onLayout={(e) => handleSectionLayout('specifications', e)}>
-            <Text style={styles.sectionTitle}>{t('detail.about')}</Text>
-            <Text style={styles.description}>{listing.description}</Text>
+        {/* Tab Navigation — paging style (matching web 8bc861f) */}
+        <View style={styles.segmentedNavContainer}>
+          <View style={styles.segmentedNavRow}>
+            {NAV_SEGMENTS.map((seg) => (
+              <Pressable
+                key={seg.key}
+                style={[styles.segmentPill, activeTab === seg.key && styles.segmentPillActive]}
+                onPress={() => setActiveTab(seg.key)}
+              >
+                <Ionicons
+                  name={seg.icon}
+                  size={16}
+                  color={activeTab === seg.key ? Colors.primary : Colors.textSecondary}
+                />
+                <Text
+                  style={[styles.segmentText, activeTab === seg.key && styles.segmentTextActive]}
+                  numberOfLines={1}
+                >
+                  {seg.label}
+                </Text>
+              </Pressable>
+            ))}
           </View>
+        </View>
 
-          {/* Amenities */}
-          {listing.amenities?.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('detail.amenities')}</Text>
-              <View style={styles.amenitiesGrid}>
-                {listing.amenities.slice(0, 8).map((amenity: string, i: number) => (
-                  <View key={i} style={styles.amenityItem}>
-                    <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
-                    <Text style={styles.amenityText}>{t(('amenity.' + amenity) as any) ?? amenity}</Text>
+        {/* Tab Content — only active tab renders */}
+        <View style={styles.content}>
+
+          {/* ── Tab: Specifications ── */}
+          {activeTab === 'specifications' && (
+            <>
+              {/* Description */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('detail.about')}</Text>
+                <Text style={styles.description}>{listing.description}</Text>
+              </View>
+
+              {/* Amenities */}
+              {listing.amenities?.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>{t('detail.amenities')}</Text>
+                  <View style={styles.amenitiesGrid}>
+                    {listing.amenities.slice(0, 8).map((amenity: string, i: number) => (
+                      <View key={i} style={styles.amenityItem}>
+                        <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
+                        <Text style={styles.amenityText}>{t(('amenity.' + amenity) as any) ?? amenity}</Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                </View>
+              )}
+
+              {/* Host */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>{t('detail.host')}</Text>
+                <View style={styles.hostCard}>
+                  <View style={styles.hostAvatar}>
+                    {listing.host.avatar ? (
+                      <Image source={{ uri: listing.host.avatar }} style={styles.hostAvatarImage} />
+                    ) : (
+                      <Ionicons name="person" size={28} color={Colors.textSecondary} />
+                    )}
+                  </View>
+                  <View style={styles.hostInfo}>
+                    <Text style={styles.hostName}>{hostName}</Text>
+                    {listing.host.isVerified && (
+                      <Text style={styles.hostMeta}>{t('detail.verifiedHost')}</Text>
+                    )}
+                  </View>
+                  <Pressable style={styles.contactButton} onPress={handleContactHost}>
+                    <Text style={styles.contactText}>{t('detail.contact')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* ── Tab: Reviews ── */}
+          {activeTab === 'reviews' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('detail.guestReviews' as any)}</Text>
+              {Array.isArray(reviews) && reviews.length > 0 ? (
+                reviews.slice(0, 5).map((review: any, idx: number) => (
+                  <View key={review._id ?? idx} style={styles.reviewCard}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewerAvatar}>
+                        {review.user?.avatar ? (
+                          <Image source={{ uri: review.user.avatar }} style={styles.reviewerAvatarImage} />
+                        ) : (
+                          <Ionicons name="person" size={20} color={Colors.textSecondary} />
+                        )}
+                      </View>
+                      <View style={styles.reviewerInfo}>
+                        <Text style={styles.reviewerName}>
+                          {review.user?.name ?? review.user?.firstName ?? t('account.guest' as any)}
+                        </Text>
+                        <Text style={styles.reviewDate}>
+                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US') : ''}
+                        </Text>
+                      </View>
+                      <View style={styles.reviewStars}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons
+                            key={star}
+                            name={star <= (review.rating ?? 0) ? 'star' : 'star-outline'}
+                            size={14}
+                            color={Colors.accent}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                    {review.comment ? (
+                      <Text style={styles.reviewComment}>{review.comment}</Text>
+                    ) : null}
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyReviews}>
+                  <Ionicons name="chatbubble-outline" size={32} color={Colors.textTertiary} />
+                  <Text style={styles.emptyReviewsText}>{t('detail.noReviews' as any)}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Tab: Location ── */}
+          {activeTab === 'location' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('detail.location')}</Text>
+              {lat && lng ? (
+                <>
+                  <View style={styles.mapContainer}>
+                    <MapView
+                      provider={PROVIDER_GOOGLE}
+                      style={styles.map}
+                      initialRegion={{
+                        latitude: lat,
+                        longitude: lng,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      }}
+                      scrollEnabled={false}
+                      zoomEnabled={false}
+                      pitchEnabled={false}
+                      rotateEnabled={false}
+                    >
+                      <Marker coordinate={{ latitude: lat, longitude: lng }} />
+                    </MapView>
+                  </View>
+                  {listing.location?.isApproximate && (
+                    <Text style={styles.approximateText}>{t('detail.approximateLocation')}</Text>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.noMapText}>
+                  {isAr ? 'لم يتم تحديد الموقع على الخريطة' : 'Location not available on map'}
+                </Text>
+              )}
+              {/* Address */}
+              <View style={styles.addressRow}>
+                <Ionicons name="location" size={18} color={Colors.primary} />
+                <Text style={styles.addressText}>
+                  {district ? `${translateDistrict(district, city, language)}, ` : ''}{translateCity(city, language)}
+                </Text>
               </View>
             </View>
           )}
 
-          {/* Host */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('detail.host')}</Text>
-            <View style={styles.hostCard}>
-              <View style={styles.hostAvatar}>
-                {listing.host.avatar ? (
-                  <Image source={{ uri: listing.host.avatar }} style={styles.hostAvatarImage} />
-                ) : (
-                  <Ionicons name="person" size={28} color={Colors.textSecondary} />
-                )}
-              </View>
-              <View style={styles.hostInfo}>
-                <Text style={styles.hostName}>{hostName}</Text>
-                {listing.host.isVerified && (
-                  <Text style={styles.hostMeta}>{t('detail.verifiedHost')}</Text>
-                )}
-              </View>
-              <Pressable style={styles.contactButton} onPress={handleContactHost}>
-                <Text style={styles.contactText}>{t('detail.contact')}</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Guest Reviews */}
-          <View style={styles.section} onLayout={(e) => handleSectionLayout('reviews', e)}>
-            <Text style={styles.sectionTitle}>{t('detail.guestReviews' as any)}</Text>
-            {Array.isArray(reviews) && reviews.length > 0 ? (
-              reviews.slice(0, 5).map((review: any, idx: number) => (
-                <View key={review._id ?? idx} style={styles.reviewCard}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewerAvatar}>
-                      {review.user?.avatar ? (
-                        <Image source={{ uri: review.user.avatar }} style={styles.reviewerAvatarImage} />
-                      ) : (
-                        <Ionicons name="person" size={20} color={Colors.textSecondary} />
-                      )}
-                    </View>
-                    <View style={styles.reviewerInfo}>
-                      <Text style={styles.reviewerName}>
-                        {review.user?.name ?? review.user?.firstName ?? t('account.guest' as any)}
-                      </Text>
-                      <Text style={styles.reviewDate}>
-                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US') : ''}
-                      </Text>
-                    </View>
-                    <View style={styles.reviewStars}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Ionicons
-                          key={star}
-                          name={star <= (review.rating ?? 0) ? 'star' : 'star-outline'}
-                          size={14}
-                          color={Colors.accent}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  {review.comment ? (
-                    <Text style={styles.reviewComment}>{review.comment}</Text>
-                  ) : null}
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyReviews}>
-                <Ionicons name="chatbubble-outline" size={32} color={Colors.textTertiary} />
-                <Text style={styles.emptyReviewsText}>{t('detail.noReviews' as any)}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Location Map */}
-          {(() => {
-            const coords = listing.location?.coordinates
-              ?? listing.location?.geoJSON?.coordinates;
-            if (!coords) return null;
-            // geoJSON is [lng, lat], coordinates may be {lat, lng} or [lng, lat]
-            let lat: number | undefined;
-            let lng: number | undefined;
-            if (Array.isArray(coords)) {
-              lng = coords[0];
-              lat = coords[1];
-            } else if (typeof coords === 'object') {
-              lat = (coords as any).lat;
-              lng = (coords as any).lng;
-            }
-            if (!lat || !lng) return null;
-            return (
-              <View style={styles.section} onLayout={(e) => handleSectionLayout('location', e)}>
-                <Text style={styles.sectionTitle}>{t('detail.location')}</Text>
-                <View style={styles.mapContainer}>
-                  <MapView
-                    provider={PROVIDER_GOOGLE}
-                    style={styles.map}
-                    initialRegion={{
-                      latitude: lat,
-                      longitude: lng,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
-                    }}
-                    scrollEnabled={false}
-                    zoomEnabled={false}
-                    pitchEnabled={false}
-                    rotateEnabled={false}
-                  >
-                    <Marker coordinate={{ latitude: lat, longitude: lng }} />
-                  </MapView>
-                </View>
-                {listing.location?.isApproximate && (
-                  <Text style={styles.approximateText}>{t('detail.approximateLocation')}</Text>
-                )}
-              </View>
-            );
-          })()}
-
-          {/* Policies */}
-          {(listing.rules?.checkInTime || listing.rules?.checkOutTime) && (
-            <View style={styles.section} onLayout={(e) => handleSectionLayout('policies', e)}>
+          {/* ── Tab: Policies / Terms ── */}
+          {activeTab === 'policies' && (
+            <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('detail.policies')}</Text>
-              {listing.rules.checkInTime && (
+              {listing.rules?.checkInTime && (
                 <View style={styles.policyRow}>
                   <Text style={styles.policyLabel}>{t('detail.checkIn')}</Text>
                   <Text style={styles.policyValue}>{listing.rules.checkInTime}</Text>
                 </View>
               )}
-              {listing.rules.checkOutTime && (
+              {listing.rules?.checkOutTime && (
                 <View style={styles.policyRow}>
                   <Text style={styles.policyLabel}>{t('detail.checkOut')}</Text>
                   <Text style={styles.policyValue}>{listing.rules.checkOutTime}</Text>
                 </View>
               )}
-              {listing.rules.minNights > 1 && (
+              {listing.rules?.minNights > 1 && (
                 <View style={styles.policyRow}>
                   <Text style={styles.policyLabel}>{t('detail.minNights')}</Text>
                   <Text style={styles.policyValue}>{listing.rules.minNights}</Text>
@@ -396,15 +412,15 @@ export default function ListingDetailScreen() {
               )}
               <View style={styles.policyRow}>
                 <Text style={styles.policyLabel}>{t('detail.smoking')}</Text>
-                <Text style={styles.policyValue}>{listing.rules.smokingAllowed ? t('detail.allowed') : t('detail.notAllowed')}</Text>
+                <Text style={styles.policyValue}>{listing.rules?.smokingAllowed ? t('detail.allowed') : t('detail.notAllowed')}</Text>
               </View>
               <View style={styles.policyRow}>
                 <Text style={styles.policyLabel}>{t('detail.pets')}</Text>
-                <Text style={styles.policyValue}>{listing.rules.petsAllowed ? t('detail.allowed') : t('detail.notAllowed')}</Text>
+                <Text style={styles.policyValue}>{listing.rules?.petsAllowed ? t('detail.allowed') : t('detail.notAllowed')}</Text>
               </View>
               <View style={styles.policyRow}>
                 <Text style={styles.policyLabel}>{t('detail.parties')}</Text>
-                <Text style={styles.policyValue}>{listing.rules.partiesAllowed ? t('detail.allowed') : t('detail.notAllowed')}</Text>
+                <Text style={styles.policyValue}>{listing.rules?.partiesAllowed ? t('detail.allowed') : t('detail.notAllowed')}</Text>
               </View>
             </View>
           )}
@@ -465,32 +481,46 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xs,
   },
   imageBadgeText: { ...Typography.tiny, color: Colors.white },
+  // Tab navigation — paging style
   segmentedNavContainer: {
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
     paddingVertical: Spacing.sm,
-  },
-  segmentedNavContent: {
     paddingHorizontal: Spacing.base,
-    gap: Spacing.sm,
+  },
+  segmentedNavRow: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    padding: 3,
+    gap: 3,
   },
   segmentPill: {
-    paddingHorizontal: Spacing.base,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.xl,
-    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
   },
   segmentPillActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   segmentText: {
-    ...Typography.small,
+    ...Typography.caption,
     color: Colors.textSecondary,
+    fontWeight: '500',
   },
   segmentTextActive: {
-    color: Colors.white,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontWeight: '700',
   },
   content: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.base },
   badgesRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
@@ -570,6 +600,17 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontStyle: 'italic',
   },
+  noMapText: { ...Typography.small, color: Colors.textTertiary },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+  },
+  addressText: { ...Typography.small, color: Colors.textSecondary, flex: 1 },
   policyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatPhoneDisplay } from '../../utils/format';
 import {
   View,
   Text,
@@ -117,7 +118,7 @@ export default function EditProfileScreen() {
             </Text>
             <TextInput
               style={[styles.input, styles.inputDisabled]}
-              value={profile?.phone || ''}
+              value={formatPhoneDisplay(profile?.phone || '')}
               editable={false}
             />
           </View>

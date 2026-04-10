@@ -121,7 +121,7 @@ export default function ProfileScreen() {
           <Text style={styles.label}>{t('profile.phone')}</Text>
           <View style={[styles.input, styles.inputDisabled]}>
             <Text style={styles.disabledText}>
-              {user?.phone ? formatPhone(user.phone) : ''}
+              {user?.phone ? formatPhone(user.phone, '+966') : ''}
             </Text>
           </View>
         </View>

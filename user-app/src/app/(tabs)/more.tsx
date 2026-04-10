@@ -101,6 +101,8 @@ export default function MoreScreen() {
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={Colors.error} />
           <Text style={styles.logoutText}>{t('account.logout')}</Text>
+          <View style={{ flex: 1 }} />
+          <Ionicons name="chevron-forward" size={18} color={Colors.error} />
         </Pressable>
 
         <View style={{ height: Spacing.xxl }} />
@@ -183,6 +185,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     padding: Spacing.base,
     gap: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.error + '30',
   },
-  logoutText: { ...Typography.body, color: Colors.error },
+  logoutText: { ...Typography.bodyBold, color: Colors.error },
 });
