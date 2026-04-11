@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../services/host.service';
 import { Booking } from '../../types';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
-import { t } from '../../utils/i18n';
+import { t, getLocale } from '../../utils/i18n';
 import { formatCurrency, formatDate } from '../../utils/format';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
@@ -45,16 +45,37 @@ export default function ReservationsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [page] = useState(1);
+  const isAr = getLocale() === 'ar';
+
+  const statusParam = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       hostService.updateBookingStatus(id, status),
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['bookings'] });
+      const prev = queryClient.getQueryData(['bookings', statusParam, page]);
+      queryClient.setQueryData(['bookings', statusParam, page], (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((b: any) => b.id === id ? { ...b, status } : b),
+        };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(['bookings', statusParam, page], context.prev);
+      }
+      Alert.alert(
+        isAr ? 'خطأ' : 'Error',
+        isAr ? 'فشل تحديث الحالة' : 'Failed to update status',
+      );
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
       queryClient.invalidateQueries({ queryKey: ['upcomingGuests'] });
-    },
-    onError: () => {
-      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث الحالة');
     },
   });
 
@@ -79,8 +100,6 @@ export default function ReservationsScreen() {
       ],
     );
   }, [statusMutation]);
-
-  const statusParam = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
 
   const {
     data: bookingsData,

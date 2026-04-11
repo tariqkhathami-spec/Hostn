@@ -272,6 +272,11 @@ export default function ChatScreen() {
 
         {/* Input bar */}
         <View style={styles.inputBar}>
+          {inputText.length > 1800 && (
+            <Text style={[styles.charCounter, inputText.length > 1950 && { color: Colors.error }]}>
+              {inputText.length}/2000
+            </Text>
+          )}
           <TouchableOpacity
             onPress={handleSend}
             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
@@ -426,6 +431,13 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  charCounter: {
+    ...Typography.tiny,
+    color: Colors.textTertiary,
+    textAlign: 'right',
+    paddingHorizontal: Spacing.base,
+    paddingBottom: 2,
   },
   // Menu modal
   menuOverlay: {

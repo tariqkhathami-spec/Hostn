@@ -20,7 +20,7 @@ import ReviewCard from '../../components/dashboard/ReviewCard';
 import SectionHeader from '../../components/dashboard/SectionHeader';
 import NpsSurveyModal from '../../components/notifications/NpsSurveyModal';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
-import { t } from '../../utils/i18n';
+import { t, getLocale } from '../../utils/i18n';
 import { hostService } from '../../services/host.service';
 import type { Booking, Transfer, Review } from '../../types';
 
@@ -28,6 +28,8 @@ export default function DashboardScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showNps, setShowNps] = React.useState(false);
+  const locale = getLocale();
+  const l = (obj: { en: string; ar: string }) => (locale === 'ar' ? obj.ar : obj.en);
 
   // --- NPS check on mount ---
   const npsQuery = useQuery({
@@ -195,25 +197,25 @@ export default function DashboardScreen() {
               {
                 icon: 'business-outline' as const,
                 value: stats.totalProperties ?? 0,
-                label: 'إجمالي العقارات',
+                label: l({ en: 'Total Properties', ar: 'إجمالي العقارات' }),
                 color: Colors.primary,
               },
               {
                 icon: 'calendar-outline' as const,
                 value: stats.activeBookings ?? 0,
-                label: 'الحجوزات النشطة',
+                label: l({ en: 'Active Bookings', ar: 'الحجوزات النشطة' }),
                 color: Colors.success,
               },
               {
                 icon: 'wallet-outline' as const,
-                value: `${(stats.totalEarnings ?? 0).toLocaleString('en-US')} ريال`,
-                label: 'إجمالي الأرباح',
+                value: `${(stats.totalEarnings ?? 0).toLocaleString('en-US')} ${l({ en: 'SAR', ar: 'ريال' })}`,
+                label: l({ en: 'Total Earnings', ar: 'إجمالي الأرباح' }),
                 color: Colors.gold500,
               },
               {
                 icon: 'star-outline' as const,
                 value: stats.averageRating ?? '-',
-                label: 'متوسط التقييم',
+                label: l({ en: 'Average Rating', ar: 'متوسط التقييم' }),
                 color: Colors.warning,
               },
             ].map((stat) => (
@@ -251,7 +253,7 @@ export default function DashboardScreen() {
             <View style={styles.weeklyBannerTextContainer}>
               <Text style={styles.weeklyBannerTitle}>{t('dashboard.reports')}</Text>
               <Text style={styles.weeklyBannerSubtitle}>
-                {'تقرير أداء أسبوع'} {dateStr}
+                {l({ en: 'Weekly performance report', ar: 'تقرير أداء أسبوع' })} {dateStr}
               </Text>
             </View>
 
@@ -265,9 +267,9 @@ export default function DashboardScreen() {
         {/* Ambassador Section */}
         <View style={styles.sectionRow}>
           <TouchableOpacity onPress={() => router.push('/program' as any)}>
-            <Text style={styles.sectionLink}>{'الكل'}</Text>
+            <Text style={styles.sectionLink}>{l({ en: 'View All', ar: 'الكل' })}</Text>
           </TouchableOpacity>
-          <Text style={styles.sectionTitle}>{'سفير هوستن'}</Text>
+          <Text style={styles.sectionTitle}>{l({ en: 'Hostn Ambassador', ar: 'سفير هوستن' })}</Text>
         </View>
 
         <TouchableOpacity
@@ -299,14 +301,14 @@ export default function DashboardScreen() {
         {/* Points Section */}
         <View style={styles.sectionRow}>
           <View />
-          <Text style={styles.sectionTitle}>{'نقاط وحدتك'}</Text>
+          <Text style={styles.sectionTitle}>{l({ en: 'Your Unit Points', ar: 'نقاط وحدتك' })}</Text>
         </View>
         <Card style={styles.pointsCard}>
           <View style={styles.pointsContent}>
             <View style={styles.pointsTextContainer}>
-              <Text style={styles.pointsMainText}>{'تتحدث يومياً'}</Text>
+              <Text style={styles.pointsMainText}>{l({ en: 'Updated daily', ar: 'تتحدث يومياً' })}</Text>
               <Text style={styles.pointsNote}>
-                {'تضاف النقاط خلال 24 ساعة من تاريخ عرض العقار'}
+                {l({ en: 'Points are added within 24 hours of listing the property', ar: 'تضاف النقاط خلال 24 ساعة من تاريخ عرض العقار' })}
               </Text>
             </View>
             <View style={styles.pointsIconCircle}>
@@ -348,7 +350,7 @@ export default function DashboardScreen() {
             />
           ))
         ) : (
-          <EmptyState message={'لا توجد حجوزات حديثة'} icon="calendar-outline" />
+          <EmptyState message={l({ en: 'No recent bookings', ar: 'لا توجد حجوزات حديثة' })} icon="calendar-outline" />
         )}
 
         {/* Upcoming Guests */}
@@ -367,7 +369,7 @@ export default function DashboardScreen() {
             />
           ))
         ) : (
-          <EmptyState message={'لا يوجد لديك ضيوف قادمين'} icon="heart-outline" />
+          <EmptyState message={l({ en: 'No upcoming guests', ar: 'لا يوجد لديك ضيوف قادمين' })} icon="heart-outline" />
         )}
 
         {/* Recent Transfers */}
@@ -382,7 +384,7 @@ export default function DashboardScreen() {
             <TransferCard key={transfer.id} transfer={transfer} />
           ))
         ) : (
-          <EmptyState message={'لا توجد حوالات حديثة'} icon="swap-horizontal-outline" />
+          <EmptyState message={l({ en: 'No recent transfers', ar: 'لا توجد حوالات حديثة' })} icon="swap-horizontal-outline" />
         )}
 
         {/* Recent Reviews */}
@@ -397,12 +399,12 @@ export default function DashboardScreen() {
             <ReviewCard key={review.id} review={review} />
           ))
         ) : (
-          <EmptyState message={'لا توجد تقييمات حديثة'} icon="star-outline" />
+          <EmptyState message={l({ en: 'No recent reviews', ar: 'لا توجد تقييمات حديثة' })} icon="star-outline" />
         )}
 
         {/* Recent Reports */}
         <SectionHeader title={t('dashboard.recentReports')} />
-        <EmptyState message={'لا توجد لديك بلاغات'} icon="flag-outline" />
+        <EmptyState message={l({ en: 'No reports', ar: 'لا توجد لديك بلاغات' })} icon="flag-outline" />
 
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>

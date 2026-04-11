@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -90,6 +90,16 @@ export default function ResultsScreen() {
     }
   };
 
+  const loadingMore = useRef(false);
+
+  const handleEndReached = useCallback(() => {
+    if (loadingMore.current || !hasNextPage || isFetchingNextPage) return;
+    loadingMore.current = true;
+    fetchNextPage().finally(() => {
+      setTimeout(() => { loadingMore.current = false; }, 500);
+    });
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
@@ -126,7 +136,7 @@ export default function ResultsScreen() {
           data={listings}
           keyExtractor={(item) => item._id ?? item.id}
           contentContainerStyle={styles.list}
-          onEndReached={() => hasNextPage && fetchNextPage()}
+          onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             isFetchingNextPage ? (

@@ -218,6 +218,11 @@ export default function ChatScreen() {
         )}
 
         <View style={styles.inputRow}>
+          {text.length > 800 && (
+            <Text style={[styles.charCounter, text.length > 950 && { color: Colors.error }]}>
+              {text.length}/1000
+            </Text>
+          )}
           <TextInput
             style={styles.input}
             placeholder={t('chat.placeholder')}
@@ -300,6 +305,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   sendDisabled: { opacity: 0.5 },
+  charCounter: {
+    ...Typography.tiny,
+    color: Colors.textTertiary,
+    textAlign: 'right',
+    paddingHorizontal: Spacing.base,
+    paddingBottom: 2,
+  },
   // System messages
   systemBubble: {
     alignSelf: 'center',

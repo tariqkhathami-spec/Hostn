@@ -188,8 +188,23 @@ export default function PropertyWizard({
   };
 
   const handleBack = () => {
-    if (step > 1) setStep(step - 1);
-    else router.back();
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      const hasData = form.title || form.type || form.city || form.images.length > 0;
+      if (hasData) {
+        Alert.alert(
+          l({ en: 'Discard changes?', ar: 'تجاهل التغييرات؟' }),
+          l({ en: 'You have unsaved data. Continue?', ar: 'لديك بيانات غير محفوظة. هل تريد المتابعة؟' }),
+          [
+            { text: l({ en: 'Cancel', ar: 'إلغاء' }), style: 'cancel' },
+            { text: l({ en: 'Discard', ar: 'تجاهل' }), style: 'destructive', onPress: () => router.back() },
+          ],
+        );
+      } else {
+        router.back();
+      }
+    }
   };
 
   // -------------------------------------------------------------------
