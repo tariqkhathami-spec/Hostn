@@ -24,7 +24,7 @@ const propertySchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel'],
+      enum: ['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel', 'rest_house', 'room', 'hotel_resort', 'serviced_apartment'],
       required: [true, 'Property type is required'],
     },
     location: {

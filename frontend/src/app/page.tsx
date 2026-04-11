@@ -19,7 +19,11 @@ const PROPERTY_TYPES = [
   { key: 'apartment', icon: Building, label: { en: 'Apartments', ar: 'شقق' } },
   { key: 'farm', icon: TreePine, label: { en: 'Farms', ar: 'مزارع' } },
   { key: 'camp', icon: Tent, label: { en: 'Camps', ar: 'مخيمات' } },
-  { key: 'hotel', icon: Hotel, label: { en: 'Hotels', ar: 'فنادق' } },
+  { key: 'hotel_resort', icon: Hotel, label: { en: 'Hotel Resorts', ar: 'منتجعات فندقية' } },
+  { key: 'rest_house', icon: Home, label: { en: 'Rest Houses', ar: 'استراحات' } },
+  { key: 'room', icon: Building, label: { en: 'Rooms', ar: 'غرف' } },
+  { key: 'serviced_apartment', icon: Building, label: { en: 'Serviced Apartments', ar: 'شقق مفروشة' } },
+  { key: 'studio', icon: Home, label: { en: 'Studios', ar: 'استوديوهات' } },
 ];
 
 export default function HomePage() {

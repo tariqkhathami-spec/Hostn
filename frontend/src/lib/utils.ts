@@ -118,7 +118,11 @@ export function getPropertyTypeLabel(type: string, lang: 'en' | 'ar' = 'en') {
     studio: { en: 'Studio', ar: 'استوديو' },
     farm: { en: 'Farm', ar: 'مزرعة' },
     camp: { en: 'Camp', ar: 'مخيم' },
-    hotel: { en: 'Hotel Room', ar: 'غرفة فندقية' },
+    hotel: { en: 'Hotel Resort', ar: 'منتجع فندقي' },
+    rest_house: { en: 'Rest House', ar: 'استراحة' },
+    room: { en: 'Room', ar: 'غرفة' },
+    hotel_resort: { en: 'Hotel Resort', ar: 'منتجع فندقي' },
+    serviced_apartment: { en: 'Serviced Apartment', ar: 'شقة مفروشة' },
   };
   return labels[type]?.[lang] || type;
 }

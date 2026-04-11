@@ -14,7 +14,10 @@ export default function CategoryNav() {
     { label: t('type.studios'), Icon: Sofa, value: 'studio', color: 'bg-amber-50 text-amber-600' },
     { label: t('type.farms'), Icon: Wheat, value: 'farm', color: 'bg-emerald-50 text-emerald-600' },
     { label: t('type.camps'), Icon: Tent, value: 'camp', color: 'bg-orange-50 text-orange-600' },
-    { label: t('type.hotels'), Icon: Hotel, value: 'hotel', color: 'bg-red-50 text-red-600' },
+    { label: t('type.hotel_resorts'), Icon: Hotel, value: 'hotel_resort', color: 'bg-red-50 text-red-600' },
+    { label: t('type.rest_houses'), Icon: Building2, value: 'rest_house', color: 'bg-teal-50 text-teal-600' },
+    { label: t('type.rooms'), Icon: Sofa, value: 'room', color: 'bg-sky-50 text-sky-600' },
+    { label: t('type.serviced_apartments'), Icon: Building2, value: 'serviced_apartment', color: 'bg-indigo-50 text-indigo-600' },
   ];
 
   return (

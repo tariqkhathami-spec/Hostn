@@ -44,7 +44,10 @@ function getPropTypes(isAr: boolean): { label: string; value: PropertyType; icon
     { label: isAr ? 'استوديو' : 'Studio', value: 'studio', icon: '\u{1F3E0}', desc: isAr ? 'وحدة غرفة واحدة' : 'Compact one-room unit' },
     { label: isAr ? 'مزرعة' : 'Farm', value: 'farm', icon: '\u{1F33E}', desc: isAr ? 'إقامة ريفية' : 'Rural farm stay' },
     { label: isAr ? 'مخيم' : 'Camp', value: 'camp', icon: '\u26FA', desc: isAr ? 'تخييم أو تخييم فاخر' : 'Camping or glamping site' },
-    { label: isAr ? 'غرفة فندقية' : 'Hotel Room', value: 'hotel', icon: '\u{1F3E8}', desc: isAr ? 'إقامة فندقية' : 'Hotel-style accommodation' },
+    { label: isAr ? 'منتجع فندقي' : 'Hotel Resort', value: 'hotel_resort', icon: '\u{1F3E8}', desc: isAr ? 'إقامة فندقية' : 'Hotel or resort accommodation' },
+    { label: isAr ? 'استراحة' : 'Rest House', value: 'rest_house', icon: '\u{1F3D8}\uFE0F', desc: isAr ? 'استراحة خاصة' : 'Private rest house' },
+    { label: isAr ? 'غرفة' : 'Room', value: 'room', icon: '\u{1F6CF}\uFE0F', desc: isAr ? 'غرفة للإيجار' : 'Single room rental' },
+    { label: isAr ? 'شقة مفروشة' : 'Serviced Apartment', value: 'serviced_apartment', icon: '\u{1F3EC}', desc: isAr ? 'شقة مخدومة ومفروشة' : 'Furnished serviced apartment' },
   ];
 }
 
@@ -56,7 +59,10 @@ const PROPERTY_TYPES: { label: string; value: PropertyType; icon: string; desc: 
   { label: 'Studio', value: 'studio', icon: '\u{1F3E0}', desc: 'Compact one-room unit' },
   { label: 'Farm', value: 'farm', icon: '\u{1F33E}', desc: 'Rural farm stay' },
   { label: 'Camp', value: 'camp', icon: '\u26FA', desc: 'Camping or glamping site' },
-  { label: 'Hotel Room', value: 'hotel', icon: '\u{1F3E8}', desc: 'Hotel-style accommodation' },
+  { label: 'Hotel Resort', value: 'hotel_resort', icon: '\u{1F3E8}', desc: 'Hotel or resort accommodation' },
+  { label: 'Rest House', value: 'rest_house', icon: '\u{1F3D8}\uFE0F', desc: 'Private rest house' },
+  { label: 'Room', value: 'room', icon: '\u{1F6CF}\uFE0F', desc: 'Single room rental' },
+  { label: 'Serviced Apartment', value: 'serviced_apartment', icon: '\u{1F3EC}', desc: 'Furnished serviced apartment' },
 ];
 
 import { CITIES as CITIES_LIST } from '@/lib/constants';

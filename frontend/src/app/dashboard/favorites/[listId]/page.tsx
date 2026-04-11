@@ -29,8 +29,11 @@ const PROPERTY_TYPES = [
   { key: 'apartment', label: { en: 'Apartments', ar: 'شقق' } },
   { key: 'farm', label: { en: 'Farms', ar: 'مزارع' } },
   { key: 'camp', label: { en: 'Camps', ar: 'مخيمات' } },
-  { key: 'hotel', label: { en: 'Hotels', ar: 'فنادق' } },
-  { key: 'studio', label: { en: 'Studios', ar: 'استوديو' } },
+  { key: 'studio', label: { en: 'Studios', ar: 'استوديوهات' } },
+  { key: 'hotel_resort', label: { en: 'Hotel Resorts', ar: 'منتجعات فندقية' } },
+  { key: 'rest_house', label: { en: 'Rest Houses', ar: 'استراحات' } },
+  { key: 'room', label: { en: 'Rooms', ar: 'غرف' } },
+  { key: 'serviced_apartment', label: { en: 'Serviced Apartments', ar: 'شقق مفروشة' } },
 ];
 
 const BEDROOM_OPTIONS = [

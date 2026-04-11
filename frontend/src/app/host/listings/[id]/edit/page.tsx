@@ -41,7 +41,10 @@ const propertyTypes = [
   { value: 'studio', en: 'Studio', ar: 'استوديو' },
   { value: 'farm', en: 'Farm', ar: 'مزرعة' },
   { value: 'camp', en: 'Camp', ar: 'مخيم' },
-  { value: 'hotel', en: 'Hotel', ar: 'فندق' },
+  { value: 'hotel_resort', en: 'Hotel Resort', ar: 'منتجع فندقي' },
+  { value: 'rest_house', en: 'Rest House', ar: 'استراحة' },
+  { value: 'room', en: 'Room', ar: 'غرفة' },
+  { value: 'serviced_apartment', en: 'Serviced Apartment', ar: 'شقة مفروشة' },
 ];
 
 const DIRECTIONS = [

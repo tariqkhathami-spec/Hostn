@@ -31,13 +31,16 @@ export default function ListingsPage() {
 
 // ─── Property types ───────────────────────────────────────────────────────────
 const PROPERTY_TYPES = [
-  { key: 'chalet', label: { en: 'Chalets', ar: '\u0634\u0627\u0644\u064A\u0647\u0627\u062A' } },
-  { key: 'villa', label: { en: 'Villas', ar: '\u0641\u0644\u0644' } },
-  { key: 'apartment', label: { en: 'Apartments', ar: '\u0634\u0642\u0642' } },
-  { key: 'farm', label: { en: 'Farms', ar: '\u0645\u0632\u0627\u0631\u0639' } },
-  { key: 'camp', label: { en: 'Camps', ar: '\u0645\u062E\u064A\u0645\u0627\u062A' } },
-  { key: 'hotel', label: { en: 'Hotels', ar: '\u0641\u0646\u0627\u062F\u0642' } },
-  { key: 'studio', label: { en: 'Studios', ar: '\u0627\u0633\u062A\u0648\u062F\u064A\u0648' } },
+  { key: 'chalet', label: { en: 'Chalets', ar: 'شاليهات' } },
+  { key: 'villa', label: { en: 'Villas', ar: 'فلل' } },
+  { key: 'apartment', label: { en: 'Apartments', ar: 'شقق' } },
+  { key: 'farm', label: { en: 'Farms', ar: 'مزارع' } },
+  { key: 'camp', label: { en: 'Camps', ar: 'مخيمات' } },
+  { key: 'studio', label: { en: 'Studios', ar: 'استوديوهات' } },
+  { key: 'hotel_resort', label: { en: 'Hotel Resorts', ar: 'منتجعات فندقية' } },
+  { key: 'rest_house', label: { en: 'Rest Houses', ar: 'استراحات' } },
+  { key: 'room', label: { en: 'Rooms', ar: 'غرف' } },
+  { key: 'serviced_apartment', label: { en: 'Serviced Apartments', ar: 'شقق مفروشة' } },
 ];
 
 const BEDROOM_OPTIONS = [
