@@ -57,7 +57,7 @@ export default function HomeScreen() {
         <View style={styles.greetingRow}>
           <View>
             <Text style={styles.greeting}>
-              {user?.firstName ? t('home.welcomeUser').replace('{name}', user.firstName) : t('home.welcome')}
+              {(user?.firstName || user?.name) ? t('home.welcomeUser').replace('{name}', user?.firstName || user?.name?.split(' ')[0] || '') : t('home.welcome')}
             </Text>
             <Text style={styles.greetingSub}>{t('home.subtitle')}</Text>
           </View>

@@ -157,21 +157,23 @@ export default function ReservationsScreen() {
         </View>
 
         {/* Accept / Decline actions for pending bookings */}
-        {(item.status === 'waiting' || item.status === 'pending') && (
+        {(item.status === 'waiting' || item.status === 'pending' || item.status === 'in_payment') && (
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={styles.acceptBtn}
               onPress={() => handleAccept(item.id)}
               activeOpacity={0.7}
             >
-              <Ionicons name="checkmark" size={18} color={Colors.white} />
+              <Ionicons name="checkmark-circle" size={20} color={Colors.white} />
+              <Text style={styles.actionBtnText}>قبول</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.declineBtn}
               onPress={() => handleDecline(item.id)}
               activeOpacity={0.7}
             >
-              <Ionicons name="close" size={18} color={Colors.white} />
+              <Ionicons name="close-circle" size={20} color={Colors.white} />
+              <Text style={styles.actionBtnText}>رفض</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -415,19 +417,27 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.borderLight,
   },
   acceptBtn: {
+    flex: 1,
     backgroundColor: Colors.success,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.sm,
   },
   declineBtn: {
+    flex: 1,
     backgroundColor: Colors.error,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.sm,
+  },
+  actionBtnText: {
+    ...Typography.smallBold,
+    color: Colors.white,
   },
 });

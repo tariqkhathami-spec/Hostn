@@ -17,8 +17,12 @@ export default function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const { t } = useLanguage();
 
-  const [firstName, setFirstName] = useState(user?.firstName ?? '');
-  const [lastName, setLastName] = useState(user?.lastName ?? '');
+  // Map `name` field to firstName/lastName when they're not set
+  const derivedFirstName = user?.firstName || (user?.name ? user.name.split(' ')[0] : '');
+  const derivedLastName = user?.lastName || (user?.name ? user.name.split(' ').slice(1).join(' ') : '');
+
+  const [firstName, setFirstName] = useState(derivedFirstName);
+  const [lastName, setLastName] = useState(derivedLastName);
   const [email, setEmail] = useState(user?.email ?? '');
 
   const updateProfile = useMutation({

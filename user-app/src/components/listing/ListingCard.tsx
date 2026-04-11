@@ -30,9 +30,13 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
   ) ?? listing.images?.[0];
   const imageUri = typeof primaryImage === 'string' ? primaryImage : (primaryImage as any)?.url;
 
-  // Pricing: units may have per-day pricing (sunday..saturday), compute average
-  let originalPrice = listing.pricing?.perNight ?? 0;
-  if (isUnit && item.pricing) {
+  // Pricing: fallback chain — perNight → per-day average → discountedPrice
+  let originalPrice = listing.pricing?.perNight && listing.pricing.perNight > 0
+    ? listing.pricing.perNight
+    : 0;
+
+  // Try per-day rates (sunday..saturday) for units or if perNight is 0
+  if (originalPrice === 0 && item.pricing) {
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayPrices = dayKeys.map((k) => parseFloat(item.pricing[k]) || 0).filter((v) => v > 0);
     if (dayPrices.length > 0) {
@@ -40,7 +44,15 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
     }
   }
 
-  const price = listing.discountedPrice ?? originalPrice;
+  // Fall back to discountedPrice if still 0
+  if (originalPrice === 0 && listing.discountedPrice && listing.discountedPrice > 0) {
+    originalPrice = listing.discountedPrice;
+  }
+
+  const price = listing.discountedPrice && listing.discountedPrice > 0
+    ? listing.discountedPrice
+    : originalPrice;
+  const priceAvailable = price > 0;
   const discount = listing.pricing?.discountPercent ?? 0;
   const hasDiscount = discount > 0 && price < originalPrice;
   const city = listing.location?.city ?? '';
@@ -144,11 +156,19 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
 
         <View style={styles.bottomRow}>
           <View style={styles.priceRow}>
-            {hasDiscount && (
-              <Text style={styles.originalPrice}>{formatCurrency(originalPrice)}</Text>
+            {priceAvailable ? (
+              <>
+                {hasDiscount && (
+                  <Text style={styles.originalPrice}>{formatCurrency(originalPrice)}</Text>
+                )}
+                <Text style={styles.price}>{formatCurrency(displayPrice)}</Text>
+                <Text style={styles.perNight}>{rateLabel}</Text>
+              </>
+            ) : (
+              <Text style={styles.priceNotSet}>
+                {language === 'ar' ? 'السعر غير محدد' : 'Price not set'}
+              </Text>
             )}
-            <Text style={styles.price}>{formatCurrency(displayPrice)}</Text>
-            <Text style={styles.perNight}>{rateLabel}</Text>
           </View>
           {rating > 0 && (
             <View style={styles.ratingRow}>
@@ -276,6 +296,11 @@ const styles = StyleSheet.create({
   perNight: {
     ...Typography.caption,
     color: Colors.textSecondary,
+  },
+  priceNotSet: {
+    ...Typography.small,
+    color: Colors.textTertiary,
+    fontStyle: 'italic',
   },
   ratingRow: {
     flexDirection: 'row',

@@ -51,28 +51,35 @@ export default function BookingsScreen() {
 
   const bookings = data ?? [];
 
-  const renderBookingCard = ({ item }: { item: Booking }) => (
-    <Pressable
-      style={styles.bookingCard}
-      onPress={() => router.push(`/booking/${item._id}`)}
-    >
-      <Image
-        source={{ uri: typeof item.property?.images?.[0] === 'string' ? item.property.images[0] : item.property?.images?.[0]?.url }}
-        style={styles.bookingImage}
-        contentFit="cover"
-      />
-      <View style={styles.bookingInfo}>
-        <Text style={styles.bookingTitle} numberOfLines={1}>{item.property.title}</Text>
-        <Text style={styles.bookingDates}>{formatDateRange(item.checkIn, item.checkOut)}</Text>
-        <View style={styles.bookingBottom}>
-          <Text style={styles.bookingPrice}>{formatCurrency(item.totalPrice)}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] ?? Colors.textTertiary }]}>
-            <Text style={styles.statusText}>{t(`status.${item.status}` as any)}</Text>
+  const renderBookingCard = ({ item }: { item: Booking }) => {
+    const bookingItem = item as any;
+    const displayPrice = item.totalPrice || bookingItem.total || bookingItem.pricing?.total || bookingItem.amount || 0;
+
+    return (
+      <Pressable
+        style={styles.bookingCard}
+        onPress={() => router.push(`/booking/${item._id}`)}
+      >
+        <Image
+          source={{ uri: typeof item.property?.images?.[0] === 'string' ? item.property.images[0] : item.property?.images?.[0]?.url }}
+          style={styles.bookingImage}
+          contentFit="cover"
+        />
+        <View style={styles.bookingInfo}>
+          <Text style={styles.bookingTitle} numberOfLines={1}>{item.property.title}</Text>
+          <Text style={styles.bookingDates}>{formatDateRange(item.checkIn, item.checkOut)}</Text>
+          <View style={styles.bookingBottom}>
+            <Text style={styles.bookingPrice}>
+              {displayPrice > 0 ? formatCurrency(displayPrice) : '—'}
+            </Text>
+            <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] ?? Colors.textTertiary }]}>
+              <Text style={styles.statusText}>{t(`status.${item.status}` as any)}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
