@@ -45,6 +45,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string>(initialUnitId);
   const selectedUnit = units.find((u) => u._id === selectedUnitId) || null;
+  const [unitBookedDates, setUnitBookedDates] = useState<string[]>([]);
 
   // Fetch units for this property
   useEffect(() => {
@@ -57,6 +58,25 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       })
       .catch(() => {});
   }, [property._id]);
+
+  // Fetch unit-specific booked dates when selected unit changes
+  useEffect(() => {
+    if (!selectedUnitId) { setUnitBookedDates([]); return; }
+    bookingsApi.getUnitBookedDates(selectedUnitId)
+      .then((res) => {
+        const bookings = res.data.data || [];
+        const dates: string[] = [];
+        for (const b of bookings as { checkIn: string; checkOut: string }[]) {
+          const start = new Date(b.checkIn);
+          const end = new Date(b.checkOut);
+          for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+            dates.push(new Date(d).toISOString().slice(0, 10));
+          }
+        }
+        setUnitBookedDates(dates);
+      })
+      .catch(() => setUnitBookedDates([]));
+  }, [selectedUnitId]);
 
   // Persist dates and guests to cookies whenever they change
   const mountedRef = useRef(false);
@@ -257,8 +277,8 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
         )}
       </div>
 
-      {/* Unit selector (only shown when property has units) */}
-      {units.length > 0 && (
+      {/* Unit selector (only shown when property has units and no specific unit was pre-selected) */}
+      {units.length > 0 && !initialUnitId && (
         <div className="mb-3">
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
             {isAr ? 'اختر الوحدة' : 'Select Unit'}
@@ -329,6 +349,10 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
                   }
                   return dates;
                 }),
+                ...(selectedUnit?.datePricing || [])
+                  .filter(dp => dp.isBlocked)
+                  .map(dp => new Date(dp.date).toISOString().slice(0, 10)),
+                ...unitBookedDates,
               ]}
             />
           </div>

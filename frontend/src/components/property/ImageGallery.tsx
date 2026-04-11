@@ -19,10 +19,12 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
   const { language } = useLanguage();
   const isAr = language === 'ar';
 
-  const primaryImages = images.slice(0, 5);
+  // Sort so that the isPrimary image appears first, then take the first 5
+  const sorted = [...images].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+  const primaryImages = sorted.slice(0, 5);
 
-  const prev = () => setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  const next = () => setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
+  const prev = () => setCurrentIndex((i) => (i === 0 ? sorted.length - 1 : i - 1));
+  const next = () => setCurrentIndex((i) => (i === sorted.length - 1 ? 0 : i + 1));
 
   const openAtIndex = (index: number) => {
     setCurrentIndex(index);
@@ -83,13 +85,13 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
               {videoCount} {isAr ? 'فيديو' : videoCount === 1 ? 'Video' : 'Videos'}
             </button>
           )}
-          {images.length > 5 && (
+          {sorted.length > 5 && (
             <button
               onClick={() => openAtIndex(0)}
               className="bg-white text-gray-800 text-sm font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2 hover:bg-gray-50 transition-colors"
             >
               <Grid3X3 className="w-4 h-4" />
-              {isAr ? `عرض جميع ${images.length} صور` : `Show all ${images.length} photos`}
+              {isAr ? `عرض جميع ${sorted.length} صور` : `Show all ${sorted.length} photos`}
             </button>
           )}
         </div>
@@ -107,14 +109,14 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
 
           <button
             onClick={prev}
-            className="absolute left-4 text-white bg-white/10 rounded-full p-3 hover:bg-white/20 transition-colors"
+            className="absolute ltr:left-4 rtl:right-4 text-white bg-white/10 rounded-full p-3 hover:bg-white/20 transition-colors"
           >
             <ChevronLeft className="w-6 h-6 rtl:rotate-180" />
           </button>
 
           <div className="relative w-full max-w-4xl mx-16 aspect-video">
             <Image
-              src={images[currentIndex]?.url || ''}
+              src={sorted[currentIndex]?.url || ''}
               alt={`${title} ${currentIndex + 1}`}
               fill
               className="object-contain"
@@ -124,20 +126,20 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
 
           <button
             onClick={next}
-            className="absolute right-4 text-white bg-white/10 rounded-full p-3 hover:bg-white/20 transition-colors"
+            className="absolute ltr:right-4 rtl:left-4 text-white bg-white/10 rounded-full p-3 hover:bg-white/20 transition-colors"
           >
             <ChevronRight className="w-6 h-6 rtl:rotate-180" />
           </button>
 
           <div className="absolute bottom-4 left-0 right-0 flex justify-center">
             <span className="text-white/80 text-sm bg-black/50 px-3 py-1 rounded-full">
-              {currentIndex + 1} / {images.length}
+              {currentIndex + 1} / {sorted.length}
             </span>
           </div>
 
           {/* Thumbnails */}
           <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-2 overflow-x-auto px-4">
-            {images.map((img, i) => (
+            {sorted.map((img, i) => (
               <button
                 key={i}
                 onClick={() => setCurrentIndex(i)}

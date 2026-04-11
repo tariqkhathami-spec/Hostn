@@ -98,7 +98,7 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
   const heartRef = useRef<HTMLButtonElement>(null);
 
   const images = unit.images && unit.images.length > 0
-    ? unit.images.slice(0, 5)
+    ? [...unit.images].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)).slice(0, 5)
     : [{ url: PLACEHOLDER_IMAGE, isPrimary: true }];
 
   const handlePrevImage = useCallback((e: React.MouseEvent) => {
@@ -437,22 +437,51 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
             <div>
               {basePrice > 0 ? (
                 <>
-                  {discountedPrice ? (
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                      <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
-                      <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                  {(!checkIn || !checkOut) ? (
+                    /* No dates selected — show nightly, weekly, monthly tiers */
+                    <div className="flex flex-col gap-0.5">
+                      {discountedPrice ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                          <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
+                          <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                          <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
+                        </div>
+                      )}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(Math.round(displayPrice * 7 * (1 - (unit.pricing?.weeklyDiscount ?? 0) / 100)))}</span>
+                        <span className="text-xs text-gray-500">/ {isAr ? 'أسبوع' : 'week'}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice * 30)}</span>
+                        <span className="text-xs text-gray-500">/ {isAr ? 'شهر' : 'month'}</span>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                      <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                    </div>
-                  )}
-                  {totalPrice > 0 && (
-                    <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
-                      {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
-                    </div>
+                    /* Dates selected — show per-night + total */
+                    <>
+                      {discountedPrice ? (
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                          <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
+                          <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                          <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                        </div>
+                      )}
+                      {totalPrice > 0 && (
+                        <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
+                          {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               ) : null}

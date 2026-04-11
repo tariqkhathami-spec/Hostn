@@ -102,10 +102,10 @@ function getMismatchReasons(
   }
 
   // Guests
-  if (filters.totalGuests > 0 && property.capacity.maxGuests < filters.totalGuests) {
+  if (filters.totalGuests > 0 && (property.capacity?.maxGuests ?? 0) < filters.totalGuests) {
     reasons.push(isAr
-      ? `أقصى عدد ${property.capacity.maxGuests} ضيوف`
-      : `Max ${property.capacity.maxGuests} guests`);
+      ? `أقصى عدد ${property.capacity?.maxGuests ?? 0} ضيوف`
+      : `Max ${property.capacity?.maxGuests ?? 0} guests`);
   }
 
   // Min nights
@@ -138,13 +138,13 @@ function getMismatchReasons(
   }
 
   // Bedrooms
-  if (filters.minBedrooms && property.capacity.bedrooms < Number(filters.minBedrooms)) {
-    reasons.push(isAr ? `${property.capacity.bedrooms} غرف نوم فقط` : `Only ${property.capacity.bedrooms} bedroom${property.capacity.bedrooms !== 1 ? 's' : ''}`);
+  if (filters.minBedrooms && (property.capacity?.bedrooms ?? 0) < Number(filters.minBedrooms)) {
+    reasons.push(isAr ? `${property.capacity?.bedrooms ?? 0} غرف نوم فقط` : `Only ${property.capacity?.bedrooms ?? 0} bedroom${(property.capacity?.bedrooms ?? 0) !== 1 ? 's' : ''}`);
   }
 
   // Rating
-  if (filters.minRating && property.ratings.average < Number(filters.minRating)) {
-    reasons.push(isAr ? `التقييم ${property.ratings.average || 0}` : `Rating ${property.ratings.average || 0}`);
+  if (filters.minRating && (property.ratings?.average ?? 0) < Number(filters.minRating)) {
+    reasons.push(isAr ? `التقييم ${property.ratings?.average ?? 0}` : `Rating ${property.ratings?.average ?? 0}`);
   }
 
   // Pool
@@ -153,13 +153,13 @@ function getMismatchReasons(
   }
 
   // Discount
-  if (filters.hasDiscount && property.pricing.discountPercent <= 0) {
+  if (filters.hasDiscount && (property.pricing?.discountPercent ?? 0) <= 0) {
     reasons.push(isAr ? 'بدون خصم' : 'No discount');
   }
 
   // Price
-  if (filters.priceRange < 4000 && property.pricing.perNight > filters.priceRange) {
-    reasons.push(isAr ? `السعر ﷼${property.pricing.perNight}` : `Price SAR ${property.pricing.perNight}`);
+  if (filters.priceRange < 4000 && (property.pricing?.perNight ?? 0) > filters.priceRange) {
+    reasons.push(isAr ? `السعر ﷼${property.pricing?.perNight ?? 0}` : `Price SAR ${property.pricing?.perNight ?? 0}`);
   }
 
   // Area
@@ -782,23 +782,23 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
   checkIn?: string; checkOut?: string;
 }) {
   const primaryImage = property.images?.find(img => img.isPrimary)?.url || property.images?.[0]?.url || 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800';
-  const discountedPrice = property.pricing.discountPercent > 0 ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent) : null;
+  const discountedPrice = (property.pricing?.discountPercent ?? 0) > 0 ? getDiscountedPrice(property.pricing?.perNight ?? 0, property.pricing?.discountPercent ?? 0) : null;
 
   // Pricing: total, weekly, monthly
-  const effectivePrice = discountedPrice || property.pricing.perNight;
+  const effectivePrice = discountedPrice || (property.pricing?.perNight ?? 0);
   const nights = (checkIn && checkOut) ? calculateNights(checkIn, checkOut) : 0;
   const totalPrice = nights > 0 ? effectivePrice * nights : 0;
 
   let displayPrice = effectivePrice;
-  let originalDisplayPrice = property.pricing.perNight;
+  let originalDisplayPrice = property.pricing?.perNight ?? 0;
   let priceUnitLabel: string;
   if (nights >= 30) {
     displayPrice = effectivePrice * 30;
-    originalDisplayPrice = property.pricing.perNight * 30;
+    originalDisplayPrice = (property.pricing?.perNight ?? 0) * 30;
     priceUnitLabel = isAr ? '/ شهر' : '/ month';
   } else if (nights >= 7) {
     displayPrice = effectivePrice * 7;
-    originalDisplayPrice = property.pricing.perNight * 7;
+    originalDisplayPrice = (property.pricing?.perNight ?? 0) * 7;
     priceUnitLabel = isAr ? '/ أسبوع' : '/ week';
   } else {
     priceUnitLabel = isAr ? '/ ليلة' : '/ night';
@@ -818,9 +818,9 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
             <div className="absolute bottom-3 ltr:left-3 rtl:right-3">
               <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">{getPropertyTypeLabel(property.type, lang)}</span>
             </div>
-            {property.pricing.discountPercent > 0 && (
+            {(property.pricing?.discountPercent ?? 0) > 0 && (
               <div className="absolute top-3 ltr:left-3 rtl:right-3">
-                <span className="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">{isAr ? `خصم ${property.pricing.discountPercent}%` : `${property.pricing.discountPercent}% OFF`}</span>
+                <span className="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full">{isAr ? `خصم ${property.pricing?.discountPercent ?? 0}%` : `${property.pricing?.discountPercent ?? 0}% OFF`}</span>
               </div>
             )}
           </div>
@@ -831,9 +831,9 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
               <span>{property.location.district ? `${translateDistrict(property.location.district, property.location.city)}, ` : ''}{translateCity(property.location.city)}</span>
             </div>
             <div className="flex items-center gap-2.5 text-gray-500 text-xs mb-3">
-              <span className="flex items-center gap-1" title={isAr ? 'ضيوف' : 'Guests'}><Users className="w-3 h-3" />{property.capacity.maxGuests}</span>
-              <span className="flex items-center gap-1" title={isAr ? 'غرف نوم' : 'Bedrooms'}><BedDouble className="w-3 h-3" />{property.capacity.bedrooms}</span>
-              <span className="flex items-center gap-1" title={isAr ? 'حمامات' : 'Bathrooms'}><Bath className="w-3 h-3" />{property.capacity.bathrooms}</span>
+              <span className="flex items-center gap-1" title={isAr ? 'ضيوف' : 'Guests'}><Users className="w-3 h-3" />{property.capacity?.maxGuests ?? 0}</span>
+              <span className="flex items-center gap-1" title={isAr ? 'غرف نوم' : 'Bedrooms'}><BedDouble className="w-3 h-3" />{property.capacity?.bedrooms ?? 0}</span>
+              <span className="flex items-center gap-1" title={isAr ? 'حمامات' : 'Bathrooms'}><Bath className="w-3 h-3" />{property.capacity?.bathrooms ?? 0}</span>
               {property.area ? (
                 <span className="flex items-center gap-1" title={isAr ? 'المساحة' : 'Area'}><Ruler className="w-3 h-3" />{property.area} {isAr ? 'م²' : 'm²'}</span>
               ) : null}
@@ -861,8 +861,8 @@ function PropertyListCard({ property, isAr, lang, removingId, onRemove, translat
                   </p>
                 )}
               </div>
-              {property.ratings.count > 0 && (
-                <StarRating rating={property.ratings.average} count={property.ratings.count} />
+              {(property.ratings?.count ?? 0) > 0 && (
+                <StarRating rating={property.ratings?.average ?? 0} count={property.ratings?.count ?? 0} />
               )}
             </div>
           </div>

@@ -63,7 +63,7 @@ export default function PropertyCard({ property, checkIn, checkOut }: PropertyCa
   const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
 
   const images = property.images && property.images.length > 0
-    ? property.images.slice(0, 5)
+    ? [...property.images].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)).slice(0, 5)
     : [{ url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800', isPrimary: true }];
 
   const host = typeof property.host === 'object' ? property.host as User : null;

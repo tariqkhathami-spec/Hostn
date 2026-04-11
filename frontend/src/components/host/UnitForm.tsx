@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { uploadApi } from '@/lib/api';
 import {
@@ -355,6 +355,41 @@ export default function UnitForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeSection, setActiveSection] = useState('section-basic');
+
+  /* ── Section nav definitions ── */
+  const NAV_SECTIONS = [
+    { id: 'section-basic', label: t.basicInfo[lang] },
+    { id: 'section-amenities', label: isAr ? 'المرافق' : 'Amenities' },
+    { id: 'section-additional', label: isAr ? 'مرافق إضافية' : 'More Amenities' },
+    { id: 'section-features', label: isAr ? 'المميزات' : 'Features' },
+    { id: 'section-deposit', label: t.insuranceTitle[lang] },
+    { id: 'section-cancellation', label: t.cancelTitle[lang] },
+    { id: 'section-rules', label: t.rulesTitle[lang] },
+    { id: 'section-photos', label: t.photos[lang] },
+  ];
+
+  /* ── IntersectionObserver to track visible section ── */
+  useEffect(() => {
+    const ids = [
+      'section-basic', 'section-amenities', 'section-additional',
+      'section-features', 'section-deposit', 'section-cancellation',
+      'section-rules', 'section-photos',
+    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: '-20% 0px -60% 0px', threshold: 0 },
+    );
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   /* ── Helpers ─────────────────────────────────── */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -486,33 +521,54 @@ export default function UnitForm({
   const btnLabel = submitLabel || (initialData ? t.save : t.create);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Sticky section nav */}
-      <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm -mx-1 px-1 py-2">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'section-basic', label: t.basicInfo[lang] },
-            { id: 'section-amenities', label: isAr ? 'المرافق' : 'Amenities' },
-            { id: 'section-additional', label: isAr ? 'مرافق إضافية' : 'More Amenities' },
-            { id: 'section-features', label: isAr ? 'المميزات' : 'Features' },
-            { id: 'section-deposit', label: t.insuranceTitle[lang] },
-            { id: 'section-cancellation', label: t.cancelTitle[lang] },
-            { id: 'section-rules', label: t.rulesTitle[lang] },
-            { id: 'section-photos', label: t.photos[lang] },
-          ].map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => {
-                document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors bg-white border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300 shadow-sm"
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <form onSubmit={handleSubmit} className="relative">
+      <div className="flex gap-8">
+        {/* ── Desktop sidebar nav (hidden below lg) ── */}
+        <nav className="sticky top-24 self-start w-48 flex-shrink-0 hidden lg:block">
+          <ul className="space-y-1">
+            {NAV_SECTIONS.map((section) => (
+              <li key={section.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`w-full text-start px-3 py-2 rounded-md text-sm transition-all ${
+                    activeSection === section.id
+                      ? 'bg-primary-50 text-primary-700 font-semibold border-l-2 border-primary-500'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* ── Form body ── */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {/* Mobile sticky horizontal nav (hidden on lg+) */}
+          <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm -mx-1 px-1 py-2 lg:hidden">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {NAV_SECTIONS.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => {
+                    document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shadow-sm ${
+                    activeSection === section.id
+                      ? 'bg-primary-50 border border-primary-400 text-primary-700 font-semibold'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
       {/* ══ 1. Basic Info ══════════════════════════════════ */}
       <div id="section-basic" className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
@@ -874,6 +930,8 @@ export default function UnitForm({
         {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
         {submitting ? t.saving[lang] : btnLabel[lang]}
       </button>
+        </div>{/* end flex-1 form body */}
+      </div>{/* end flex container */}
     </form>
   );
 }

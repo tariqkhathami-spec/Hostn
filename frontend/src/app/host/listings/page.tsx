@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { propertiesApi, hostApi, unitsApi } from '@/lib/api';
 import {
-  Plus, ToggleLeft, ToggleRight, Edit, Loader2, Building, Layers,
+  Plus, ToggleLeft, ToggleRight, Edit, Pencil, Loader2, Building, Layers,
   AlertTriangle, MapPin, ChevronDown, ChevronUp, Users, Bed, Droplets,
   Calendar,
 } from 'lucide-react';
@@ -36,14 +36,15 @@ const t: Record<string, Record<string, string>> = {
   edit: { en: 'Edit', ar: '\u062a\u0639\u062f\u064a\u0644' },
   units: { en: 'Units', ar: '\u0627\u0644\u0648\u062d\u062f\u0627\u062a' },
   toggled: { en: 'Status updated', ar: '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u062d\u0627\u0644\u0629' },
-  noUnits: { en: 'No units — add units to activate', ar: '\u0644\u0627 \u062a\u0648\u062c\u062f \u0648\u062d\u062f\u0627\u062a \u2014 \u0623\u0636\u0641 \u0648\u062d\u062f\u0627\u062a \u0644\u0644\u062a\u0641\u0639\u064a\u0644' },
+  noUnits: { en: 'Add at least one unit to activate this property', ar: '\u0623\u0636\u0641 \u0648\u062d\u062f\u0629 \u0648\u0627\u062d\u062f\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u0639\u0642\u0627\u0631' },
+  activateUnit: { en: 'Activate at least one unit to enable this property', ar: '\u0641\u0639\u0651\u0644 \u0648\u062d\u062f\u0629 \u0648\u0627\u062d\u062f\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u062a\u0641\u0639\u064a\u0644 \u0627\u0644\u0639\u0642\u0627\u0631' },
   unitCount: { en: 'units', ar: '\u0648\u062d\u062f\u0627\u062a' },
   activeOf: { en: 'active of', ar: '\u0646\u0634\u0637\u0629 \u0645\u0646' },
   showUnits: { en: 'Units', ar: '\u0627\u0644\u0648\u062d\u062f\u0627\u062a' },
   hideUnits: { en: 'Hide', ar: '\u0625\u062e\u0641\u0627\u0621' },
   manageAll: { en: 'Manage all units', ar: '\u0625\u062f\u0627\u0631\u0629 \u0643\u0644 \u0627\u0644\u0648\u062d\u062f\u0627\u062a' },
   addUnit: { en: 'Add Unit', ar: '\u0625\u0636\u0627\u0641\u0629 \u0648\u062d\u062f\u0629' },
-  pricing: { en: 'Pricing', ar: '\u0627\u0644\u0623\u0633\u0639\u0627\u0631' },
+  pricing: { en: 'Calendar', ar: '\u0627\u0644\u062a\u0642\u0648\u064a\u0645' },
   avgPrice: { en: 'Avg price', ar: '\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631' },
   guests: { en: 'Guests', ar: '\u0636\u064a\u0648\u0641' },
   bedrooms: { en: 'Bedrooms', ar: '\u063a\u0631\u0641 \u0646\u0648\u0645' },
@@ -124,12 +125,25 @@ export default function HostListingsPage() {
   const handleUnitToggle = async (unitId: string, propertyId: string) => {
     try {
       await unitsApi.toggle(unitId);
-      setPropertyUnits(prev => ({
-        ...prev,
-        [propertyId]: (prev[propertyId] || []).map(u =>
-          u._id === unitId ? { ...u, isActive: !u.isActive } : u
-        ),
-      }));
+      const updatedUnits = (propertyUnits[propertyId] || []).map(u =>
+        u._id === unitId ? { ...u, isActive: !u.isActive } : u
+      );
+      setPropertyUnits(prev => ({ ...prev, [propertyId]: updatedUnits }));
+
+      // If all units are now inactive, auto-deactivate the property in local state
+      const allInactive = updatedUnits.length > 0 && updatedUnits.every(u => !u.isActive);
+      if (allInactive) {
+        setProperties(prev =>
+          prev.map(p => p._id === propertyId ? { ...p, isActive: false, activeUnitCount: 0 } : p)
+        );
+      } else {
+        // Update activeUnitCount to stay in sync
+        const newActiveCount = updatedUnits.filter(u => u.isActive).length;
+        setProperties(prev =>
+          prev.map(p => p._id === propertyId ? { ...p, activeUnitCount: newActiveCount } : p)
+        );
+      }
+
       toast.success(t.statusUpdated[lang]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -237,17 +251,25 @@ export default function HostListingsPage() {
                       {/* Unit count */}
                       <div className="mt-2">
                         {hasUnits ? (
-                          <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
-                            <Layers className="w-3.5 h-3.5 text-primary-500" />
-                            <span className="font-medium">{activeUnits}</span>
-                            <span className="text-gray-400">{t.activeOf[lang]}</span>
-                            <span>{totalUnits} {t.unitCount[lang]}</span>
-                          </span>
+                          <>
+                            <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+                              <Layers className="w-3.5 h-3.5 text-primary-500" />
+                              <span className="font-medium">{activeUnits}</span>
+                              <span className="text-gray-400">{t.activeOf[lang]}</span>
+                              <span>{totalUnits} {t.unitCount[lang]}</span>
+                            </span>
+                            {activeUnits === 0 && (
+                              <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg p-2 text-xs flex items-center gap-1.5 mt-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                                {t.activateUnit[lang]}
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                          <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg p-2 text-xs flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                             {t.noUnits[lang]}
-                          </span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -380,29 +402,29 @@ export default function HostListingsPage() {
                                 </div>
 
                                 {/* Unit actions */}
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                   <Link
                                     href={`/host/listings/${property._id}/units/${unit._id}/edit`}
-                                    className="text-xs text-gray-500 hover:text-primary-600 transition-colors flex items-center gap-0.5"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                                   >
-                                    <Edit className="w-3 h-3" />
+                                    <Pencil className="w-3.5 h-3.5" />
                                     {t.edit[lang]}
                                   </Link>
                                   <Link
                                     href={`/host/listings/${property._id}/units/${unit._id}/calendar`}
-                                    className="text-xs text-gray-500 hover:text-primary-600 transition-colors flex items-center gap-0.5"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                                   >
-                                    <Calendar className="w-3 h-3" />
+                                    <Calendar className="w-3.5 h-3.5" />
                                     {t.pricing[lang]}
                                   </Link>
                                   <button
                                     onClick={() => handleUnitToggle(unit._id, property._id)}
-                                    className="text-xs text-gray-500 hover:text-primary-600 transition-colors flex items-center"
+                                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary-600 transition-colors"
                                   >
                                     {unit.isActive ? (
-                                      <ToggleRight className="w-4 h-4 text-emerald-500" />
+                                      <ToggleRight className="w-5 h-5 text-emerald-500" />
                                     ) : (
-                                      <ToggleLeft className="w-4 h-4 text-gray-400" />
+                                      <ToggleLeft className="w-5 h-5 text-gray-400" />
                                     )}
                                   </button>
                                 </div>

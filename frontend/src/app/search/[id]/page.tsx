@@ -296,16 +296,20 @@ function UnitDetailContent() {
     return list.name;
   };
 
-  // ── Images: prefer unit images, fallback to property images ──
+  // ── Images: prefer unit images, fallback to property images (primary first) ──
   const galleryImages: PropertyImage[] = (() => {
     if (unit?.images && unit.images.length > 0) {
-      return unit.images.map(img => ({
-        url: img.url,
-        caption: img.caption,
-        isPrimary: img.isPrimary ?? false,
-      }));
+      return unit.images
+        .map(img => ({
+          url: img.url,
+          caption: img.caption,
+          isPrimary: img.isPrimary ?? false,
+        }))
+        .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
     }
-    if (property?.images && property.images.length > 0) return property.images;
+    if (property?.images && property.images.length > 0) {
+      return [...property.images].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+    }
     return [{ url: '/placeholder-property.jpg', isPrimary: true }];
   })();
 
@@ -377,8 +381,12 @@ function UnitDetailContent() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{displayTitle}</h1>
-                {propertyTitle && (
-                  <p className="text-base text-gray-500 mb-2">{propertyTitle}</p>
+                {propertyTitle && property && (
+                  <p className="text-base text-gray-500 mb-2">
+                    <Link href={`/property/${property._id}`} className="hover:text-primary-600 hover:underline transition-colors">
+                      {propertyTitle}
+                    </Link>
+                  </p>
                 )}
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   {ratings && ratings.count > 0 && (

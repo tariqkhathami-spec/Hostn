@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Property } from '@/types';
-import { propertiesApi, bookingsApi, paymentsApi, bnplApi } from '@/lib/api';
+import { propertiesApi, unitsApi, bookingsApi, paymentsApi, bnplApi } from '@/lib/api';
 import { formatPrice, formatPriceNumber, formatDate, calculateNights, getNightLabel, getGuestLabel, getAdultLabel, getChildLabel } from '@/lib/utils';
 import { CITIES } from '@/lib/constants';
 import SarSymbol from '@/components/ui/SarSymbol';
@@ -77,8 +77,20 @@ function BookingContent() {
 
   const fetchProperty = async () => {
     try {
-      const res = await propertiesApi.getOne(id);
-      setProperty(res.data.data);
+      // Try as unit first (id may be a unit ID after Property→Unit migration)
+      try {
+        const unitRes = await unitsApi.getOne(id);
+        const unit = unitRes.data.data;
+        if (unit?.property) {
+          setProperty(typeof unit.property === 'object' ? unit.property : unit);
+        } else {
+          setProperty(unit);
+        }
+      } catch {
+        // Fall back to property lookup
+        const res = await propertiesApi.getOne(id);
+        setProperty(res.data.data);
+      }
     } catch {
       router.push('/search');
     } finally {
@@ -225,12 +237,12 @@ function BookingContent() {
 
   const nights = checkIn && checkOut ? calculateNights(checkIn, checkOut) : 0;
   // Always use original perNight; discount is a separate line item
-  const pricePerNight = property.pricing.perNight;
+  const pricePerNight = property.pricing?.perNight ?? 0;
   const subtotal = nights * pricePerNight;
-  const cleaningFee = property.pricing.cleaningFee || 0;
+  const cleaningFee = property.pricing?.cleaningFee ?? 0;
   const serviceFee = Math.round(subtotal * 0.1);
-  const discount = property.pricing.discountPercent > 0
-    ? Math.round(subtotal * (property.pricing.discountPercent / 100))
+  const discount = (property.pricing?.discountPercent ?? 0) > 0
+    ? Math.round(subtotal * ((property.pricing?.discountPercent ?? 0) / 100))
     : 0;
   // Saudi Arabia 15% VAT — applied on taxable amount (after discount)
   const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
@@ -322,7 +334,7 @@ function BookingContent() {
                             <div>
                               <p className="text-sm font-medium text-gray-800">{isAr ? 'الضيوف' : 'Guests'}</p>
                               <p className="text-xs text-gray-500">
-                                {isAr ? `حتى ${getGuestLabel(property.capacity.maxGuests, 'ar')} مسموح` : `Up to ${property.capacity.maxGuests} allowed`}
+                                {isAr ? `حتى ${getGuestLabel(property.capacity?.maxGuests ?? 0, 'ar')} مسموح` : `Up to ${property.capacity?.maxGuests ?? 0} allowed`}
                               </p>
                             </div>
                           </div>
@@ -577,7 +589,7 @@ function BookingContent() {
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>{isAr ? `\u062E\u0635\u0645 (${property.pricing.discountPercent}%)` : `Discount (${property.pricing.discountPercent}%)`}</span>
+                        <span>{isAr ? `\u062E\u0635\u0645 (${property.pricing?.discountPercent ?? 0}%)` : `Discount (${property.pricing?.discountPercent ?? 0}%)`}</span>
                         <span dir="ltr"><SarSymbol /> -{formatPriceNumber(discount)}</span>
                       </div>
                     )}
