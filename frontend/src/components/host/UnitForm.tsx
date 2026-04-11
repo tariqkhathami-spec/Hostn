@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { uploadApi } from '@/lib/api';
 import {
@@ -76,9 +76,9 @@ const t: Record<string, Record<string, string>> = {
   addlAmenities:{ en: 'Additional Amenities', ar: 'مرافق إضافية' },
   featuresTitle:{ en: 'Features', ar: 'الميزات' },
 
-  insuranceTitle:{ en: 'Insurance', ar: 'التأمين' },
-  insurance:    { en: 'Insurance on Arrival', ar: 'تأمين عند الوصول' },
-  insuranceAmt: { en: 'Insurance Amount (SAR)', ar: 'مبلغ التأمين (ر.س)' },
+  insuranceTitle:{ en: 'Security Deposit', ar: 'التأمين (مبلغ مسترد)' },
+  insurance:    { en: 'Require security deposit (refundable after checkout)', ar: 'تأمين مسترد بعد المغادرة' },
+  insuranceAmt: { en: 'Deposit Amount (SAR)', ar: 'مبلغ التأمين (ر.س)' },
 
   cancelTitle:  { en: 'Cancellation Policy', ar: 'سياسة الإلغاء' },
   rulesTitle:   { en: 'Rules', ar: 'القواعد' },
@@ -355,6 +355,41 @@ export default function UnitForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeSection, setActiveSection] = useState('section-basic');
+
+  /* ── Section nav definitions ── */
+  const NAV_SECTIONS = [
+    { id: 'section-basic', label: t.basicInfo[lang] },
+    { id: 'section-amenities', label: isAr ? 'المرافق' : 'Amenities' },
+    { id: 'section-additional', label: isAr ? 'مرافق إضافية' : 'More Amenities' },
+    { id: 'section-features', label: isAr ? 'المميزات' : 'Features' },
+    { id: 'section-deposit', label: t.insuranceTitle[lang] },
+    { id: 'section-cancellation', label: t.cancelTitle[lang] },
+    { id: 'section-rules', label: t.rulesTitle[lang] },
+    { id: 'section-photos', label: t.photos[lang] },
+  ];
+
+  /* ── IntersectionObserver to track visible section ── */
+  useEffect(() => {
+    const ids = [
+      'section-basic', 'section-amenities', 'section-additional',
+      'section-features', 'section-deposit', 'section-cancellation',
+      'section-rules', 'section-photos',
+    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: '-20% 0px -60% 0px', threshold: 0 },
+    );
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   /* ── Helpers ─────────────────────────────────── */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -486,9 +521,57 @@ export default function UnitForm({
   const btnLabel = submitLabel || (initialData ? t.save : t.create);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="relative">
+      <div className="flex gap-8">
+        {/* ── Desktop sidebar nav (hidden below lg) ── */}
+        <nav className="sticky top-24 self-start w-48 flex-shrink-0 hidden lg:block">
+          <ul className="space-y-1">
+            {NAV_SECTIONS.map((section) => (
+              <li key={section.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`w-full text-start px-3 py-2 rounded-md text-sm transition-all ${
+                    activeSection === section.id
+                      ? 'bg-primary-50 text-primary-700 font-semibold border-l-2 border-primary-500'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* ── Form body ── */}
+        <div className="flex-1 min-w-0 space-y-6">
+          {/* Mobile sticky horizontal nav (hidden on lg+) */}
+          <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm -mx-1 px-1 py-2 lg:hidden">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {NAV_SECTIONS.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => {
+                    document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shadow-sm ${
+                    activeSection === section.id
+                      ? 'bg-primary-50 border border-primary-400 text-primary-700 font-semibold'
+                      : 'bg-white border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-300'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
       {/* ══ 1. Basic Info ══════════════════════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+      <div id="section-basic" className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className={sectionTitle}>{t.basicInfo[lang]}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -562,7 +645,7 @@ export default function UnitForm({
       </div>
 
       {/* ══ 3. Main Amenities toggle grid ═════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div id="section-amenities" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.mainAmenities[lang]}</h2>
         <p className="text-xs text-gray-500 mb-4">{t.mainAmHint[lang]}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -721,7 +804,7 @@ export default function UnitForm({
       )}
 
       {/* ══ 4. Additional Amenities ═══════════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div id="section-additional" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.addlAmenities[lang]}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {UNIT_AMENITIES.map((a) => {
@@ -738,7 +821,7 @@ export default function UnitForm({
       </div>
 
       {/* ══ 5. Features (big icons) ══════════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div id="section-features" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.featuresTitle[lang]}</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {UNIT_FEATURES.map((f) => {
@@ -760,7 +843,7 @@ export default function UnitForm({
       </div>
 
       {/* ══ 6. Insurance ═════════════════════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+      <div id="section-deposit" className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h2 className={sectionTitle}>{t.insuranceTitle[lang]}</h2>
         <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
           <input type="checkbox" checked={form.insuranceOnArrival} onChange={() => toggleBool('insuranceOnArrival')}
@@ -776,7 +859,7 @@ export default function UnitForm({
       </div>
 
       {/* ══ 7. Cancellation Policy (radio cards) ═════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div id="section-cancellation" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.cancelTitle[lang]}</h2>
         <div className="space-y-3">
           {CANCEL_POLICIES.map((policy) => {
@@ -804,14 +887,14 @@ export default function UnitForm({
       </div>
 
       {/* ══ 8. Written Rules ═════════════════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div id="section-rules" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.rulesTitle[lang]}</h2>
         <textarea name="writtenRules" value={form.writtenRules} onChange={handleChange} rows={4} className={inputClass}
           placeholder={isAr ? 'أضف قواعد الوحدة هنا...' : 'Add unit rules here...'} />
       </div>
 
       {/* ══ 9. Photos (at the end) ═══════════════════════ */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div id="section-photos" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.photos[lang]}</h2>
         <p className="text-xs text-gray-500 mb-3">{t.uploadHint[lang]}</p>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
@@ -847,6 +930,8 @@ export default function UnitForm({
         {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
         {submitting ? t.saving[lang] : btnLabel[lang]}
       </button>
+        </div>{/* end flex-1 form body */}
+      </div>{/* end flex container */}
     </form>
   );
 }

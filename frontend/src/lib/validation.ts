@@ -114,7 +114,7 @@ export const verifyPaymentSchema = z.object({
 
 // ── Property Schemas ──
 
-const validPropertyTypes = ['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel'] as const;
+const validPropertyTypes = ['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel', 'rest_house', 'room', 'hotel_resort', 'serviced_apartment'] as const;
 const validAmenities = ['wifi', 'pool', 'parking', 'ac', 'kitchen', 'tv', 'washer', 'dryer', 'heating', 'workspace', 'gym', 'hot_tub', 'bbq', 'garden', 'security', 'elevator', 'balcony', 'sea_view', 'mountain_view', 'playground'] as const;
 
 export const createPropertySchema = z.object({

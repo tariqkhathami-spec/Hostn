@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { unitsApi, propertiesApi } from '@/lib/api';
 import {
-  Plus, Loader2, ArrowLeft, Copy, Calendar,
+  Plus, Loader2, ArrowLeft, Copy, Calendar, Pencil,
   ToggleLeft, ToggleRight, Bed, Users, Droplets, Building,
   X, ImageOff, DollarSign, CalendarOff,
 } from 'lucide-react';
@@ -43,7 +43,7 @@ const t: Record<string, Record<string, string>> = {
   dupDates:     { en: 'Blocked dates', ar: 'التواريخ المحجوبة' },
   dupConfirm:   { en: 'Duplicate', ar: 'نسخ' },
   cancel:       { en: 'Cancel', ar: 'إلغاء' },
-  pricing:      { en: 'Pricing', ar: 'الأسعار' },
+  pricing:      { en: 'Calendar', ar: 'التقويم' },
 };
 
 export default function UnitsListPage() {
@@ -65,18 +65,19 @@ export default function UnitsListPage() {
 
   const load = async () => {
     try {
-      const [unitsRes, propRes] = await Promise.all([
-        unitsApi.getManage(propertyId),
-        propertiesApi.getOne(propertyId),
-      ]);
+      const unitsRes = await unitsApi.getManage(propertyId);
       setUnits(unitsRes.data.data || []);
+    } catch {
+      toast.error(isAr ? 'فشل في تحميل الوحدات' : 'Failed to load units');
+    }
+    try {
+      const propRes = await propertiesApi.getOne(propertyId);
       const prop = propRes.data.data || propRes.data;
       setPropertyTitle(prop.title || prop.titleAr || '');
     } catch {
-      toast.error(isAr ? 'فشل في تحميل الوحدات' : 'Failed to load units');
-    } finally {
-      setLoading(false);
+      // Property may be inactive — still show units
     }
+    setLoading(false);
   };
 
   const openDupDialog = (id: string) => {
@@ -224,25 +225,27 @@ export default function UnitsListPage() {
 
                 {/* Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Link
                       href={`/host/listings/${propertyId}/units/${unit._id}/edit`}
-                      className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                     >
+                      <Pencil className="w-3.5 h-3.5" />
                       {t.edit[lang]}
                     </Link>
                     <Link
-                      href={`/host/listings/${propertyId}/units/${unit._id}/pricing`}
-                      className="text-sm text-gray-600 hover:text-primary-600 transition-colors flex items-center gap-1"
+                      href={`/host/listings/${propertyId}/units/${unit._id}/calendar`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                     >
                       <Calendar className="w-3.5 h-3.5" />
                       {t.pricing[lang]}
                     </Link>
                     <button
                       onClick={() => openDupDialog(unit._id)}
-                      className="text-sm text-gray-600 hover:text-primary-600 transition-colors flex items-center gap-1"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                     >
                       <Copy className="w-3.5 h-3.5" />
+                      {t.duplicate[lang]}
                     </button>
                   </div>
                   <button

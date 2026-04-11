@@ -32,7 +32,7 @@ export default function FavoritesPage() {
   // Translate the default list name based on current language
   const getDisplayName = (list: WishlistList) => {
     if (list.isDefault) {
-      return isAr ? 'مفضلاتي' : 'My Favorites';
+      return isAr ? 'مفضلتي' : 'My Favorites';
     }
     return list.name;
   };

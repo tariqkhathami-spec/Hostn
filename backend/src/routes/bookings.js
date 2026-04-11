@@ -5,6 +5,7 @@ const {
   createBooking,
   getMyBookings,
   getHostBookings,
+  getUnitBookedDates,
   getBooking,
   updateBookingStatus,
   cancelBooking,
@@ -23,6 +24,7 @@ router.post('/hold', holdBookingRules, createHold);
 router.post('/', createBookingRules, createBooking);
 router.get('/my-bookings', getMyBookings);
 router.get('/host-bookings', getHostBookings);
+router.get('/unit/:unitId/dates', getUnitBookedDates);
 router.get('/:id', mongoIdParam(), getBooking);
 router.put('/:id/status', mongoIdParam(), updateBookingStatusRules, updateBookingStatus);
 router.put('/:id/cancel', mongoIdParam(), cancelBooking);

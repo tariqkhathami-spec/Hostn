@@ -56,6 +56,10 @@ export default function HeroSearch() {
     { label: t('type.studios'), value: 'studio' },
     { label: t('type.farms'), value: 'farm' },
     { label: t('type.camps'), value: 'camp' },
+    { label: t('type.hotel_resorts'), value: 'hotel_resort' },
+    { label: t('type.rest_houses'), value: 'rest_house' },
+    { label: t('type.rooms'), value: 'room' },
+    { label: t('type.serviced_apartments'), value: 'serviced_apartment' },
   ];
 
   const handleSearch = () => {

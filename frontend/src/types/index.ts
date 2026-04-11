@@ -67,7 +67,7 @@ export interface Ratings {
   count: number;
 }
 
-export type PropertyType = 'chalet' | 'apartment' | 'villa' | 'studio' | 'farm' | 'camp' | 'hotel';
+export type PropertyType = 'chalet' | 'apartment' | 'villa' | 'studio' | 'farm' | 'camp' | 'hotel' | 'rest_house' | 'room' | 'hotel_resort' | 'serviced_apartment';
 
 export type AmenityType =
   | 'wifi'

@@ -369,7 +369,7 @@ exports.getUnit = async (req, res, next) => {
   try {
     const unit = await Unit.findById(req.params.id).populate({
       path: 'property',
-      select: 'title titleAr location host type images ratings direction rules',
+      select: 'title titleAr location host type images ratings direction rules pricing capacity',
       populate: { path: 'host', select: 'name avatar isVerified _id createdAt' },
     });
 

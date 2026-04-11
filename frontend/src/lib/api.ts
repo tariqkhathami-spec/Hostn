@@ -163,6 +163,7 @@ export const bookingsApi = {
   updateStatus: (id: string, status: string) =>
     api.put(`/bookings/${id}/status`, { status }),
   cancel: (id: string) => api.put(`/bookings/${id}/status`, { status: 'cancelled' }),
+  getUnitBookedDates: (unitId: string) => api.get(`/bookings/unit/${unitId}/dates`),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -313,6 +314,8 @@ export const adminApi = {
   toggleUnit: (id: string) => api.patch(`/admin/units/${id}/toggle`),
   // Logs
   getLogs: (params?: Record<string, unknown>) => api.get('/admin/logs', { params }),
+  deleteProperty: (id: string) => api.delete(`/properties/${id}`),
+  deleteUnit: (id: string) => api.delete(`/units/${id}`),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

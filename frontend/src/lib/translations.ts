@@ -56,7 +56,11 @@ export const translations = {
     'type.studios': 'Studios',
     'type.farms': 'Farms',
     'type.camps': 'Camps',
-    'type.hotels': 'Hotels',
+    'type.hotels': 'Hotel Resorts',
+    'type.rest_houses': 'Rest Houses',
+    'type.rooms': 'Rooms',
+    'type.hotel_resorts': 'Hotel Resorts',
+    'type.serviced_apartments': 'Serviced Apartments',
 
     // City browse
     'cities.title': 'Explore Destinations',
@@ -378,7 +382,11 @@ export const translations = {
     'type.studios': 'استوديوهات',
     'type.farms': 'مزارع',
     'type.camps': 'مخيمات',
-    'type.hotels': 'فنادق',
+    'type.hotels': 'منتجعات فندقية',
+    'type.rest_houses': 'استراحات',
+    'type.rooms': 'غرف',
+    'type.hotel_resorts': 'منتجعات فندقية',
+    'type.serviced_apartments': 'شقق مفروشة',
 
     // City browse
     'cities.title': 'استكشف الوجهات',

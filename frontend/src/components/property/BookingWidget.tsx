@@ -23,9 +23,10 @@ interface BookingWidgetProps {
   initialCheckOut?: string;
   initialAdults?: number;
   initialChildren?: number;
+  initialUnitId?: string;
 }
 
-export default function BookingWidget({ property, initialCheckIn = '', initialCheckOut = '', initialAdults = 0, initialChildren = 0 }: BookingWidgetProps) {
+export default function BookingWidget({ property, initialCheckIn = '', initialCheckOut = '', initialAdults = 0, initialChildren = 0, initialUnitId = '' }: BookingWidgetProps) {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { isAuthenticated } = useAuth();
@@ -40,10 +41,11 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   const [selectingCheckOut, setSelectingCheckOut] = useState(false);
 
   // ── Unit selection ──
-  interface UnitOption { _id: string; nameEn?: string; nameAr?: string; pricing?: Record<string, number>; capacity?: { maxGuests?: number } }
+  interface UnitOption { _id: string; nameEn?: string; nameAr?: string; pricing?: Record<string, number>; capacity?: { maxGuests?: number }; datePricing?: { date: string; price?: number; isBlocked?: boolean }[] }
   const [units, setUnits] = useState<UnitOption[]>([]);
-  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(initialUnitId);
   const selectedUnit = units.find((u) => u._id === selectedUnitId) || null;
+  const [unitBookedDates, setUnitBookedDates] = useState<string[]>([]);
 
   // Fetch units for this property
   useEffect(() => {
@@ -56,6 +58,25 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       })
       .catch(() => {});
   }, [property._id]);
+
+  // Fetch unit-specific booked dates when selected unit changes
+  useEffect(() => {
+    if (!selectedUnitId) { setUnitBookedDates([]); return; }
+    bookingsApi.getUnitBookedDates(selectedUnitId)
+      .then((res) => {
+        const bookings = res.data.data || [];
+        const dates: string[] = [];
+        for (const b of bookings as { checkIn: string; checkOut: string }[]) {
+          const start = new Date(b.checkIn);
+          const end = new Date(b.checkOut);
+          for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+            dates.push(new Date(d).toISOString().slice(0, 10));
+          }
+        }
+        setUnitBookedDates(dates);
+      })
+      .catch(() => setUnitBookedDates([]));
+  }, [selectedUnitId]);
 
   // Persist dates and guests to cookies whenever they change
   const mountedRef = useRef(false);
@@ -91,17 +112,46 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
   let discount: number;
 
   if (hasUnit && selectedUnit.pricing && nights > 0) {
-    // Sum per-day prices for the selected date range
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+    // Build date override map from datePricing
+    const dateOverrides = new Map<string, { price?: number; isBlocked?: boolean }>();
+    if (selectedUnit.datePricing) {
+      for (const dp of selectedUnit.datePricing) {
+        const key = new Date(dp.date).toISOString().slice(0, 10);
+        dateOverrides.set(key, dp);
+      }
+    }
+
     let sum = 0;
+    let hasBlockedDate = false;
     const start = new Date(checkIn);
     for (let i = 0; i < nights; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      sum += selectedUnit.pricing[dayNames[d.getDay()]] || 0;
+      const dateKey = d.toISOString().slice(0, 10);
+      const override = dateOverrides.get(dateKey);
+
+      if (override?.isBlocked) {
+        hasBlockedDate = true;
+        break;
+      }
+
+      if (override?.price != null && override.price > 0) {
+        sum += override.price;
+      } else {
+        sum += selectedUnit.pricing[dayNames[d.getDay()]] || 0;
+      }
     }
-    subtotal = sum;
-    pricePerNight = Math.round(sum / nights);
+
+    if (hasBlockedDate) {
+      // Some dates are blocked — show 0 and the UI will handle it
+      subtotal = 0;
+      pricePerNight = 0;
+    } else {
+      subtotal = sum;
+      pricePerNight = Math.round(sum / nights);
+    }
     cleaningFee = selectedUnit.pricing.cleaningFee || 0;
     let discPct = selectedUnit.pricing.discountPercent || 0;
     if (nights >= 7 && (selectedUnit.pricing.weeklyDiscount || 0) > discPct) {
@@ -109,11 +159,11 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
     }
     discount = discPct > 0 ? Math.round(subtotal * (discPct / 100)) : 0;
   } else {
-    pricePerNight = property.pricing.perNight;
+    pricePerNight = property.pricing?.perNight ?? 0;
     subtotal = nights * pricePerNight;
-    cleaningFee = property.pricing.cleaningFee || 0;
-    discount = property.pricing.discountPercent > 0
-      ? Math.round(subtotal * (property.pricing.discountPercent / 100))
+    cleaningFee = property.pricing?.cleaningFee || 0;
+    discount = (property.pricing?.discountPercent ?? 0) > 0
+      ? Math.round(subtotal * ((property.pricing?.discountPercent ?? 0) / 100))
       : 0;
   }
 
@@ -137,7 +187,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
         : `Minimum stay is ${getNightLabel(property.rules.minNights, 'en')}`);
       return;
     }
-    const maxGuestsAllowed = selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests;
+    const maxGuestsAllowed = selectedUnit?.capacity?.maxGuests || property.capacity?.maxGuests || 10;
     if (guests > maxGuestsAllowed) {
       toast.error(isAr ? `الحد الأقصى ${getGuestLabel(maxGuestsAllowed, 'ar')}` : `Maximum ${maxGuestsAllowed} guests allowed`);
       return;
@@ -189,9 +239,9 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
     router.push(`/booking/${property._id}`);
   };
 
-  const displayPrice = property.pricing.discountPercent > 0
-    ? getDiscountedPrice(property.pricing.perNight, property.pricing.discountPercent)
-    : property.pricing.perNight;
+  const displayPrice = (property.pricing?.discountPercent ?? 0) > 0
+    ? getDiscountedPrice(property.pricing?.perNight ?? 0, property.pricing?.discountPercent ?? 0)
+    : property.pricing?.perNight ?? 0;
   const nightLabel = getNightLabel(nights, language as 'en' | 'ar');
 
   return (
@@ -199,13 +249,13 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       {/* Price header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          {property.pricing.discountPercent > 0 ? (
+          {(property.pricing?.discountPercent ?? 0) > 0 ? (
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold text-primary-600" dir="ltr">
                 <SarSymbol /> {formatPriceNumber(displayPrice)}
               </span>
               <span className="text-base text-gray-400 line-through" dir="ltr">
-                <SarSymbol /> {formatPriceNumber(property.pricing.perNight)}
+                <SarSymbol /> {formatPriceNumber(property.pricing?.perNight ?? 0)}
               </span>
               <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
             </div>
@@ -218,17 +268,17 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
             </div>
           )}
         </div>
-        {property.ratings.count > 0 && (
+        {(property.ratings?.count ?? 0) > 0 && (
           <StarRating
-            rating={property.ratings.average}
-            count={property.ratings.count}
+            rating={property.ratings?.average ?? 0}
+            count={property.ratings?.count ?? 0}
             size="sm"
           />
         )}
       </div>
 
-      {/* Unit selector (only shown when property has units) */}
-      {units.length > 0 && (
+      {/* Unit selector (only shown when property has units and no specific unit was pre-selected) */}
+      {units.length > 0 && !initialUnitId && (
         <div className="mb-3">
           <label className="block text-xs font-semibold text-gray-500 mb-1.5">
             {isAr ? 'اختر الوحدة' : 'Select Unit'}
@@ -299,6 +349,10 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
                   }
                   return dates;
                 }),
+                ...(selectedUnit?.datePricing || [])
+                  .filter(dp => dp.isBlocked)
+                  .map(dp => new Date(dp.date).toISOString().slice(0, 10)),
+                ...unitBookedDates,
               ]}
             />
           </div>
@@ -317,7 +371,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
                 <Minus className="w-3 h-3" />
               </button>
               <span className="w-5 text-center text-sm font-medium">{adults}</span>
-              <button type="button" onClick={() => setAdults((a) => Math.min((selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests) - children, a + 1))} disabled={guests >= (selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests)}
+              <button type="button" onClick={() => setAdults((a) => Math.min((selectedUnit?.capacity?.maxGuests || property.capacity?.maxGuests || 10) - children, a + 1))} disabled={guests >= (selectedUnit?.capacity?.maxGuests || property.capacity?.maxGuests || 10)}
                 className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Plus className="w-3 h-3" />
               </button>
@@ -335,7 +389,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
                 <Minus className="w-3 h-3" />
               </button>
               <span className="w-5 text-center text-sm font-medium">{children}</span>
-              <button type="button" onClick={() => setChildren((c) => Math.min((selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests) - adults, c + 1))} disabled={guests >= (selectedUnit?.capacity?.maxGuests || property.capacity.maxGuests)}
+              <button type="button" onClick={() => setChildren((c) => Math.min((selectedUnit?.capacity?.maxGuests || property.capacity?.maxGuests || 10) - adults, c + 1))} disabled={guests >= (selectedUnit?.capacity?.maxGuests || property.capacity?.maxGuests || 10)}
                 className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary-400 hover:text-primary-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Plus className="w-3 h-3" />
               </button>
@@ -343,6 +397,29 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
           </div>
         </div>
       </div>
+
+      {/* Blocked dates warning */}
+      {(() => {
+        if (!selectedUnit?.datePricing || !checkIn || !checkOut || nights <= 0) return null;
+        const dateOverrides = new Map<string, { price?: number; isBlocked?: boolean }>();
+        for (const dp of selectedUnit.datePricing) {
+          const key = new Date(dp.date).toISOString().slice(0, 10);
+          dateOverrides.set(key, dp);
+        }
+        const start = new Date(checkIn);
+        for (let i = 0; i < nights; i++) {
+          const d = new Date(start);
+          d.setDate(d.getDate() + i);
+          if (dateOverrides.get(d.toISOString().slice(0, 10))?.isBlocked) {
+            return (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 mb-3">
+                {isAr ? 'بعض التواريخ المحددة غير متاحة. يرجى اختيار تواريخ أخرى.' : 'Some selected dates are unavailable. Please choose different dates.'}
+              </div>
+            );
+          }
+        }
+        return null;
+      })()}
 
       {/* Min nights warning */}
       {property.rules?.minNights > 1 && nights > 0 && nights < property.rules.minNights && (
@@ -398,8 +475,8 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       )}
 
       {/* BNPL widget when no dates selected — show based on per-night price */}
-      {nights === 0 && property.pricing.perNight > 0 && property.pricing.perNight <= 5000 && (
-        <BnplWidget total={property.pricing.perNight} />
+      {nights === 0 && (property.pricing?.perNight ?? 0) > 0 && (property.pricing?.perNight ?? 0) <= 5000 && (
+        <BnplWidget total={property.pricing?.perNight ?? 0} />
       )}
     </div>
   );
