@@ -32,15 +32,15 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
     mutationFn: () => hostService.submitNps(rating!, comment || undefined),
     onSuccess: () => {
       Alert.alert(
-        '\u0634\u0643\u0631\u0627\u064b \u0644\u0643',
-        '\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u062a\u0642\u064a\u064a\u0645\u0643 \u0628\u0646\u062c\u0627\u062d',
-        [{ text: '\u062d\u0633\u0646\u0627\u064b', onPress: handleClose }],
+        'شكراً لك',
+        'تم إرسال تقييمك بنجاح',
+        [{ text: 'حسناً', onPress: handleClose }],
       );
     },
     onError: () => {
       Alert.alert(
-        '\u062e\u0637\u0623',
-        '\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062a\u0642\u064a\u064a\u0645. \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.',
+        'خطأ',
+        'حدث خطأ أثناء إرسال التقييم. حاول مرة أخرى.',
       );
     },
   });
@@ -84,12 +84,12 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
 
                 {/* Title */}
                 <Text style={styles.title}>
-                  {'\u0642\u064a\u0651\u0645 \u062a\u062c\u0631\u0628\u062a\u0643 \u0645\u0639 \u0645\u0646\u0635\u0629 \u062d\u0633\u0651\u0646'}
+                  {'قيّم تجربتك مع منصة حسّن'}
                 </Text>
 
                 {/* Question 1 */}
                 <Text style={styles.question}>
-                  {'\u0645\u0627 \u0645\u062f\u0649 \u0627\u062d\u062a\u0645\u0627\u0644\u064a\u0629 \u0623\u0646 \u062a\u0648\u0635\u064a \u0628\u0645\u0646\u0635\u0629 \u062d\u0633\u0651\u0646 \u0644\u0645\u0636\u064a\u0641 \u0622\u062e\u0631\u061f'}
+                  {'ما مدى احتمالية أن توصي بمنصة حسّن لمضيف آخر؟'}
                 </Text>
 
                 {/* Rating Scale */}
@@ -122,22 +122,22 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
                 {/* Rating Labels */}
                 <View style={styles.ratingLabels}>
                   <Text style={styles.ratingLabel}>
-                    {'\u0637\u0628\u0639\u0627\u064b \u0623\u0648\u0635\u064a'}
+                    {'طبعاً أوصي'}
                   </Text>
                   <Text style={styles.ratingLabel}>
-                    {'\u0645\u0633\u062a\u062d\u064a\u0644 \u0623\u0648\u0635\u064a'}
+                    {'مستحيل أوصي'}
                   </Text>
                 </View>
 
                 {/* Question 2 */}
                 <Text style={styles.question}>
-                  {'\u0645\u0627 \u0627\u0644\u0634\u064a\u0621 \u0627\u0644\u0630\u064a \u0633\u064a\u062f\u0641\u0639\u0643 \u0644\u0645\u0646\u062d \u0645\u0646\u0635\u0629 \u062d\u0633\u0651\u0646 \u062f\u0631\u062c\u0629 \u0623\u0639\u0644\u0649\u061f'}
+                  {'ما الشيء الذي سيدفعك لمنح منصة حسّن درجة أعلى؟'}
                 </Text>
 
                 {/* Comment Input */}
                 <TextInput
                   style={styles.textInput}
-                  placeholder={'\u0627\u0643\u062a\u0628 \u0647\u0646\u0627 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)'}
+                  placeholder={'اكتب هنا (اختياري)'}
                   placeholderTextColor={Colors.textTertiary}
                   value={comment}
                   onChangeText={setComment}
@@ -161,7 +161,7 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
                     <ActivityIndicator color={Colors.textWhite} />
                   ) : (
                     <Text style={styles.submitButtonText}>
-                      {'\u0625\u0631\u0633\u0627\u0644'}
+                      {'إرسال'}
                     </Text>
                   )}
                 </TouchableOpacity>

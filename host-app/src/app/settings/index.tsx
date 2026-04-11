@@ -17,17 +17,17 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    label: '\u0645\u062F\u0631\u0627\u0621 \u0627\u0644\u062D\u062C\u0648\u0632\u0627\u062A',
+    label: 'مدراء الحجوزات',
     icon: 'people-outline',
     route: '/settings/managers',
   },
   {
-    label: '\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062D\u062C\u0632',
+    label: 'إعدادات الحجز',
     icon: 'calendar-outline',
     route: '/settings/booking-rules',
   },
   {
-    label: '\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629',
+    label: 'ضريبة القيمة المضافة',
     icon: 'receipt-outline',
     route: '/settings/vat',
   },
@@ -44,26 +44,26 @@ export default function SettingsScreen() {
       router.replace('/(auth)/onboarding' as any);
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u062D\u0633\u0627\u0628');
+      Alert.alert('خطأ', 'حدث خطأ أثناء حذف الحساب');
     },
   });
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '\u062D\u0630\u0641 \u0627\u0644\u062D\u0633\u0627\u0628',
-      '\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F\u061F \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647.',
+      'حذف الحساب',
+      'هل أنت متأكد؟ هذا الإجراء لا يمكن التراجع عنه.',
       [
-        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+        { text: 'إلغاء', style: 'cancel' },
         {
-          text: '\u062D\u0630\u0641',
+          text: 'حذف',
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              '\u062A\u0623\u0643\u064A\u062F \u0646\u0647\u0627\u0626\u064A',
-              '\u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u062D\u0633\u0627\u0628\u0643 \u0648\u062C\u0645\u064A\u0639 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0628\u0634\u0643\u0644 \u0646\u0647\u0627\u0626\u064A. \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F',
+              'تأكيد نهائي',
+              'سيتم حذف حسابك وجميع بياناتك بشكل نهائي. هل تريد المتابعة؟',
               [
-                { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
-                { text: '\u062D\u0630\u0641 \u0646\u0647\u0627\u0626\u064A', style: 'destructive', onPress: () => deleteMutation.mutate() },
+                { text: 'إلغاء', style: 'cancel' },
+                { text: 'حذف نهائي', style: 'destructive', onPress: () => deleteMutation.mutate() },
               ],
             );
           },
@@ -74,7 +74,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.surface}>
-      <HeaderBar title={'\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A'} showBack />
+      <HeaderBar title={'الإعدادات'} showBack />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
           {menuItems.map((item) => (
@@ -105,7 +105,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="trash-outline" size={20} color={Colors.error} />
             <Text style={styles.deleteButtonText}>
-              {deleteMutation.isPending ? '\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0630\u0641...' : '\u062D\u0630\u0641 \u0627\u0644\u062D\u0633\u0627\u0628'}
+              {deleteMutation.isPending ? 'جاري الحذف...' : 'حذف الحساب'}
             </Text>
           </TouchableOpacity>
         </View>

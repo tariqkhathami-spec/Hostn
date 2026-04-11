@@ -10,9 +10,9 @@ import { hostService } from '../../services/host.service';
 import type { SupportInfo } from '../../types';
 
 const FALLBACK_SUPPORT: SupportInfo = {
-  hoursStart: '10 \u0635\u0628\u0627\u062D\u0627\u064B',
-  hoursEnd: '12 \u0645\u0646\u062A\u0635\u0641 \u0627\u0644\u0644\u064A\u0644',
-  days: '\u0637\u0648\u0627\u0644 \u0623\u064A\u0627\u0645 \u0627\u0644\u0623\u0633\u0628\u0648\u0639',
+  hoursStart: '10 صباحاً',
+  hoursEnd: '12 منتصف الليل',
+  days: 'طوال أيام الأسبوع',
   phone: '920007858',
 };
 
@@ -30,7 +30,7 @@ export default function ContactScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={'\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627'} showBack />
+      <HeaderBar title={'تواصل معنا'} showBack />
 
       <ScrollView
         style={styles.scrollView}
@@ -42,9 +42,9 @@ export default function ContactScreen() {
           <View style={styles.iconCircle}>
             <Ionicons name="happy-outline" size={64} color={Colors.primary} />
           </View>
-          <Text style={styles.heroTitle}>{'\u0646\u062E\u062F\u0645\u0643 \u0628\u0639\u064A\u0648\u0646\u0646\u0627'}</Text>
+          <Text style={styles.heroTitle}>{'نخدمك بعيوننا'}</Text>
           <Text style={styles.hoursText}>
-            {'\u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644: '}{support.hoursStart}{' - '}{support.hoursEnd}
+            {'ساعات العمل: '}{support.hoursStart}{' - '}{support.hoursEnd}
           </Text>
         </View>
 
@@ -59,10 +59,10 @@ export default function ContactScreen() {
             <View style={[styles.cardIconCircle, { backgroundColor: Colors.primary100 }]}>
               <Ionicons name="chatbubbles-outline" size={32} color={Colors.primary} />
             </View>
-            <Text style={styles.cardTitle}>{'\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A'}</Text>
-            <Text style={styles.cardDescription}>{'\u062A\u062D\u062F\u062B \u0645\u0639\u0646\u0627 \u0645\u0628\u0627\u0634\u0631\u0629'}</Text>
+            <Text style={styles.cardTitle}>{'المحادثات'}</Text>
+            <Text style={styles.cardDescription}>{'تحدث معنا مباشرة'}</Text>
             <View style={[styles.cardButton, { backgroundColor: Colors.primary }]}>
-              <Text style={styles.cardButtonText}>{'\u0627\u0628\u062F\u0623 \u0645\u062D\u0627\u062F\u062B\u0629'}</Text>
+              <Text style={styles.cardButtonText}>{'ابدأ محادثة'}</Text>
               <Ionicons name="arrow-back" size={16} color={Colors.textWhite} />
             </View>
           </TouchableOpacity>
@@ -76,10 +76,10 @@ export default function ContactScreen() {
             <View style={[styles.cardIconCircle, { backgroundColor: '#dcfce7' }]}>
               <Ionicons name="call-outline" size={32} color={Colors.success} />
             </View>
-            <Text style={styles.cardTitle}>{'\u0645\u0631\u0643\u0632 \u0627\u0644\u0627\u062A\u0635\u0627\u0644'}</Text>
+            <Text style={styles.cardTitle}>{'مركز الاتصال'}</Text>
             <Text style={styles.cardPhone}>{formattedPhone}</Text>
             <View style={[styles.cardButton, { backgroundColor: Colors.success }]}>
-              <Text style={styles.cardButtonText}>{'\u0627\u062A\u0635\u0644 \u0627\u0644\u0622\u0646'}</Text>
+              <Text style={styles.cardButtonText}>{'اتصل الآن'}</Text>
               <Ionicons name="call" size={16} color={Colors.textWhite} />
             </View>
           </TouchableOpacity>

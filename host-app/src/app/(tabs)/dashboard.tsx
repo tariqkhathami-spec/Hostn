@@ -195,25 +195,25 @@ export default function DashboardScreen() {
               {
                 icon: 'business-outline' as const,
                 value: stats.totalProperties ?? 0,
-                label: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062A',
+                label: 'إجمالي العقارات',
                 color: Colors.primary,
               },
               {
                 icon: 'calendar-outline' as const,
                 value: stats.activeBookings ?? 0,
-                label: '\u0627\u0644\u062D\u062C\u0648\u0632\u0627\u062A \u0627\u0644\u0646\u0634\u0637\u0629',
+                label: 'الحجوزات النشطة',
                 color: Colors.success,
               },
               {
                 icon: 'wallet-outline' as const,
-                value: `${(stats.totalEarnings ?? 0).toLocaleString('en-US')} \u0631\u064A\u0627\u0644`,
-                label: '\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D',
+                value: `${(stats.totalEarnings ?? 0).toLocaleString('en-US')} ريال`,
+                label: 'إجمالي الأرباح',
                 color: Colors.gold500,
               },
               {
                 icon: 'star-outline' as const,
                 value: stats.averageRating ?? '-',
-                label: '\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u062A\u0642\u064A\u064A\u0645',
+                label: 'متوسط التقييم',
                 color: Colors.warning,
               },
             ].map((stat) => (
@@ -251,7 +251,7 @@ export default function DashboardScreen() {
             <View style={styles.weeklyBannerTextContainer}>
               <Text style={styles.weeklyBannerTitle}>{t('dashboard.reports')}</Text>
               <Text style={styles.weeklyBannerSubtitle}>
-                {'\u062A\u0642\u0631\u064A\u0631 \u0623\u062F\u0627\u0621 \u0623\u0633\u0628\u0648\u0639'} {dateStr}
+                {'تقرير أداء أسبوع'} {dateStr}
               </Text>
             </View>
 
@@ -265,9 +265,9 @@ export default function DashboardScreen() {
         {/* Ambassador Section */}
         <View style={styles.sectionRow}>
           <TouchableOpacity onPress={() => router.push('/program' as any)}>
-            <Text style={styles.sectionLink}>{'\u0627\u0644\u0643\u0644'}</Text>
+            <Text style={styles.sectionLink}>{'الكل'}</Text>
           </TouchableOpacity>
-          <Text style={styles.sectionTitle}>{'\u0633\u0641\u064A\u0631 \u0647\u0648\u0633\u062A\u0646'}</Text>
+          <Text style={styles.sectionTitle}>{'سفير هوستن'}</Text>
         </View>
 
         <TouchableOpacity
@@ -286,12 +286,12 @@ export default function DashboardScreen() {
               />
             </View>
             <Text style={styles.ambassadorTitle}>
-              {ambassadorStatus?.nameAr ?? '\u0633\u0641\u064A\u0631 \u0627\u0633\u0627\u0633\u064A'}
+              {ambassadorStatus?.nameAr ?? 'سفير اساسي'}
             </Text>
             <Text style={styles.ambassadorDesc}>
               {ambassadorStatus?.bonusPoints != null
-                ? `${ambassadorStatus.bonusPoints} \u0646\u0642\u0637\u0629`
-                : '\u062A\u0627\u0628\u0639 \u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0623\u062F\u0627\u0621 \u0648\u0627\u0631\u0642\u0649 \u0625\u0644\u0649 \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u0623\u0639\u0644\u0649'}
+                ? `${ambassadorStatus.bonusPoints} نقطة`
+                : 'تابع مؤشرات الأداء وارقى إلى مستويات أعلى'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -299,14 +299,14 @@ export default function DashboardScreen() {
         {/* Points Section */}
         <View style={styles.sectionRow}>
           <View />
-          <Text style={styles.sectionTitle}>{'\u0646\u0642\u0627\u0637 \u0648\u062D\u062F\u062A\u0643'}</Text>
+          <Text style={styles.sectionTitle}>{'نقاط وحدتك'}</Text>
         </View>
         <Card style={styles.pointsCard}>
           <View style={styles.pointsContent}>
             <View style={styles.pointsTextContainer}>
-              <Text style={styles.pointsMainText}>{'\u062A\u062A\u062D\u062F\u062B \u064A\u0648\u0645\u064A\u0627\u064B'}</Text>
+              <Text style={styles.pointsMainText}>{'تتحدث يومياً'}</Text>
               <Text style={styles.pointsNote}>
-                {'\u062A\u0636\u0627\u0641 \u0627\u0644\u0646\u0642\u0627\u0637 \u062E\u0644\u0627\u0644 24 \u0633\u0627\u0639\u0629 \u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0639\u0631\u0636 \u0627\u0644\u0639\u0642\u0627\u0631'}
+                {'تضاف النقاط خلال 24 ساعة من تاريخ عرض العقار'}
               </Text>
             </View>
             <View style={styles.pointsIconCircle}>
@@ -348,7 +348,7 @@ export default function DashboardScreen() {
             />
           ))
         ) : (
-          <EmptyState message={'\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u062C\u0648\u0632\u0627\u062A \u062D\u062F\u064A\u062B\u0629'} icon="calendar-outline" />
+          <EmptyState message={'لا توجد حجوزات حديثة'} icon="calendar-outline" />
         )}
 
         {/* Upcoming Guests */}
@@ -367,7 +367,7 @@ export default function DashboardScreen() {
             />
           ))
         ) : (
-          <EmptyState message={'\u0644\u0627 \u064A\u0648\u062C\u062F \u0644\u062F\u064A\u0643 \u0636\u064A\u0648\u0641 \u0642\u0627\u062F\u0645\u064A\u0646'} icon="heart-outline" />
+          <EmptyState message={'لا يوجد لديك ضيوف قادمين'} icon="heart-outline" />
         )}
 
         {/* Recent Transfers */}
@@ -382,7 +382,7 @@ export default function DashboardScreen() {
             <TransferCard key={transfer.id} transfer={transfer} />
           ))
         ) : (
-          <EmptyState message={'\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0648\u0627\u0644\u0627\u062A \u062D\u062F\u064A\u062B\u0629'} icon="swap-horizontal-outline" />
+          <EmptyState message={'لا توجد حوالات حديثة'} icon="swap-horizontal-outline" />
         )}
 
         {/* Recent Reviews */}
@@ -397,12 +397,12 @@ export default function DashboardScreen() {
             <ReviewCard key={review.id} review={review} />
           ))
         ) : (
-          <EmptyState message={'\u0644\u0627 \u062A\u0648\u062C\u062F \u062A\u0642\u064A\u064A\u0645\u0627\u062A \u062D\u062F\u064A\u062B\u0629'} icon="star-outline" />
+          <EmptyState message={'لا توجد تقييمات حديثة'} icon="star-outline" />
         )}
 
         {/* Recent Reports */}
         <SectionHeader title={t('dashboard.recentReports')} />
-        <EmptyState message={'\u0644\u0627 \u062A\u0648\u062C\u062F \u0644\u062F\u064A\u0643 \u0628\u0644\u0627\u063A\u0627\u062A'} icon="flag-outline" />
+        <EmptyState message={'لا توجد لديك بلاغات'} icon="flag-outline" />
 
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>

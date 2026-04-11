@@ -158,19 +158,19 @@ export default function CalendarScreen() {
       queryClient.invalidateQueries({ queryKey: ['hostCalendar'] });
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0642\u0648\u064A\u0645');
+      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث التقويم');
     },
   });
 
   const handleDayPress = React.useCallback(
     (unitId: string, propertyId: string, day: number, isBlocked: boolean) => {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const actionLabel = isBlocked ? '\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u062D\u0638\u0631' : '\u062D\u0638\u0631 \u0627\u0644\u062A\u0627\u0631\u064A\u062E';
+      const actionLabel = isBlocked ? 'إلغاء الحظر' : 'حظر التاريخ';
       const message = isBlocked
-        ? `\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u0644\u063A\u0627\u0621 \u062D\u0638\u0631 \u064A\u0648\u0645 ${day}\u061F`
-        : `\u0647\u0644 \u062A\u0631\u064A\u062F \u062D\u0638\u0631 \u064A\u0648\u0645 ${day}\u061F`;
+        ? `هل تريد إلغاء حظر يوم ${day}؟`
+        : `هل تريد حظر يوم ${day}؟`;
       Alert.alert(actionLabel, message, [
-        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+        { text: 'إلغاء', style: 'cancel' },
         {
           text: actionLabel,
           onPress: () => blockMutation.mutate({ propertyId, date: dateStr, block: !isBlocked }),
@@ -215,13 +215,13 @@ export default function CalendarScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{'\u0627\u0644\u062A\u0642\u0648\u064A\u0645'}</Text>
+        <Text style={styles.headerTitle}>{'التقويم'}</Text>
       </View>
 
       {/* Toggle row */}
       <View style={styles.toggleRow}>
         <Text style={styles.toggleLabel}>
-          {'\u0639\u0631\u0636 \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629 \u0641\u0642\u0637'}
+          {'عرض الوحدات المعروضة فقط'}
         </Text>
         <Switch
           value={listedOnly}
@@ -239,12 +239,12 @@ export default function CalendarScreen() {
       {/* Block hint */}
       <View style={styles.hintRow}>
         <Ionicons name="information-circle-outline" size={16} color={Colors.textTertiary} />
-        <Text style={styles.hintText}>{'\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0644\u062D\u0638\u0631\u0647'}</Text>
+        <Text style={styles.hintText}>{'اضغط على التاريخ لحظره'}</Text>
         <View style={styles.legendRow}>
           <View style={[styles.legendDot, { backgroundColor: Colors.primary }]} />
-          <Text style={styles.legendText}>{'\u0645\u062D\u062C\u0648\u0632'}</Text>
+          <Text style={styles.legendText}>{'محجوز'}</Text>
           <View style={[styles.legendDot, { backgroundColor: Colors.error }]} />
-          <Text style={styles.legendText}>{'\u0645\u062D\u0638\u0648\u0631'}</Text>
+          <Text style={styles.legendText}>{'محظور'}</Text>
         </View>
       </View>
 

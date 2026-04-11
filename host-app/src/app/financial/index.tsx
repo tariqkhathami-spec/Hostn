@@ -36,7 +36,7 @@ export default function FinancialMenuScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title="\u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629" showBack />
+      <HeaderBar title="المعاملات المالية" showBack />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Earnings Summary Card */}
         <View style={styles.earningsCard}>
@@ -47,10 +47,10 @@ export default function FinancialMenuScreen() {
             <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.sm }} />
           ) : (
             <Text style={styles.earningsAmount}>
-              {(totalEarnings ?? 0).toLocaleString('en-US')} {'\u0631\u064A\u0627\u0644'}
+              {(totalEarnings ?? 0).toLocaleString('en-US')} {'ريال'}
             </Text>
           )}
-          <Text style={styles.earningsLabel}>{'\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D'}</Text>
+          <Text style={styles.earningsLabel}>{'إجمالي الأرباح'}</Text>
         </View>
 
         {menuItems.map((item, index) => (

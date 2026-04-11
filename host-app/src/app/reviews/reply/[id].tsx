@@ -20,8 +20,8 @@ import ScreenWrapper from '../../../components/layout/ScreenWrapper';
 import HeaderBar from '../../../components/layout/HeaderBar';
 
 const QUICK_REPLIES = [
-  'شكرا\u064B لتقييمك',
-  'نسعد بخدمتكم دائما\u064B',
+  'شكراً لتقييمك',
+  'نسعد بخدمتكم دائماً',
   'مروركم الجميل أسعدنا',
   'فرصة سعيدة لاستضافتكم',
   'نعتذر عن أي إزعاج',

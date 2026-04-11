@@ -65,7 +65,7 @@ export default function BookingRulesScreen() {
       closeModal();
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0642\u0627\u0639\u062F\u0629. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+      Alert.alert('خطأ', 'فشل إضافة القاعدة. حاول مرة أخرى.');
     },
   });
 
@@ -75,7 +75,7 @@ export default function BookingRulesScreen() {
       queryClient.invalidateQueries({ queryKey: ['bookingRules'] });
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0642\u0627\u0639\u062F\u0629. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+      Alert.alert('خطأ', 'فشل حذف القاعدة. حاول مرة أخرى.');
     },
   });
 
@@ -87,11 +87,11 @@ export default function BookingRulesScreen() {
   const handleSave = () => {
     const minNights = parseInt(form.minNights, 10);
     if (isNaN(minNights) || minNights < 1) {
-      Alert.alert('\u062E\u0637\u0623', '\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0639\u062F\u062F \u0644\u064A\u0627\u0644\u064A \u0635\u062D\u064A\u062D');
+      Alert.alert('خطأ', 'يرجى إدخال عدد ليالي صحيح');
       return;
     }
     if (!form.applyToAll && !form.unitId) {
-      Alert.alert('\u062E\u0637\u0623', '\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0629');
+      Alert.alert('خطأ', 'يرجى اختيار الوحدة');
       return;
     }
     const payload: Record<string, unknown> = {
@@ -104,12 +104,12 @@ export default function BookingRulesScreen() {
 
   const handleDelete = (rule: BookingRule) => {
     Alert.alert(
-      '\u062D\u0630\u0641 \u0627\u0644\u0642\u0627\u0639\u062F\u0629',
-      '\u0647\u0644 \u062A\u0631\u064A\u062F \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0642\u0627\u0639\u062F\u0629\u061F',
+      'حذف القاعدة',
+      'هل تريد حذف هذه القاعدة؟',
       [
-        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+        { text: 'إلغاء', style: 'cancel' },
         {
-          text: '\u062D\u0630\u0641',
+          text: 'حذف',
           style: 'destructive',
           onPress: () => deleteMutation.mutate(rule.id),
         },
@@ -123,13 +123,13 @@ export default function BookingRulesScreen() {
         <View style={styles.ruleHeader}>
           <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
           <Text style={styles.ruleName}>
-            {item.applyToAll ? '\u062C\u0645\u064A\u0639 \u0627\u0644\u0648\u062D\u062F\u0627\u062A' : item.unitName || '\u0648\u062D\u062F\u0629 \u0645\u062D\u062F\u062F\u0629'}
+            {item.applyToAll ? 'جميع الوحدات' : item.unitName || 'وحدة محددة'}
           </Text>
         </View>
         <View style={styles.nightsRow}>
           <Ionicons name="moon-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.nightsText}>
-            {'\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u062F\u0646\u0649: '}{item.minNights}{' \u0644\u064A\u0627\u0644\u064A'}
+            {'الحد الأدنى: '}{item.minNights}{' ليالي'}
           </Text>
         </View>
       </View>
@@ -142,7 +142,7 @@ export default function BookingRulesScreen() {
   return (
     <ScreenWrapper backgroundColor={Colors.surface}>
       <HeaderBar
-        title={'\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062D\u062C\u0632'}
+        title={'إعدادات الحجز'}
         showBack
         fallbackRoute="/settings"
         rightActions={
@@ -170,7 +170,7 @@ export default function BookingRulesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={48} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>{'\u0644\u0627 \u062A\u0648\u062C\u062F \u0642\u0648\u0627\u0639\u062F \u062D\u062C\u0632'}</Text>
+              <Text style={styles.emptyText}>{'لا توجد قواعد حجز'}</Text>
             </View>
           }
         />
@@ -181,14 +181,14 @@ export default function BookingRulesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{'\u0623\u0636\u0641 \u0642\u0627\u0639\u062F\u0629'}</Text>
+              <Text style={styles.modalTitle}>{'أضف قاعدة'}</Text>
               <TouchableOpacity onPress={closeModal}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.switchRow}>
-              <Text style={styles.formLabel}>{'\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0627\u0644\u0648\u062D\u062F\u0627\u062A'}</Text>
+              <Text style={styles.formLabel}>{'تطبيق على جميع الوحدات'}</Text>
               <Switch
                 value={form.applyToAll}
                 onValueChange={(val) =>
@@ -201,7 +201,7 @@ export default function BookingRulesScreen() {
 
             {!form.applyToAll && (
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{'\u0627\u062E\u062A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629'}</Text>
+                <Text style={styles.formLabel}>{'اختر الوحدة'}</Text>
                 <TouchableOpacity
                   style={styles.pickerButton}
                   onPress={() => setUnitPickerVisible(true)}
@@ -212,7 +212,7 @@ export default function BookingRulesScreen() {
                       !form.unitId && { color: Colors.textTertiary },
                     ]}
                   >
-                    {form.unitName || '\u0627\u062E\u062A\u0631 \u0648\u062D\u062F\u0629'}
+                    {form.unitName || 'اختر وحدة'}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
                 </TouchableOpacity>
@@ -220,7 +220,7 @@ export default function BookingRulesScreen() {
             )}
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{'\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u062F\u0646\u0649 \u0644\u0644\u064A\u0627\u0644\u064A'}</Text>
+              <Text style={styles.formLabel}>{'الحد الأدنى لليالي'}</Text>
               <TextInput
                 style={styles.input}
                 value={form.minNights}
@@ -241,7 +241,7 @@ export default function BookingRulesScreen() {
               {addMutation.isPending ? (
                 <ActivityIndicator size="small" color={Colors.textWhite} />
               ) : (
-                <Text style={styles.saveButtonText}>{'\u062D\u0641\u0638'}</Text>
+                <Text style={styles.saveButtonText}>{'حفظ'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -253,7 +253,7 @@ export default function BookingRulesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.pickerModal}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{'\u0627\u062E\u062A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629'}</Text>
+              <Text style={styles.modalTitle}>{'اختر الوحدة'}</Text>
               <TouchableOpacity onPress={() => setUnitPickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
@@ -286,7 +286,7 @@ export default function BookingRulesScreen() {
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={styles.pickerEmptyText}>{'\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u062D\u062F\u0627\u062A'}</Text>
+                <Text style={styles.pickerEmptyText}>{'لا توجد وحدات'}</Text>
               }
             />
           </View>

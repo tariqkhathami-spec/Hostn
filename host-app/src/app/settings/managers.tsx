@@ -54,7 +54,7 @@ export default function ManagersScreen() {
       closeModal();
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u062F\u064A\u0631. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+      Alert.alert('خطأ', 'فشل إضافة المدير. حاول مرة أخرى.');
     },
   });
 
@@ -66,7 +66,7 @@ export default function ManagersScreen() {
       closeModal();
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062F\u064A\u0631. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+      Alert.alert('خطأ', 'فشل تحديث بيانات المدير. حاول مرة أخرى.');
     },
   });
 
@@ -76,7 +76,7 @@ export default function ManagersScreen() {
       queryClient.invalidateQueries({ queryKey: ['managers'] });
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u062F\u064A\u0631. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+      Alert.alert('خطأ', 'فشل حذف المدير. حاول مرة أخرى.');
     },
   });
 
@@ -105,7 +105,7 @@ export default function ManagersScreen() {
 
   const handleSave = () => {
     if (!form.name.trim() || !form.phone.trim()) {
-      Alert.alert('\u062E\u0637\u0623', '\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0627\u0633\u0645 \u0648\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641');
+      Alert.alert('خطأ', 'يرجى إدخال الاسم ورقم الهاتف');
       return;
     }
     const payload: Record<string, unknown> = { ...form };
@@ -118,12 +118,12 @@ export default function ManagersScreen() {
 
   const handleDelete = (manager: ReservationManager) => {
     Alert.alert(
-      '\u062D\u0630\u0641 \u0627\u0644\u0645\u062F\u064A\u0631',
-      `\u0647\u0644 \u062A\u0631\u064A\u062F \u062D\u0630\u0641 ${manager.name}\u061F`,
+      'حذف المدير',
+      `هل تريد حذف ${manager.name}؟`,
       [
-        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+        { text: 'إلغاء', style: 'cancel' },
         {
-          text: '\u062D\u0630\u0641',
+          text: 'حذف',
           style: 'destructive',
           onPress: () => deleteMutation.mutate(manager.id),
         },
@@ -144,7 +144,7 @@ export default function ManagersScreen() {
           <Text style={styles.managerName}>{item.name}</Text>
           {item.isOwner && (
             <View style={styles.ownerBadge}>
-              <Text style={styles.ownerBadgeText}>{'\u0645\u0627\u0644\u0643'}</Text>
+              <Text style={styles.ownerBadgeText}>{'مالك'}</Text>
             </View>
           )}
         </View>
@@ -168,7 +168,7 @@ export default function ManagersScreen() {
             color={item.smsEnabled ? Colors.success : Colors.textTertiary}
           />
           <Text style={[styles.detailText, { color: item.smsEnabled ? Colors.success : Colors.textTertiary }]}>
-            {item.smsEnabled ? '\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0645\u0641\u0639\u0644\u0629' : '\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0645\u0639\u0637\u0644\u0629'}
+            {item.smsEnabled ? 'الرسائل مفعلة' : 'الرسائل معطلة'}
           </Text>
         </View>
 
@@ -190,7 +190,7 @@ export default function ManagersScreen() {
               { color: item.status === 'active' ? Colors.success : Colors.textTertiary },
             ]}
           >
-            {item.status === 'active' ? '\u0646\u0634\u0637' : '\u063A\u064A\u0631 \u0646\u0634\u0637'}
+            {item.status === 'active' ? 'نشط' : 'غير نشط'}
           </Text>
         </View>
       </View>
@@ -200,7 +200,7 @@ export default function ManagersScreen() {
   return (
     <ScreenWrapper backgroundColor={Colors.surface}>
       <HeaderBar
-        title={'\u0645\u062F\u0631\u0627\u0621 \u0627\u0644\u062D\u062C\u0648\u0632\u0627\u062A'}
+        title={'مدراء الحجوزات'}
         showBack
         fallbackRoute="/settings"
         rightActions={
@@ -228,7 +228,7 @@ export default function ManagersScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={48} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>{'\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u062F\u0631\u0627\u0621 \u062D\u062C\u0648\u0632\u0627\u062A'}</Text>
+              <Text style={styles.emptyText}>{'لا يوجد مدراء حجوزات'}</Text>
             </View>
           }
         />
@@ -241,7 +241,7 @@ export default function ManagersScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingId ? '\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u062F\u064A\u0631' : '\u0623\u0636\u0641 \u0645\u062F\u064A\u0631'}
+                {editingId ? 'تعديل المدير' : 'أضف مدير'}
               </Text>
               <TouchableOpacity onPress={closeModal}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
@@ -249,19 +249,19 @@ export default function ManagersScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{'\u0627\u0644\u0627\u0633\u0645'}</Text>
+              <Text style={styles.formLabel}>{'الاسم'}</Text>
               <TextInput
                 style={styles.input}
                 value={form.name}
                 onChangeText={(text) => setForm((prev) => ({ ...prev, name: text }))}
-                placeholder={'\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u062F\u064A\u0631'}
+                placeholder={'أدخل اسم المدير'}
                 placeholderTextColor={Colors.textTertiary}
                 textAlign="right"
               />
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{'\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641'}</Text>
+              <Text style={styles.formLabel}>{'رقم الهاتف'}</Text>
               <TextInput
                 style={styles.input}
                 value={form.phone}
@@ -274,7 +274,7 @@ export default function ManagersScreen() {
             </View>
 
             <View style={styles.switchRow}>
-              <Text style={styles.formLabel}>{'\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0646\u0635\u064A\u0629'}</Text>
+              <Text style={styles.formLabel}>{'تفعيل الرسائل النصية'}</Text>
               <Switch
                 value={form.smsEnabled}
                 onValueChange={(val) => setForm((prev) => ({ ...prev, smsEnabled: val }))}
@@ -284,10 +284,10 @@ export default function ManagersScreen() {
             </View>
 
             <View style={styles.switchRow}>
-              <Text style={styles.formLabel}>{'\u0627\u0644\u062D\u0627\u0644\u0629'}</Text>
+              <Text style={styles.formLabel}>{'الحالة'}</Text>
               <View style={styles.statusToggle}>
                 <Text style={styles.statusToggleText}>
-                  {form.status === 'active' ? '\u0646\u0634\u0637' : '\u063A\u064A\u0631 \u0646\u0634\u0637'}
+                  {form.status === 'active' ? 'نشط' : 'غير نشط'}
                 </Text>
                 <Switch
                   value={form.status === 'active'}
@@ -309,7 +309,7 @@ export default function ManagersScreen() {
               {isSaving ? (
                 <ActivityIndicator size="small" color={Colors.textWhite} />
               ) : (
-                <Text style={styles.saveButtonText}>{'\u062D\u0641\u0638'}</Text>
+                <Text style={styles.saveButtonText}>{'حفظ'}</Text>
               )}
             </TouchableOpacity>
           </View>

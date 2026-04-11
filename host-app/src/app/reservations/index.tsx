@@ -54,28 +54,28 @@ export default function ReservationsScreen() {
       queryClient.invalidateQueries({ queryKey: ['upcomingGuests'] });
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062D\u0627\u0644\u0629');
+      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث الحالة');
     },
   });
 
   const handleAccept = useCallback((id: string) => {
     Alert.alert(
-      '\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0642\u0628\u0648\u0644',
-      '\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0642\u0628\u0648\u0644 \u0647\u0630\u0627 \u0627\u0644\u062D\u062C\u0632\u061F',
+      'تأكيد القبول',
+      'هل أنت متأكد من قبول هذا الحجز؟',
       [
-        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
-        { text: '\u0642\u0628\u0648\u0644', onPress: () => statusMutation.mutate({ id, status: 'confirmed' }) },
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'قبول', onPress: () => statusMutation.mutate({ id, status: 'confirmed' }) },
       ],
     );
   }, [statusMutation]);
 
   const handleDecline = useCallback((id: string) => {
     Alert.alert(
-      '\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0631\u0641\u0636',
-      '\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u0631\u0641\u0636 \u0647\u0630\u0627 \u0627\u0644\u062D\u062C\u0632\u061F',
+      'تأكيد الرفض',
+      'هل أنت متأكد من رفض هذا الحجز؟',
       [
-        { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
-        { text: '\u0631\u0641\u0636', style: 'destructive', onPress: () => statusMutation.mutate({ id, status: 'cancelled' }) },
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'رفض', style: 'destructive', onPress: () => statusMutation.mutate({ id, status: 'cancelled' }) },
       ],
     );
   }, [statusMutation]);
