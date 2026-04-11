@@ -546,7 +546,7 @@ function UnitDetailContent() {
 
             {/* Right column – Booking widget (still receives property for backward compat) */}
             <div className="lg:col-span-1">
-              <BookingWidget property={property} initialCheckIn={initialCheckIn} initialCheckOut={initialCheckOut} initialAdults={initialAdults} initialChildren={initialChildren} />
+              <BookingWidget property={property} initialUnitId={unit._id} initialCheckIn={initialCheckIn} initialCheckOut={initialCheckOut} initialAdults={initialAdults} initialChildren={initialChildren} />
             </div>
           </div>
         </div>
