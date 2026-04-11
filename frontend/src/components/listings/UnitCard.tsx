@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { CITIES, DISTRICTS } from '@/lib/constants';
 import { wishlistsApi } from '@/lib/api';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 
@@ -23,14 +23,33 @@ interface UnitCardProps {
 
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800';
 
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
 const avgPrice = (pricing?: Record<string, number>) => {
   if (!pricing) return 0;
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const prices = days.map(d => pricing[d] || 0).filter(p => p > 0);
+  const prices = DAY_KEYS.map(d => pricing[d] || 0).filter(p => p > 0);
   return prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
 };
 
-export default function UnitCard({ unit }: UnitCardProps) {
+/** Compute avg nightly price for selected dates (day-of-week aware) */
+const avgPriceForDates = (pricing: Record<string, number> | undefined, checkIn: string, checkOut: string): { avg: number; nights: number } => {
+  if (!pricing) return { avg: 0, nights: 0 };
+  const start = new Date(checkIn + 'T00:00:00');
+  const end = new Date(checkOut + 'T00:00:00');
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return { avg: avgPrice(pricing), nights: 0 };
+  let total = 0;
+  let nights = 0;
+  const current = new Date(start);
+  while (current < end) {
+    const dayName = DAY_KEYS[current.getDay()];
+    total += pricing[dayName] || 0;
+    nights++;
+    current.setDate(current.getDate() + 1);
+  }
+  return { avg: nights > 0 ? Math.round(total / nights) : 0, nights };
+};
+
+export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
   const { user, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
   const isAr = language === 'ar';
@@ -261,12 +280,22 @@ export default function UnitCard({ unit }: UnitCardProps) {
     return list.name;
   };
 
-  // Pricing
-  const basePrice = avgPrice(unit.pricing);
+  // Pricing — date-aware: if dates selected, compute avg nightly for those dates
+  const { basePrice, totalNights } = useMemo(() => {
+    if (checkIn && checkOut) {
+      const result = avgPriceForDates(unit.pricing, checkIn, checkOut);
+      return { basePrice: result.avg, totalNights: result.nights };
+    }
+    return { basePrice: avgPrice(unit.pricing), totalNights: 0 };
+  }, [unit.pricing, checkIn, checkOut]);
+
   const discountPct = unit.pricing?.discountPercent ?? 0;
   const discountedPrice = discountPct > 0 ? Math.round(basePrice * (1 - discountPct / 100)) : 0;
   const displayPrice = discountedPrice || basePrice;
-  const priceUnitLabel = t('property.perNight');
+  const priceUnitLabel = totalNights > 0
+    ? (isAr ? `/ ${totalNights} ${totalNights === 1 ? 'ليلة' : 'ليالي'}` : `/ ${totalNights} ${totalNights === 1 ? 'night' : 'nights'}`)
+    : t('property.perNight');
+  const totalPrice = totalNights > 0 ? displayPrice * totalNights : 0;
 
   // Ratings: prefer unit ratings, fall back to property ratings
   const ratings = unit.ratings?.count ? unit.ratings : property?.ratings;
@@ -407,18 +436,25 @@ export default function UnitCard({ unit }: UnitCardProps) {
           <div className="flex items-center justify-between">
             <div>
               {basePrice > 0 ? (
-                discountedPrice ? (
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                    <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
-                    <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                    <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                  </div>
-                )
+                <>
+                  {discountedPrice ? (
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                      <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
+                      <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                      <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                    </div>
+                  )}
+                  {totalPrice > 0 && (
+                    <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
+                      {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
+                    </div>
+                  )}
+                </>
               ) : null}
             </div>
             {(ratings?.count ?? 0) > 0 && ratings && (

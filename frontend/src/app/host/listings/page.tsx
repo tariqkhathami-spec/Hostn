@@ -389,7 +389,7 @@ export default function HostListingsPage() {
                                     {t.edit[lang]}
                                   </Link>
                                   <Link
-                                    href={`/host/listings/${property._id}/units/${unit._id}/pricing`}
+                                    href={`/host/listings/${property._id}/units/${unit._id}/calendar`}
                                     className="text-xs text-gray-500 hover:text-primary-600 transition-colors flex items-center gap-0.5"
                                   >
                                     <Calendar className="w-3 h-3" />

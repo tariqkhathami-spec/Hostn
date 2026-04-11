@@ -2,29 +2,39 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight, Grid3X3 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Grid3X3, Video } from 'lucide-react';
 import { PropertyImage } from '@/types';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ImageGalleryProps {
   images: PropertyImage[];
   title: string;
+  videoCount?: number;
+  onVideoClick?: () => void;
 }
 
-export default function ImageGallery({ images, title }: ImageGalleryProps) {
+export default function ImageGallery({ images, title, videoCount = 0, onVideoClick }: ImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
   const primaryImages = images.slice(0, 5);
 
   const prev = () => setCurrentIndex((i) => (i === 0 ? images.length - 1 : i - 1));
   const next = () => setCurrentIndex((i) => (i === images.length - 1 ? 0 : i + 1));
 
+  const openAtIndex = (index: number) => {
+    setCurrentIndex(index);
+    setLightboxOpen(true);
+  };
+
   return (
     <>
       {/* Grid layout */}
-      <div className="relative rounded-2xl overflow-hidden cursor-pointer" onClick={() => setLightboxOpen(true)}>
+      <div className="relative rounded-2xl overflow-hidden">
         {primaryImages.length === 1 ? (
-          <div className="aspect-[16/9] relative">
+          <div className="aspect-[16/9] relative cursor-pointer" onClick={() => openAtIndex(0)}>
             <Image
               src={primaryImages[0].url}
               alt={title}
@@ -37,7 +47,7 @@ export default function ImageGallery({ images, title }: ImageGalleryProps) {
         ) : (
           <div className="grid grid-cols-4 grid-rows-2 gap-2 h-80 md:h-96">
             {/* Main image */}
-            <div className="col-span-2 row-span-2 relative">
+            <div className="col-span-2 row-span-2 relative cursor-pointer" onClick={() => openAtIndex(0)}>
               <Image
                 src={primaryImages[0]?.url || ''}
                 alt={title}
@@ -47,9 +57,9 @@ export default function ImageGallery({ images, title }: ImageGalleryProps) {
                 unoptimized
               />
             </div>
-            {/* Side images */}
+            {/* Side images — each individually clickable */}
             {primaryImages.slice(1, 5).map((img, i) => (
-              <div key={i} className="relative">
+              <div key={i} className="relative cursor-pointer" onClick={() => openAtIndex(i + 1)}>
                 <Image
                   src={img.url}
                   alt={`${title} ${i + 2}`}
@@ -62,13 +72,27 @@ export default function ImageGallery({ images, title }: ImageGalleryProps) {
           </div>
         )}
 
-        {/* Show all button */}
-        {images.length > 5 && (
-          <button className="absolute bottom-4 right-4 bg-white text-gray-800 text-sm font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2 hover:bg-gray-50 transition-colors">
-            <Grid3X3 className="w-4 h-4" />
-            Show all {images.length} photos
-          </button>
-        )}
+        {/* Bottom-right buttons */}
+        <div className="absolute bottom-4 ltr:right-4 rtl:left-4 flex items-center gap-2">
+          {videoCount > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onVideoClick?.(); }}
+              className="bg-white text-gray-800 text-sm font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2 hover:bg-gray-50 transition-colors"
+            >
+              <Video className="w-4 h-4" />
+              {videoCount} {isAr ? 'فيديو' : videoCount === 1 ? 'Video' : 'Videos'}
+            </button>
+          )}
+          {images.length > 5 && (
+            <button
+              onClick={() => openAtIndex(0)}
+              className="bg-white text-gray-800 text-sm font-semibold px-4 py-2 rounded-xl shadow-md flex items-center gap-2 hover:bg-gray-50 transition-colors"
+            >
+              <Grid3X3 className="w-4 h-4" />
+              {isAr ? `عرض جميع ${images.length} صور` : `Show all ${images.length} photos`}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Lightbox */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
@@ -9,11 +9,11 @@ import ImageGallery from '@/components/property/ImageGallery';
 import AmenitiesList from '@/components/property/AmenitiesList';
 import ReviewsList from '@/components/property/ReviewsList';
 import BookingWidget from '@/components/property/BookingWidget';
-import { Unit, Property, User, AmenityType, PropertyImage } from '@/types';
-import { unitsApi, propertiesApi, publicHostApi } from '@/lib/api';
+import { Unit, Property, User, AmenityType, PropertyImage, WishlistList } from '@/types';
+import { unitsApi, propertiesApi, publicHostApi, wishlistsApi } from '@/lib/api';
 import { getPropertyTypeLabel } from '@/lib/utils';
 import { CITIES, DISTRICTS } from '@/lib/constants';
-import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText, ShieldCheck, FileText } from 'lucide-react';
+import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText, ShieldCheck, FileText, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
@@ -25,6 +25,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
 import { getSearchCookies } from '@/lib/searchCookies';
 import toast from 'react-hot-toast';
+import { createPortal } from 'react-dom';
 import { usePageTitle } from '@/lib/usePageTitle';
 
 export default function PropertyDetailPage() {
@@ -48,13 +49,15 @@ function getCancellationLabel(policy: string | undefined, isAr: boolean): string
   return entry ? (isAr ? entry.ar : entry.en) : policy;
 }
 
+const SECTION_IDS = ['specification', 'reviews', 'location', 'terms'] as const;
+
 function UnitDetailContent() {
   const { id } = useParams<{ id: string }>();
   const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const { t, language } = useLanguage();
-  const { user, isAuthenticated, toggleWishlist } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const isAr = language === 'ar';
 
   // Extract the populated property from the unit
@@ -71,15 +74,30 @@ function UnitDetailContent() {
 
   usePageTitle(displayTitle || (isAr ? 'تفاصيل الوحدة' : 'Unit Details'));
 
-  // Wishlist state (still tied to property)
+  // Wishlist state (property-based)
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  // Wishlist list picker state
+  const [showListPicker, setShowListPicker] = useState(false);
+  const [lists, setLists] = useState<WishlistList[]>([]);
+  const [memberListIds, setMemberListIds] = useState<Set<string>>(new Set());
+  const [listsLoading, setListsLoading] = useState(false);
+  const [togglingList, setTogglingList] = useState<string | null>(null);
+  const [showNewList, setShowNewList] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [creatingList, setCreatingList] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
+  const [pickerStyle, setPickerStyle] = useState<React.CSSProperties>({});
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const heartRef = useRef<HTMLButtonElement>(null);
 
   // Host stats from public API
   const [hostStats, setHostStats] = useState<{ propertyCount: number; averageRating: number; totalReviews: number } | null>(null);
 
-  // Segmented nav active section
+  // Segmented nav — scroll-to-section approach
   const [activeSection, setActiveSection] = useState('specification');
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Read dates and guests from cookies
   const [initialCheckIn, setInitialCheckIn] = useState('');
@@ -107,17 +125,14 @@ function UnitDetailContent() {
         // If unit not found, try loading as a property → show first active unit
         try {
           const propRes = await propertiesApi.getOne(id);
-          const property = propRes.data.data;
-          if (property) {
-            // Fetch the first active unit for this property
+          const propData = propRes.data.data;
+          if (propData) {
             const unitsRes = await unitsApi.getForProperty(id);
             const units = unitsRes.data.data || [];
             if (units.length > 0) {
-              // Load the full unit data for the first unit
               const unitRes = await unitsApi.getOne(units[0]._id);
               setUnit(unitRes.data.data);
             }
-            // If property exists but has no units, leave unit as null (shows "not found")
           }
         } catch {
           // Neither unit nor property found
@@ -129,7 +144,8 @@ function UnitDetailContent() {
     fetchUnit();
   }, [id]);
 
-  // Track wishlist state (still uses property._id)
+  // Track wishlist state (uses property._id)
+  const propertyId = property?._id || '';
   useEffect(() => {
     if (property) setIsWishlisted(user?.wishlist?.includes(property._id) ?? false);
   }, [user?.wishlist, property]);
@@ -142,6 +158,28 @@ function UnitDetailContent() {
       .catch(() => {});
   }, [host]);
 
+  // IntersectionObserver for active section highlighting
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    for (const sId of SECTION_IDS) {
+      const el = sectionRefs.current[sId];
+      if (!el) continue;
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) setActiveSection(sId);
+        },
+        { rootMargin: '-20% 0px -60% 0px', threshold: 0 }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    }
+    return () => observers.forEach(o => o.disconnect());
+  }, [unit]);
+
+  const scrollToSection = (sId: string) => {
+    sectionRefs.current[sId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const handleShare = async () => {
     const url = window.location.href;
     const title = displayTitle || 'Hostn';
@@ -153,24 +191,134 @@ function UnitDetailContent() {
     }
   };
 
-  const handleWishlistToggle = async () => {
-    if (!isAuthenticated || !property) {
+  // ── Wishlist picker logic (same pattern as UnitCard) ──
+  const openListPicker = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated || !propertyId) {
       toast.error(isAr ? 'سجّل دخولك لحفظ العقارات' : 'Please sign in to save properties');
       return;
     }
-    setWishlistLoading(true);
-    try {
-      await toggleWishlist(property._id);
-      const newState = !isWishlisted;
-      setIsWishlisted(newState);
-      toast.success(newState
-        ? (isAr ? 'تم الحفظ في المفضلة' : 'Saved to wishlist')
-        : (isAr ? 'تمت الإزالة من المفضلة' : 'Removed from wishlist'));
-    } catch {
-      toast.error(isAr ? 'حدث خطأ' : 'Something went wrong');
-    } finally {
-      setWishlistLoading(false);
+    if (heartRef.current) {
+      const rect = heartRef.current.getBoundingClientRect();
+      const pickerW = 260;
+      const gap = 8;
+      let left = isAr ? rect.left : rect.right - pickerW;
+      left = Math.max(gap, Math.min(left, window.innerWidth - pickerW - gap));
+      setPickerStyle({
+        position: 'fixed',
+        top: rect.bottom + gap,
+        left,
+        maxHeight: window.innerHeight - rect.bottom - gap * 2,
+        zIndex: 9999,
+      });
     }
+    setShowListPicker(true);
+    setListsLoading(true);
+    try {
+      const [listsRes, memberRes] = await Promise.all([
+        wishlistsApi.getLists(),
+        wishlistsApi.getPropertyMembership(propertyId),
+      ]);
+      setLists(listsRes.data.data || []);
+      setMemberListIds(new Set(memberRes.data.data || []));
+    } catch {
+      toast.error(isAr ? 'فشل تحميل القوائم' : 'Failed to load lists');
+    } finally {
+      setListsLoading(false);
+    }
+  }, [isAuthenticated, propertyId, isAr]);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showListPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
+        heartRef.current && !heartRef.current.contains(e.target as Node)
+      ) {
+        setShowListPicker(false);
+        setShowNewList(false);
+        setNewListName('');
+      }
+    };
+    const handleScroll = () => {
+      setShowListPicker(false);
+      setShowNewList(false);
+      setNewListName('');
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [showListPicker]);
+
+  const handleToggleInList = async (listId: string) => {
+    if (!propertyId) return;
+    setTogglingList(listId);
+    const wasIn = memberListIds.has(listId);
+    try {
+      await wishlistsApi.toggleProperty(listId, propertyId);
+      setMemberListIds(prev => {
+        const next = new Set(prev);
+        if (wasIn) next.delete(listId);
+        else next.add(listId);
+        return next;
+      });
+      const newCount = wasIn ? memberListIds.size - 1 : memberListIds.size + 1;
+      setIsWishlisted(newCount > 0);
+    } catch {
+      toast.error(isAr ? 'فشل في التحديث' : 'Failed to update');
+    } finally {
+      setTogglingList(null);
+    }
+  };
+
+  const handleCreateList = async () => {
+    if (!newListName.trim() || !propertyId) return;
+    setCreatingList(true);
+    try {
+      const res = await wishlistsApi.createList(newListName.trim());
+      const newList = res.data.data;
+      await wishlistsApi.toggleProperty(newList._id, propertyId);
+      setLists(prev => [...prev, { ...newList, propertyCount: 1, coverImage: null }]);
+      setMemberListIds(prev => new Set([...prev, newList._id]));
+      setIsWishlisted(true);
+      setNewListName('');
+      setShowNewList(false);
+      toast.success(isAr ? 'تم إنشاء القائمة' : 'List created');
+    } catch {
+      toast.error(isAr ? 'فشل في الإنشاء' : 'Failed to create');
+    } finally {
+      setCreatingList(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!propertyId || memberListIds.size === 0) return;
+    setClearingAll(true);
+    try {
+      await Promise.all(
+        [...memberListIds].map((lid) => wishlistsApi.toggleProperty(lid, propertyId))
+      );
+      setMemberListIds(new Set());
+      setIsWishlisted(false);
+      setShowListPicker(false);
+      setShowNewList(false);
+      toast.success(isAr ? 'تمت الإزالة' : 'Removed from all lists');
+    } catch {
+      toast.error(isAr ? 'فشل في الإزالة' : 'Failed to remove');
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
+  const getListDisplayName = (list?: WishlistList) => {
+    if (!list) return '';
+    if (list.isDefault) return isAr ? 'مفضلتي' : 'My Favorites';
+    return list.name;
   };
 
   // ── Images: prefer unit images, fallback to property images ──
@@ -273,13 +421,19 @@ function UnitDetailContent() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 {discountPercent > 0 && (
                   <span className="badge bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1.5">
-                    🎉 {isAr ? `خصم ${discountPercent}%` : `${discountPercent}% Discount`}
+                    {isAr ? `خصم ${discountPercent}%` : `${discountPercent}% Discount`}
                   </span>
                 )}
                 <button onClick={handleShare} className="p-2 hover:bg-gray-100 rounded-full transition-colors" title={isAr ? 'مشاركة' : 'Share'}>
                   <Share2 className="w-5 h-5 text-gray-600" />
                 </button>
-                <button onClick={handleWishlistToggle} disabled={wishlistLoading} className="group/heart p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50" title={isAr ? 'المفضلة' : 'Wishlist'}>
+                <button
+                  ref={heartRef}
+                  onClick={openListPicker}
+                  disabled={wishlistLoading}
+                  className="group/heart p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                  title={isAr ? 'المفضلة' : 'Wishlist'}
+                >
                   <Heart className={`w-5 h-5 transition-colors ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600 group-hover/heart:fill-red-500 group-hover/heart:text-red-500'}`} />
                 </button>
               </div>
@@ -291,7 +445,39 @@ function UnitDetailContent() {
             <ImageGallery images={galleryImages} title={displayTitle} />
           </div>
 
-          {/* Segmented navigation — tab/pill style */}
+          {/* Host info — always visible above tabs */}
+          {host && typeof host === 'object' && (
+            <Link href={`/hosts/${host._id}`} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors group mb-6">
+              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                {host.avatar ? (
+                  <img src={host.avatar} alt={host.name} className="w-12 h-12 rounded-full object-cover" />
+                ) : (
+                  <span className="text-primary-600 font-bold text-lg">
+                    {host.name?.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900 flex items-center gap-1.5 group-hover:text-primary-600">
+                  {t('property.hostedBy')} {host.name}
+                  {host.isVerified && (
+                    <BadgeCheck className="w-4 h-4 text-primary-600" />
+                  )}
+                </p>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                  <span>{isAr ? `مضيف منذ ${new Date(host.createdAt).getFullYear()}` : `Host since ${new Date(host.createdAt).getFullYear()}`}</span>
+                  {hostStats && hostStats.averageRating > 0 && (
+                    <StarRating rating={hostStats.averageRating} count={hostStats.totalReviews} size="sm" />
+                  )}
+                  {hostStats && (
+                    <span>{isAr ? `${hostStats.propertyCount} عقارات` : `${hostStats.propertyCount} properties`}</span>
+                  )}
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {/* Segmented navigation — scroll-to-section pills */}
           <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 py-3 -mx-4 px-4 mb-6">
             <div className="flex bg-gray-100 rounded-xl p-1 gap-0.5 w-full overflow-x-auto no-scrollbar">
               {[
@@ -302,7 +488,7 @@ function UnitDetailContent() {
               ].map(({ id: sId, label, Icon }) => (
                 <button
                   key={sId}
-                  onClick={() => setActiveSection(sId)}
+                  onClick={() => scrollToSection(sId)}
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 min-w-0 ${
                     activeSection === sId
                       ? 'bg-white text-primary-700 shadow-sm ring-1 ring-primary-100'
@@ -318,156 +504,118 @@ function UnitDetailContent() {
 
           {/* Main content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            {/* Left column */}
+            {/* Left column — all sections always visible */}
             <div className="lg:col-span-2 space-y-8">
 
-              {/* ── Tab: Specification ── */}
-              {activeSection === 'specification' && (
-                <>
-                  {/* Quick stats — from unit data */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[
-                      { Icon: Users, label: t('property.maxGuests'), value: unit.capacity?.maxGuests ?? '—' },
-                      { Icon: BedDouble, label: t('property.bedrooms'), value: unit.bedrooms?.count ?? '—' },
-                      { Icon: Bath, label: t('property.bathrooms'), value: unit.bathroomCount ?? '—' },
-                      { Icon: BedDouble, label: t('property.beds'), value: ((unit.bedrooms?.singleBeds ?? 0) + (unit.bedrooms?.doubleBeds ?? 0)) || '—' },
-                    ].map(({ Icon, label, value }) => (
-                      <div key={label} className="bg-gray-50 rounded-2xl p-4 text-center">
-                        <Icon className="w-5 h-5 text-primary-600 mx-auto mb-2" />
-                        <div className="text-xl font-bold text-gray-900">{value}</div>
-                        <div className="text-xs text-gray-500">{label}</div>
-                      </div>
-                    ))}
+              {/* ── Section: Specification ── */}
+              <div ref={(el) => { sectionRefs.current.specification = el; }} id="specification" className="scroll-mt-20">
+                {/* Quick stats — from unit data */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                  {[
+                    { Icon: Users, label: t('property.maxGuests'), value: unit.capacity?.maxGuests ?? '\u2014' },
+                    { Icon: BedDouble, label: t('property.bedrooms'), value: unit.bedrooms?.count ?? '\u2014' },
+                    { Icon: Bath, label: t('property.bathrooms'), value: unit.bathroomCount ?? '\u2014' },
+                    { Icon: BedDouble, label: t('property.beds'), value: ((unit.bedrooms?.singleBeds ?? 0) + (unit.bedrooms?.doubleBeds ?? 0)) || '\u2014' },
+                  ].map(({ Icon, label, value }) => (
+                    <div key={label} className="bg-gray-50 rounded-2xl p-4 text-center">
+                      <Icon className="w-5 h-5 text-primary-600 mx-auto mb-2" />
+                      <div className="text-xl font-bold text-gray-900">{value}</div>
+                      <div className="text-xs text-gray-500">{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Description — from unit */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.aboutThisPlace')}</h2>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                    {unit.description || (isAr ? 'لا يوجد وصف متاح.' : 'No description available.')}
+                  </p>
+                </div>
+
+                {/* Suitability */}
+                {unit.suitability && (
+                  <div className="mb-8">
+                    <h2 className="text-lg font-bold text-gray-900 mb-2">{isAr ? 'مناسبة لـ' : 'Suitable for'}</h2>
+                    <p className="text-gray-600">{unit.suitability}</p>
                   </div>
+                )}
 
-                  {/* Host info — from property.host */}
-                  {host && typeof host === 'object' && (
-                    <Link href={`/hosts/${host._id}`} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors group">
-                      <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        {host.avatar ? (
-                          <img src={host.avatar} alt={host.name} className="w-12 h-12 rounded-full object-cover" />
-                        ) : (
-                          <span className="text-primary-600 font-bold text-lg">
-                            {host.name?.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 flex items-center gap-1.5 group-hover:text-primary-600">
-                          {t('property.hostedBy')} {host.name}
-                          {host.isVerified && (
-                            <BadgeCheck className="w-4 h-4 text-primary-600" />
-                          )}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                          <span>{isAr ? `مضيف منذ ${new Date(host.createdAt).getFullYear()}` : `Host since ${new Date(host.createdAt).getFullYear()}`}</span>
-                          {hostStats && hostStats.averageRating > 0 && (
-                            <StarRating rating={hostStats.averageRating} count={hostStats.totalReviews} size="sm" />
-                          )}
-                          {hostStats && (
-                            <span>{isAr ? `${hostStats.propertyCount} عقارات` : `${hostStats.propertyCount} properties`}</span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  )}
+                {/* Amenities — from unit */}
+                {unitAmenities.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">
+                      {t('property.whatThisPlaceOffers')}
+                    </h2>
+                    <AmenitiesList amenities={unitAmenities} showAll={showAllAmenities} />
+                    {unitAmenities.length > 10 && (
+                      <button
+                        onClick={() => setShowAllAmenities(!showAllAmenities)}
+                        className="mt-4 text-sm font-semibold text-primary-600 hover:text-primary-700 underline"
+                      >
+                        {showAllAmenities ? t('property.showLess') : `${t('property.showAll')} (${unitAmenities.length})`}
+                      </button>
+                    )}
+                  </div>
+                )}
 
-                  {/* Description — from unit */}
+                {/* Features — from unit */}
+                {unit.features && unit.features.length > 0 && (
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.aboutThisPlace')}</h2>
-                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                      {unit.description || (isAr ? 'لا يوجد وصف متاح.' : 'No description available.')}
-                    </p>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'المميزات' : 'Features'}</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {unit.features.map((feature) => (
+                        <span key={feature} className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg">
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+                )}
+              </div>
 
-                  {/* Suitability */}
-                  {unit.suitability && (
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900 mb-2">{isAr ? 'مناسبة لـ' : 'Suitable for'}</h2>
-                      <p className="text-gray-600">{unit.suitability}</p>
-                    </div>
-                  )}
+              {/* ── Section: Reviews — still uses property._id ── */}
+              <div ref={(el) => { sectionRefs.current.reviews = el; }} id="reviews" className="scroll-mt-20 pt-4 border-t border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.guestReviews')}</h2>
+                <ReviewsList
+                  propertyId={property._id}
+                  averageRating={ratings?.average ?? 0}
+                  reviewCount={ratings?.count ?? 0}
+                />
+              </div>
 
-                  {/* Amenities — from unit */}
-                  {unitAmenities.length > 0 && (
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 mb-4">
-                        {t('property.whatThisPlaceOffers')}
-                      </h2>
-                      <AmenitiesList amenities={unitAmenities} showAll={showAllAmenities} />
-                      {unitAmenities.length > 10 && (
-                        <button
-                          onClick={() => setShowAllAmenities(!showAllAmenities)}
-                          className="mt-4 text-sm font-semibold text-primary-600 hover:text-primary-700 underline"
-                        >
-                          {showAllAmenities ? t('property.showLess') : `${t('property.showAll')} (${unitAmenities.length})`}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Features — from unit */}
-                  {unit.features && unit.features.length > 0 && (
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'المميزات' : 'Features'}</h2>
-                      <div className="flex flex-wrap gap-2">
-                        {unit.features.map((feature) => (
-                          <span key={feature} className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg">
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ── Tab: Reviews — still uses property._id ── */}
-              {activeSection === 'reviews' && (
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.guestReviews')}</h2>
-                  <ReviewsList
-                    propertyId={property._id}
-                    averageRating={ratings?.average ?? 0}
-                    reviewCount={ratings?.count ?? 0}
-                  />
+              {/* ── Section: Location & Map — from property ── */}
+              <div ref={(el) => { sectionRefs.current.location = el; }} id="location" className="scroll-mt-20 pt-4 border-t border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'الموقع والخريطة' : 'Location & Map'}</h2>
+                {property.location.coordinates?.lat && property.location.coordinates?.lng ? (
+                  <>
+                    <PropertyMap
+                      lat={property.location.coordinates.lat}
+                      lng={property.location.coordinates.lng}
+                      title={displayTitle}
+                      className="h-[350px] rounded-xl"
+                      isApproximate={(property.location as { isApproximate?: boolean }).isApproximate}
+                    />
+                    {(property.location as { isApproximate?: boolean }).isApproximate && (
+                      <p className="mt-3 text-sm text-gray-500 italic flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4" />
+                        {isAr ? 'سيتم عرض الموقع الدقيق بعد تأكيد الحجز' : 'Exact location shown after booking confirmation'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-sm">{isAr ? 'لم يتم تحديد الموقع على الخريطة' : 'Location not available on map'}</p>
+                )}
+                <div className="mt-4 p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                    {property.location.district && `${isAr ? (Object.values(DISTRICTS).flat().find(d => d.value === property.location.district)?.ar || property.location.district) : property.location.district}, `}{isAr ? (CITIES.find(c => c.value.toLowerCase() === property.location.city.toLowerCase())?.ar || property.location.city) : property.location.city}
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {/* ── Tab: Location & Map — from property ── */}
-              {activeSection === 'location' && (
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'الموقع والخريطة' : 'Location & Map'}</h2>
-                  {property.location.coordinates?.lat && property.location.coordinates?.lng ? (
-                    <>
-                      <PropertyMap
-                        lat={property.location.coordinates.lat}
-                        lng={property.location.coordinates.lng}
-                        title={displayTitle}
-                        className="h-[350px] rounded-xl"
-                        isApproximate={(property.location as { isApproximate?: boolean }).isApproximate}
-                      />
-                      {(property.location as { isApproximate?: boolean }).isApproximate && (
-                        <p className="mt-3 text-sm text-gray-500 italic flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4" />
-                          {isAr ? 'سيتم عرض الموقع الدقيق بعد تأكيد الحجز' : 'Exact location shown after booking confirmation'}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-gray-500 text-sm">{isAr ? 'لم يتم تحديد الموقع على الخريطة' : 'Location not available on map'}</p>
-                  )}
-                  <div className="mt-4 p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm text-gray-600 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                      {property.location.district && `${isAr ? (Object.values(DISTRICTS).flat().find(d => d.value === property.location.district)?.ar || property.location.district) : property.location.district}, `}{isAr ? (CITIES.find(c => c.value.toLowerCase() === property.location.city.toLowerCase())?.ar || property.location.city) : property.location.city}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Tab: Terms & Policies — unit cancellation + written rules, with property rules fallback ── */}
-              {activeSection === 'terms' && (
+              {/* ── Section: Terms & Policies — unit cancellation + written rules, with property rules fallback ── */}
+              <div ref={(el) => { sectionRefs.current.terms = el; }} id="terms" className="scroll-mt-20 pt-4 border-t border-gray-100">
                 <div className="space-y-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.houseRules')}</h2>
 
@@ -540,7 +688,7 @@ function UnitDetailContent() {
                     </div>
                   )}
                 </div>
-              )}
+              </div>
 
             </div>
 
@@ -552,6 +700,109 @@ function UnitDetailContent() {
         </div>
       </main>
       <Footer />
+
+      {/* ── Wishlist List Picker Portal ── */}
+      {showListPicker && typeof window !== 'undefined' && createPortal(
+        <div
+          ref={pickerRef}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          style={pickerStyle}
+          className="bg-white rounded-xl shadow-xl border border-gray-200 w-[260px] flex flex-col overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
+            <span className="text-sm font-semibold text-gray-900">
+              {isAr ? 'المفضلة' : 'Wishlist'}
+            </span>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowListPicker(false); setShowNewList(false); setNewListName(''); }}
+              className="p-1 hover:bg-gray-100 rounded-full"
+            >
+              <X className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto">
+            {listsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
+              </div>
+            ) : (
+              lists.map((list) => {
+                const isIn = memberListIds.has(list._id);
+                return (
+                  <button
+                    key={list._id}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleInList(list._id); }}
+                    disabled={togglingList === list._id}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors text-start disabled:opacity-60"
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      isIn ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
+                    }`}>
+                      {togglingList === list._id ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-white" />
+                      ) : isIn ? (
+                        <Check className="w-3 h-3 text-white" />
+                      ) : null}
+                    </div>
+                    <span className="text-sm text-gray-800 truncate flex-1">
+                      {getListDisplayName(list)}
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      {list.propertyCount}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer: New wishlist + Clear */}
+          <div className="border-t border-gray-100">
+            {showNewList ? (
+              <div className="p-2.5 flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateList(); }}
+                  placeholder={isAr ? 'اسم القائمة' : 'List name'}
+                  className="flex-1 text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-primary-400 outline-none"
+                />
+                <button
+                  onClick={handleCreateList}
+                  disabled={creatingList || !newListName.trim()}
+                  className="text-xs font-semibold text-primary-600 hover:text-primary-700 disabled:opacity-50 px-2 py-1.5"
+                >
+                  {creatingList ? <Loader2 className="w-3 h-3 animate-spin" /> : (isAr ? 'إنشاء' : 'Create')}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 p-1.5">
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowNewList(true); }}
+                  className="flex-1 flex items-center justify-center gap-1 text-xs font-medium text-gray-600 hover:text-primary-600 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  {isAr ? 'قائمة جديدة' : 'New list'}
+                </button>
+                {memberListIds.size > 0 && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleClearAll(); }}
+                    disabled={clearingAll}
+                    className="flex items-center justify-center gap-1 text-xs font-medium text-red-500 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {clearingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    {isAr ? 'إزالة الكل' : 'Remove all'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }

@@ -685,3 +685,29 @@ exports.cancelBooking = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get booked date ranges for a unit (for host calendar)
+// @route   GET /api/v1/bookings/unit/:unitId/dates
+// @access  Private (Host/Admin)
+exports.getUnitBookedDates = async (req, res, next) => {
+  try {
+    const { unitId } = req.params;
+
+    // Find all active bookings for this unit (pending, confirmed, or active holds)
+    const bookings = await Booking.find({
+      unit: unitId,
+      $or: [
+        { status: { $in: ['pending', 'confirmed'] } },
+        { status: 'held', holdExpiresAt: { $gt: new Date() } },
+      ],
+    })
+      .select('checkIn checkOut status guest')
+      .populate('guest', 'name')
+      .sort('checkIn')
+      .lean();
+
+    res.json({ success: true, data: bookings });
+  } catch (error) {
+    next(error);
+  }
+};

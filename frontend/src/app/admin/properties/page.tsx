@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
-import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Layers } from 'lucide-react';
+import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Layers, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '@/lib/usePageTitle';
 
@@ -147,6 +147,39 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const deleteProperty = async (id: string) => {
+    if (!window.confirm(isAr ? 'هل أنت متأكد من حذف هذا العقار نهائياً؟' : 'Are you sure you want to permanently delete this property?')) return;
+    setActionId(id);
+    try {
+      await adminApi.deleteProperty(id);
+      toast.success(isAr ? 'تم حذف العقار' : 'Property deleted');
+      loadProperties();
+    } catch {
+      toast.error(isAr ? 'فشل في حذف العقار' : 'Failed to delete property');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const deleteUnit = async (id: string) => {
+    if (!window.confirm(isAr ? 'هل أنت متأكد من حذف هذه الوحدة نهائياً؟' : 'Are you sure you want to permanently delete this unit?')) return;
+    try {
+      await adminApi.deleteUnit(id);
+      toast.success(isAr ? 'تم حذف الوحدة' : 'Unit deleted');
+      if (expandedPropertyId) {
+        setUnitsLoading(true);
+        try {
+          const res = await adminApi.getPropertyUnits(expandedPropertyId);
+          setUnits(res.data.data || []);
+        } finally {
+          setUnitsLoading(false);
+        }
+      }
+    } catch {
+      toast.error(isAr ? 'فشل في حذف الوحدة' : 'Failed to delete unit');
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
@@ -261,6 +294,14 @@ export default function AdminPropertiesPage() {
                             {isAr ? '\u0625\u0632\u0627\u0644\u0629' : 'Remove'}
                           </button>
                         )}
+                        <button
+                          onClick={() => deleteProperty(prop._id)}
+                          disabled={actionId === prop._id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-gray-800 text-white hover:bg-gray-900 disabled:opacity-50"
+                        >
+                          {actionId === prop._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                          {isAr ? '\u062d\u0630\u0641 \u0646\u0647\u0627\u0626\u064a' : 'Delete'}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -301,6 +342,12 @@ export default function AdminPropertiesPage() {
                                       className={`px-2 py-0.5 text-[10px] font-medium rounded ${unit.isActive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}
                                     >
                                       {unit.isActive ? (isAr ? '\u062a\u0639\u0637\u064a\u0644' : 'Deactivate') : (isAr ? '\u062a\u0641\u0639\u064a\u0644' : 'Activate')}
+                                    </button>
+                                    <button
+                                      onClick={() => deleteUnit(unit._id)}
+                                      className="px-2 py-0.5 text-[10px] font-medium rounded bg-gray-800 text-white hover:bg-gray-900 ms-1"
+                                    >
+                                      {isAr ? '\u062d\u0630\u0641' : 'Delete'}
                                     </button>
                                   </td>
                                 </tr>

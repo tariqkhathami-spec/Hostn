@@ -36,6 +36,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  // Redirect old /pricing URLs to /calendar (permanent)
+  const pricingMatch = pathname.match(/^(\/host\/listings\/[^/]+\/units\/[^/]+)\/pricing(\/.*)?$/);
+  if (pricingMatch) {
+    const newPath = pricingMatch[1] + '/calendar' + (pricingMatch[2] || '');
+    const url = new URL(newPath + (request.nextUrl.search || ''), request.url);
+    return NextResponse.redirect(url, 308);
+  }
+
   // Auth pages: redirect authenticated users to their dashboard
   if (pathname.startsWith('/auth')) {
     if (isAuthenticated) {

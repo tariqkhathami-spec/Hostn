@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
-import { unitsApi } from '@/lib/api';
+import { unitsApi, bookingsApi } from '@/lib/api';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -14,7 +14,7 @@ import {
   X,
   Loader2,
   Calendar,
-  DollarSign,
+  UserCheck,
 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
@@ -37,6 +37,16 @@ interface DayPriceInfo {
   isOverride: boolean;
 }
 
+interface BookedDateInfo {
+  guestName: string;
+  status: string;
+}
+
+interface PricingDialogState {
+  mode: 'day' | 'weekday' | 'weekend';
+  dayKey?: string;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* Translations                                                               */
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -48,10 +58,9 @@ const t: Record<string, Record<string, string>> = {
   weekendPrice:   { en: 'Weekend Price',          ar: 'سعر نهاية الأسبوع' },
   weekdayDesc:    { en: 'Sun \u2013 Wed',         ar: 'الأحد \u2013 الأربعاء' },
   weekendDesc:    { en: 'Thu \u2013 Sat',         ar: 'الخميس \u2013 السبت' },
-  apply:          { en: 'Apply',                  ar: 'تطبيق' },
   dayPrices:      { en: 'Day-of-week prices',     ar: 'أسعار أيام الأسبوع' },
   setSpecial:     { en: 'Set special price',      ar: 'تعيين سعر خاص' },
-  block:          { en: 'Reserved',                ar: 'محجوز' },
+  block:          { en: 'Reserved',               ar: 'محجوز' },
   unblock:        { en: 'Unreserve',              ar: 'إلغاء الحجز' },
   removeOverride: { en: 'Remove override',        ar: 'إزالة التخصيص' },
   save:           { en: 'Save',                   ar: 'حفظ' },
@@ -60,16 +69,16 @@ const t: Record<string, Record<string, string>> = {
   weekdayDefault: { en: 'Weekday default',        ar: 'السعر الافتراضي (أسبوع)' },
   weekendDefault: { en: 'Weekend default',        ar: 'السعر الافتراضي (نهاية أسبوع)' },
   customPrice:    { en: 'Custom price',           ar: 'سعر مخصص' },
-  blocked:        { en: 'Reserved',                ar: 'محجوز' },
+  blocked:        { en: 'Reserved',               ar: 'محجوز' },
   priceSaved:     { en: 'Price updated',          ar: 'تم تحديث السعر' },
   priceBlocked:   { en: 'Date reserved',          ar: 'تم حجز التاريخ' },
   priceUnblocked: { en: 'Date unreserved',        ar: 'تم إلغاء حجز التاريخ' },
-  overrideRemoved:{ en: 'Override removed',        ar: 'تمت إزالة التخصيص' },
+  overrideRemoved:{ en: 'Override removed',       ar: 'تمت إزالة التخصيص' },
   error:          { en: 'Something went wrong',   ar: 'حدث خطأ ما' },
   legend:         { en: 'Legend',                  ar: 'دليل الألوان' },
   defaultDay:     { en: 'Default',                ar: 'افتراضي' },
   overrideDay:    { en: 'Custom price',           ar: 'سعر مخصص' },
-  blockedDay:     { en: 'Reserved',                ar: 'محجوز' },
+  blockedDay:     { en: 'Reserved',               ar: 'محجوز' },
   weekendDay:     { en: 'Weekend',                ar: 'نهاية الأسبوع' },
   today:          { en: 'Today',                  ar: 'اليوم' },
   sun:            { en: 'Sun', ar: 'أحد' },
@@ -80,8 +89,11 @@ const t: Record<string, Record<string, string>> = {
   fri:            { en: 'Fri', ar: 'جمعة' },
   sat:            { en: 'Sat', ar: 'سبت' },
   perNight:       { en: '/ night', ar: '/ ليلة' },
-  individualDays: { en: 'Individual Day Prices', ar: 'أسعار الأيام الفردية' },
-  individualDaysDesc: { en: 'Set price for a specific day of the week', ar: 'تعيين سعر ليوم محدد من الأسبوع' },
+  newPrice:       { en: 'Price per night',        ar: 'السعر لليلة' },
+  bookedDay:      { en: 'Booked',                 ar: 'محجوز (حجز)' },
+  clickToEdit:    { en: 'Click to edit',          ar: 'اضغط للتعديل' },
+  allWeekdays:    { en: 'Sets price for Sun, Mon, Tue, Wed', ar: 'تعيين السعر للأحد، الإثنين، الثلاثاء، الأربعاء' },
+  allWeekends:    { en: 'Sets price for Thu, Fri, Sat',      ar: 'تعيين السعر للخميس، الجمعة، السبت' },
 };
 
 const DAY_KEYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -159,15 +171,18 @@ export default function UnitPricingPage() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
-  // Pricing panel inputs
-  const [weekdayInput, setWeekdayInput] = useState('');
-  const [weekendInput, setWeekendInput] = useState('');
-  const [dayInputs, setDayInputs] = useState<Record<string, string>>({});
+  // Pricing dialog (replaces old open input fields)
+  const [pricingDialog, setPricingDialog] = useState<PricingDialogState | null>(null);
+  const [pricingDialogInput, setPricingDialogInput] = useState('');
+  const pricingDialogRef = useRef<HTMLDivElement>(null);
 
   // Day popover
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [specialPriceInput, setSpecialPriceInput] = useState('');
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Booked dates from actual bookings
+  const [bookedDates, setBookedDates] = useState<Map<string, BookedDateInfo>>(new Map());
 
   const todayKey = formatDateKey(new Date());
   const nowYear = new Date().getFullYear();
@@ -179,25 +194,6 @@ export default function UnitPricingPage() {
       const res = await unitsApi.getOne(unitId);
       const data: Unit = res.data.data || res.data;
       setUnit(data);
-      // Populate input defaults from current pricing
-      if (data.pricing) {
-        const p = data.pricing;
-        // Weekday = average of Sun-Wed
-        const weekdayAvg = Math.round(
-          ((p.sunday || 0) + (p.monday || 0) + (p.tuesday || 0) + (p.wednesday || 0)) / 4
-        );
-        const weekendAvg = Math.round(
-          ((p.thursday || 0) + (p.friday || 0) + (p.saturday || 0)) / 3
-        );
-        setWeekdayInput(weekdayAvg > 0 ? String(weekdayAvg) : '');
-        setWeekendInput(weekendAvg > 0 ? String(weekendAvg) : '');
-        // Initialize individual day inputs
-        const di: Record<string, string> = {};
-        for (const dk of DAY_KEYS_EN) {
-          di[dk] = p[dk] ? String(p[dk]) : '';
-        }
-        setDayInputs(di);
-      }
     } catch {
       toast.error(t.error[lang]);
     } finally {
@@ -206,6 +202,33 @@ export default function UnitPricingPage() {
   }, [unitId, lang]);
 
   useEffect(() => { fetchUnit(); }, [fetchUnit]);
+
+  /* ── Fetch booked dates ── */
+  useEffect(() => {
+    const fetchBookedDates = async () => {
+      try {
+        const res = await bookingsApi.getUnitBookedDates(unitId);
+        const bookings = res.data.data || [];
+        const map = new Map<string, BookedDateInfo>();
+        for (const booking of bookings as { checkIn: string; checkOut: string; status: string; guest?: { name?: string } }[]) {
+          const checkIn = new Date(booking.checkIn);
+          const checkOut = new Date(booking.checkOut);
+          const current = new Date(checkIn);
+          while (current < checkOut) {
+            map.set(formatDateKey(current), {
+              guestName: booking.guest?.name || '',
+              status: booking.status,
+            });
+            current.setDate(current.getDate() + 1);
+          }
+        }
+        setBookedDates(map);
+      } catch {
+        // silently ignore
+      }
+    };
+    fetchBookedDates();
+  }, [unitId]);
 
   /* ── datePricing map ── */
   const datePricingMap = useMemo(() => {
@@ -249,21 +272,24 @@ export default function UnitPricingPage() {
     setSelectedDate(null);
   };
 
-  /* ── Apply weekday price ── */
-  const applyWeekday = async () => {
-    const val = Number(weekdayInput);
+  /* ── Save pricing from dialog ── */
+  const savePricingDialog = async () => {
+    if (!pricingDialog) return;
+    const val = Number(pricingDialogInput);
     if (!val || val <= 0) return;
     setSaving(true);
     try {
-      await unitsApi.updatePricing(unitId, {
-        pricing: {
-          sunday: val,
-          monday: val,
-          tuesday: val,
-          wednesday: val,
-        },
-      });
+      let pricing: Record<string, number> = {};
+      if (pricingDialog.mode === 'weekday') {
+        pricing = { sunday: val, monday: val, tuesday: val, wednesday: val };
+      } else if (pricingDialog.mode === 'weekend') {
+        pricing = { thursday: val, friday: val, saturday: val };
+      } else if (pricingDialog.dayKey) {
+        pricing = { [pricingDialog.dayKey]: val };
+      }
+      await unitsApi.updatePricing(unitId, { pricing });
       toast.success(t.priceSaved[lang]);
+      setPricingDialog(null);
       await fetchUnit();
     } catch {
       toast.error(t.error[lang]);
@@ -272,50 +298,55 @@ export default function UnitPricingPage() {
     }
   };
 
-  const applyWeekend = async () => {
-    const val = Number(weekendInput);
-    if (!val || val <= 0) return;
-    setSaving(true);
-    try {
-      await unitsApi.updatePricing(unitId, {
-        pricing: {
-          thursday: val,
-          friday: val,
-          saturday: val,
-        },
-      });
-      toast.success(t.priceSaved[lang]);
-      await fetchUnit();
-    } catch {
-      toast.error(t.error[lang]);
-    } finally {
-      setSaving(false);
+  /* ── Open pricing dialog ── */
+  const openPricingDialog = (mode: 'day' | 'weekday' | 'weekend', dayKey?: string) => {
+    setSelectedDate(null);
+    let currentVal = '';
+    if (mode === 'day' && dayKey) {
+      currentVal = String(unit?.pricing?.[dayKey] || '');
+    } else if (mode === 'weekday') {
+      const avg = Math.round(
+        ((unit?.pricing?.sunday || 0) + (unit?.pricing?.monday || 0) +
+         (unit?.pricing?.tuesday || 0) + (unit?.pricing?.wednesday || 0)) / 4
+      );
+      currentVal = avg > 0 ? String(avg) : '';
+    } else if (mode === 'weekend') {
+      const avg = Math.round(
+        ((unit?.pricing?.thursday || 0) + (unit?.pricing?.friday || 0) +
+         (unit?.pricing?.saturday || 0)) / 3
+      );
+      currentVal = avg > 0 ? String(avg) : '';
     }
+    setPricingDialogInput(currentVal);
+    setPricingDialog({ mode, dayKey });
   };
 
-  /* ── Apply individual day price ── */
-  const applyDayPrice = async (dayKey: string) => {
-    const val = Number(dayInputs[dayKey]);
-    if (!val || val <= 0) return;
-    setSaving(true);
-    try {
-      await unitsApi.updatePricing(unitId, {
-        pricing: { [dayKey]: val },
-      });
-      toast.success(t.priceSaved[lang]);
-      await fetchUnit();
-    } catch {
-      toast.error(t.error[lang]);
-    } finally {
-      setSaving(false);
+  /* ── Pricing dialog title ── */
+  const getPricingDialogTitle = () => {
+    if (!pricingDialog) return '';
+    if (pricingDialog.mode === 'weekday') {
+      return isAr ? 'تعديل أسعار أيام الأسبوع' : 'Edit Weekday Prices';
     }
+    if (pricingDialog.mode === 'weekend') {
+      return isAr ? 'تعديل أسعار نهاية الأسبوع' : 'Edit Weekend Prices';
+    }
+    const dayIndex = DAY_KEYS_EN.indexOf(pricingDialog.dayKey as typeof DAY_KEYS_EN[number]);
+    const dayName = isAr ? WEEKDAY_AR[dayIndex] : WEEKDAY_EN[dayIndex];
+    return isAr ? `تعديل سعر ${dayName}` : `Edit ${dayName} Price`;
+  };
+
+  const getPricingDialogSubtitle = () => {
+    if (!pricingDialog) return '';
+    if (pricingDialog.mode === 'weekday') return t.allWeekdays[lang];
+    if (pricingDialog.mode === 'weekend') return t.allWeekends[lang];
+    return '';
   };
 
   /* ── Day click ── */
   const handleDayClick = (dateKey: string) => {
     if (dateKey < todayKey) return;
+    setPricingDialog(null);
     setSelectedDate(dateKey === selectedDate ? null : dateKey);
-    // Pre-fill special price input with current override or default
     const date = new Date(dateKey + 'T00:00:00');
     const info = getDayPrice(date);
     setSpecialPriceInput(info.price > 0 ? String(info.price) : '');
@@ -387,6 +418,17 @@ export default function UnitPricingPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [selectedDate]);
 
+  /* ── Close pricing dialog on outside click ── */
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (pricingDialogRef.current && !pricingDialogRef.current.contains(e.target as Node)) {
+        setPricingDialog(null);
+      }
+    };
+    if (pricingDialog) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [pricingDialog]);
+
   /* ── Selected date info ── */
   const selectedDateInfo = useMemo(() => {
     if (!selectedDate) return null;
@@ -396,6 +438,7 @@ export default function UnitPricingPage() {
     const isWeekend = isWeekendDay(dayIndex);
     const override = datePricingMap.get(selectedDate);
     const hasOverride = !!override;
+    const bookedInfo = bookedDates.get(selectedDate);
 
     let source: string;
     if (override?.isBlocked) {
@@ -414,20 +457,33 @@ export default function UnitPricingPage() {
       ? `${dayNameFull}، ${date.getDate()} ${monthName}`
       : `${dayNameFull}, ${monthName} ${date.getDate()}`;
 
-    return { date, info, isWeekend, hasOverride, source, dateLabel, isBlocked: !!override?.isBlocked };
-  }, [selectedDate, getDayPrice, datePricingMap, lang, isAr]);
+    return { date, info, isWeekend, hasOverride, source, dateLabel, isBlocked: !!override?.isBlocked, bookedInfo };
+  }, [selectedDate, getDayPrice, datePricingMap, bookedDates, lang, isAr]);
 
   /* ── Day-of-week badge data ── */
   const dayBadges = useMemo(() => {
-    // Order: Sun, Mon, Tue, Wed, Thu, Fri, Sat (Sunday-first)
-    const order = [0, 1, 2, 3, 4, 5, 6]; // JS day indices
+    const order = [0, 1, 2, 3, 4, 5, 6];
     const shortNames = [t.sun, t.mon, t.tue, t.wed, t.thu, t.fri, t.sat];
     return order.map((jsDay, i) => ({
       label: shortNames[i][lang],
+      dayKey: DAY_KEYS_EN[jsDay],
       price: unit?.pricing?.[DAY_KEYS_EN[jsDay]] || 0,
       isWeekend: isWeekendDay(jsDay),
     }));
   }, [unit?.pricing, lang]);
+
+  /* ── Group averages ── */
+  const weekdayAvg = useMemo(() => {
+    if (!unit?.pricing) return 0;
+    const p = unit.pricing;
+    return Math.round(((p.sunday || 0) + (p.monday || 0) + (p.tuesday || 0) + (p.wednesday || 0)) / 4);
+  }, [unit?.pricing]);
+
+  const weekendAvg = useMemo(() => {
+    if (!unit?.pricing) return 0;
+    const p = unit.pricing;
+    return Math.round(((p.thursday || 0) + (p.friday || 0) + (p.saturday || 0)) / 3);
+  }, [unit?.pricing]);
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   /* Render                                                                 */
@@ -471,135 +527,83 @@ export default function UnitPricingPage() {
       {/* ── Pricing Settings Panel ── */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <DollarSign className="w-5 h-5 text-primary-600" />
+          <SarSymbol size={20} className="text-primary-600" />
           <h2 className="text-lg font-semibold text-gray-900">{t.dayPrices[lang]}</h2>
         </div>
 
-        {/* Weekday / Weekend inputs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-          {/* Weekday */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.weekdayPrice[lang]}
-            </label>
+        {/* Group headers — clickable cards */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Weekday group */}
+          <button
+            onClick={() => openPricingDialog('weekday')}
+            className="text-start bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl p-4 transition-colors group cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-gray-800">
+                {t.weekdayPrice[lang]}
+              </span>
+              <span className="text-[10px] text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                {t.clickToEdit[lang]}
+              </span>
+            </div>
             <p className="text-xs text-gray-400 mb-2">{t.weekdayDesc[lang]}</p>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="number"
-                  min="0"
-                  value={weekdayInput}
-                  onChange={(e) => setWeekdayInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') applyWeekday(); }}
-                  placeholder="0"
-                  className="w-full px-3 py-2 pe-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                />
-                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-                  <SarSymbol size={12} />
-                </span>
-              </div>
-              <button
-                onClick={applyWeekday}
-                disabled={saving || !weekdayInput}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.apply[lang]}
-              </button>
+            <div className="text-base font-bold text-gray-900" dir="ltr">
+              {weekdayAvg > 0 ? (
+                <>
+                  <SarSymbol size={14} /> {weekdayAvg.toLocaleString('en')}
+                  <span className="text-xs text-gray-400 font-normal ms-1">{t.perNight[lang]}</span>
+                </>
+              ) : (
+                <span className="text-gray-400 font-normal">&mdash;</span>
+              )}
             </div>
-          </div>
+          </button>
 
-          {/* Weekend */}
-          <div className="bg-amber-50/60 rounded-lg p-4 border border-amber-100">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.weekendPrice[lang]}
-            </label>
-            <p className="text-xs text-gray-400 mb-2">{t.weekendDesc[lang]}</p>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="number"
-                  min="0"
-                  value={weekendInput}
-                  onChange={(e) => setWeekendInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') applyWeekend(); }}
-                  placeholder="0"
-                  className="w-full px-3 py-2 pe-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                />
-                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-                  <SarSymbol size={12} />
-                </span>
-              </div>
-              <button
-                onClick={applyWeekend}
-                disabled={saving || !weekendInput}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.apply[lang]}
-              </button>
+          {/* Weekend group */}
+          <button
+            onClick={() => openPricingDialog('weekend')}
+            className="text-start bg-amber-50/60 hover:bg-amber-100/60 border border-amber-200 rounded-xl p-4 transition-colors group cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-gray-800">
+                {t.weekendPrice[lang]}
+              </span>
+              <span className="text-[10px] text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                {t.clickToEdit[lang]}
+              </span>
             </div>
-          </div>
+            <p className="text-xs text-gray-400 mb-2">{t.weekendDesc[lang]}</p>
+            <div className="text-base font-bold text-gray-900" dir="ltr">
+              {weekendAvg > 0 ? (
+                <>
+                  <SarSymbol size={14} /> {weekendAvg.toLocaleString('en')}
+                  <span className="text-xs text-gray-400 font-normal ms-1">{t.perNight[lang]}</span>
+                </>
+              ) : (
+                <span className="text-gray-400 font-normal">&mdash;</span>
+              )}
+            </div>
+          </button>
         </div>
 
-        {/* Day-of-week badges */}
+        {/* Day-of-week pills — clickable */}
         <div className="flex flex-wrap gap-2">
           {dayBadges.map((badge) => (
-            <div
-              key={badge.label}
-              className={`flex flex-col items-center px-3 py-2 rounded-lg text-xs border ${
+            <button
+              key={badge.dayKey}
+              onClick={() => openPricingDialog('day', badge.dayKey)}
+              className={`flex flex-col items-center px-3 py-2.5 rounded-xl text-xs border transition-all cursor-pointer hover:shadow-sm ${
                 badge.isWeekend
-                  ? 'bg-amber-50 border-amber-200 text-amber-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-600'
+                  ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
               }`}
             >
               <span className="font-medium">{badge.label}</span>
-              <span className="mt-0.5 font-semibold" dir="ltr">
-                {badge.price > 0 ? badge.price.toLocaleString('en') : '—'}
+              <span className="mt-1 font-bold text-sm text-gray-900" dir="ltr">
+                {badge.price > 0 ? badge.price.toLocaleString('en') : '\u2014'}
               </span>
-            </div>
+            </button>
           ))}
-        </div>
-
-        {/* Individual Day Prices */}
-        <div className="mt-6 pt-5 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">{t.individualDays[lang]}</h3>
-          <p className="text-xs text-gray-400 mb-3">{t.individualDaysDesc[lang]}</p>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-            {/* Sunday-first order */}
-            {(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const).map((dayKey) => {
-              const jsIndex = DAY_KEYS_EN.indexOf(dayKey);
-              const shortNameMap: Record<string, Record<string, string>> = { sunday: t.sun, monday: t.mon, tuesday: t.tue, wednesday: t.wed, thursday: t.thu, friday: t.fri, saturday: t.sat };
-              const dayAbbr = shortNameMap[dayKey][lang];
-              const isWknd = isWeekendDay(jsIndex);
-              return (
-                <div
-                  key={dayKey}
-                  className={`rounded-lg px-2 py-2 border text-center ${
-                    isWknd ? 'bg-amber-50/60 border-amber-100' : 'bg-gray-50 border-gray-100'
-                  }`}
-                >
-                  <span className="block text-[10px] font-medium text-gray-500 mb-1">{dayAbbr}</span>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      value={dayInputs[dayKey] || ''}
-                      onChange={(e) => setDayInputs((prev) => ({ ...prev, [dayKey]: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === 'Enter') applyDayPrice(dayKey); }}
-                      placeholder="0"
-                      className="w-full px-1.5 py-1 text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-                  <button
-                    onClick={() => applyDayPrice(dayKey)}
-                    disabled={saving || !dayInputs[dayKey]}
-                    className="mt-1 w-full py-0.5 bg-primary-600 text-white rounded text-[10px] font-medium hover:bg-primary-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {saving ? '...' : t.apply[lang]}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
 
@@ -648,6 +652,8 @@ export default function UnitPricingPage() {
             const isWeekend = isWeekendDay(date.getDay());
             const isSelected = key === selectedDate;
             const isClickable = isCurrentMonth && !isPast;
+            const bookedInfo = bookedDates.get(key);
+            const isBooked = !!bookedInfo && isCurrentMonth;
 
             // Build cell classes
             let cellBg = 'bg-white';
@@ -657,6 +663,8 @@ export default function UnitPricingPage() {
               cellBg = 'bg-gray-50';
             } else if (dayInfo.blocked) {
               cellBg = 'bg-red-50';
+            } else if (isBooked) {
+              cellBg = 'bg-emerald-50';
             } else if (dayInfo.isOverride) {
               cellBg = 'bg-blue-50';
             } else if (isWeekend) {
@@ -699,6 +707,9 @@ export default function UnitPricingPage() {
                   {dayInfo.blocked && isCurrentMonth && (
                     <Lock className="w-3 h-3 text-red-400" />
                   )}
+                  {isBooked && !dayInfo.blocked && (
+                    <UserCheck className="w-3 h-3 text-emerald-500" />
+                  )}
                 </div>
 
                 {isCurrentMonth && !dayInfo.blocked && dayInfo.price > 0 && (
@@ -710,6 +721,12 @@ export default function UnitPricingPage() {
                 {isCurrentMonth && dayInfo.blocked && (
                   <div className="mt-1 text-xs text-red-400 font-medium">
                     {t.blocked[lang]}
+                  </div>
+                )}
+
+                {isBooked && !dayInfo.blocked && isCurrentMonth && (
+                  <div className="mt-0.5 text-[9px] text-emerald-600 font-medium truncate">
+                    {t.bookedDay[lang]}
                   </div>
                 )}
               </div>
@@ -731,6 +748,10 @@ export default function UnitPricingPage() {
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border bg-red-50 border-red-200 inline-block" />
           {t.blockedDay[lang]}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border bg-emerald-50 border-emerald-200 inline-block" />
+          {t.bookedDay[lang]}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border bg-amber-50 border-amber-200 inline-block" />
@@ -761,6 +782,21 @@ export default function UnitPricingPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Booked info banner */}
+            {selectedDateInfo.bookedInfo && (
+              <div className="rounded-lg p-3 mb-4 bg-emerald-50 border border-emerald-100">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="text-sm font-medium text-emerald-700">
+                    {t.bookedDay[lang]}
+                    {selectedDateInfo.bookedInfo.guestName && (
+                      <span className="text-emerald-500 font-normal ms-1">&mdash; {selectedDateInfo.bookedInfo.guestName}</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Current price info */}
             <div className={`rounded-lg p-3 mb-4 ${
@@ -850,6 +886,73 @@ export default function UnitPricingPage() {
                   {t.removeOverride[lang]}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Pricing Dialog ── */}
+      {pricingDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div
+            ref={pricingDialogRef}
+            className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-sm p-5 animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">
+                  {getPricingDialogTitle()}
+                </h3>
+                {getPricingDialogSubtitle() && (
+                  <p className="text-xs text-gray-400 mt-0.5">{getPricingDialogSubtitle()}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setPricingDialog(null)}
+                className="p-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Price input */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                {t.newPrice[lang]}
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  value={pricingDialogInput}
+                  onChange={(e) => setPricingDialogInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') savePricingDialog(); }}
+                  placeholder="0"
+                  className="w-full px-3 py-2.5 pe-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
+                  autoFocus
+                />
+                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <SarSymbol size={11} />
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPricingDialog(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                {t.cancel[lang]}
+              </button>
+              <button
+                onClick={savePricingDialog}
+                disabled={saving || !pricingDialogInput || Number(pricingDialogInput) <= 0}
+                className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t.save[lang]}
+              </button>
             </div>
           </div>
         </div>

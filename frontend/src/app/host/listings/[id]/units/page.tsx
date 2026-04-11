@@ -65,18 +65,19 @@ export default function UnitsListPage() {
 
   const load = async () => {
     try {
-      const [unitsRes, propRes] = await Promise.all([
-        unitsApi.getManage(propertyId),
-        propertiesApi.getOne(propertyId),
-      ]);
+      const unitsRes = await unitsApi.getManage(propertyId);
       setUnits(unitsRes.data.data || []);
+    } catch {
+      toast.error(isAr ? 'فشل في تحميل الوحدات' : 'Failed to load units');
+    }
+    try {
+      const propRes = await propertiesApi.getOne(propertyId);
       const prop = propRes.data.data || propRes.data;
       setPropertyTitle(prop.title || prop.titleAr || '');
     } catch {
-      toast.error(isAr ? 'فشل في تحميل الوحدات' : 'Failed to load units');
-    } finally {
-      setLoading(false);
+      // Property may be inactive — still show units
     }
+    setLoading(false);
   };
 
   const openDupDialog = (id: string) => {
@@ -232,7 +233,7 @@ export default function UnitsListPage() {
                       {t.edit[lang]}
                     </Link>
                     <Link
-                      href={`/host/listings/${propertyId}/units/${unit._id}/pricing`}
+                      href={`/host/listings/${propertyId}/units/${unit._id}/calendar`}
                       className="text-sm text-gray-600 hover:text-primary-600 transition-colors flex items-center gap-1"
                     >
                       <Calendar className="w-3.5 h-3.5" />
