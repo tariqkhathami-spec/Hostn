@@ -39,4 +39,8 @@ export const bookingsService = {
   cancel(id: string) {
     return api.put<Booking>(`/bookings/${id}/cancel`).then((r) => r.data);
   },
+
+  getUnitBookedDates(unitId: string) {
+    return api.get(`/bookings/unit/${unitId}/dates`).then((r) => r.data);
+  },
 };

@@ -21,6 +21,10 @@ export const PROPERTY_TYPES = [
   { id: 'farm', label: 'Farms', icon: 'leaf-outline' },
   { id: 'camp', label: 'Camps', icon: 'bonfire-outline' },
   { id: 'resort', label: 'Resorts', icon: 'bed-outline' },
+  { id: 'rest_house', label: 'Rest Houses', icon: 'home-outline' },
+  { id: 'room', label: 'Rooms', icon: 'bed-outline' },
+  { id: 'hotel_resort', label: 'Hotel Resorts', icon: 'business-outline' },
+  { id: 'serviced_apartment', label: 'Serviced Apartments', icon: 'albums-outline' },
 ] as const;
 
 export const SAUDI_CITIES = [

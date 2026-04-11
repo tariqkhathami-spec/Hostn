@@ -160,10 +160,26 @@ export default function ListingDetailScreen() {
     ? (itemData.bathroomCount ?? itemData.rooms?.bathrooms ?? listing.capacity?.bathrooms)
     : listing.capacity?.bathrooms;
 
+  const TYPE_LABELS: Record<string, { en: string; ar: string }> = {
+    rest_house: { en: 'Rest House', ar: 'استراحة' },
+    room: { en: 'Room', ar: 'غرفة' },
+    hotel_resort: { en: 'Hotel Resort', ar: 'منتجع فندقي' },
+    serviced_apartment: { en: 'Serviced Apartment', ar: 'شقة مفروشة' },
+  };
+
   const getTypeLabel = (type: string) => {
     const key = `type.${type}` as any;
-    return t(key) ?? type;
+    const translated = t(key);
+    if (translated && translated !== key) return translated;
+    const fallback = TYPE_LABELS[type];
+    if (fallback) return isAr ? fallback.ar : fallback.en;
+    return type;
   };
+
+  // Sort images so primary comes first
+  const sortedImages = [...(listing.images ?? [])].sort((a: any, b: any) =>
+    (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)
+  );
 
   // Extract map coordinates
   const coords = listing.location?.coordinates ?? listing.location?.geoJSON?.coordinates;
@@ -188,7 +204,7 @@ export default function ListingDetailScreen() {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            data={listing.images ?? []}
+            data={sortedImages}
             keyExtractor={(_: any, i: number) => i.toString()}
             renderItem={({ item: img }: { item: any }) => {
               const uri = typeof img === 'string' ? img : img?.url;
@@ -216,7 +232,7 @@ export default function ListingDetailScreen() {
           </View>
           <View style={styles.imageBadge}>
             <Text style={styles.imageBadgeText}>
-              1/{listing.images?.length ?? 0}
+              1/{sortedImages.length}
             </Text>
           </View>
         </View>

@@ -42,6 +42,10 @@ export const translations = {
     'type.camp': 'Camp',
     'type.resort': 'Resort',
     'type.hotel': 'Hotel',
+    'type.rest_house': 'Rest House',
+    'type.room': 'Room',
+    'type.hotel_resort': 'Hotel Resort',
+    'type.serviced_apartment': 'Serviced Apartment',
 
     // Listing Detail
     'detail.about': 'About',
@@ -395,6 +399,10 @@ export const translations = {
     'type.camp': 'مخيم',
     'type.resort': 'منتجع',
     'type.hotel': 'فندق',
+    'type.rest_house': 'استراحة',
+    'type.room': 'غرفة',
+    'type.hotel_resort': 'منتجع فندقي',
+    'type.serviced_apartment': 'شقة مفروشة',
 
     // Listing Detail
     'detail.about': 'عن العقار',

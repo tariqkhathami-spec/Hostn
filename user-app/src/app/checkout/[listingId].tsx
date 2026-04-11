@@ -17,6 +17,43 @@ import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 
+function calculateDateRangePrice(
+  listing: any, checkIn: string, checkOut: string
+): { subtotal: number; blocked: boolean; nights: number } {
+  const start = new Date(checkIn);
+  const end = new Date(checkOut);
+  const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
+
+  const datePricingMap = new Map<string, any>();
+  if (listing?.datePricing) {
+    for (const dp of listing.datePricing) {
+      const key = new Date(dp.date).toISOString().split('T')[0];
+      datePricingMap.set(key, dp);
+    }
+  }
+
+  const dayKeys = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  let subtotal = 0;
+  let blocked = false;
+
+  for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    const override = datePricingMap.get(dateStr);
+
+    if (override?.isBlocked) { blocked = true; break; }
+    if (override?.price) { subtotal += override.price; continue; }
+
+    const dayOfWeek = d.getDay(); // 0=sunday
+    const dayKey = dayKeys[dayOfWeek];
+    const dayPrice = listing?.pricing?.[dayKey];
+    if (dayPrice && dayPrice > 0) { subtotal += dayPrice; continue; }
+
+    subtotal += listing?.pricing?.perNight || 0;
+  }
+
+  return { subtotal, blocked, nights };
+}
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -142,9 +179,10 @@ export default function CheckoutScreen() {
 
   // Price calculations — matching web BookingWidget exactly
   const hasValidDates = checkIn.length > 0 && checkOut.length > 0;
-  const nights = hasValidDates ? getNights(checkIn, checkOut) : 0;
+  const { subtotal, blocked: datesBlocked, nights } = hasValidDates
+    ? calculateDateRangePrice(listing, checkIn, checkOut)
+    : { subtotal: 0, blocked: false, nights: 0 };
   const pricePerNight = listing?.pricing?.perNight ?? 0;
-  const subtotal = nights * pricePerNight;
   const cleaningFee = listing?.pricing?.cleaningFee ?? 0;
   const serviceFee = Math.round(subtotal * 0.1);
   const discountPercent = listing?.pricing?.discountPercent ?? 0;
@@ -155,7 +193,19 @@ export default function CheckoutScreen() {
 
   const maxGuests = listing?.capacity?.maxGuests ?? 20;
   const minNights = listing?.rules?.minNights ?? 1;
-  const canBook = hasValidDates && nights >= minNights && totalGuests >= 1 && totalGuests <= maxGuests;
+  const canBook = hasValidDates && nights >= minNights && totalGuests >= 1 && totalGuests <= maxGuests && !datesBlocked;
+
+  // Show alert if dates are blocked by datePricing
+  React.useEffect(() => {
+    if (datesBlocked) {
+      Alert.alert(
+        t('common.error'),
+        isAr
+          ? 'بعض التواريخ المحددة محظورة. يرجى اختيار تواريخ أخرى.'
+          : 'Some of the selected dates are blocked. Please choose different dates.'
+      );
+    }
+  }, [datesBlocked]);
 
   // Error messages matching web's error codes
   const getBookingErrorMessage = (errData: any) => {

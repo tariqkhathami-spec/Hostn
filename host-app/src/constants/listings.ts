@@ -133,6 +133,10 @@ export const PROPERTY_TYPES: PropertyTypeOption[] = [
   { value: 'farm', en: 'Farm', ar: 'مزرعة', icon: 'leaf' },
   { value: 'camp', en: 'Camp', ar: 'مخيم', icon: 'bonfire' },
   { value: 'hotel', en: 'Hotel', ar: 'فندق', icon: 'bed' },
+  { value: 'rest_house', en: 'Rest House', ar: 'استراحة', icon: 'home-outline' },
+  { value: 'room', en: 'Room', ar: 'غرفة', icon: 'bed-outline' },
+  { value: 'hotel_resort', en: 'Hotel Resort', ar: 'منتجع فندقي', icon: 'business-outline' },
+  { value: 'serviced_apartment', en: 'Serviced Apartment', ar: 'شقة مفروشة', icon: 'albums-outline' },
 ];
 
 export interface AmenityOption {

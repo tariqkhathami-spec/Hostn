@@ -38,6 +38,7 @@ export const hostService = {
   // Bookings
   getBookings: (params?: { status?: string; page?: number }) => api.get<{ data: Booking[] }>('/host/bookings', { params }).then(r => r.data),
   getUpcomingGuests: () => api.get<{ data: Booking[] }>('/host/bookings/upcoming').then(r => r.data),
+  getUnitBookedDates: (unitId: string) => api.get(`/bookings/unit/${unitId}/dates`).then(r => r.data),
   getBookingDetail: (id: string) => api.get<{ data: Booking }>(`/bookings/${id}`).then(r => r.data),
   updateBookingStatus: (id: string, status: string) => api.put(`/bookings/${id}/status`, { status }).then(r => r.data),
 
