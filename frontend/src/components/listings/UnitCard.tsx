@@ -484,7 +484,11 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
                     </>
                   )}
                 </>
-              ) : null}
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm text-gray-400">{isAr ? 'السعر غير محدد' : 'Price not set'}</span>
+                </div>
+              )}
             </div>
             {(ratings?.count ?? 0) > 0 && ratings && (
               <StarRating rating={ratings.average} count={ratings.count} />

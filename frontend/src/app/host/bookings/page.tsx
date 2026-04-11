@@ -11,7 +11,7 @@ import { usePageTitle } from '@/lib/usePageTitle';
 interface Booking {
   _id: string;
   guest?: { name: string; email: string };
-  property?: { title: string };
+  property?: { title: string; titleAr?: string };
   unit?: { _id: string; nameEn: string; nameAr: string } | null;
   checkIn: string;
   checkOut: string;
@@ -142,7 +142,7 @@ export default function HostBookingsPage() {
                 {filtered.map((booking) => (
                   <tr key={booking._id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="p-3 text-gray-900">{booking.guest?.name || '-'}</td>
-                    <td className="p-3 text-gray-700">{booking.property?.title || '-'}</td>
+                    <td className="p-3 text-gray-700">{(lang === 'ar' ? (booking.property?.titleAr || booking.property?.title) : booking.property?.title) || '-'}</td>
                     <td className="p-3 text-gray-600">
                       {booking.unit
                         ? (lang === 'ar' ? booking.unit.nameAr || booking.unit.nameEn : booking.unit.nameEn || booking.unit.nameAr)
@@ -159,7 +159,7 @@ export default function HostBookingsPage() {
                         {t[booking.status]?.[lang] || booking.status}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-gray-900"><span dir="ltr"><SarSymbol /> {booking.totalPrice?.toLocaleString('en')}</span></td>
+                    <td className="p-3 font-medium text-gray-900">{booking.totalPrice != null ? <span dir="ltr"><SarSymbol /> {booking.totalPrice.toLocaleString('en')}</span> : <span className="text-gray-400">-</span>}</td>
                     <td className="p-3">
                       {booking.status === 'pending' && (
                         <div className="flex gap-2">

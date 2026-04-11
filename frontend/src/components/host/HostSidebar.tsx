@@ -19,6 +19,7 @@ import {
   ChevronRight,
   X,
   Globe,
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,7 +36,7 @@ function getNavItems(isAr: boolean) {
     { href: '/host/listings', label: isAr ? '\u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062A' : 'Listings', icon: Building2 },
     { href: '/host/bookings', label: isAr ? '\u0627\u0644\u062D\u062C\u0648\u0632\u0627\u062A' : 'Bookings', icon: BookOpen },
     { href: '/host/calendar', label: isAr ? '\u0627\u0644\u062A\u0642\u0648\u064A\u0645' : 'Calendar', icon: CalendarDays },
-    { href: '/host/pricing', label: isAr ? '\u0627\u0644\u0623\u0633\u0639\u0627\u0631' : 'Pricing', icon: DollarSign },
+    { href: '/host/pricing', label: isAr ? '\u0627\u0644\u0623\u0633\u0639\u0627\u0631' : 'Pricing', icon: Tag },
     { href: '/host/earnings', label: isAr ? '\u0627\u0644\u0623\u0631\u0628\u0627\u062D' : 'Earnings', icon: DollarSign },
     { href: '/host/reviews', label: isAr ? '\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A' : 'Reviews', icon: Star },
     { href: '/host/messages', label: isAr ? '\u0627\u0644\u0631\u0633\u0627\u0626\u0644' : 'Messages', icon: MessageSquare },

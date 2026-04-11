@@ -84,10 +84,15 @@ function PropertyDetailContent() {
     fetchData();
   }, [id]);
 
-  // Gallery images from property
+  // Gallery images from property, falling back to aggregated unit images
   const galleryImages: PropertyImage[] = (() => {
     if (property?.images && property.images.length > 0) {
       return [...property.images].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+    }
+    // Fallback: use images from units
+    const unitImages = units.flatMap(u => (u.images || []).map(img => ({ url: img.url, caption: img.caption, isPrimary: img.isPrimary ?? false })));
+    if (unitImages.length > 0) {
+      return unitImages.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
     }
     return [{ url: '/placeholder-property.jpg', isPrimary: true }];
   })();

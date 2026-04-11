@@ -235,12 +235,19 @@ const unitSchema = new mongoose.Schema(
       weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
     },
 
+    // ── Discount rules (weekday/weekend) ────────────────────────────
+    discountRules: [{
+      type: { type: String, enum: ['weekday', 'weekend'], required: true },
+      percent: { type: Number, required: true, min: 0, max: 100 },
+    }],
+
     // ── Per-date price overrides ─────────────────────────────────────
     datePricing: [
       {
         date: { type: Date, required: true },
         price: { type: Number, min: 0 },         // override price (null = use day-of-week default)
         isBlocked: { type: Boolean, default: false }, // true = unavailable
+        discountPercent: { type: Number, min: 0, max: 100 },
       },
     ],
 

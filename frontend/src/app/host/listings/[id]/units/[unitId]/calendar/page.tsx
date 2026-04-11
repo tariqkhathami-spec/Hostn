@@ -18,6 +18,8 @@ import {
   DollarSign,
   Percent,
   Tag,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
@@ -32,6 +34,7 @@ interface DatePricingEntry {
   date: string;
   price?: number;
   isBlocked?: boolean;
+  discountPercent?: number;
 }
 
 interface DayPriceInfo {
@@ -43,6 +46,7 @@ interface DayPriceInfo {
 interface BookedDateInfo {
   guestName: string;
   status: string;
+  checkOut: string;
 }
 
 interface PricingDialogState {
@@ -55,7 +59,7 @@ interface PricingDialogState {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 const t: Record<string, Record<string, string>> = {
-  title:          { en: 'Pricing & Availability', ar: 'الأسعار والتوفر' },
+  title:          { en: 'Calendar', ar: 'التقويم' },
   back:           { en: 'Back to units',          ar: 'العودة للوحدات' },
   weekdayPrice:   { en: 'Weekday Price',          ar: 'سعر أيام الأسبوع' },
   weekendPrice:   { en: 'Weekend Price',          ar: 'سعر نهاية الأسبوع' },
@@ -64,7 +68,7 @@ const t: Record<string, Record<string, string>> = {
   dayPrices:      { en: 'Day-of-week prices',     ar: 'أسعار أيام الأسبوع' },
   setSpecial:     { en: 'Set special price',      ar: 'تعيين سعر خاص' },
   block:          { en: 'Reserved',               ar: 'محجوز' },
-  unblock:        { en: 'Unreserve',              ar: 'إلغاء الحجز' },
+  unblock:        { en: 'Unreserve',              ar: 'إلغاء التخصيص' },
   removeOverride: { en: 'Remove override',        ar: 'إزالة التخصيص' },
   save:           { en: 'Save',                   ar: 'حفظ' },
   cancel:         { en: 'Cancel',                 ar: 'إلغاء' },
@@ -201,7 +205,7 @@ export default function UnitPricingPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
-  usePageTitle(isAr ? 'الأسعار والتوفر' : 'Pricing & Availability');
+  usePageTitle(isAr ? 'التقويم' : 'Calendar');
 
   /* ── state ── */
   const [unit, setUnit] = useState<Unit | null>(null);
@@ -230,9 +234,16 @@ export default function UnitPricingPage() {
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<string | null>(null);
   const [rangePrice, setRangePrice] = useState('');
-  const [showRangePriceInput, setShowRangePriceInput] = useState(false);
+  const [showRangePriceDialog, setShowRangePriceDialog] = useState(false);
   const [rangeDiscount, setRangeDiscount] = useState('');
-  const [showRangeDiscountInput, setShowRangeDiscountInput] = useState(false);
+
+  // Discount rules (Task J)
+  const [discountRules, setDiscountRules] = useState<{ type: 'weekday' | 'weekend'; percent: number }[]>([]);
+  const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
+  const [newDiscountType, setNewDiscountType] = useState<'weekday' | 'weekend'>('weekday');
+  const [newDiscountPercent, setNewDiscountPercent] = useState(50);
+  const [showRangeDiscountDialog, setShowRangeDiscountDialog] = useState(false);
+  const [rangeDiscountPercent, setRangeDiscountPercent] = useState(10);
 
   // Discount controls (4F)
   const [globalDiscountInput, setGlobalDiscountInput] = useState('');
@@ -273,6 +284,7 @@ export default function UnitPricingPage() {
             map.set(formatDateKey(current), {
               guestName: booking.guest?.name || '',
               status: booking.status,
+              checkOut: booking.checkOut,
             });
             current.setDate(current.getDate() + 1);
           }
@@ -289,10 +301,11 @@ export default function UnitPricingPage() {
   const clearSelection = useCallback(() => {
     setSelectionStart(null);
     setSelectionEnd(null);
-    setShowRangePriceInput(false);
+    setShowRangePriceDialog(false);
     setRangePrice('');
-    setShowRangeDiscountInput(false);
     setRangeDiscount('');
+    setShowRangeDiscountDialog(false);
+    setRangeDiscountPercent(10);
   }, []);
 
   const selectedSet = useMemo(() => {
@@ -319,7 +332,8 @@ export default function UnitPricingPage() {
       setGlobalDiscountInput(String(unit.pricing.discountPercent || ''));
       setWeeklyDiscountInput(String(unit.pricing.weeklyDiscount || ''));
     }
-  }, [unit?.pricing]);
+    setDiscountRules(unit?.discountRules || []);
+  }, [unit?.pricing, unit]);
 
   /* ── datePricing map ── */
   const datePricingMap = useMemo(() => {
@@ -448,9 +462,8 @@ export default function UnitPricingPage() {
       setSelectionStart(dateKey);
       setSelectionEnd(null);
       setSelectedDate(null);
-      setShowRangePriceInput(false);
+      setShowRangePriceDialog(false);
       setRangePrice('');
-      setShowRangeDiscountInput(false);
       setRangeDiscount('');
     } else {
       // Second click — complete the range
@@ -601,25 +614,19 @@ export default function UnitPricingPage() {
   };
 
   const applyRangeDiscount = async () => {
-    const val = Number(rangeDiscount);
-    if (!val || val <= 0 || val > 100 || selectedSet.size === 0) return;
+    if (!selectionStart || !selectionEnd || rangeDiscountPercent <= 0) return;
     setSaving(true);
     try {
-      // Store discount as negative price or a special field
-      // We'll store as datePricing entries with a discountPercent marker via price encoding
-      // For now, use datePricing with a computed discounted price based on the day's normal price
-      const datePricingEntries = Array.from(selectedSet).map((dateStr) => {
-        const date = new Date(dateStr + 'T00:00:00');
-        const info = getDayPrice(date);
-        const discountedPrice = Math.round(info.price * (1 - val / 100));
-        return {
-          date: dateStr,
-          price: discountedPrice > 0 ? discountedPrice : info.price,
-          isBlocked: false,
-        };
-      });
-      await unitsApi.updatePricing(unitId, { datePricing: datePricingEntries });
-      toast.success(t.discountSaved[lang]);
+      const dates: { date: string; discountPercent: number }[] = [];
+      const start = new Date(selectionStart + 'T00:00:00');
+      const end = new Date(selectionEnd + 'T00:00:00');
+      const s = start <= end ? start : end;
+      const e = start <= end ? end : start;
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        dates.push({ date: d.toISOString().slice(0, 10), discountPercent: rangeDiscountPercent });
+      }
+      await unitsApi.updatePricing(unitId, { datePricing: dates });
+      toast.success(lang === 'ar' ? 'تم تطبيق الخصم' : 'Discount applied');
       clearSelection();
       await fetchUnit();
     } catch {
@@ -627,6 +634,30 @@ export default function UnitPricingPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  /* ── Discount rule handlers (Task J) ── */
+  const handleAddDiscountRule = async () => {
+    if (discountRules.some(r => r.type === newDiscountType)) {
+      toast.error(lang === 'ar' ? 'توجد قاعدة لهذا النوع بالفعل' : 'A rule for this day type already exists');
+      return;
+    }
+    const updated = [...discountRules, { type: newDiscountType, percent: newDiscountPercent }];
+    try {
+      await unitsApi.update(unitId, { discountRules: updated });
+      setDiscountRules(updated);
+      setShowAddDiscountDialog(false);
+      toast.success(lang === 'ar' ? 'تمت إضافة الخصم' : 'Discount added');
+    } catch { toast.error(lang === 'ar' ? 'فشل' : 'Failed'); }
+  };
+
+  const handleRemoveDiscountRule = async (idx: number) => {
+    const updated = discountRules.filter((_, i) => i !== idx);
+    try {
+      await unitsApi.update(unitId, { discountRules: updated });
+      setDiscountRules(updated);
+      toast.success(lang === 'ar' ? 'تم حذف الخصم' : 'Discount removed');
+    } catch { toast.error(lang === 'ar' ? 'فشل' : 'Failed'); }
   };
 
   /* ── Close popover on outside click ── */
@@ -934,13 +965,32 @@ export default function UnitPricingPage() {
           )}
         </div>
 
-        {/* Day-Specific Discounts */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <DollarSign className="w-4 h-4 text-primary-600" />
-            <h3 className="text-base font-semibold text-gray-900">{t.dayDiscounts[lang]}</h3>
+        {/* Discount Rules */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">{lang === 'ar' ? 'قواعد الخصم' : 'Discount Rules'}</h3>
+            <button onClick={() => setShowAddDiscountDialog(true)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-xs font-medium hover:bg-primary-100 transition-colors">
+              <Plus className="w-3.5 h-3.5" /> {lang === 'ar' ? 'إضافة' : 'Add'}
+            </button>
           </div>
-          <p className="text-xs text-gray-400 mb-3">{t.dayDiscountsDesc[lang]}</p>
+          {discountRules.length === 0 ? (
+            <p className="text-sm text-gray-400">{lang === 'ar' ? 'لا توجد قواعد خصم' : 'No discount rules'}</p>
+          ) : (
+            <div className="space-y-2">
+              {discountRules.map((rule, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded">-{rule.percent}%</span>
+                    <span className="text-sm text-gray-700">{rule.type === 'weekday' ? (lang === 'ar' ? 'أيام الأسبوع' : 'Weekdays') : (lang === 'ar' ? 'نهاية الأسبوع' : 'Weekends')}</span>
+                  </div>
+                  <button onClick={() => handleRemoveDiscountRule(idx)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       )}
@@ -1005,7 +1055,13 @@ export default function UnitPricingPage() {
             } else if (dayInfo.blocked) {
               cellBg = 'bg-red-50';
             } else if (isBooked) {
-              cellBg = 'bg-emerald-50';
+              if (bookedInfo!.status === 'pending') {
+                cellBg = 'bg-yellow-50';
+              } else if (bookedInfo!.status === 'confirmed' && new Date(bookedInfo!.checkOut) < new Date()) {
+                cellBg = 'bg-gray-100';
+              } else {
+                cellBg = 'bg-emerald-50';
+              }
             } else if (dayInfo.isOverride) {
               cellBg = 'bg-blue-50';
             } else if (isWeekend) {
@@ -1050,7 +1106,11 @@ export default function UnitPricingPage() {
                     <Lock className="w-3 h-3 text-red-400" />
                   )}
                   {isBooked && !dayInfo.blocked && (
-                    <UserCheck className="w-3 h-3 text-emerald-500" />
+                    <UserCheck className={`w-3 h-3 ${
+                      bookedInfo!.status === 'pending' ? 'text-yellow-500' :
+                      bookedInfo!.status === 'confirmed' && new Date(bookedInfo!.checkOut) < new Date() ? 'text-gray-400' :
+                      'text-emerald-500'
+                    }`} />
                   )}
                 </div>
 
@@ -1060,6 +1120,17 @@ export default function UnitPricingPage() {
                   </div>
                 )}
 
+                {/* Discount badge */}
+                {(() => {
+                  const isWknd = [4,5,6].includes(date.getDay());
+                  const ruleDiscount = discountRules.find(r => (r.type === 'weekend' && isWknd) || (r.type === 'weekday' && !isWknd))?.percent ?? 0;
+                  const dateDiscount = datePricingMap?.get(key)?.discountPercent ?? 0;
+                  const effective = Math.max(ruleDiscount, dateDiscount);
+                  return effective > 0 && isCurrentMonth && !dayInfo?.blocked ? (
+                    <div className="text-[8px] text-orange-500 font-medium">-{effective}%</div>
+                  ) : null;
+                })()}
+
                 {isCurrentMonth && dayInfo.blocked && (
                   <div className="mt-1 text-xs text-red-400 font-medium">
                     {t.blocked[lang]}
@@ -1067,8 +1138,16 @@ export default function UnitPricingPage() {
                 )}
 
                 {isBooked && !dayInfo.blocked && isCurrentMonth && (
-                  <div className="mt-0.5 text-[9px] text-emerald-600 font-medium truncate">
-                    {t.bookedDay[lang]}
+                  <div className={`mt-0.5 text-[9px] font-medium truncate ${
+                    bookedInfo!.status === 'pending' ? 'text-yellow-600' :
+                    bookedInfo!.status === 'confirmed' && new Date(bookedInfo!.checkOut) < new Date() ? 'text-gray-400' :
+                    'text-emerald-600'
+                  }`}>
+                    {bookedInfo!.status === 'pending'
+                      ? (isAr ? 'قيد الانتظار' : 'Pending')
+                      : bookedInfo!.status === 'confirmed' && new Date(bookedInfo!.checkOut) < new Date()
+                        ? (isAr ? 'مكتمل' : 'Completed')
+                        : t.bookedDay[lang]}
                   </div>
                 )}
               </div>
@@ -1093,7 +1172,15 @@ export default function UnitPricingPage() {
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border bg-emerald-50 border-emerald-200 inline-block" />
-          {t.bookedDay[lang]}
+          {isAr ? 'قادم' : 'Upcoming'}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border bg-yellow-50 border-yellow-200 inline-block" />
+          {isAr ? 'قيد الانتظار' : 'Pending'}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border bg-gray-100 border-gray-300 inline-block" />
+          {isAr ? 'مكتمل' : 'Completed'}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded border bg-amber-50 border-amber-200 inline-block" />
@@ -1152,81 +1239,20 @@ export default function UnitPricingPage() {
 
               {/* Set Price (pricing tab) */}
               {activeTab === 'pricing' && (
-                <>
-                  {!showRangePriceInput ? (
-                    <button
-                      onClick={() => setShowRangePriceInput(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors"
-                    >
-                      <DollarSign className="w-3.5 h-3.5" />
-                      {t.setPrice[lang]}
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          value={rangePrice}
-                          onChange={(e) => setRangePrice(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') applyRangePrice(); }}
-                          placeholder="0"
-                          autoFocus
-                          className="w-28 px-3 py-2 pe-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                        />
-                        <span className="absolute end-2 top-1/2 -translate-y-1/2 text-gray-400">
-                          <SarSymbol size={10} />
-                        </span>
-                      </div>
-                      <button
-                        onClick={applyRangePrice}
-                        disabled={saving || !rangePrice || Number(rangePrice) <= 0}
-                        className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
-                      >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
-                      </button>
-                    </div>
-                  )}
-                </>
+                <button onClick={() => { setRangePrice(''); setShowRangePriceDialog(true); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  {t.setPrice[lang]}
+                </button>
               )}
 
               {/* Set Discount (discount tab) */}
               {activeTab === 'discount' && (
-                <>
-                  {!showRangeDiscountInput ? (
-                    <button
-                      onClick={() => setShowRangeDiscountInput(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors"
-                    >
-                      <Percent className="w-3.5 h-3.5" />
-                      {t.setDiscount[lang]}
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={rangeDiscount}
-                          onChange={(e) => setRangeDiscount(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') applyRangeDiscount(); }}
-                          placeholder="0"
-                          autoFocus
-                          className="w-24 px-3 py-2 pe-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                        />
-                        <span className="absolute end-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                      </div>
-                      <button
-                        onClick={applyRangeDiscount}
-                        disabled={saving || !rangeDiscount || Number(rangeDiscount) <= 0 || Number(rangeDiscount) > 100}
-                        className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
-                      >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
-                      </button>
-                    </div>
-                  )}
-                </>
+                <button onClick={() => { setRangeDiscountPercent(10); setShowRangeDiscountDialog(true); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors">
+                  <Percent className="w-3.5 h-3.5" />
+                  {t.setDiscount[lang]}
+                </button>
               )}
             </div>
           )}
@@ -1422,6 +1448,112 @@ export default function UnitPricingPage() {
                 className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t.save[lang]}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Set Price Dialog (Task I) ── */}
+      {showRangePriceDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setShowRangePriceDialog(false)}>
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-gray-900">{t.setPrice[lang]}</h3>
+              <button onClick={() => setShowRangePriceDialog(false)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.newPrice[lang]}</label>
+            <div className="relative mb-4">
+              <input type="number" min="0" value={rangePrice} onChange={e => setRangePrice(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && rangePrice && Number(rangePrice) > 0) { applyRangePrice(); setShowRangePriceDialog(false); }}}
+                placeholder="0" autoFocus className="w-full px-3 py-2.5 pe-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none text-sm" />
+              <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400"><SarSymbol size={11} /></span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowRangePriceDialog(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">{t.cancel[lang]}</button>
+              <button onClick={() => { applyRangePrice(); setShowRangePriceDialog(false); }}
+                disabled={saving || !rangePrice || Number(rangePrice) <= 0}
+                className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-primary-700 transition-colors">
+                {saving ? '...' : t.save[lang]}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Discount Rule Dialog (Task J) ── */}
+      {showAddDiscountDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setShowAddDiscountDialog(false)}>
+          <div className="bg-white rounded-xl shadow-xl border w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold">{lang === 'ar' ? 'إضافة خصم' : 'Add Discount'}</h3>
+              <button onClick={() => setShowAddDiscountDialog(false)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            {/* Day type selector */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{lang === 'ar' ? 'نوع الأيام' : 'Day Type'}</label>
+              <div className="flex gap-2">
+                {(['weekday', 'weekend'] as const).map(type => {
+                  const exists = discountRules.some(r => r.type === type);
+                  return (
+                    <button key={type} onClick={() => !exists && setNewDiscountType(type)} disabled={exists}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all border ${newDiscountType === type ? 'bg-primary-50 text-primary-700 border-primary-300' : exists ? 'bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+                      {type === 'weekday' ? (lang === 'ar' ? 'أيام الأسبوع' : 'Weekdays') : (lang === 'ar' ? 'نهاية الأسبوع' : 'Weekends')}
+                      {exists && <span className="block text-[10px] text-gray-400 mt-0.5">{lang === 'ar' ? 'موجود' : 'exists'}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Percent slider + input */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{lang === 'ar' ? 'نسبة الخصم' : 'Discount %'}</label>
+              <div className="flex items-center gap-3">
+                <input type="range" min="0" max="100" value={newDiscountPercent} onChange={e => setNewDiscountPercent(Number(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600" />
+                <div className="relative w-20">
+                  <input type="number" min="0" max="100" value={newDiscountPercent} onChange={e => setNewDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                    className="w-full px-2 py-1.5 pe-7 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none" />
+                  <span className="absolute end-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAddDiscountDialog(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium">{lang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
+              <button onClick={handleAddDiscountRule}
+                disabled={newDiscountPercent <= 0 || discountRules.some(r => r.type === newDiscountType)}
+                className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">
+                {lang === 'ar' ? 'حفظ' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Range Discount Dialog (Task J) ── */}
+      {showRangeDiscountDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setShowRangeDiscountDialog(false)}>
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-gray-900">{t.setDiscount[lang]}</h3>
+              <button onClick={() => setShowRangeDiscountDialog(false)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.discountPercent[lang]}</label>
+            <div className="flex items-center gap-3 mb-4">
+              <input type="range" min="0" max="100" value={rangeDiscountPercent} onChange={e => setRangeDiscountPercent(Number(e.target.value))}
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600" />
+              <div className="relative w-20">
+                <input type="number" min="0" max="100" value={rangeDiscountPercent} onChange={e => setRangeDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  className="w-full px-2 py-1.5 pe-7 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none" />
+                <span className="absolute end-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowRangeDiscountDialog(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">{t.cancel[lang]}</button>
+              <button onClick={() => { applyRangeDiscount(); setShowRangeDiscountDialog(false); }}
+                disabled={saving || rangeDiscountPercent <= 0}
+                className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-primary-700 transition-colors">
+                {saving ? '...' : t.save[lang]}
               </button>
             </div>
           </div>

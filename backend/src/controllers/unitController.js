@@ -31,6 +31,7 @@ const ALLOWED_UNIT_FIELDS = [
   'datePricing',
   'capacity',
   'unavailableDates',
+  'discountRules',
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -124,6 +125,16 @@ exports.searchUnits = async (req, res, next) => {
       // Exclude units with manually blocked dates overlapping the stay
       unitFilter.unavailableDates = {
         $not: { $elemMatch: { start: { $lt: coDate }, end: { $gt: ciDate } } },
+      };
+
+      // Exclude units with blocked datePricing dates in range
+      unitFilter.datePricing = {
+        $not: {
+          $elemMatch: {
+            date: { $gte: ciDate, $lt: coDate },
+            isBlocked: true,
+          }
+        }
       };
 
       // Exclude units with confirmed/pending bookings overlapping the stay
@@ -553,10 +564,15 @@ exports.updateUnitPricing = async (req, res, next) => {
         if (dp.remove) {
           dateMap.delete(key); // Remove override
         } else {
-          dateMap.set(key, { date: new Date(dp.date), price: dp.price, isBlocked: dp.isBlocked ?? false });
+          dateMap.set(key, { date: new Date(dp.date), price: dp.price, isBlocked: dp.isBlocked ?? false, discountPercent: dp.discountPercent ?? undefined });
         }
       }
       unit.datePricing = Array.from(dateMap.values());
+    }
+
+    // 5. Discount rules (weekday/weekend)
+    if (req.body.discountRules) {
+      unit.discountRules = req.body.discountRules;
     }
 
     await unit.save();

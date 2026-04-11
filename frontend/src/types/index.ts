@@ -164,7 +164,8 @@ export interface Unit {
   capacity?: { maxGuests?: number };
   ratings?: Ratings;
   unavailableDates?: { start: string; end: string }[];
-  datePricing?: { date: string; price?: number; isBlocked?: boolean }[];
+  datePricing?: { date: string; price?: number; isBlocked?: boolean; discountPercent?: number }[];
+  discountRules?: { type: 'weekday' | 'weekend'; percent: number }[];
   createdAt?: string;
   updatedAt?: string;
 }

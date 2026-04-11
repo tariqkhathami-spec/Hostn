@@ -33,6 +33,7 @@ function BookingContent() {
   const { language } = useLanguage();
 
   const [property, setProperty] = useState<Property | null>(null);
+  const [unit, setUnit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [specialRequests, setSpecialRequests] = useState('');
@@ -80,11 +81,19 @@ function BookingContent() {
       // Try as unit first (id may be a unit ID after Property→Unit migration)
       try {
         const unitRes = await unitsApi.getOne(id);
-        const unit = unitRes.data.data;
-        if (unit?.property) {
-          setProperty(typeof unit.property === 'object' ? unit.property : unit);
+        const unitData = unitRes.data.data;
+        setUnit(unitData);
+        if (unitData?.property && typeof unitData.property === 'object') {
+          // property is populated (full object)
+          setProperty(unitData.property);
+        } else if (unitData?.property && typeof unitData.property === 'string') {
+          // property is just an ID string — fetch the full property
+          const propRes = await propertiesApi.getOne(unitData.property);
+          setProperty(propRes.data.data);
         } else {
-          setProperty(unit);
+          // No property ref — try as legacy property ID
+          const res = await propertiesApi.getOne(id);
+          setProperty(res.data.data);
         }
       } catch {
         // Fall back to property lookup
@@ -236,20 +245,46 @@ function BookingContent() {
   }
 
   const nights = checkIn && checkOut ? calculateNights(checkIn, checkOut) : 0;
-  // Always use original perNight; discount is a separate line item
-  const pricePerNight = property.pricing?.perNight ?? 0;
-  const subtotal = nights * pricePerNight;
-  const cleaningFee = property.pricing?.cleaningFee ?? 0;
+
+  // Pricing: prefer unit day-of-week pricing, fall back to property-level perNight
+  let pricePerNight = 0;
+  let subtotal = 0;
+  let cleaningFee = 0;
+  let discount = 0;
+  if (unit?.pricing) {
+    const dayNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    let sum = 0;
+    const start = new Date(checkIn);
+    for (let i = 0; i < nights; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      sum += unit.pricing[dayNames[d.getDay()]] || 0;
+    }
+    pricePerNight = nights > 0 ? Math.round(sum / nights) : 0;
+    subtotal = sum;
+    cleaningFee = unit.pricing.cleaningFee ?? property.pricing?.cleaningFee ?? 0;
+    discount = (unit.pricing.discountPercent ?? 0) > 0
+      ? Math.round(subtotal * (unit.pricing.discountPercent / 100))
+      : 0;
+  } else {
+    // Legacy property-level pricing
+    pricePerNight = property.pricing?.perNight ?? 0;
+    subtotal = nights * pricePerNight;
+    cleaningFee = property.pricing?.cleaningFee ?? 0;
+    discount = (property.pricing?.discountPercent ?? 0) > 0
+      ? Math.round(subtotal * ((property.pricing?.discountPercent ?? 0) / 100))
+      : 0;
+  }
   const serviceFee = Math.round(subtotal * 0.1);
-  const discount = (property.pricing?.discountPercent ?? 0) > 0
-    ? Math.round(subtotal * ((property.pricing?.discountPercent ?? 0) / 100))
-    : 0;
   // Saudi Arabia 15% VAT — applied on taxable amount (after discount)
   const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
   const vat = Math.round(taxableAmount * 0.15);
   const total = taxableAmount + vat;
 
-  const primaryImage = property.images.find((i) => i.isPrimary)?.url || property.images[0]?.url;
+  const primaryImage = property.images?.find((i: any) => i.isPrimary)?.url
+    || property.images?.[0]?.url
+    || unit?.images?.find((i: any) => i.isPrimary)?.url
+    || unit?.images?.[0]?.url;
 
   return (
     <>
@@ -334,7 +369,7 @@ function BookingContent() {
                             <div>
                               <p className="text-sm font-medium text-gray-800">{isAr ? 'الضيوف' : 'Guests'}</p>
                               <p className="text-xs text-gray-500">
-                                {isAr ? `حتى ${getGuestLabel(property.capacity?.maxGuests ?? 0, 'ar')} مسموح` : `Up to ${property.capacity?.maxGuests ?? 0} allowed`}
+                                {isAr ? `حتى ${getGuestLabel(unit?.capacity?.maxGuests ?? property.capacity?.maxGuests ?? 0, 'ar')} مسموح` : `Up to ${unit?.capacity?.maxGuests ?? property.capacity?.maxGuests ?? 0} allowed`}
                               </p>
                             </div>
                           </div>
@@ -589,7 +624,7 @@ function BookingContent() {
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-green-600">
-                        <span>{isAr ? `\u062E\u0635\u0645 (${property.pricing?.discountPercent ?? 0}%)` : `Discount (${property.pricing?.discountPercent ?? 0}%)`}</span>
+                        <span>{isAr ? `\u062E\u0635\u0645 (${unit?.pricing?.discountPercent ?? property.pricing?.discountPercent ?? 0}%)` : `Discount (${unit?.pricing?.discountPercent ?? property.pricing?.discountPercent ?? 0}%)`}</span>
                         <span dir="ltr"><SarSymbol /> -{formatPriceNumber(discount)}</span>
                       </div>
                     )}

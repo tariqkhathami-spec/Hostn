@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { wishlistsApi } from '@/lib/api';
-import { WishlistList, Property } from '@/types';
+import { wishlistsApi, unitsApi } from '@/lib/api';
+import { WishlistList, Property, Unit } from '@/types';
+import UnitCard from '@/components/listings/UnitCard';
 import {
   Heart, Loader2, ArrowLeft, Trash2, MapPin, Users, BedDouble, Bath,
   Building, Star, Droplets, Percent, Compass, Ruler, X, ChevronDown, Map,
@@ -195,6 +196,8 @@ export default function WishlistDetailPage() {
   const [list, setList] = useState<WishlistList | null>(null);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [unitsByProperty, setUnitsByProperty] = useState<Record<string, Unit[]>>({});
+  const [unitsLoading, setUnitsLoading] = useState(false);
 
   // ── Search state (city, dates, guests) ──
   const [searchCity, setSearchCity] = useState('');
@@ -363,6 +366,23 @@ export default function WishlistDetailPage() {
     };
     fetchList();
   }, [isAuthenticated, listId, router, isAr]);
+
+  // Fetch units for each wishlisted property
+  useEffect(() => {
+    if (!list?.properties?.length) return;
+    setUnitsLoading(true);
+    Promise.all(
+      list.properties.map(p =>
+        unitsApi.getForProperty(p._id)
+          .then(res => ({ propertyId: p._id, units: (res.data.data || []) as Unit[] }))
+          .catch(() => ({ propertyId: p._id, units: [] as Unit[] }))
+      )
+    ).then(results => {
+      const map: Record<string, Unit[]> = {};
+      for (const r of results) map[r.propertyId] = r.units;
+      setUnitsByProperty(map);
+    }).finally(() => setUnitsLoading(false));
+  }, [list?.properties]);
 
   const handleRemoveProperty = async (propertyId: string) => {
     if (!list) return;
@@ -738,11 +758,38 @@ export default function WishlistDetailPage() {
               <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
               <p className="text-amber-800 text-sm font-medium">{isAr ? 'لا توجد عقارات مطابقة للبحث' : 'No properties match your search'}</p>
             </div>
+          ) : unitsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayProperties.map(property => (
-                <PropertyListCard key={property._id} property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} checkIn={checkIn} checkOut={checkOut} />
-              ))}
+            <div className="space-y-6">
+              {displayProperties.map(property => {
+                const propUnits = unitsByProperty[property._id] || [];
+                return (
+                  <div key={property._id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900 text-sm">
+                        {isAr ? (property.titleAr || property.title) : property.title}
+                      </h3>
+                      <button onClick={() => handleRemoveProperty(property._id)}
+                        disabled={removingId === property._id}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+                        {removingId === property._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {propUnits.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {propUnits.map(unit => (
+                          <UnitCard key={unit._id} unit={unit} checkIn={checkIn || undefined} checkOut={checkOut || undefined} />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 py-2">{isAr ? 'لا توجد وحدات متاحة' : 'No units available'}</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -751,20 +798,41 @@ export default function WishlistDetailPage() {
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">
                 {isAr ? 'لا تطابق البحث' : 'Doesn\'t match search'}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mismatched.map(({ property, reasons }) => (
-                  <div key={property._id} className="relative">
-                    <div className="opacity-40">
-                      <PropertyListCard property={property} isAr={isAr} lang={lang} removingId={removingId} onRemove={handleRemoveProperty} translateCity={translateCity} translateDistrict={translateDistrict} checkIn={checkIn} checkOut={checkOut} />
-                    </div>
-                    <div className="absolute bottom-0 inset-x-0 bg-amber-500 rounded-b-xl px-3 py-2.5 shadow-md">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-white font-semibold leading-snug">{reasons.join(' · ')}</p>
+              <div className="space-y-6">
+                {mismatched.map(({ property, reasons }) => {
+                  const propUnits = unitsByProperty[property._id] || [];
+                  return (
+                    <div key={property._id} className="relative opacity-40">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-gray-900 text-sm">
+                            {isAr ? (property.titleAr || property.title) : property.title}
+                          </h3>
+                          <button onClick={() => handleRemoveProperty(property._id)}
+                            disabled={removingId === property._id}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+                            {removingId === property._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {propUnits.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {propUnits.map(unit => (
+                              <UnitCard key={unit._id} unit={unit} checkIn={checkIn || undefined} checkOut={checkOut || undefined} />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 py-2">{isAr ? 'لا توجد وحدات متاحة' : 'No units available'}</p>
+                        )}
+                      </div>
+                      <div className="mt-2 bg-amber-500 rounded-xl px-3 py-2.5 shadow-md">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-white font-semibold leading-snug">{reasons.join(' · ')}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

@@ -124,7 +124,6 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
     }
 
     let sum = 0;
-    let hasBlockedDate = false;
     const start = new Date(checkIn);
     for (let i = 0; i < nights; i++) {
       const d = new Date(start);
@@ -133,25 +132,17 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       const override = dateOverrides.get(dateKey);
 
       if (override?.isBlocked) {
-        hasBlockedDate = true;
-        break;
-      }
-
-      if (override?.price != null && override.price > 0) {
+        // Blocked date — use day-of-week default price instead of breaking
+        sum += selectedUnit.pricing[dayNames[d.getDay()]] || 0;
+      } else if (override?.price != null && override.price > 0) {
         sum += override.price;
       } else {
         sum += selectedUnit.pricing[dayNames[d.getDay()]] || 0;
       }
     }
 
-    if (hasBlockedDate) {
-      // Some dates are blocked — show 0 and the UI will handle it
-      subtotal = 0;
-      pricePerNight = 0;
-    } else {
-      subtotal = sum;
-      pricePerNight = Math.round(sum / nights);
-    }
+    subtotal = sum;
+    pricePerNight = Math.round(sum / nights);
     cleaningFee = selectedUnit.pricing.cleaningFee || 0;
     let discPct = selectedUnit.pricing.discountPercent || 0;
     if (nights >= 7 && (selectedUnit.pricing.weeklyDiscount || 0) > discPct) {
