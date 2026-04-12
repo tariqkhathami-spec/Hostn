@@ -340,14 +340,14 @@ export default function HostListingsPage() {
                         </Link>
                       </div>
                     ) : (
-                      <div className="divide-y divide-gray-100">
+                      <div className="divide-y divide-gray-200 bg-gray-50/50 rounded-lg border border-gray-100">
                         {units.map((unit) => {
                           const avg = avgPrice(unit.pricing);
                           const img = primaryImage(unit);
                           return (
                             <div
                               key={unit._id}
-                              className={`flex items-start gap-3 px-4 py-3 ${
+                              className={`flex items-start gap-3 px-4 py-3.5 hover:bg-white/80 transition-colors ${
                                 !unit.isActive ? 'opacity-60' : ''
                               }`}
                             >
@@ -405,14 +405,14 @@ export default function HostListingsPage() {
                                 <div className="flex items-center gap-2">
                                   <Link
                                     href={`/host/listings/${property._id}/units/${unit._id}/edit`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:border-primary-300 hover:bg-primary-50 rounded-lg text-xs font-medium text-gray-700 hover:text-primary-600 shadow-sm transition-colors"
                                   >
                                     <Pencil className="w-3.5 h-3.5" />
                                     {t.edit[lang]}
                                   </Link>
                                   <Link
                                     href={`/host/listings/${property._id}/units/${unit._id}/calendar`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 border border-primary-200 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-700 shadow-sm transition-colors"
                                   >
                                     <Calendar className="w-3.5 h-3.5" />
                                     {t.pricing[lang]}

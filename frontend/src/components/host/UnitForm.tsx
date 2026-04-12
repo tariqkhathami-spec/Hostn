@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { uploadApi } from '@/lib/api';
 import {
@@ -358,24 +358,29 @@ export default function UnitForm({
   const [activeSection, setActiveSection] = useState('section-basic');
 
   /* ── Section nav definitions ── */
-  const NAV_SECTIONS = [
-    { id: 'section-basic', label: t.basicInfo[lang] },
-    { id: 'section-amenities', label: isAr ? 'المرافق' : 'Amenities' },
-    { id: 'section-additional', label: isAr ? 'مرافق إضافية' : 'More Amenities' },
-    { id: 'section-features', label: isAr ? 'المميزات' : 'Features' },
-    { id: 'section-deposit', label: t.insuranceTitle[lang] },
-    { id: 'section-cancellation', label: t.cancelTitle[lang] },
-    { id: 'section-rules', label: t.rulesTitle[lang] },
-    { id: 'section-photos', label: t.photos[lang] },
-  ];
+  const NAV_SECTIONS = useMemo(() => {
+    const sections = [
+      { id: 'section-basic', label: t.basicInfo[lang] },
+      { id: 'section-amenities', label: isAr ? 'المرافق' : 'Amenities' },
+    ];
+    if (form.hasBedrooms) sections.push({ id: 'section-bedrooms', label: isAr ? 'غرف النوم' : 'Bedrooms' });
+    if (form.hasPool) sections.push({ id: 'section-pools', label: isAr ? 'المسابح' : 'Pools' });
+    if (form.hasKitchen) sections.push({ id: 'section-kitchen', label: isAr ? 'المطبخ' : 'Kitchen' });
+    if (form.hasLivingRooms) sections.push({ id: 'section-living', label: isAr ? 'غرفة المعيشة' : 'Living Room' });
+    sections.push(
+      { id: 'section-additional', label: isAr ? 'مرافق إضافية' : 'More Amenities' },
+      { id: 'section-features', label: isAr ? 'المميزات' : 'Features' },
+      { id: 'section-deposit', label: t.insuranceTitle[lang] },
+      { id: 'section-cancellation', label: t.cancelTitle[lang] },
+      { id: 'section-rules', label: t.rulesTitle[lang] },
+      { id: 'section-photos', label: t.photos[lang] },
+    );
+    return sections;
+  }, [form.hasBedrooms, form.hasPool, form.hasKitchen, form.hasLivingRooms, lang]);
 
   /* ── IntersectionObserver to track visible section ── */
   useEffect(() => {
-    const ids = [
-      'section-basic', 'section-amenities', 'section-additional',
-      'section-features', 'section-deposit', 'section-cancellation',
-      'section-rules', 'section-photos',
-    ];
+    const ids = NAV_SECTIONS.map(s => s.id);
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -389,7 +394,7 @@ export default function UnitForm({
     const els = ids.map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [NAV_SECTIONS]);
 
   /* ── Helpers ─────────────────────────────────── */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -522,7 +527,7 @@ export default function UnitForm({
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="flex gap-8">
+      <div className="flex gap-8 lg:justify-center">
         {/* ── Desktop sidebar nav (hidden below lg) ── */}
         <nav className="sticky top-24 self-start w-48 flex-shrink-0 hidden lg:block">
           <ul className="space-y-1">
@@ -547,7 +552,7 @@ export default function UnitForm({
         </nav>
 
         {/* ── Form body ── */}
-        <div className="flex-1 min-w-0 space-y-6">
+        <div className="flex-1 min-w-0 max-w-3xl space-y-6">
           {/* Mobile sticky horizontal nav (hidden on lg+) */}
           <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm -mx-1 px-1 py-2 lg:hidden">
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -670,7 +675,7 @@ export default function UnitForm({
 
       {/* ══ Bedroom detail card ═══════════════════════════ */}
       {form.hasBedrooms && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+        <div id="section-bedrooms" className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
           <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
             <BedDouble className="w-5 h-5 text-primary-500" /> {t.bedroomsTitle[lang]}
           </h2>
@@ -684,7 +689,7 @@ export default function UnitForm({
 
       {/* ══ Pool detail card ══════════════════════════════ */}
       {form.hasPool && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div id="section-pools" className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
             <Waves className="w-5 h-5 text-primary-500" /> {t.poolsTitle[lang]}
           </h2>
@@ -767,7 +772,7 @@ export default function UnitForm({
 
       {/* ══ Kitchen detail card ═══════════════════════════ */}
       {form.hasKitchen && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+        <div id="section-kitchen" className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
           <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
             <UtensilsCrossed className="w-5 h-5 text-primary-500" /> {t.kitchenTitle[lang]}
           </h2>
@@ -790,7 +795,7 @@ export default function UnitForm({
 
       {/* ══ Living room (Majlis) detail card ══════════════ */}
       {form.hasLivingRooms && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
+        <div id="section-living" className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
           <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
             <Armchair className="w-5 h-5 text-primary-500" /> {t.livingTitle[lang]}
           </h2>

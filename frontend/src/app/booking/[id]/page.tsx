@@ -254,18 +254,30 @@ function BookingContent() {
   if (unit?.pricing) {
     const dayNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
     let sum = 0;
-    const start = new Date(checkIn);
-    for (let i = 0; i < nights; i++) {
+    const loopCount = Math.max(nights, 1); // At least 1 to get today's rate
+    const start = new Date(checkIn || new Date());
+    for (let i = 0; i < loopCount; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      sum += unit.pricing[dayNames[d.getDay()]] || 0;
+      const dayKey = dayNames[d.getDay()];
+      // Check datePricing override first
+      const dateStr = d.toISOString().slice(0, 10);
+      const override = unit.datePricing?.find((dp: any) => dp.date?.slice(0, 10) === dateStr);
+      sum += override?.price ?? unit.pricing[dayKey] ?? 0;
     }
-    pricePerNight = nights > 0 ? Math.round(sum / nights) : 0;
-    subtotal = sum;
+    pricePerNight = loopCount > 0 ? Math.round(sum / loopCount) : 0;
+    subtotal = nights > 0 ? sum : 0;
     cleaningFee = unit.pricing.cleaningFee ?? property.pricing?.cleaningFee ?? 0;
+    // Global discount
     discount = (unit.pricing.discountPercent ?? 0) > 0
       ? Math.round(subtotal * (unit.pricing.discountPercent / 100))
       : 0;
+    // Weekly/monthly discount (additive)
+    if (nights >= 30 && (unit.pricing.monthlyDiscount ?? 0) > 0) {
+      discount += Math.round(subtotal * (unit.pricing.monthlyDiscount / 100));
+    } else if (nights >= 7 && (unit.pricing.weeklyDiscount ?? 0) > 0) {
+      discount += Math.round(subtotal * (unit.pricing.weeklyDiscount / 100));
+    }
   } else {
     // Legacy property-level pricing
     pricePerNight = property.pricing?.perNight ?? 0;
@@ -281,10 +293,10 @@ function BookingContent() {
   const vat = Math.round(taxableAmount * 0.15);
   const total = taxableAmount + vat;
 
-  const primaryImage = property.images?.find((i: any) => i.isPrimary)?.url
-    || property.images?.[0]?.url
-    || unit?.images?.find((i: any) => i.isPrimary)?.url
-    || unit?.images?.[0]?.url;
+  const primaryImage = unit?.images?.find((i: any) => i.isPrimary)?.url
+    || unit?.images?.[0]?.url
+    || property.images?.find((i: any) => i.isPrimary)?.url
+    || property.images?.[0]?.url;
 
   return (
     <>
@@ -392,10 +404,21 @@ function BookingContent() {
                           <Shield className="w-5 h-5 text-green-500" />
                           <div>
                             <p className="text-sm font-medium text-gray-800">
-                              {isAr ? 'إلغاء مجاني' : 'Free cancellation'}
+                              {(() => {
+                                const policy = unit?.cancellationPolicy || 'free';
+                                const labels: Record<string, { en: string; ar: string }> = {
+                                  free: { en: 'Free cancellation', ar: 'إلغاء مجاني' },
+                                  flexible: { en: 'Flexible cancellation', ar: 'إلغاء مرن' },
+                                  normal: { en: 'Normal cancellation', ar: 'إلغاء عادي' },
+                                  restricted: { en: 'Restricted cancellation', ar: 'إلغاء مقيد' },
+                                };
+                                return isAr ? labels[policy]?.ar || labels.free.ar : labels[policy]?.en || labels.free.en;
+                              })()}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {isAr ? 'ألغِ قبل تاريخ الوصول واسترد المبلغ كاملاً' : 'Cancel before check-in for a full refund'}
+                              {unit?.cancellationDescription
+                                ? unit.cancellationDescription
+                                : (isAr ? 'ألغِ قبل تاريخ الوصول واسترد المبلغ كاملاً' : 'Cancel before check-in for a full refund')}
                             </p>
                           </div>
                         </div>
@@ -600,7 +623,14 @@ function BookingContent() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm line-clamp-2">{isAr && property.titleAr ? property.titleAr : property.title}</p>
+                      <p className="font-semibold text-gray-900 text-sm line-clamp-2">
+                        {unit ? (isAr && unit.nameAr ? unit.nameAr : unit.nameEn || property.title) : (isAr && property.titleAr ? property.titleAr : property.title)}
+                      </p>
+                      {unit && (
+                        <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">
+                          {isAr && property.titleAr ? property.titleAr : property.title}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">{isAr ? (CITIES.find(c => c.value === property.location.city)?.ar || property.location.city) : property.location.city}</p>
                     </div>
                   </div>

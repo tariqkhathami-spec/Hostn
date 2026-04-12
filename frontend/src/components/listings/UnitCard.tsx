@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Users, BedDouble, Bath, Ruler, MapPin, BadgeCheck, ChevronLeft, ChevronRight, Heart, Plus, Loader2, X, Check, Trash2, Layers } from 'lucide-react';
+import { Users, BedDouble, Bath, Ruler, MapPin, BadgeCheck, ChevronLeft, ChevronRight, Heart, Plus, Loader2, X, Check, Trash2, Layers, Star } from 'lucide-react';
 import { Unit, User, Property, WishlistList } from '@/types';
 import { formatPriceNumber, getPropertyTypeLabel } from '@/lib/utils';
 import StarRating from '@/components/ui/StarRating';
@@ -397,31 +397,17 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
 
         {/* Content */}
         <div className="p-4">
-          {/* Unit name */}
-          <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 line-clamp-1 group-hover:text-primary-600 transition-colors">
-            {unitName}
-          </h3>
-
-          {/* Property name subtitle */}
-          {propertyName && (
-            <p className="text-xs text-gray-500 mb-1.5 line-clamp-1">{propertyName}</p>
-          )}
-
-          {/* Location + host verification */}
-          {locationText && (
-            <div className="flex items-center gap-1 text-gray-500 text-xs mb-2">
-              <MapPin className="w-3 h-3 flex-shrink-0" />
-              <span className="flex-1">{locationText}</span>
-              {host?.isVerified && (
-                <span className="flex items-center gap-0.5 text-primary-600" title={isAr ? 'مضيف موثق' : 'Verified Host'}>
-                  <BadgeCheck className="w-3.5 h-3.5" />
-                </span>
-              )}
+          {/* Rating */}
+          {(ratings?.count ?? 0) > 0 && ratings && (
+            <div className="flex items-center gap-1.5 mb-2">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+              <span className="text-sm font-bold text-gray-900">{ratings.average.toFixed(1)}</span>
+              <span className="text-xs text-gray-400">({ratings.count})</span>
             </div>
           )}
 
           {/* Capacity row */}
-          <div className="flex items-center gap-2.5 text-gray-500 text-xs mb-3">
+          <div className="flex items-center gap-2.5 text-gray-500 text-xs mb-2">
             {(unit.capacity?.maxGuests ?? 0) > 0 && (
               <span className="flex items-center gap-1" title={isAr ? 'ضيوف' : 'Guests'}>
                 <Users className="w-3 h-3" />
@@ -443,69 +429,87 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
             {unit.area ? (
               <span className="flex items-center gap-1" title={isAr ? 'المساحة' : 'Area'}>
                 <Ruler className="w-3 h-3" />
-                {unit.area} {isAr ? 'م²' : 'm\u00B2'}
+                {unit.area} {isAr ? 'م²' : 'm²'}
               </span>
             ) : null}
           </div>
 
-          {/* Pricing + Rating */}
-          <div className="flex items-center justify-between">
-            <div>
-              {basePrice > 0 ? (
-                <>
-                  {(!checkIn || !checkOut) ? (
-                    /* No dates selected — show today's nightly rate only */
-                    <div className="flex flex-col gap-0.5">
-                      {discountedPrice ? (
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                          <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
-                          <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                          <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Dates selected — show per-night + total */
-                    <>
-                      {discountedPrice ? (
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                          <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
-                          <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                          <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                        </div>
-                      )}
-                      {totalPrice > 0 && (
-                        <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
-                          {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
-                        </div>
-                      )}
-                      {periodTotal > 0 && (
-                        <div className="flex items-baseline gap-1 mt-0.5">
-                          <span className="text-xs font-medium text-primary-500" dir="ltr"><SarSymbol /> {formatPriceNumber(periodTotal)}</span>
-                          <span className="text-xs text-gray-400">{periodLabel}</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-baseline gap-1">
-                  <span className="text-sm text-gray-400">{isAr ? 'السعر غير محدد' : 'Price not set'}</span>
-                </div>
+          {/* Unit name */}
+          <h3 className="font-semibold text-gray-900 text-sm leading-snug mb-0.5 line-clamp-1 group-hover:text-primary-600 transition-colors">
+            {unitName}
+          </h3>
+
+          {/* Property name subtitle */}
+          {propertyName && (
+            <p className="text-xs text-gray-500 mb-1.5 line-clamp-1">{propertyName}</p>
+          )}
+
+          {/* Location + host verification */}
+          {locationText && (
+            <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              <span className="flex-1">{locationText}</span>
+              {host?.isVerified && (
+                <span className="flex items-center gap-0.5 text-primary-600" title={isAr ? 'مضيف موثق' : 'Verified Host'}>
+                  <BadgeCheck className="w-3.5 h-3.5" />
+                </span>
               )}
             </div>
-            {(ratings?.count ?? 0) > 0 && ratings && (
-              <StarRating rating={ratings.average} count={ratings.count} />
+          )}
+
+          {/* Pricing */}
+          <div>
+            {basePrice > 0 ? (
+              <>
+                {(!checkIn || !checkOut) ? (
+                  /* No dates selected — show today's nightly rate only */
+                  <div className="flex flex-col gap-0.5">
+                    {discountedPrice ? (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                        <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
+                        <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                        <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Dates selected — show per-night + total */
+                  <>
+                    {discountedPrice ? (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                        <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
+                        <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
+                        <span className="text-xs text-gray-500">{priceUnitLabel}</span>
+                      </div>
+                    )}
+                    {totalPrice > 0 && (
+                      <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
+                        {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
+                      </div>
+                    )}
+                    {periodTotal > 0 && (
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-xs font-medium text-primary-500" dir="ltr"><SarSymbol /> {formatPriceNumber(periodTotal)}</span>
+                        <span className="text-xs text-gray-400">{periodLabel}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm text-gray-400">{isAr ? 'السعر غير محدد' : 'Price not set'}</span>
+              </div>
             )}
           </div>
         </div>
