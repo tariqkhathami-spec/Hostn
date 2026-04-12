@@ -13,7 +13,7 @@ import { Unit, Property, User, AmenityType, PropertyImage, WishlistList } from '
 import { unitsApi, propertiesApi, publicHostApi, wishlistsApi } from '@/lib/api';
 import { getPropertyTypeLabel, getAmenityLabel, getAmenityIcon } from '@/lib/utils';
 import { CITIES, DISTRICTS } from '@/lib/constants';
-import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText, ShieldCheck, FileText, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
+import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText, ShieldCheck, FileText, Plus, Loader2, X, Check, Trash2, Ruler, UserCheck, Building2, ChevronRight } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const PropertyMap = dynamic(() => import('@/components/maps/PropertyMap'), {
@@ -54,6 +54,7 @@ function UnitDetailContent() {
   const [unit, setUnit] = useState<Unit | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [showPromise, setShowPromise] = useState(false);
   const { t, language } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const isAr = language === 'ar';
@@ -376,6 +377,15 @@ function UnitDetailContent() {
             <span className="text-gray-800 line-clamp-1">{displayTitle}</span>
           </nav>
 
+          {/* Rating — prominent line above title */}
+          {ratings && ratings.count > 0 && (
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <span className="text-lg font-bold text-gray-900">{ratings.average.toFixed(1)}</span>
+              <span className="text-sm text-gray-500">{'\u00B7'} {ratings.count} {isAr ? 'تقييم' : ratings.count === 1 ? 'review' : 'reviews'}</span>
+            </div>
+          )}
+
           {/* Title — unit name as main, property name as subtitle */}
           <div className="mb-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -389,16 +399,28 @@ function UnitDetailContent() {
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-3 text-sm">
-                  {ratings && ratings.count > 0 && (
-                    <StarRating rating={ratings.average} count={ratings.count} size="md" />
-                  )}
                   <span className="flex items-center gap-1 text-gray-600">
                     <MapPin className="w-4 h-4 text-primary-500" />
                     {property.location.district && `${isAr ? (Object.values(DISTRICTS).flat().find(d => d.value === property.location.district)?.ar || property.location.district) : property.location.district}, `}{isAr ? (CITIES.find(c => c.value.toLowerCase() === property.location.city.toLowerCase())?.ar || property.location.city) : property.location.city}
                   </span>
-                  <span className="badge bg-primary-50 text-primary-700 text-xs font-semibold">
+                  <span className="badge bg-primary-50 text-primary-700 text-xs font-semibold inline-flex items-center gap-1">
+                    <Building2 className="w-3.5 h-3.5" />
                     {getPropertyTypeLabel(property.type, language as 'en' | 'ar')}
                   </span>
+                  {(unit.area || property.area) ? (
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <Ruler className="w-4 h-4 text-primary-500" />
+                      {unit.area || property.area} {isAr ? 'م²' : 'm\u00B2'}
+                    </span>
+                  ) : null}
+                  {unit.suitability && (
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <UserCheck className="w-4 h-4 text-primary-500" />
+                      {unit.suitability === 'family' ? (isAr ? 'مناسبة للعائلات' : 'Suitable for families')
+                       : unit.suitability === 'singles' ? (isAr ? 'مناسبة للأفراد' : 'Suitable for singles')
+                       : (isAr ? 'مناسبة للعائلات والأفراد' : 'Suitable for families & singles')}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -428,10 +450,54 @@ function UnitDetailContent() {
             <ImageGallery images={galleryImages} title={displayTitle} />
           </div>
 
+          {/* The Hostn Promise */}
+          <div className="mb-8 bg-emerald-50 border border-emerald-200 rounded-xl overflow-hidden">
+            <button
+              onClick={() => setShowPromise(!showPromise)}
+              className="w-full flex items-center gap-4 p-4 hover:bg-emerald-100/50 transition-colors text-start"
+            >
+              <ShieldCheck className="w-8 h-8 text-emerald-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-emerald-900">{isAr ? 'وعد Hostn' : 'The Hostn Promise'}</h3>
+                <p className="text-sm text-emerald-700">{isAr ? 'نضمن صحة المعلومات ونظافة المكان' : 'We guarantee correct information and place cleaning'}</p>
+              </div>
+              <ChevronRight className={`w-5 h-5 text-emerald-500 flex-shrink-0 transition-transform duration-200 ${showPromise ? 'rotate-90' : ''}`} />
+            </button>
+            <div className={`transition-all duration-300 ease-in-out ${showPromise ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
+              <div className="px-4 pb-4 ps-16 text-sm text-emerald-800 leading-relaxed">
+                <p className="mb-3">
+                  {isAr
+                    ? 'نضمن أن المعلومات الموجودة في هذه الصفحة صحيحة، وأنك ستجد المكان نظيفًا. إذا وجدت أن العقار لا يتطابق مع 80% أو أكثر من التفاصيل في هذه الصفحة، فسوف:'
+                    : 'We guarantee that the information you find on this page is correct, and that you\'ll find the property to be cleaned. If you find that the property does not match up with 80% or more of the details on this page, we will:'}
+                </p>
+                <ul className="list-disc ps-5 space-y-1.5">
+                  <li>
+                    {isAr
+                      ? 'نرتب لك عقارًا بديلًا بنفس المواصفات أو أفضل'
+                      : 'Arrange an alternative property with the same or better specifications'}
+                  </li>
+                  <li>
+                    {isAr
+                      ? 'نقدم لك استردادًا كاملًا وإلغاء حجزك بغض النظر عن سياسة الإلغاء'
+                      : 'Offer you a full refund and cancellation of your reservation regardless of the policy'}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           {/* Main content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
             {/* Left column */}
             <div className="lg:col-span-2 space-y-6">
+
+              {/* Unit Description — always visible */}
+              {unit.description && (
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">{t('property.aboutThisPlace')}</h2>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{unit.description}</p>
+                </div>
+              )}
 
               {/* Quick stats — always visible */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -507,14 +573,6 @@ function UnitDetailContent() {
               {/* ── Tab: Specification ── */}
               {activeSection === 'specification' && (
                 <div className="space-y-8">
-                  {/* Description — from unit */}
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">{t('property.aboutThisPlace')}</h2>
-                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                      {unit.description || (isAr ? 'لا يوجد وصف متاح.' : 'No description available.')}
-                    </p>
-                  </div>
-
                   {/* Suitability */}
                   {unit.suitability && (
                     <div>

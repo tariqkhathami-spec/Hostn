@@ -21,8 +21,8 @@ export default function BnplWidget({ total }: BnplWidgetProps) {
   const isAr = language === 'ar';
   const [expanded, setExpanded] = useState(false);
 
-  // BNPL available for 1-5000 SAR
-  if (total <= 0 || total > 5000) return null;
+  // BNPL available for any positive amount
+  if (total <= 0) return null;
 
   const installment = Math.ceil((total / 4) * 100) / 100;
 
