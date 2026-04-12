@@ -84,6 +84,7 @@ function formatDateDisplay(dateStr: string, locale: string = 'en'): string {
 // ─── Mismatch reasons ───────────────────────────────────────────────────────
 function getMismatchReasons(
   property: Property,
+  units: { capacity?: { maxGuests?: number } }[],
   filters: {
     selectedTypes: string[]; minBedrooms: string; minRating: string;
     hasPool: boolean; hasDiscount: boolean; priceRange: number;
@@ -103,10 +104,15 @@ function getMismatchReasons(
   }
 
   // Guests
-  if (filters.totalGuests > 0 && (property.capacity?.maxGuests ?? 0) < filters.totalGuests) {
-    reasons.push(isAr
-      ? `أقصى عدد ${property.capacity?.maxGuests ?? 0} ضيوف`
-      : `Max ${property.capacity?.maxGuests ?? 0} guests`);
+  if (filters.totalGuests > 0) {
+    const maxCapacity = units.length > 0
+      ? Math.max(...units.map(u => u.capacity?.maxGuests ?? 0))
+      : (property.capacity?.maxGuests ?? 0);
+    if (maxCapacity < filters.totalGuests) {
+      reasons.push(isAr
+        ? `أقصى عدد ${maxCapacity} ضيوف`
+        : `Max ${maxCapacity} guests`);
+    }
   }
 
   // Min nights
@@ -420,7 +426,7 @@ export default function WishlistDetailPage() {
 
   if (hasActiveFilters) {
     for (const p of properties) {
-      const reasons = getMismatchReasons(p, filters, lang);
+      const reasons = getMismatchReasons(p, unitsByProperty[p._id] || [], filters, lang);
       if (reasons.length === 0) matched.push(p);
       else mismatched.push({ property: p, reasons });
     }
@@ -769,9 +775,16 @@ export default function WishlistDetailPage() {
                 return (
                   <div key={property._id} className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900 text-sm">
-                        {isAr ? (property.titleAr || property.title) : property.title}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900 text-sm">
+                          {isAr ? (property.titleAr || property.title) : property.title}
+                        </h3>
+                        {propUnits.length > 1 && (
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {propUnits.length} {isAr ? 'وحدات' : 'units'}
+                          </span>
+                        )}
+                      </div>
                       <button onClick={() => handleRemoveProperty(property._id)}
                         disabled={removingId === property._id}
                         className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
@@ -805,9 +818,16 @@ export default function WishlistDetailPage() {
                     <div key={property._id} className="relative opacity-40">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-gray-900 text-sm">
-                            {isAr ? (property.titleAr || property.title) : property.title}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900 text-sm">
+                              {isAr ? (property.titleAr || property.title) : property.title}
+                            </h3>
+                            {propUnits.length > 1 && (
+                              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                {propUnits.length} {isAr ? 'وحدات' : 'units'}
+                              </span>
+                            )}
+                          </div>
                           <button onClick={() => handleRemoveProperty(property._id)}
                             disabled={removingId === property._id}
                             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">

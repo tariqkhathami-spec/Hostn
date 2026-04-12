@@ -186,8 +186,8 @@ export default function HostProfilePage() {
             </div>
             <div className="bg-gray-50 rounded-2xl p-4 text-center">
               <Building2 className="w-5 h-5 text-primary-600 mx-auto mb-2" />
-              <div className="text-lg font-bold text-gray-900">{stats.propertyCount}</div>
-              <div className="text-xs text-gray-500">{isAr ? 'عدد الوحدات' : 'Properties'}</div>
+              <div className="text-lg font-bold text-gray-900">{unitsLoading ? '...' : hostUnits.length}</div>
+              <div className="text-xs text-gray-500">{isAr ? 'عدد الوحدات' : 'Units'}</div>
             </div>
             <div className="bg-gray-50 rounded-2xl p-4 text-center">
               <CalendarDays className="w-5 h-5 text-primary-600 mx-auto mb-2" />

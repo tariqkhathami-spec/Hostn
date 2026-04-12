@@ -60,6 +60,12 @@ const t: Record<string, Record<string, string>> = {
   thu: { en: 'Th', ar: 'خم' },
   fri: { en: 'Fr', ar: 'جم' },
   sat: { en: 'Sa', ar: 'سب' },
+  defaultDay:  { en: 'Default',      ar: 'افتراضي' },
+  overrideDay: { en: 'Custom price', ar: 'سعر مخصص' },
+  upcoming:    { en: 'Upcoming',     ar: 'قادم' },
+  completed:   { en: 'Completed',    ar: 'مكتمل' },
+  weekend:     { en: 'Weekend',      ar: 'نهاية الأسبوع' },
+  today:       { en: 'Today',        ar: 'اليوم' },
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -210,28 +216,34 @@ export default function HostCalendarPage() {
 
   /* ── Build per-unit day status maps ── */
   const getUnitDayStatus = useCallback(
-    (unit: UnitData): Map<string, 'confirmed' | 'pending' | 'blocked'> => {
-      const map = new Map<string, 'confirmed' | 'pending' | 'blocked'>();
+    (unit: UnitData): Map<string, 'confirmed' | 'pending' | 'blocked' | 'completed' | 'override'> => {
+      const map = new Map<string, 'confirmed' | 'pending' | 'blocked' | 'completed' | 'override'>();
 
-      // Host-reserved dates from datePricing
+      // Host-reserved / custom-price dates from datePricing
       if (unit.datePricing) {
         for (const dp of unit.datePricing) {
+          const dateKey = new Date(dp.date).toISOString().slice(0, 10);
           if (dp.isBlocked) {
-            map.set(dp.date, 'blocked');
+            map.set(dateKey, 'blocked');
+          } else if (dp.price && dp.price > 0) {
+            map.set(dateKey, 'override');
           }
         }
       }
 
-      // Booked dates from bookings (overrides blocked if a booking exists)
+      // Booked dates from bookings (overrides datePricing status)
       const ub = unitBookingsMap[unit._id];
       if (ub?.loaded) {
         for (const entry of ub.entries) {
           const start = new Date(entry.checkIn);
           const end = new Date(entry.checkOut);
+          const checkOutDate = new Date(entry.checkOut);
           const current = new Date(start);
           while (current < end) {
             const key = formatDateKey(current);
-            const status = entry.status === 'confirmed' ? 'confirmed' : 'pending';
+            const status = entry.status === 'confirmed'
+              ? (checkOutDate < new Date() ? 'completed' : 'confirmed')
+              : 'pending';
             map.set(key, status);
             current.setDate(current.getDate() + 1);
           }
@@ -296,20 +308,36 @@ export default function HostCalendarPage() {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-green-200 inline-block" />
-          {t.confirmed[lang]}
+          <span className="w-3 h-3 rounded border bg-white border-gray-200 inline-block" />
+          {t.defaultDay[lang]}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-yellow-200 inline-block" />
-          {t.pending[lang]}
+          <span className="w-3 h-3 rounded border bg-blue-50 border-blue-200 inline-block" />
+          {t.overrideDay[lang]}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-200 inline-block" />
+          <span className="w-3 h-3 rounded border bg-red-50 border-red-200 inline-block" />
           {t.hostReserved[lang]}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-white border border-gray-200 inline-block" />
-          {t.available[lang]}
+          <span className="w-3 h-3 rounded border bg-emerald-50 border-emerald-200 inline-block" />
+          {t.upcoming[lang]}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border bg-yellow-50 border-yellow-200 inline-block" />
+          {t.pending[lang]}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border bg-gray-100 border-gray-300 inline-block" />
+          {t.completed[lang]}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border bg-amber-50 border-amber-200 inline-block" />
+          {t.weekend[lang]}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-white ring-2 ring-primary-400 inline-block" />
+          {t.today[lang]}
         </span>
       </div>
 
@@ -417,9 +445,11 @@ function MiniCalendarGrid({
 }: {
   gridDays: Date[];
   currentMonth: number;
-  dayStatusMap: Map<string, 'confirmed' | 'pending' | 'blocked'>;
+  dayStatusMap: Map<string, 'confirmed' | 'pending' | 'blocked' | 'completed' | 'override'>;
   lang: 'en' | 'ar';
 }) {
+  const todayKey = formatDateKey(new Date());
+
   return (
     <div>
       {/* Day headers */}
@@ -445,12 +475,20 @@ function MiniCalendarGrid({
           if (!isCurrentMonth) {
             bgClass = '';
           } else if (status === 'confirmed') {
-            bgClass = 'bg-green-100';
+            bgClass = 'bg-emerald-100';
+          } else if (status === 'completed') {
+            bgClass = 'bg-gray-100';
           } else if (status === 'pending') {
             bgClass = 'bg-yellow-100';
           } else if (status === 'blocked') {
             bgClass = 'bg-red-100';
+          } else if (status === 'override') {
+            bgClass = 'bg-blue-100';
+          } else if ([4, 5, 6].includes(date.getDay())) {
+            bgClass = 'bg-amber-50';
           }
+
+          const isToday = key === todayKey && isCurrentMonth;
 
           return (
             <div
@@ -460,6 +498,7 @@ function MiniCalendarGrid({
                 w-7 h-7 mx-auto
                 text-[11px] rounded-md
                 ${bgClass}
+                ${isToday ? 'ring-2 ring-primary-400' : ''}
                 ${isCurrentMonth ? 'text-gray-700' : 'text-gray-300'}
               `}
             >

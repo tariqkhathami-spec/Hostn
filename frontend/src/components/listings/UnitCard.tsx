@@ -25,10 +25,10 @@ const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89
 
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-const avgPrice = (pricing?: Record<string, number>) => {
+const todayPrice = (pricing?: Record<string, number>) => {
   if (!pricing) return 0;
-  const prices = DAY_KEYS.map(d => pricing[d] || 0).filter(p => p > 0);
-  return prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+  const todayDayKey = DAY_KEYS[new Date().getDay()];
+  return pricing[todayDayKey] || 0;
 };
 
 /** Compute avg nightly price for selected dates (day-of-week aware) */
@@ -36,7 +36,7 @@ const avgPriceForDates = (pricing: Record<string, number> | undefined, checkIn: 
   if (!pricing) return { avg: 0, nights: 0 };
   const start = new Date(checkIn + 'T00:00:00');
   const end = new Date(checkOut + 'T00:00:00');
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return { avg: avgPrice(pricing), nights: 0 };
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return { avg: todayPrice(pricing), nights: 0 };
   let total = 0;
   let nights = 0;
   const current = new Date(start);
@@ -286,12 +286,28 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
       const result = avgPriceForDates(unit.pricing, checkIn, checkOut);
       return { basePrice: result.avg, totalNights: result.nights };
     }
-    return { basePrice: avgPrice(unit.pricing), totalNights: 0 };
+    return { basePrice: todayPrice(unit.pricing), totalNights: 0 };
   }, [unit.pricing, checkIn, checkOut]);
 
   const discountPct = unit.pricing?.discountPercent ?? 0;
   const discountedPrice = discountPct > 0 ? Math.round(basePrice * (1 - discountPct / 100)) : 0;
   const displayPrice = discountedPrice || basePrice;
+  // Compute period-based display for dates
+  let periodLabel: string;
+  let periodTotal: number;
+  if (totalNights >= 30) {
+    const monthlyDisc = unit.pricing?.monthlyDiscount ?? 0;
+    periodTotal = Math.round(displayPrice * 30 * (1 - monthlyDisc / 100));
+    periodLabel = isAr ? '/ شهر' : '/ month';
+  } else if (totalNights >= 7) {
+    const weeklyDisc = unit.pricing?.weeklyDiscount ?? 0;
+    periodTotal = Math.round(displayPrice * 7 * (1 - weeklyDisc / 100));
+    periodLabel = isAr ? '/ أسبوع' : '/ week';
+  } else {
+    periodTotal = 0;
+    periodLabel = '';
+  }
+
   const priceUnitLabel = totalNights > 0
     ? (isAr ? `/ ${totalNights} ${totalNights === 1 ? 'ليلة' : 'ليالي'}` : `/ ${totalNights} ${totalNights === 1 ? 'night' : 'nights'}`)
     : t('property.perNight');
@@ -438,7 +454,7 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
               {basePrice > 0 ? (
                 <>
                   {(!checkIn || !checkOut) ? (
-                    /* No dates selected — show nightly, weekly, monthly tiers */
+                    /* No dates selected — show today's nightly rate only */
                     <div className="flex flex-col gap-0.5">
                       {discountedPrice ? (
                         <div className="flex items-baseline gap-1.5">
@@ -452,14 +468,6 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
                           <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
                         </div>
                       )}
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-sm font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(Math.round(displayPrice * 7 * (1 - (unit.pricing?.weeklyDiscount ?? 0) / 100)))}</span>
-                        <span className="text-xs text-gray-500">/ {isAr ? 'أسبوع' : 'week'}</span>
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-sm font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice * 30)}</span>
-                        <span className="text-xs text-gray-500">/ {isAr ? 'شهر' : 'month'}</span>
-                      </div>
                     </div>
                   ) : (
                     /* Dates selected — show per-night + total */
@@ -479,6 +487,12 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
                       {totalPrice > 0 && (
                         <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
                           {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
+                        </div>
+                      )}
+                      {periodTotal > 0 && (
+                        <div className="flex items-baseline gap-1 mt-0.5">
+                          <span className="text-xs font-medium text-primary-500" dir="ltr"><SarSymbol /> {formatPriceNumber(periodTotal)}</span>
+                          <span className="text-xs text-gray-400">{periodLabel}</span>
                         </div>
                       )}
                     </>

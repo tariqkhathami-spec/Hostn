@@ -11,7 +11,7 @@ import ReviewsList from '@/components/property/ReviewsList';
 import BookingWidget from '@/components/property/BookingWidget';
 import { Unit, Property, User, AmenityType, PropertyImage, WishlistList } from '@/types';
 import { unitsApi, propertiesApi, publicHostApi, wishlistsApi } from '@/lib/api';
-import { getPropertyTypeLabel } from '@/lib/utils';
+import { getPropertyTypeLabel, getAmenityLabel, getAmenityIcon } from '@/lib/utils';
 import { CITIES, DISTRICTS } from '@/lib/constants';
 import { MapPin, Users, BedDouble, Bath, Clock, Cigarette, PawPrint, Music, BadgeCheck, Share2, Heart, ClipboardList, Star, MapPinned, ScrollText, ShieldCheck, FileText, Plus, Loader2, X, Check, Trash2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -547,8 +547,9 @@ function UnitDetailContent() {
                       <h2 className="text-xl font-bold text-gray-900 mb-4">{isAr ? 'المميزات' : 'Features'}</h2>
                       <div className="flex flex-wrap gap-2">
                         {unit.features.map((feature) => (
-                          <span key={feature} className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg">
-                            {feature}
+                          <span key={feature} className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg">
+                            <span className="text-base">{getAmenityIcon(feature)}</span>
+                            {getAmenityLabel(feature, language as 'en' | 'ar')}
                           </span>
                         ))}
                       </div>

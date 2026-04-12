@@ -233,6 +233,7 @@ const unitSchema = new mongoose.Schema(
       cleaningFee: { type: Number, default: 0, min: 0 },
       discountPercent: { type: Number, default: 0, min: 0, max: 100 },
       weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
+      monthlyDiscount: { type: Number, default: 0, min: 0, max: 100 },
     },
 
     // ── Discount rules (weekday/weekend) ────────────────────────────

@@ -104,6 +104,20 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
 
   const nights = checkIn && checkOut ? calculateNights(checkIn, checkOut) : 0;
 
+  // Preview: when only checkIn is set, show 1-night preview price
+  const previewPricePerNight = (() => {
+    if (!(checkIn && !checkOut && selectedUnit?.pricing)) return 0;
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const checkInDate = new Date(checkIn + 'T00:00:00');
+    if (selectedUnit.datePricing) {
+      const dateKey = checkInDate.toISOString().slice(0, 10);
+      const override = (selectedUnit.datePricing as { date: string; price?: number; isBlocked?: boolean }[])
+        .find(dp => new Date(dp.date).toISOString().slice(0, 10) === dateKey);
+      if (override?.price && !override?.isBlocked) return override.price;
+    }
+    return selectedUnit.pricing[dayNames[checkInDate.getDay()]] || 0;
+  })();
+
   // ── Calculate pricing: unit per-day rates vs property flat rate ──
   const hasUnit = !!selectedUnit;
   let pricePerNight: number;
@@ -145,7 +159,9 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
     pricePerNight = Math.round(sum / nights);
     cleaningFee = selectedUnit.pricing.cleaningFee || 0;
     let discPct = selectedUnit.pricing.discountPercent || 0;
-    if (nights >= 7 && (selectedUnit.pricing.weeklyDiscount || 0) > discPct) {
+    if (nights >= 30 && (selectedUnit.pricing.monthlyDiscount || 0) > discPct) {
+      discPct = selectedUnit.pricing.monthlyDiscount || 0;
+    } else if (nights >= 7 && (selectedUnit.pricing.weeklyDiscount || 0) > discPct) {
       discPct = selectedUnit.pricing.weeklyDiscount || 0;
     }
     discount = discPct > 0 ? Math.round(subtotal * (discPct / 100)) : 0;
@@ -251,11 +267,18 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
               <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
             </div>
           ) : (
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-primary-600" dir="ltr">
-                <SarSymbol /> {formatPriceNumber(pricePerNight)}
-              </span>
-              <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-primary-600" dir="ltr">
+                  <SarSymbol /> {formatPriceNumber(previewPricePerNight > 0 && nights === 0 ? previewPricePerNight : pricePerNight)}
+                </span>
+                <span className="text-sm text-gray-500">{t('booking.perNight')}</span>
+              </div>
+              {previewPricePerNight > 0 && nights === 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {isAr ? 'سعر ليلة واحدة (حدد تاريخ المغادرة)' : '1-night rate (select checkout)'}
+                </p>
+              )}
             </div>
           )}
         </div>
