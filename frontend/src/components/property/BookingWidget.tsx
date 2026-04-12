@@ -291,6 +291,14 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
         )}
       </div>
 
+      {/* Total nights summary */}
+      {nights > 0 && (
+        <div className="text-sm text-gray-500 mb-3">
+          <span>{isAr ? `${nightLabel} = ` : `${nightLabel} = `}</span>
+          <span className="font-semibold text-gray-700" dir="ltr"><SarSymbol /> {formatPriceNumber(subtotal)}</span>
+        </div>
+      )}
+
       {/* Unit selector (only shown when property has units and no specific unit was pre-selected) */}
       {units.length > 0 && !initialUnitId && (
         <div className="mb-3">
@@ -489,7 +497,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
       )}
 
       {/* BNPL widget when no dates selected — show based on per-night price */}
-      {nights === 0 && (property.pricing?.perNight ?? 0) > 0 && (property.pricing?.perNight ?? 0) <= 5000 && (
+      {nights === 0 && (property.pricing?.perNight ?? 0) > 0 && (
         <BnplWidget total={property.pricing?.perNight ?? 0} />
       )}
     </div>
