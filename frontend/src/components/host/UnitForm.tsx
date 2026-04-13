@@ -527,7 +527,7 @@ export default function UnitForm({
 
   return (
     <form onSubmit={handleSubmit} className="relative">
-      <div className="flex gap-8 lg:justify-center">
+      <div className="flex gap-8">
         {/* ── Desktop sidebar nav (hidden below lg) ── */}
         <nav className="sticky top-24 self-start w-48 flex-shrink-0 hidden lg:block">
           <ul className="space-y-1">
