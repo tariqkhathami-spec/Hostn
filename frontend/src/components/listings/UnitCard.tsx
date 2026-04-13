@@ -291,27 +291,24 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
 
   const discountPct = unit.pricing?.discountPercent ?? 0;
   const discountedPrice = discountPct > 0 ? Math.round(basePrice * (1 - discountPct / 100)) : 0;
-  const displayPrice = discountedPrice || basePrice;
-  // Compute period-based display for dates
-  let periodLabel: string;
-  let periodTotal: number;
+  const nightlyRate = discountedPrice || basePrice;
+
+  // Main price adapts: /night (<7), /week (7-29), /month (30+)
+  let mainPrice: number;
+  let mainLabel: string;
   if (totalNights >= 30) {
     const monthlyDisc = unit.pricing?.monthlyDiscount ?? 0;
-    periodTotal = Math.round(displayPrice * 30 * (1 - monthlyDisc / 100));
-    periodLabel = isAr ? '/ شهر' : '/ month';
+    mainPrice = Math.round(nightlyRate * 30 * (1 - monthlyDisc / 100));
+    mainLabel = isAr ? '/ شهر' : '/ month';
   } else if (totalNights >= 7) {
     const weeklyDisc = unit.pricing?.weeklyDiscount ?? 0;
-    periodTotal = Math.round(displayPrice * 7 * (1 - weeklyDisc / 100));
-    periodLabel = isAr ? '/ أسبوع' : '/ week';
+    mainPrice = Math.round(nightlyRate * 7 * (1 - weeklyDisc / 100));
+    mainLabel = isAr ? '/ أسبوع' : '/ week';
   } else {
-    periodTotal = 0;
-    periodLabel = '';
+    mainPrice = nightlyRate;
+    mainLabel = isAr ? '/ ليلة' : '/ night';
   }
-
-  const priceUnitLabel = totalNights > 0
-    ? (isAr ? `/ ${totalNights} ${totalNights === 1 ? 'ليلة' : 'ليالي'}` : `/ ${totalNights} ${totalNights === 1 ? 'night' : 'nights'}`)
-    : t('property.perNight');
-  const totalPrice = totalNights > 0 ? displayPrice * totalNights : 0;
+  const totalPrice = totalNights > 0 ? nightlyRate * totalNights : 0;
 
   // Ratings: prefer unit ratings, fall back to property ratings
   const ratings = unit.ratings?.count ? unit.ratings : property?.ratings;
@@ -402,7 +399,7 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
             <div className="flex items-center gap-1.5 mb-2">
               <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
               <span className="text-sm font-bold text-gray-900">{ratings.average.toFixed(1)}</span>
-              <span className="text-xs text-gray-400">({ratings.count})</span>
+              <span className="text-xs text-gray-400">({ratings.count}) {isAr ? 'تقييم' : ratings.count === 1 ? 'review' : 'reviews'}</span>
             </div>
           )}
 
@@ -460,52 +457,30 @@ export default function UnitCard({ unit, checkIn, checkOut }: UnitCardProps) {
           {/* Pricing */}
           <div>
             {basePrice > 0 ? (
-              <>
-                {(!checkIn || !checkOut) ? (
-                  /* No dates selected — show today's nightly rate only */
-                  <div className="flex flex-col gap-0.5">
-                    {discountedPrice ? (
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                        <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
-                        <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                        <span className="text-xs text-gray-500">/ {isAr ? 'ليلة' : 'night'}</span>
-                      </div>
-                    )}
+              <div className="flex flex-col gap-0.5">
+                {/* Main price — adapts unit: /night, /week, /month */}
+                {discountedPrice ? (
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(mainPrice)}</span>
+                    <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(totalNights >= 30 ? basePrice * 30 : totalNights >= 7 ? basePrice * 7 : basePrice)}</span>
+                    <span className="text-xs text-gray-500">{mainLabel}</span>
                   </div>
                 ) : (
-                  /* Dates selected — show per-night + total */
-                  <>
-                    {discountedPrice ? (
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                        <span className="text-xs text-gray-400 line-through" dir="ltr"><SarSymbol /> {formatPriceNumber(basePrice)}</span>
-                        <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-base font-bold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(displayPrice)}</span>
-                        <span className="text-xs text-gray-500">{priceUnitLabel}</span>
-                      </div>
-                    )}
-                    {totalPrice > 0 && (
-                      <div className="text-xs text-gray-500 mt-0.5" dir="ltr">
-                        {isAr ? 'الإجمالي' : 'Total'}: <SarSymbol /> {formatPriceNumber(totalPrice)}
-                      </div>
-                    )}
-                    {periodTotal > 0 && (
-                      <div className="flex items-baseline gap-1 mt-0.5">
-                        <span className="text-xs font-medium text-primary-500" dir="ltr"><SarSymbol /> {formatPriceNumber(periodTotal)}</span>
-                        <span className="text-xs text-gray-400">{periodLabel}</span>
-                      </div>
-                    )}
-                  </>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-semibold text-primary-600" dir="ltr"><SarSymbol /> {formatPriceNumber(mainPrice)}</span>
+                    <span className="text-xs text-gray-500">{mainLabel}</span>
+                  </div>
                 )}
-              </>
+                {/* Total # nights SAR # */}
+                {totalNights > 0 && totalPrice > 0 && (
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {isAr
+                      ? `الإجمالي ${totalNights} ${totalNights === 1 ? 'ليلة' : 'ليالي'} `
+                      : `Total ${totalNights} ${totalNights === 1 ? 'night' : 'nights'} `}
+                    <span dir="ltr"><SarSymbol /> {formatPriceNumber(totalPrice)}</span>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex items-baseline gap-1">
                 <span className="text-sm text-gray-400">{isAr ? 'السعر غير محدد' : 'Price not set'}</span>
