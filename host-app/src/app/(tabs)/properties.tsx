@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -113,9 +114,51 @@ export default function PropertiesScreen() {
             )}
           </View>
 
-          {/* Thumbnail on the right */}
-          <View style={styles.unitThumbnail}>
-            <Ionicons name="image-outline" size={28} color={Colors.textTertiary} />
+          {/* Right: thumbnail + action buttons */}
+          <View style={styles.unitActions}>
+            <View style={styles.unitThumbnail}>
+              <Ionicons name="image-outline" size={28} color={Colors.textTertiary} />
+            </View>
+            <View style={styles.unitActionRow}>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                hitSlop={8}
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  router.push(`/property/edit-unit/${item.id}` as any);
+                }}
+              >
+                <Ionicons name="create-outline" size={16} color={Colors.primary} />
+                <Text style={styles.actionBtnText}>تعديل</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                hitSlop={8}
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  router.push(`/property/unit-pricing/${item.id}` as any);
+                }}
+              >
+                <Ionicons name="pricetag-outline" size={16} color={Colors.primary} />
+                <Text style={styles.actionBtnText}>تسعير</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.duplicateBtn}
+                hitSlop={8}
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  router.push({
+                    pathname: `/property/duplicate/${item.id}` as any,
+                    params: {
+                      groupTag: displayProperty?.nameAr || displayProperty?.nameEn || '',
+                    },
+                  });
+                }}
+              >
+                <Ionicons name="copy-outline" size={16} color={Colors.primary} />
+                <Text style={styles.duplicateBtnText}>نسخ</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       );
@@ -166,6 +209,26 @@ export default function PropertiesScreen() {
             style={styles.infoIcon}
           />
         </View>
+
+        {/* Add Unit button */}
+        <TouchableOpacity
+          style={styles.addUnitBtn}
+          activeOpacity={0.7}
+          onPress={() =>
+            router.push({
+              pathname: '/property/add-unit' as any,
+              params: {
+                groupTag: displayProperty.nameAr || displayProperty.nameEn,
+                city: displayProperty.city,
+                district: '',
+                type: '',
+              },
+            })
+          }
+        >
+          <Ionicons name="add-circle-outline" size={18} color={Colors.primary} />
+          <Text style={styles.addUnitText}>إضافة وحدة جديدة</Text>
+        </TouchableOpacity>
       </View>
     );
   }, [displayProperty]);
@@ -213,6 +276,15 @@ export default function PropertiesScreen() {
           </View>
         )}
       </View>
+
+      {/* FAB - Add Property */}
+      <Pressable
+        style={styles.fab}
+        onPress={() => router.push('/property/create' as any)}
+      >
+        <Ionicons name="add" size={20} color={Colors.white} />
+        <Text style={styles.fabText}>إضافة عقار</Text>
+      </Pressable>
     </View>
   );
 }
@@ -366,5 +438,87 @@ const styles = StyleSheet.create({
   emptySubtext: {
     ...Typography.small,
     color: Colors.textTertiary,
+  },
+
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: 110,
+    right: Spacing.xl,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  fabText: {
+    ...Typography.smallBold,
+    color: Colors.white,
+  },
+
+  // Add Unit button
+  addUnitBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  addUnitText: {
+    ...Typography.smallBold,
+    color: Colors.primary,
+  },
+
+  // Unit actions (right side)
+  unitActions: {
+    alignItems: 'center' as const,
+    gap: Spacing.xs,
+  },
+
+  // Unit action row
+  unitActionRow: {
+    flexDirection: 'row' as const,
+    gap: Spacing.xs,
+  },
+  actionBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 2,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.xs,
+    backgroundColor: Colors.primary + '10',
+  },
+  actionBtnText: {
+    ...Typography.tiny,
+    color: Colors.primary,
+    fontWeight: '600' as const,
+  },
+  // Duplicate button
+  duplicateBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 2,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.xs,
+    backgroundColor: Colors.primary + '10',
+  },
+  duplicateBtnText: {
+    ...Typography.tiny,
+    color: Colors.primary,
+    fontWeight: '600' as const,
   },
 });

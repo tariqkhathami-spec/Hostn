@@ -11,19 +11,19 @@ export const paymentsService = {
   },
 
   getSavedMethods() {
-    return api.get<PaymentMethod[]>('/paymentMethods').then((r) => r.data);
+    return api.get<PaymentMethod[]>('/payment-methods').then((r) => r.data);
   },
 
   addMethod(data: { token: string; brand: string; last4: string; expiryMonth: number; expiryYear: number }) {
-    return api.post<PaymentMethod>('/paymentMethods', data).then((r) => r.data);
+    return api.post<PaymentMethod>('/payment-methods', data).then((r) => r.data);
   },
 
   deleteMethod(id: string) {
-    return api.delete(`/paymentMethods/${id}`).then((r) => r.data);
+    return api.delete(`/payment-methods/${id}`).then((r) => r.data);
   },
 
   setDefault(id: string) {
-    return api.put(`/paymentMethods/${id}/default`).then((r) => r.data);
+    return api.put(`/payment-methods/${id}/default`).then((r) => r.data);
   },
 };
 

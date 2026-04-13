@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatPhoneDisplay } from '../../utils/format';
 import {
   View,
   Text,
@@ -45,22 +46,22 @@ export default function ProfileScreen() {
 
   const actionCards: ActionCard[] = [
     {
-      label: '\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0644\u0641',
+      label: 'تعديل الملف',
       icon: 'create-outline',
       onPress: () => router.push('/profile/edit' as any),
     },
     {
-      label: '\u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629',
+      label: 'المساعدة',
       icon: 'help-circle-outline',
       onPress: () => setSupportModalVisible(true),
     },
     {
-      label: '\u0642\u064A\u0645\u0646\u0627',
+      label: 'قيمنا',
       icon: 'star-outline',
       onPress: () => Linking.openURL('https://apps.apple.com'),
     },
     {
-      label: '\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C',
+      label: 'تسجيل الخروج',
       icon: 'log-out-outline',
       onPress: () => setLogoutModalVisible(true),
     },
@@ -96,7 +97,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.headerName}>{profile?.name || ''}</Text>
           <Text style={styles.headerEmail}>{profile?.email || ''}</Text>
-          <Text style={styles.headerPhone}>{profile?.phone || ''}</Text>
+          <Text style={styles.headerPhone}>{formatPhoneDisplay(profile?.phone || '')}</Text>
         </View>
 
         {/* 2x2 Action Grid */}
@@ -151,20 +152,20 @@ export default function ProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {'\u0647\u0644 \u062A\u0631\u064A\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C\u061F'}
+              {'هل تريد تسجيل الخروج؟'}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => setLogoutModalVisible(false)}
               >
-                <Text style={styles.modalButtonCancelText}>{'\u0625\u0644\u063A\u0627\u0621'}</Text>
+                <Text style={styles.modalButtonCancelText}>{'إلغاء'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
                 onPress={handleLogout}
               >
-                <Text style={styles.modalButtonConfirmText}>{'\u0646\u0639\u0645'}</Text>
+                <Text style={styles.modalButtonConfirmText}>{'نعم'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -182,7 +183,7 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <View style={styles.supportHeader}>
               <Text style={styles.modalTitle}>
-                {'\u062A\u0648\u0627\u0635\u0644 \u0645\u0639\u0646\u0627'}
+                {'تواصل معنا'}
               </Text>
               <TouchableOpacity onPress={() => setSupportModalVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
@@ -198,7 +199,7 @@ export default function ProfileScreen() {
             >
               <Ionicons name="chatbubbles-outline" size={24} color={Colors.primary} />
               <Text style={styles.supportOptionText}>
-                {'\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A'}
+                {'المحادثات'}
               </Text>
               <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
@@ -212,7 +213,7 @@ export default function ProfileScreen() {
             >
               <Ionicons name="call-outline" size={24} color={Colors.primary} />
               <Text style={styles.supportOptionText}>
-                {'\u0645\u0631\u0643\u0632 \u0627\u0644\u0627\u062A\u0635\u0627\u0644'}
+                {'مركز الاتصال'}
               </Text>
               <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
             </TouchableOpacity>

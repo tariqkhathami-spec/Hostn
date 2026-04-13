@@ -8,6 +8,7 @@ import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/th
 import { t } from '../../utils/i18n';
 import { useAuthStore } from '../../store/authStore';
 import { hostService } from '../../services/host.service';
+import { formatPhoneDisplay } from '../../utils/format';
 
 const menuItems = [
   { label: 'more.profile', icon: 'person-outline', route: '/profile' },
@@ -68,7 +69,7 @@ export default function MoreScreen() {
           <View style={styles.profileRow}>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{host?.name || ''}</Text>
-              <Text style={styles.profileId}>{host?.phone || ''}</Text>
+              <Text style={styles.profileId}>{formatPhoneDisplay(host?.phone || '')}</Text>
             </View>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>n</Text>

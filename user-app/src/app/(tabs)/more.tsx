@@ -5,37 +5,44 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useAuthStore } from '../../store/authStore';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { formatPhone } from '../../utils/format';
 
 type MenuIcon = React.ComponentProps<typeof Ionicons>['name'];
 
 interface MenuItem {
   icon: MenuIcon;
-  label: string;
+  labelKey: string;
   route: string;
   color?: string;
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { icon: 'person-outline', label: 'Profile', route: '/account/profile' },
-  { icon: 'wallet-outline', label: 'Wallet', route: '/account/wallet' },
-  { icon: 'card-outline', label: 'Payment Methods', route: '/account/payment-methods' },
-  { icon: 'notifications-outline', label: 'Notifications', route: '/account/notifications' },
-  { icon: 'help-circle-outline', label: 'FAQ', route: '/account/faq' },
-  { icon: 'document-text-outline', label: 'Terms of Use', route: '/account/terms' },
-  { icon: 'shield-checkmark-outline', label: 'Privacy Policy', route: '/account/privacy' },
+  { icon: 'person-outline', labelKey: 'account.profile', route: '/account/profile' },
+  { icon: 'wallet-outline', labelKey: 'account.wallet', route: '/account/wallet' },
+  { icon: 'card-outline', labelKey: 'account.paymentMethods', route: '/account/payment-methods' },
+  { icon: 'notifications-outline', labelKey: 'account.notifications', route: '/account/notifications' },
+  { icon: 'help-circle-outline', labelKey: 'account.support', route: '/account/support' },
+  { icon: 'information-circle-outline', labelKey: 'account.about', route: '/account/about' },
+  { icon: 'mail-outline', labelKey: 'account.contactUs', route: '/account/contact' },
+  { icon: 'newspaper-outline', labelKey: 'account.blog', route: '/account/blog' },
+  { icon: 'information-circle-outline', labelKey: 'account.faq', route: '/account/faq' },
+  { icon: 'document-text-outline', labelKey: 'account.terms', route: '/account/terms' },
+  { icon: 'shield-checkmark-outline', labelKey: 'account.privacy', route: '/account/privacy' },
 ];
 
 export default function MoreScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { t, language, toggleLanguage } = useLanguage();
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('account.logout'), t('account.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Logout',
+        text: t('account.logout'),
         style: 'destructive',
         onPress: async () => {
           await logout();
@@ -48,7 +55,13 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.header}>Account</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.header}>{t('account.title')}</Text>
+          <Pressable style={styles.langToggle} onPress={toggleLanguage}>
+            <Ionicons name="language-outline" size={18} color={Colors.primary} />
+            <Text style={styles.langToggleText}>{language === 'ar' ? 'EN' : 'عربي'}</Text>
+          </Pressable>
+        </View>
 
         {/* Profile Card */}
         <Pressable style={styles.profileCard} onPress={() => router.push('/account/profile')}>
@@ -61,9 +74,9 @@ export default function MoreScreen() {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
-              {user?.firstName ? `${user.firstName} ${user.lastName ?? ''}` : 'Guest'}
+              {user?.firstName ? `${user.firstName} ${user.lastName ?? ''}` : t('account.guest')}
             </Text>
-            <Text style={styles.profilePhone}>{user?.phone ?? ''}</Text>
+            <Text style={styles.profilePhone}>{user?.phone ? formatPhone(user.phone, '+966') : ''}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
         </Pressable>
@@ -78,7 +91,7 @@ export default function MoreScreen() {
             >
               <Ionicons name={item.icon} size={22} color={item.color ?? Colors.textPrimary} />
               <Text style={[styles.menuLabel, item.color ? { color: item.color } : undefined]}>
-                {item.label}
+                {t(item.labelKey as any)}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
             </Pressable>
@@ -88,7 +101,9 @@ export default function MoreScreen() {
         {/* Logout */}
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={Colors.error} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('account.logout')}</Text>
+          <View style={{ flex: 1 }} />
+          <Ionicons name="chevron-forward" size={18} color={Colors.error} />
         </Pressable>
 
         <View style={{ height: Spacing.xxl }} />
@@ -99,11 +114,30 @@ export default function MoreScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  headerRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.base,
+  },
   header: {
     ...Typography.h2,
     color: Colors.textPrimary,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.base,
+  },
+  langToggle: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  langToggleText: {
+    ...Typography.smallBold,
+    color: Colors.primary,
   },
   profileCard: {
     flexDirection: 'row',
@@ -152,6 +186,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     padding: Spacing.base,
     gap: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.error + '30',
   },
-  logoutText: { ...Typography.body, color: Colors.error },
+  logoutText: { ...Typography.bodyBold, color: Colors.error },
 });

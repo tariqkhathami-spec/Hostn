@@ -28,10 +28,10 @@ interface FilterOption {
 }
 
 const FILTERS: FilterOption[] = [
-  { key: 'all', label: '\u0627\u0644\u0643\u0644' },
-  { key: 'check_in', label: '\u062f\u062e\u0648\u0644 \u0627\u0644\u064a\u0648\u0645' },
-  { key: 'check_out', label: '\u062e\u0631\u0648\u062c \u0627\u0644\u064a\u0648\u0645' },
-  { key: 'booking_confirmed', label: '\u062d\u062c\u0648\u0632\u0627\u062a \u0645\u0624\u0643\u062f\u0629' },
+  { key: 'all', label: 'الكل' },
+  { key: 'check_in', label: 'دخول اليوم' },
+  { key: 'check_out', label: 'خروج اليوم' },
+  { key: 'booking_confirmed', label: 'حجوزات مؤكدة' },
 ];
 
 export default function NotificationsScreen() {
@@ -137,7 +137,7 @@ export default function NotificationsScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.primary}>
-      <HeaderBar title={'\u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a'} showBack />
+      <HeaderBar title={'الإشعارات'} showBack />
 
       {/* Filter Tabs */}
       <View style={styles.filtersContainer}>
@@ -180,7 +180,7 @@ export default function NotificationsScreen() {
         ) : notifications.length === 0 ? (
           <EmptyState
             icon="notifications-off-outline"
-            message={'\u0644\u0627 \u064a\u0648\u062c\u062f \u0625\u0634\u0639\u0627\u0631\u0627\u062a'}
+            message={'لا يوجد إشعارات'}
           />
         ) : (
           <FlatList

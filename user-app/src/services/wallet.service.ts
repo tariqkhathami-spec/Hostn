@@ -3,7 +3,7 @@ import type { WalletInfo, WalletTransaction } from '../types';
 
 export const walletService = {
   getBalance() {
-    return api.get<WalletInfo>('/wallet').then((r) => r.data);
+    return api.get<WalletInfo>('/wallet/balance').then((r) => r.data);
   },
 
   getTransactions(page = 1) {

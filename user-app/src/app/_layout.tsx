@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { connectSocket, setQueryClient, disconnectSocket } from '../services/socket';
 import { useUIStore } from '../store/uiStore';
 import { useNotificationSetup } from '../hooks/useNotifications';
+import { LanguageProvider } from '../i18n';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import NetworkBanner from '../components/ui/NetworkBanner';
 
@@ -39,6 +40,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
+            <LanguageProvider>
             <StatusBar style="dark" />
             <NetworkBanner />
             <Stack screenOptions={{ headerShown: false }}>
@@ -53,6 +55,7 @@ export default function RootLayout() {
               <Stack.Screen name="chat" />
               <Stack.Screen name="account" />
             </Stack>
+            </LanguageProvider>
           </QueryClientProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

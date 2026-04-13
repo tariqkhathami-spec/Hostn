@@ -31,10 +31,10 @@ interface DayRateConfig {
 }
 
 const DAY_RATES: DayRateConfig[] = [
-  { key: 'midWeek', label: '\u0648\u0633\u0637 \u0627\u0644\u0623\u0633\u0628\u0648\u0639', description: '\u0627\u0644\u0623\u062D\u062F - \u0627\u0644\u0623\u0631\u0628\u0639\u0627\u0621' },
-  { key: 'thursday', label: '\u0627\u0644\u062E\u0645\u064A\u0633', description: '' },
-  { key: 'friday', label: '\u0627\u0644\u062C\u0645\u0639\u0629', description: '' },
-  { key: 'saturday', label: '\u0627\u0644\u0633\u0628\u062A', description: '' },
+  { key: 'midWeek', label: 'وسط الأسبوع', description: 'الأحد - الأربعاء' },
+  { key: 'thursday', label: 'الخميس', description: '' },
+  { key: 'friday', label: 'الجمعة', description: '' },
+  { key: 'saturday', label: 'السبت', description: '' },
 ];
 
 export default function UnitPricingDetailScreen() {
@@ -50,7 +50,10 @@ export default function UnitPricingDetailScreen() {
     isLoading: unitLoading,
   } = useQuery({
     queryKey: ['unit', unitId],
-    queryFn: () => hostService.getUnit(unitId!),
+    queryFn: async () => {
+      try { return await hostService.getUnit(unitId!); }
+      catch { return await hostService.getUnitLegacy(unitId!); }
+    },
     enabled: !!unitId,
     retry: false,
   });
@@ -104,7 +107,10 @@ export default function UnitPricingDetailScreen() {
 
   // Mutations
   const updatePricingMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => hostService.updateUnitPricing(unitId!, data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      try { return await hostService.updateUnitPricing(unitId!, data); }
+      catch { return await hostService.updateUnitPricingLegacy(unitId!, data); }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unitPricing', unitId] });
       setExpandedRate(null);
@@ -130,7 +136,7 @@ export default function UnitPricingDetailScreen() {
     (rateKey: string) => {
       const value = editValues[rateKey];
       if (!value || isNaN(Number(value)) || Number(value) <= 0) {
-        Alert.alert('\u062E\u0637\u0623', '\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0633\u0639\u0631 \u0635\u062D\u064A\u062D');
+        Alert.alert('خطأ', 'يرجى إدخال سعر صحيح');
         return;
       }
       updatePricingMutation.mutate({ [rateKey]: Number(value) });
@@ -165,12 +171,12 @@ export default function UnitPricingDetailScreen() {
   const handleDeleteOffer = useCallback(
     (offerId: string) => {
       Alert.alert(
-        '\u062D\u0630\u0641 \u0627\u0644\u0639\u0631\u0636',
-        '\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0639\u0631\u0636\u061F',
+        'حذف العرض',
+        'هل أنت متأكد من حذف هذا العرض؟',
         [
-          { text: '\u0625\u0644\u063A\u0627\u0621', style: 'cancel' },
+          { text: 'إلغاء', style: 'cancel' },
           {
-            text: '\u062D\u0630\u0641',
+            text: 'حذف',
             style: 'destructive',
             onPress: () => deleteOfferMutation.mutate(offerId),
           },
@@ -200,7 +206,7 @@ export default function UnitPricingDetailScreen() {
         <HeaderBar title="..." showBack fallbackRoute="/pricing" />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>{'\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...'}</Text>
+          <Text style={styles.loadingText}>{'جاري التحميل...'}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -208,7 +214,7 @@ export default function UnitPricingDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={unit?.name ?? '\u0627\u0644\u0623\u0633\u0639\u0627\u0631'} showBack fallbackRoute="/pricing" />
+      <HeaderBar title={unit?.name ?? 'الأسعار'} showBack fallbackRoute="/pricing" />
 
       {/* Segmented Control */}
       <View style={styles.segmentedContainer}>
@@ -217,7 +223,7 @@ export default function UnitPricingDetailScreen() {
           onPress={() => setActiveTab('offers')}
         >
           <Text style={[styles.segmentText, activeTab === 'offers' && styles.segmentTextActive]}>
-            {'\u0627\u0644\u0639\u0631\u0648\u0636 \u0648\u0627\u0644\u062E\u0635\u0648\u0645\u0627\u062A'}
+            {'العروض والخصومات'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -225,7 +231,7 @@ export default function UnitPricingDetailScreen() {
           onPress={() => setActiveTab('prices')}
         >
           <Text style={[styles.segmentText, activeTab === 'prices' && styles.segmentTextActive]}>
-            {'\u0627\u0644\u0623\u0633\u0639\u0627\u0631'}
+            {'الأسعار'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -277,7 +283,7 @@ export default function UnitPricingDetailScreen() {
                         {updatePricingMutation.isPending ? (
                           <ActivityIndicator size="small" color={Colors.textWhite} />
                         ) : (
-                          <Text style={styles.saveButtonText}>{'\u062D\u0641\u0638'}</Text>
+                          <Text style={styles.saveButtonText}>{'حفظ'}</Text>
                         )}
                       </TouchableOpacity>
                       <TextInput
@@ -287,12 +293,12 @@ export default function UnitPricingDetailScreen() {
                           setEditValues((prev) => ({ ...prev, [rate.key]: text }))
                         }
                         keyboardType="numeric"
-                        placeholder={'\u0623\u062F\u062E\u0644 \u0627\u0644\u0633\u0639\u0631'}
+                        placeholder={'أدخل السعر'}
                         placeholderTextColor={Colors.textTertiary}
                         textAlign="right"
                       />
                     </View>
-                    <Text style={styles.currencyHint}>{'\u0631\u064A\u0627\u0644 \u0633\u0639\u0648\u062F\u064A'}</Text>
+                    <Text style={styles.currencyHint}>{'ريال سعودي'}</Text>
                   </View>
                 )}
               </View>
@@ -311,8 +317,8 @@ export default function UnitPricingDetailScreen() {
           {renderDiscountCard(
             discounts.find((d) => d.type === 'weekly'),
             'weekly',
-            '\u062E\u0635\u0645 \u0623\u0633\u0628\u0648\u0639\u064A',
-            '\u062E\u0635\u0645 \u0639\u0646\u062F \u0627\u0644\u062D\u062C\u0632 \u0644\u0645\u062F\u0629 \u0623\u0633\u0628\u0648\u0639',
+            'خصم أسبوعي',
+            'خصم عند الحجز لمدة أسبوع',
             handleToggleDiscount,
             toggleDiscountMutation.isPending,
           )}
@@ -321,15 +327,15 @@ export default function UnitPricingDetailScreen() {
           {renderDiscountCard(
             discounts.find((d) => d.type === 'monthly'),
             'monthly',
-            '\u062E\u0635\u0645 \u0634\u0647\u0631\u064A',
-            '\u062E\u0635\u0645 \u0639\u0646\u062F \u0627\u0644\u062D\u062C\u0632 \u0644\u0645\u062F\u0629 \u0634\u0647\u0631',
+            'خصم شهري',
+            'خصم عند الحجز لمدة شهر',
             handleToggleDiscount,
             toggleDiscountMutation.isPending,
           )}
 
           {/* Custom Offers */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{'\u0627\u0644\u0639\u0631\u0648\u0636 \u0627\u0644\u0645\u062E\u0635\u0635\u0629'}</Text>
+            <Text style={styles.sectionTitle}>{'العروض المخصصة'}</Text>
           </View>
 
           {offers.length > 0 ? (
@@ -344,10 +350,10 @@ export default function UnitPricingDetailScreen() {
                   </TouchableOpacity>
                   <View style={styles.offerInfo}>
                     <Text style={styles.offerName}>{offer.name}</Text>
-                    <Text style={styles.offerDiscount}>{offer.discountPercent}% {'\u062E\u0635\u0645'}</Text>
+                    <Text style={styles.offerDiscount}>{offer.discountPercent}% {'خصم'}</Text>
                     {offer.selectedDates.length > 0 && (
                       <Text style={styles.offerDates}>
-                        {offer.selectedDates.length} {'\u0623\u064A\u0627\u0645'}
+                        {offer.selectedDates.length} {'أيام'}
                       </Text>
                     )}
                   </View>
@@ -357,14 +363,14 @@ export default function UnitPricingDetailScreen() {
           ) : (
             <View style={styles.emptyOffers}>
               <Ionicons name="pricetag-outline" size={40} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>{'\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0631\u0648\u0636 \u0645\u062E\u0635\u0635\u0629'}</Text>
+              <Text style={styles.emptyText}>{'لا توجد عروض مخصصة'}</Text>
             </View>
           )}
 
           {/* Add Offer Button */}
           <TouchableOpacity style={styles.addOfferButton} activeOpacity={0.7}>
             <Ionicons name="add-circle-outline" size={22} color={Colors.textWhite} />
-            <Text style={styles.addOfferText}>{'\u0623\u0636\u0641 \u0639\u0631\u0636'}</Text>
+            <Text style={styles.addOfferText}>{'أضف عرض'}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -399,7 +405,7 @@ function renderDiscountCard(
         </View>
       </View>
       <View style={styles.discountPercentageContainer}>
-        <Text style={styles.discountPercentageLabel}>{'\u0646\u0633\u0628\u0629 \u0627\u0644\u062E\u0635\u0645'}</Text>
+        <Text style={styles.discountPercentageLabel}>{'نسبة الخصم'}</Text>
         <Text style={[styles.discountPercentage, isActive && styles.discountPercentageActive]}>
           {percentage}%
         </Text>

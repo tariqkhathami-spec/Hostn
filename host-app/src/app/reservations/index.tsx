@@ -8,13 +8,15 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../services/host.service';
 import { Booking } from '../../types';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
-import { t } from '../../utils/i18n';
+import { t, getLocale } from '../../utils/i18n';
 import { formatCurrency, formatDate } from '../../utils/format';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
@@ -39,11 +41,65 @@ const statusFilters: StatusFilter[] = [
 
 export default function ReservationsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [page] = useState(1);
+  const isAr = getLocale() === 'ar';
 
   const statusParam = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      hostService.updateBookingStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['bookings'] });
+      const prev = queryClient.getQueryData(['bookings', statusParam, page]);
+      queryClient.setQueryData(['bookings', statusParam, page], (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((b: any) => b.id === id ? { ...b, status } : b),
+        };
+      });
+      return { prev };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(['bookings', statusParam, page], context.prev);
+      }
+      Alert.alert(
+        isAr ? 'خطأ' : 'Error',
+        isAr ? 'فشل تحديث الحالة' : 'Failed to update status',
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingGuests'] });
+    },
+  });
+
+  const handleAccept = useCallback((id: string) => {
+    Alert.alert(
+      'تأكيد القبول',
+      'هل أنت متأكد من قبول هذا الحجز؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'قبول', onPress: () => statusMutation.mutate({ id, status: 'confirmed' }) },
+      ],
+    );
+  }, [statusMutation]);
+
+  const handleDecline = useCallback((id: string) => {
+    Alert.alert(
+      'تأكيد الرفض',
+      'هل أنت متأكد من رفض هذا الحجز؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { text: 'رفض', style: 'destructive', onPress: () => statusMutation.mutate({ id, status: 'cancelled' }) },
+      ],
+    );
+  }, [statusMutation]);
 
   const {
     data: bookingsData,
@@ -99,7 +155,7 @@ export default function ReservationsScreen() {
         </View>
 
         {/* Guest name */}
-        <Text style={styles.guestName}>{item.guestName}</Text>
+        <Text style={styles.guestName}>{item.guestName || 'ضيف'}</Text>
 
         {/* Property / unit */}
         <Text style={styles.propertyName}>
@@ -118,9 +174,41 @@ export default function ReservationsScreen() {
           <Text style={styles.amount}>{formatCurrency(item.totalAmount)}</Text>
           <StatusBadge status={item.status} />
         </View>
+
+        {/* Accept / Decline actions for pending bookings */}
+        {(item.status === 'waiting' || item.status === 'pending' || item.status === 'in_payment') && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.acceptBtn, statusMutation.isPending && { opacity: 0.5 }]}
+              onPress={() => handleAccept(item.id)}
+              activeOpacity={0.7}
+              disabled={statusMutation.isPending}
+            >
+              {statusMutation.isPending ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Ionicons name="checkmark-circle" size={20} color={Colors.white} />
+              )}
+              <Text style={styles.actionBtnText}>قبول</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.declineBtn, statusMutation.isPending && { opacity: 0.5 }]}
+              onPress={() => handleDecline(item.id)}
+              activeOpacity={0.7}
+              disabled={statusMutation.isPending}
+            >
+              {statusMutation.isPending ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Ionicons name="close-circle" size={20} color={Colors.white} />
+              )}
+              <Text style={styles.actionBtnText}>رفض</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </TouchableOpacity>
     ),
-    [handleBookingPress]
+    [handleBookingPress, handleAccept, handleDecline]
   );
 
   const isLoading = activeTab === 'recent' ? bookingsLoading : upcomingLoading;
@@ -348,5 +436,37 @@ const styles = StyleSheet.create({
   amount: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
+  },
+  actionRow: {
+    flexDirection: 'row-reverse',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  acceptBtn: {
+    flex: 1,
+    backgroundColor: Colors.success,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.sm,
+  },
+  declineBtn: {
+    flex: 1,
+    backgroundColor: Colors.error,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.sm,
+  },
+  actionBtnText: {
+    ...Typography.smallBold,
+    color: Colors.white,
   },
 });

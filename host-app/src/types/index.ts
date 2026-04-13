@@ -158,6 +158,9 @@ export interface CalendarUnit {
   unitCode: string;
   isListed: boolean;
   bookedDates: string[];
+  blockedDates?: string[];
+  discountRules?: { type: 'weekday' | 'weekend'; percent: number }[];
+  datePricing?: { date: string; price?: number; isBlocked?: boolean; discountPercent?: number }[];
 }
 
 export interface CalendarProperty {

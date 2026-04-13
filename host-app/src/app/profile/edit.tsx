@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatPhoneDisplay } from '../../utils/format';
 import {
   View,
   Text,
@@ -42,15 +43,15 @@ export default function EditProfileScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hostProfile'] });
       Alert.alert(
-        '\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B',
-        '\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0628\u0646\u062C\u0627\u062D',
-        [{ text: '\u062D\u0633\u0646\u0627', onPress: () => router.canGoBack() ? router.back() : router.replace('/profile' as any) }],
+        'تم التحديث',
+        'تم تحديث البريد الإلكتروني بنجاح',
+        [{ text: 'حسنا', onPress: () => router.canGoBack() ? router.back() : router.replace('/profile' as any) }],
       );
     },
     onError: () => {
       Alert.alert(
-        '\u062E\u0637\u0623',
-        '\u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A',
+        'خطأ',
+        'فشل تحديث البريد الإلكتروني',
       );
     },
   });
@@ -65,7 +66,7 @@ export default function EditProfileScreen() {
     return (
       <ScreenWrapper>
         <HeaderBar
-          title={'\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A'}
+          title={'تعديل الملف الشخصي'}
           showBack
         />
         <View style={styles.loadingContainer}>
@@ -78,7 +79,7 @@ export default function EditProfileScreen() {
   return (
     <ScreenWrapper>
       <HeaderBar
-        title={'\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A'}
+        title={'تعديل الملف الشخصي'}
         showBack
       />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -86,7 +87,7 @@ export default function EditProfileScreen() {
           {/* Name - Read Only */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>
-              {'\u0627\u0644\u0627\u0633\u0645'}
+              {'الاسم'}
             </Text>
             <TextInput
               style={[styles.input, styles.inputDisabled]}
@@ -98,7 +99,7 @@ export default function EditProfileScreen() {
           {/* Email - Editable */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>
-              {'\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A'}
+              {'البريد الإلكتروني'}
             </Text>
             <TextInput
               style={styles.input}
@@ -113,11 +114,11 @@ export default function EditProfileScreen() {
           {/* Phone - Read Only */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>
-              {'\u0631\u0642\u0645 \u0627\u0644\u062C\u0648\u0627\u0644'}
+              {'رقم الجوال'}
             </Text>
             <TextInput
               style={[styles.input, styles.inputDisabled]}
-              value={profile?.phone || ''}
+              value={formatPhoneDisplay(profile?.phone || '')}
               editable={false}
             />
           </View>
@@ -125,7 +126,7 @@ export default function EditProfileScreen() {
           {/* ID Number - Read Only */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>
-              {'\u0631\u0642\u0645 \u0627\u0644\u0647\u0648\u064A\u0629'}
+              {'رقم الهوية'}
             </Text>
             <TextInput
               style={[styles.input, styles.inputDisabled]}
@@ -148,7 +149,7 @@ export default function EditProfileScreen() {
               <ActivityIndicator size="small" color={Colors.textWhite} />
             ) : (
               <Text style={styles.saveButtonText}>
-                {'\u062D\u0641\u0638'}
+                {'حفظ'}
               </Text>
             )}
           </TouchableOpacity>

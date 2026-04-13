@@ -4,7 +4,7 @@ import type { Booking } from '../types';
 export const bookingsService = {
   getMyBookings(status?: 'upcoming' | 'previous') {
     return api
-      .get<Booking[]>('/bookings', { params: { status } })
+      .get<Booking[]>('/bookings/my-bookings', { params: { status } })
       .then((r) => r.data);
   },
 
@@ -12,11 +12,24 @@ export const bookingsService = {
     return api.get<Booking>(`/bookings/${id}`).then((r) => r.data);
   },
 
-  create(data: {
-    property: string;
+  createHold(data: {
+    propertyId: string;
+    unitId?: string;
     checkIn: string;
     checkOut: string;
-    guests: number;
+    guests: { adults: number; children: number; infants: number };
+  }) {
+    return api.post('/bookings/hold', data).then((r) => r.data);
+  },
+
+  create(data: {
+    propertyId: string;
+    unitId?: string;
+    checkIn: string;
+    checkOut: string;
+    guests: { adults: number; children: number; infants: number };
+    specialRequests?: string;
+    holdId?: string;
     paymentMethod?: string;
     couponCode?: string;
   }) {
@@ -24,6 +37,10 @@ export const bookingsService = {
   },
 
   cancel(id: string) {
-    return api.patch<Booking>(`/bookings/${id}/cancel`).then((r) => r.data);
+    return api.put<Booking>(`/bookings/${id}/cancel`).then((r) => r.data);
+  },
+
+  getUnitBookedDates(unitId: string) {
+    return api.get(`/bookings/unit/${unitId}/dates`).then((r) => r.data);
   },
 };

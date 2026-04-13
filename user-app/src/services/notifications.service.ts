@@ -11,6 +11,6 @@ export const notificationsService = {
   },
 
   registerPushToken(token: string) {
-    return api.post('/notifications/register-token', { pushToken: token }).then((r) => r.data);
+    return api.post('/notifications/device-token', { pushToken: token }).then((r) => r.data);
   },
 };

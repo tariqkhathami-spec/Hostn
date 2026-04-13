@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationsService } from '../../services/notifications.service';
 import { formatDate } from '../../utils/format';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import type { Notification } from '../../types';
 
@@ -17,6 +18,7 @@ const ICON_MAP: Record<string, React.ComponentProps<typeof Ionicons>['name']> = 
 export default function NotificationsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -36,7 +38,7 @@ export default function NotificationsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Notifications</Text>
+        <Text style={styles.title}>{t('notifications.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -45,8 +47,8 @@ export default function NotificationsScreen() {
       ) : notifications.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="notifications-outline" size={64} color={Colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No notifications</Text>
-          <Text style={styles.emptyText}>You're all caught up!</Text>
+          <Text style={styles.emptyTitle}>{t('notifications.empty')}</Text>
+          <Text style={styles.emptyText}>{t('notifications.emptySub')}</Text>
         </View>
       ) : (
         <FlatList

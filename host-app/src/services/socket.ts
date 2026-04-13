@@ -71,6 +71,24 @@ export async function connectSocket() {
     }
   });
 
+  // ── Message events → invalidate conversation caches ────────────
+  socket.on('message:new', (data) => {
+    console.log('[SOCKET] message:new', data?.conversationId);
+    invalidateMessageCaches(data?.conversationId);
+  });
+
+  socket.on('message:read', (data) => {
+    console.log('[SOCKET] message:read', data?.conversationId);
+    invalidateMessageCaches(data?.conversationId);
+  });
+
+  socket.on('conversation:updated', (data) => {
+    console.log('[SOCKET] conversation:updated', data?.conversationId);
+    if (queryClientRef) {
+      queryClientRef.invalidateQueries({ queryKey: ['conversations'] });
+    }
+  });
+
   return socket;
 }
 
@@ -98,6 +116,14 @@ export function leavePropertyRoom(propertyId: string) {
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────
+
+function invalidateMessageCaches(conversationId?: string) {
+  if (!queryClientRef) return;
+  queryClientRef.invalidateQueries({ queryKey: ['conversations'] });
+  if (conversationId) {
+    queryClientRef.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+  }
+}
 
 function invalidateBookingCaches() {
   if (!queryClientRef) return;

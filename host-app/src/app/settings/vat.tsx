@@ -58,7 +58,7 @@ export default function VatScreen() {
       closeModal();
     },
     onError: () => {
-      Alert.alert('\u062E\u0637\u0623', '\u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.');
+      Alert.alert('خطأ', 'فشل إضافة الرقم الضريبي. حاول مرة أخرى.');
     },
   });
 
@@ -69,11 +69,11 @@ export default function VatScreen() {
 
   const handleSave = () => {
     if (!form.propertyId) {
-      Alert.alert('\u062E\u0637\u0623', '\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0639\u0642\u0627\u0631');
+      Alert.alert('خطأ', 'يرجى اختيار العقار');
       return;
     }
     if (!form.taxNumber.trim()) {
-      Alert.alert('\u062E\u0637\u0623', '\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A');
+      Alert.alert('خطأ', 'يرجى إدخال الرقم الضريبي');
       return;
     }
     const payload: Record<string, unknown> = {
@@ -94,7 +94,7 @@ export default function VatScreen() {
         {item.verified && (
           <View style={styles.verifiedBadge}>
             <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
-            <Text style={styles.verifiedText}>{'\u0645\u0648\u062B\u0642'}</Text>
+            <Text style={styles.verifiedText}>{'موثق'}</Text>
           </View>
         )}
       </View>
@@ -107,12 +107,12 @@ export default function VatScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.surface}>
-      <HeaderBar title={'\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629'} showBack fallbackRoute="/settings" />
+      <HeaderBar title={'ضريبة القيمة المضافة'} showBack fallbackRoute="/settings" />
 
       {/* Info Banner */}
       <View style={styles.infoBanner}>
         <Ionicons name="information-circle" size={22} color={Colors.info} />
-        <Text style={styles.infoBannerText}>{'\u0646\u0633\u0628\u0629 \u0627\u0644\u0636\u0631\u064A\u0628\u0629 15%'}</Text>
+        <Text style={styles.infoBannerText}>{'نسبة الضريبة 15%'}</Text>
       </View>
 
       {isError ? (
@@ -137,13 +137,13 @@ export default function VatScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="add-circle-outline" size={22} color={Colors.primary} />
-              <Text style={styles.addButtonText}>{'\u0623\u0636\u0641 \u0631\u0642\u0645 \u0636\u0631\u064A\u0628\u064A'}</Text>
+              <Text style={styles.addButtonText}>{'أضف رقم ضريبي'}</Text>
             </TouchableOpacity>
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="receipt-outline" size={48} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>{'\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0631\u0642\u0627\u0645 \u0636\u0631\u064A\u0628\u064A\u0629'}</Text>
+              <Text style={styles.emptyText}>{'لا توجد أرقام ضريبية'}</Text>
             </View>
           }
         />
@@ -154,14 +154,14 @@ export default function VatScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{'\u0623\u0636\u0641 \u0631\u0642\u0645 \u0636\u0631\u064A\u0628\u064A'}</Text>
+              <Text style={styles.modalTitle}>{'أضف رقم ضريبي'}</Text>
               <TouchableOpacity onPress={closeModal}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{'\u0627\u0644\u0639\u0642\u0627\u0631'}</Text>
+              <Text style={styles.formLabel}>{'العقار'}</Text>
               <TouchableOpacity
                 style={styles.pickerButton}
                 onPress={() => setPropertyPickerVisible(true)}
@@ -172,19 +172,19 @@ export default function VatScreen() {
                     !form.propertyId && { color: Colors.textTertiary },
                   ]}
                 >
-                  {form.propertyName || '\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0642\u0627\u0631'}
+                  {form.propertyName || 'اختر العقار'}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>{'\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A'}</Text>
+              <Text style={styles.formLabel}>{'الرقم الضريبي'}</Text>
               <TextInput
                 style={styles.input}
                 value={form.taxNumber}
                 onChangeText={(text) => setForm((prev) => ({ ...prev, taxNumber: text }))}
-                placeholder={'\u0623\u062F\u062E\u0644 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A'}
+                placeholder={'أدخل الرقم الضريبي'}
                 placeholderTextColor={Colors.textTertiary}
                 keyboardType="number-pad"
                 textAlign="right"
@@ -200,7 +200,7 @@ export default function VatScreen() {
               {addMutation.isPending ? (
                 <ActivityIndicator size="small" color={Colors.textWhite} />
               ) : (
-                <Text style={styles.saveButtonText}>{'\u062D\u0641\u0638'}</Text>
+                <Text style={styles.saveButtonText}>{'حفظ'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -212,7 +212,7 @@ export default function VatScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.pickerModal}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{'\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0642\u0627\u0631'}</Text>
+              <Text style={styles.modalTitle}>{'اختر العقار'}</Text>
               <TouchableOpacity onPress={() => setPropertyPickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
@@ -249,7 +249,7 @@ export default function VatScreen() {
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={styles.pickerEmptyText}>{'\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0642\u0627\u0631\u0627\u062A'}</Text>
+                <Text style={styles.pickerEmptyText}>{'لا توجد عقارات'}</Text>
               }
             />
           </View>

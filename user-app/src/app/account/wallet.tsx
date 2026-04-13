@@ -8,9 +8,12 @@ import { useQuery } from '@tanstack/react-query';
 import { walletService } from '../../services/wallet.service';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 
 export default function WalletScreen() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const l = (obj: { en: string; ar: string }) => (language === 'ar' ? obj.ar : obj.en);
 
   const { data: balance, isLoading: balanceLoading } = useQuery({
     queryKey: ['wallet'],
@@ -28,13 +31,13 @@ export default function WalletScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Wallet</Text>
+        <Text style={styles.title}>{l({ en: 'Wallet', ar: 'المحفظة' })}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Balance Card */}
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Available Balance</Text>
+        <Text style={styles.balanceLabel}>{l({ en: 'Available Balance', ar: 'الرصيد المتاح' })}</Text>
         {balanceLoading ? (
           <ActivityIndicator color={Colors.white} />
         ) : (
@@ -45,12 +48,12 @@ export default function WalletScreen() {
       </View>
 
       {/* Transactions */}
-      <Text style={styles.sectionTitle}>Transaction History</Text>
+      <Text style={styles.sectionTitle}>{l({ en: 'Transaction History', ar: 'سجل المعاملات' })}</Text>
       {txLoading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       ) : !transactions?.length ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No transactions yet</Text>
+          <Text style={styles.emptyText}>{l({ en: 'No transactions yet', ar: 'لا توجد معاملات بعد' })}</Text>
         </View>
       ) : (
         <FlatList

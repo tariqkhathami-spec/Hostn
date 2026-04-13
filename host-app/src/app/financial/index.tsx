@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { hostService } from '../../services/host.service';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 
@@ -13,6 +15,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
+  { icon: 'trending-up-outline', label: 'الأرباح', route: '/financial/earnings' },
   { icon: 'card-outline', label: 'طريقة الدفع', route: '/financial/payment-method' },
   { icon: 'time-outline', label: 'مدة التحويل', route: '/financial/transfer-duration' },
   { icon: 'swap-horizontal-outline', label: 'الحوالات البنكية', route: '/financial/transfers' },
@@ -24,10 +27,32 @@ const menuItems: MenuItem[] = [
 export default function FinancialMenuScreen() {
   const router = useRouter();
 
+  const statsQuery = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => hostService.getStats(),
+    retry: false,
+  });
+  const totalEarnings = statsQuery.data?.data?.totalEarnings;
+
   return (
     <ScreenWrapper>
       <HeaderBar title="المعاملات المالية" showBack />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* Earnings Summary Card */}
+        <View style={styles.earningsCard}>
+          <View style={styles.earningsIconCircle}>
+            <Ionicons name="wallet-outline" size={28} color={Colors.primary} />
+          </View>
+          {statsQuery.isLoading ? (
+            <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: Spacing.sm }} />
+          ) : (
+            <Text style={styles.earningsAmount}>
+              {(totalEarnings ?? 0).toLocaleString('en-US')} {'ريال'}
+            </Text>
+          )}
+          <Text style={styles.earningsLabel}>{'إجمالي الأرباح'}</Text>
+        </View>
+
         {menuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
@@ -57,6 +82,35 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: Spacing.base,
     gap: Spacing.sm,
+  },
+  earningsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary200,
+    ...Shadows.card,
+  },
+  earningsIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  earningsAmount: {
+    ...Typography.h2,
+    color: Colors.primary,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  earningsLabel: {
+    ...Typography.small,
+    color: Colors.textSecondary,
   },
   menuCard: {
     backgroundColor: Colors.white,

@@ -8,9 +8,11 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { CalendarProperty, CalendarUnit } from '../../types';
@@ -35,10 +37,14 @@ function MiniCalendar({
   year,
   month,
   bookedDays,
+  blockedDays,
+  onDayPress,
 }: {
   year: number;
   month: number;
   bookedDays: number[];
+  blockedDays?: number[];
+  onDayPress?: (day: number, isBlocked: boolean) => void;
 }) {
   const totalDays = daysInMonth(year, month);
   // 7 columns (Sat-Fri in Arabic calendar)
@@ -56,15 +62,31 @@ function MiniCalendar({
   }
 
   const bookedSet = new Set(bookedDays);
+  const blockedSet = new Set(blockedDays ?? []);
 
   for (let d = 1; d <= totalDays; d++) {
     const isBooked = bookedSet.has(d);
-    cells.push(
-      <View
-        key={d}
-        style={[miniStyles.cell, isBooked ? miniStyles.cellBooked : miniStyles.cellEmpty]}
-      />,
-    );
+    const isBlocked = blockedSet.has(d);
+    const cellStyle = isBooked
+      ? miniStyles.cellBooked
+      : isBlocked
+        ? miniStyles.cellBlocked
+        : miniStyles.cellEmpty;
+
+    if (onDayPress && !isBooked) {
+      cells.push(
+        <TouchableOpacity
+          key={d}
+          style={[miniStyles.cell, cellStyle]}
+          onPress={() => onDayPress(d, isBlocked)}
+          activeOpacity={0.6}
+        />,
+      );
+    } else {
+      cells.push(
+        <View key={d} style={[miniStyles.cell, cellStyle]} />,
+      );
+    }
   }
 
   // Pad to fill last row
@@ -100,6 +122,9 @@ const miniStyles = StyleSheet.create({
   cellBooked: {
     backgroundColor: Colors.primary,
   },
+  cellBlocked: {
+    backgroundColor: Colors.error,
+  },
   cellEmpty: {
     backgroundColor: Colors.borderLight,
   },
@@ -109,6 +134,7 @@ const miniStyles = StyleSheet.create({
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const now = new Date();
   const [currentMonth] = React.useState(now.getMonth());
   const [currentYear] = React.useState(now.getFullYear());
@@ -120,6 +146,39 @@ export default function CalendarScreen() {
     queryFn: () => hostService.getCalendarData(currentYear, currentMonth),
     retry: false,
   });
+
+  const blockMutation = useMutation({
+    mutationFn: ({ propertyId, date, block }: { propertyId: string; date: string; block: boolean }) => {
+      const dates = { start: date, end: date };
+      return block
+        ? hostService.blockDates(propertyId, dates)
+        : hostService.unblockDates(propertyId, dates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hostCalendar'] });
+    },
+    onError: () => {
+      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث التقويم');
+    },
+  });
+
+  const handleDayPress = React.useCallback(
+    (unitId: string, propertyId: string, day: number, isBlocked: boolean) => {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const actionLabel = isBlocked ? 'إلغاء الحظر' : 'حظر التاريخ';
+      const message = isBlocked
+        ? `هل تريد إلغاء حظر يوم ${day}؟`
+        : `هل تريد حظر يوم ${day}؟`;
+      Alert.alert(actionLabel, message, [
+        { text: 'إلغاء', style: 'cancel' },
+        {
+          text: actionLabel,
+          onPress: () => blockMutation.mutate({ propertyId, date: dateStr, block: !isBlocked }),
+        },
+      ]);
+    },
+    [currentYear, currentMonth, blockMutation],
+  );
 
   // Transform API data into display units
   const calendarGroups: CalendarProperty[] = calendarData?.data ?? [];
@@ -156,13 +215,13 @@ export default function CalendarScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{'\u0627\u0644\u062A\u0642\u0648\u064A\u0645'}</Text>
+        <Text style={styles.headerTitle}>{'التقويم'}</Text>
       </View>
 
       {/* Toggle row */}
       <View style={styles.toggleRow}>
         <Text style={styles.toggleLabel}>
-          {'\u0639\u0631\u0636 \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629 \u0641\u0642\u0637'}
+          {'عرض الوحدات المعروضة فقط'}
         </Text>
         <Switch
           value={listedOnly}
@@ -175,6 +234,18 @@ export default function CalendarScreen() {
       {/* Property name */}
       <View style={styles.propertyRow}>
         <Text style={styles.propertyName}>{propertyName}</Text>
+      </View>
+
+      {/* Block hint */}
+      <View style={styles.hintRow}>
+        <Ionicons name="information-circle-outline" size={16} color={Colors.textTertiary} />
+        <Text style={styles.hintText}>{'اضغط على التاريخ لحظره'}</Text>
+        <View style={styles.legendRow}>
+          <View style={[styles.legendDot, { backgroundColor: Colors.primary }]} />
+          <Text style={styles.legendText}>{'محجوز'}</Text>
+          <View style={[styles.legendDot, { backgroundColor: Colors.error }]} />
+          <Text style={styles.legendText}>{'محظور'}</Text>
+        </View>
       </View>
 
       {/* Unit grid */}
@@ -190,23 +261,31 @@ export default function CalendarScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.unitsGrid}>
-            {displayUnits.map((unit) => (
-              <TouchableOpacity
-                key={unit.unitId}
-                style={styles.unitCard}
-                activeOpacity={0.7}
-                onPress={() => router.push(`/property/unit/${unit.unitId}` as any)}
-              >
-                <MiniCalendar
-                  year={currentYear}
-                  month={currentMonth}
-                  bookedDays={getBookedDays(unit.bookedDates)}
-                />
-                <Text style={styles.unitName} numberOfLines={2}>
-                  {unit.unitName}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {displayUnits.map((unit) => {
+              // Find the property this unit belongs to
+              const parentProperty = calendarGroups.find((g) =>
+                (g.units || []).some((u) => u.unitId === unit.unitId),
+              );
+              const propertyId = parentProperty?.propertyId ?? '';
+              const blockedDays = getBookedDays(unit.blockedDates ?? []);
+
+              return (
+                <View key={unit.unitId} style={styles.unitCard}>
+                  <MiniCalendar
+                    year={currentYear}
+                    month={currentMonth}
+                    bookedDays={getBookedDays(unit.bookedDates)}
+                    blockedDays={blockedDays}
+                    onDayPress={(day, isBlocked) =>
+                      handleDayPress(unit.unitId, propertyId, day, isBlocked)
+                    }
+                  />
+                  <Text style={styles.unitName} numberOfLines={2}>
+                    {unit.unitName}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
 
           {displayUnits.length === 0 && (
@@ -266,6 +345,35 @@ const styles = StyleSheet.create({
     ...Typography.bodyBold,
     color: Colors.textPrimary,
     textAlign: 'center',
+  },
+  hintRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+    gap: Spacing.xs,
+  },
+  hintText: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
+    flex: 1,
+    textAlign: 'right',
+  },
+  legendRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: Spacing.xs,
+  },
+  legendText: {
+    ...Typography.tiny,
+    color: Colors.textTertiary,
   },
   scrollView: {
     flex: 1,

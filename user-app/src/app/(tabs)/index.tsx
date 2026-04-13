@@ -18,11 +18,13 @@ import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/format';
 import { SAUDI_CITIES } from '../../constants/config';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 import type { Listing } from '../../types';
 import ListingCard from '../../components/listing/ListingCard';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t, language, isRTL } = useLanguage();
   const user = useAuthStore((s) => s.user);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -55,9 +57,9 @@ export default function HomeScreen() {
         <View style={styles.greetingRow}>
           <View>
             <Text style={styles.greeting}>
-              Welcome{user?.firstName ? `, ${user.firstName}` : ''}
+              {(user?.firstName || user?.name) ? t('home.welcomeUser').replace('{name}', user?.firstName || user?.name?.split(' ')[0] || '') : t('home.welcome')}
             </Text>
-            <Text style={styles.greetingSub}>Find your perfect stay</Text>
+            <Text style={styles.greetingSub}>{t('home.subtitle')}</Text>
           </View>
           <Pressable onPress={() => router.push('/account/notifications')}>
             <Ionicons name="notifications-outline" size={26} color={Colors.textPrimary} />
@@ -67,12 +69,12 @@ export default function HomeScreen() {
         {/* Search Bar */}
         <Pressable style={styles.searchBar} onPress={handleSearch}>
           <Ionicons name="search" size={20} color={Colors.textSecondary} />
-          <Text style={styles.searchPlaceholder}>Where do you want to go?</Text>
+          <Text style={styles.searchPlaceholder}>{t('home.searchPlaceholder')}</Text>
         </Pressable>
 
         {/* City Carousel */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Explore Cities</Text>
+          <Text style={styles.sectionTitle}>{t('home.exploreCities')}</Text>
           <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -87,7 +89,7 @@ export default function HomeScreen() {
                 <View style={styles.cityIcon}>
                   <Ionicons name="location" size={24} color={Colors.white} />
                 </View>
-                <Text style={styles.cityName}>{item.name}</Text>
+                <Text style={styles.cityName}>{language === 'ar' ? item.nameAr : item.name}</Text>
               </Pressable>
             )}
           />
@@ -95,13 +97,13 @@ export default function HomeScreen() {
 
         {/* Featured Listings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Featured Properties</Text>
+          <Text style={styles.sectionTitle}>{t('home.featuredProperties')}</Text>
           {isLoading ? (
             <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
           ) : listings.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="home-outline" size={48} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>No properties available yet</Text>
+              <Text style={styles.emptyText}>{t('home.noProperties')}</Text>
             </View>
           ) : (
             <FlatList
@@ -125,8 +127,8 @@ export default function HomeScreen() {
         <Pressable style={styles.promoBanner} onPress={handleSearch}>
           <Ionicons name="sparkles" size={28} color={Colors.white} />
           <View style={styles.promoText}>
-            <Text style={styles.promoTitle}>Plan your next trip</Text>
-            <Text style={styles.promoSub}>Explore the best vacation homes in Saudi Arabia</Text>
+            <Text style={styles.promoTitle}>{t('home.planTrip')}</Text>
+            <Text style={styles.promoSub}>{t('home.planTripSub')}</Text>
           </View>
           <Ionicons name="arrow-forward" size={22} color={Colors.white} />
         </Pressable>

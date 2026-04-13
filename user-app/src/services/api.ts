@@ -32,7 +32,19 @@ const processQueue = (error: unknown) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Auto-unwrap { success, data } backend wrapper, but preserve pagination if present
+    const d = response.data;
+    if (d && typeof d === 'object' && 'success' in d && 'data' in d) {
+      if ('pagination' in d) {
+        // Paginated response — keep { data, pagination } structure
+        response.data = { data: d.data, pagination: d.pagination };
+      } else {
+        response.data = d.data;
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

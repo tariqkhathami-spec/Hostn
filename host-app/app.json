@@ -28,9 +28,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "supportsRTL": true,
-      "permissions": [
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,12 +40,7 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-notifications",
-      [
-        "expo-av",
-        {
-          "microphonePermission": false
-        }
-      ]
+      "expo-image-picker"
     ],
     "extra": {
       "router": {

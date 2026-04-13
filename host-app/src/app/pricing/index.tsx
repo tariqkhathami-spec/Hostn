@@ -75,10 +75,10 @@ export default function PricingIndexScreen() {
   if (isLoading) {
     return (
       <ScreenWrapper>
-        <HeaderBar title={'\u0627\u0644\u0623\u0633\u0639\u0627\u0631'} showBack />
+        <HeaderBar title={'الأسعار'} showBack />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>{'\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...'}</Text>
+          <Text style={styles.loadingText}>{'جاري التحميل...'}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -87,10 +87,10 @@ export default function PricingIndexScreen() {
   if (isError) {
     return (
       <ScreenWrapper>
-        <HeaderBar title={'\u0627\u0644\u0623\u0633\u0639\u0627\u0631'} showBack />
+        <HeaderBar title={'الأسعار'} showBack />
         <View style={styles.centered}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.error} />
-          <Text style={styles.errorText}>{'\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0639\u0642\u0627\u0631\u0627\u062A'}</Text>
+          <Text style={styles.errorText}>{'حدث خطأ في تحميل العقارات'}</Text>
         </View>
       </ScreenWrapper>
     );
@@ -98,12 +98,12 @@ export default function PricingIndexScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={'\u0627\u0644\u0623\u0633\u0639\u0627\u0631'} showBack />
+      <HeaderBar title={'الأسعار'} showBack />
 
       <View style={styles.container}>
         {/* Property Dropdown */}
         <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>{'\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0642\u0627\u0631'}</Text>
+          <Text style={styles.dropdownLabel}>{'اختر العقار'}</Text>
           <TouchableOpacity
             style={styles.dropdownButton}
             onPress={() => setDropdownOpen(!dropdownOpen)}
@@ -117,7 +117,7 @@ export default function PricingIndexScreen() {
             <Text style={styles.dropdownButtonText}>
               {selectedProperty
                 ? selectedProperty.nameAr || selectedProperty.name
-                : '\u0627\u062E\u062A\u0631 \u0639\u0642\u0627\u0631\u0627\u064B'}
+                : 'اختر عقاراً'}
             </Text>
           </TouchableOpacity>
 
@@ -162,14 +162,14 @@ export default function PricingIndexScreen() {
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <Ionicons name="cube-outline" size={48} color={Colors.textTertiary} />
-                <Text style={styles.emptyText}>{'\u0644\u0627 \u062A\u0648\u062C\u062F \u0648\u062D\u062F\u0627\u062A \u0644\u0647\u0630\u0627 \u0627\u0644\u0639\u0642\u0627\u0631'}</Text>
+                <Text style={styles.emptyText}>{'لا توجد وحدات لهذا العقار'}</Text>
               </View>
             }
           />
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="business-outline" size={48} color={Colors.textTertiary} />
-            <Text style={styles.emptyText}>{'\u0627\u062E\u062A\u0631 \u0639\u0642\u0627\u0631\u0627\u064B \u0644\u0639\u0631\u0636 \u0627\u0644\u0648\u062D\u062F\u0627\u062A'}</Text>
+            <Text style={styles.emptyText}>{'اختر عقاراً لعرض الوحدات'}</Text>
           </View>
         )}
       </View>

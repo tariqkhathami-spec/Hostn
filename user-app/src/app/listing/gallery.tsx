@@ -21,7 +21,7 @@ export default function GalleryScreen() {
     enabled: !!id,
   });
 
-  const images = listing?.images ?? [];
+  const images = (listing?.images ?? []).map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean) as string[];
   const numColumns = 3;
   const imageSize = (SCREEN_WIDTH - Spacing.xl * 2 - Spacing.xs * (numColumns - 1)) / numColumns;
 

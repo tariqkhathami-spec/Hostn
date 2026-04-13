@@ -8,11 +8,13 @@ import { useQuery } from '@tanstack/react-query';
 import { chatService } from '../../services/chat.service';
 import { formatDate } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 import type { Conversation } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 
 export default function ConversationsScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const userId = useAuthStore((s) => s.user?._id);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
@@ -27,15 +29,15 @@ export default function ConversationsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>Conversations</Text>
+      <Text style={styles.header}>{t('chat.conversations')}</Text>
       {isLoading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       ) : conversations.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="chatbubbles-outline" size={64} color={Colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No conversations yet</Text>
+          <Text style={styles.emptyTitle}>{t('chat.noConversations')}</Text>
           <Text style={styles.emptyText}>
-            Start a conversation by contacting a host from a listing page
+            {t('chat.noConversationsSub')}
           </Text>
         </View>
       ) : (

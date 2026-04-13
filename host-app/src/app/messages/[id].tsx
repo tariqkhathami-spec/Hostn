@@ -10,22 +10,28 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { formatRelativeDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Message } from '../../types';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
+import { getLocale } from '../../utils/i18n';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [inputText, setInputText] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const locale = getLocale();
+  const isAr = locale === 'ar';
 
   const conversationId = id ?? '';
 
@@ -37,9 +43,11 @@ export default function ChatScreen() {
     retry: false,
   });
 
-  const conversation = conversationsData?.data?.find((c: { id: string }) => c.id === conversationId);
-  const headerTitle = conversation?.guestName ?? 'المحادثة';
+  const conversation = conversationsData?.data?.find((c: any) => c.id === conversationId);
+  const headerTitle = conversation?.guestName ?? (isAr ? 'المحادثة' : 'Chat');
+  const guestId = conversation?.guestId ?? '';
 
+  // Fetch messages with auto-polling every 5 seconds (matching web behavior)
   const {
     data,
     isLoading,
@@ -48,6 +56,7 @@ export default function ChatScreen() {
     queryFn: () => hostService.getConversationMessages(conversationId),
     enabled: !!conversationId,
     retry: false,
+    refetchInterval: 5000, // Poll every 5 seconds like the web
   });
 
   const messages: Message[] = data?.data ?? [];
@@ -55,17 +64,15 @@ export default function ChatScreen() {
   // Mark as read on mount
   useEffect(() => {
     if (conversationId) {
-      hostService.markConversationRead(conversationId).catch(() => {
-        // Silently fail - not critical
-      });
+      hostService.markConversationRead(conversationId).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     }
   }, [conversationId, queryClient]);
 
+  // Send message mutation with optimistic update
   const sendMutation = useMutation({
     mutationFn: (text: string) => hostService.sendMessage(conversationId, text),
     onMutate: async (text) => {
-      // Optimistic update
       const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
         conversationId,
@@ -97,9 +104,11 @@ export default function ChatScreen() {
       }
     },
     onSuccess: (data: any) => {
-      // Show warning if message content was filtered
       if (data?.warning) {
-        Alert.alert('Notice', data.warning);
+        Alert.alert(
+          isAr ? 'تنبيه' : 'Notice',
+          data.warning,
+        );
       }
     },
     onSettled: () => {
@@ -115,8 +124,88 @@ export default function ChatScreen() {
     sendMutation.mutate(trimmed);
   }, [inputText, sendMutation]);
 
+  // Block conversation
+  const handleBlock = useCallback(() => {
+    setShowMenu(false);
+    Alert.alert(
+      isAr ? 'حظر المحادثة' : 'Block Conversation',
+      isAr ? 'هل أنت متأكد من حظر هذه المحادثة؟ لن تتمكن من إرسال أو استقبال رسائل.' : 'Are you sure you want to block this conversation?',
+      [
+        { text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel' },
+        {
+          text: isAr ? 'حظر' : 'Block',
+          style: 'destructive',
+          onPress: async () => {
+            if (!conversationId) return;
+            try {
+              await hostService.blockConversation(conversationId);
+              Alert.alert(
+                isAr ? 'تم' : 'Done',
+                isAr ? 'تم حظر المحادثة' : 'Conversation blocked',
+              );
+              queryClient.invalidateQueries({ queryKey: ['conversations'] });
+            } catch {
+              Alert.alert(
+                isAr ? 'خطأ' : 'Error',
+                isAr ? 'فشل حظر المحادثة' : 'Failed to block conversation',
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [conversationId, isAr, queryClient]);
+
+  // Report user
+  const handleReport = useCallback(() => {
+    setShowMenu(false);
+    if (!guestId) {
+      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'لا يمكن الإبلاغ' : 'Cannot report');
+      return;
+    }
+    Alert.alert(
+      isAr ? 'الإبلاغ عن المستخدم' : 'Report User',
+      isAr ? 'سيتم مراجعة البلاغ من قبل فريق الدعم.' : 'The report will be reviewed by our support team.',
+      [
+        { text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel' },
+        {
+          text: isAr ? 'إبلاغ' : 'Report',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await hostService.reportUser({
+                reportedUser: guestId,
+                reason: 'inappropriate_behavior',
+                details: `Reported from conversation ${conversationId}`,
+              });
+              Alert.alert(
+                isAr ? 'تم' : 'Done',
+                isAr ? 'تم إرسال البلاغ بنجاح' : 'Report submitted successfully',
+              );
+            } catch {
+              Alert.alert(
+                isAr ? 'خطأ' : 'Error',
+                isAr ? 'فشل إرسال البلاغ' : 'Failed to submit report',
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [guestId, conversationId, isAr]);
+
   const renderMessage = useCallback(({ item }: { item: Message }) => {
     const isHost = item.sender === 'host';
+    const isSystem = (item.sender as string) === 'system' || (item as any).messageType === 'system';
+
+    if (isSystem) {
+      return (
+        <View style={styles.systemMessage}>
+          <Text style={styles.systemMessageText}>{item.text}</Text>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.bubbleRow, isHost ? styles.bubbleRowHost : styles.bubbleRowGuest]}>
         <View style={[styles.bubble, isHost ? styles.bubbleHost : styles.bubbleGuest]}>
@@ -149,9 +238,16 @@ export default function ChatScreen() {
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
 
+  // Header right action — three-dot menu
+  const headerRight = (
+    <TouchableOpacity onPress={() => setShowMenu(true)} hitSlop={12}>
+      <Ionicons name="ellipsis-vertical" size={22} color={Colors.textPrimary} />
+    </TouchableOpacity>
+  );
+
   return (
     <ScreenWrapper>
-      <HeaderBar title={headerTitle} showBack fallbackRoute="/messages" />
+      <HeaderBar title={headerTitle} showBack fallbackRoute="/messages" rightActions={headerRight} />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -176,6 +272,11 @@ export default function ChatScreen() {
 
         {/* Input bar */}
         <View style={styles.inputBar}>
+          {inputText.length > 1800 && (
+            <Text style={[styles.charCounter, inputText.length > 1950 && { color: Colors.error }]}>
+              {inputText.length}/2000
+            </Text>
+          )}
           <TouchableOpacity
             onPress={handleSend}
             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
@@ -188,7 +289,7 @@ export default function ChatScreen() {
             style={styles.textInput}
             value={inputText}
             onChangeText={setInputText}
-            placeholder="اكتب رسالتك..."
+            placeholder={isAr ? 'اكتب رسالتك...' : 'Type a message...'}
             placeholderTextColor={Colors.textTertiary}
             multiline
             maxLength={2000}
@@ -196,6 +297,25 @@ export default function ChatScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+
+      {/* Menu Modal — Block / Report */}
+      <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
+        <Pressable style={styles.menuOverlay} onPress={() => setShowMenu(false)}>
+          <View style={styles.menuContainer}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleReport}>
+              <Ionicons name="flag-outline" size={20} color={Colors.warning} />
+              <Text style={styles.menuItemText}>{isAr ? 'الإبلاغ عن المستخدم' : 'Report User'}</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.menuItem} onPress={handleBlock}>
+              <Ionicons name="ban-outline" size={20} color={Colors.error} />
+              <Text style={[styles.menuItemText, { color: Colors.error }]}>
+                {isAr ? 'حظر المحادثة' : 'Block Conversation'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -265,6 +385,21 @@ const styles = StyleSheet.create({
   statusIcon: {
     marginLeft: 2,
   },
+  // System messages
+  systemMessage: {
+    alignSelf: 'center',
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.sm,
+  },
+  systemMessageText: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+  },
+  // Input bar
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -296,5 +431,43 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  charCounter: {
+    ...Typography.tiny,
+    color: Colors.textTertiary,
+    textAlign: 'right',
+    paddingHorizontal: Spacing.base,
+    paddingBottom: 2,
+  },
+  // Menu modal
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 100,
+    paddingRight: Spacing.xl,
+  },
+  menuContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    minWidth: 200,
+    ...Shadows.lg,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+  },
+  menuItemText: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
   },
 });

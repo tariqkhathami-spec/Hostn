@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { bookingsService } from '../../services/bookings.service';
+import { getSocket } from '../../services/socket';
 import { formatCurrency, formatDateRange } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 import type { Booking } from '../../types';
 
 const TABS = ['upcoming', 'previous'] as const;
@@ -21,7 +23,26 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'previous'>('upcoming');
+
+  const handleBookingEvent = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['bookings'] });
+  }, [queryClient]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on('booking:updated', handleBookingEvent);
+    socket.on('booking:cancelled', handleBookingEvent);
+
+    return () => {
+      socket.off('booking:updated', handleBookingEvent);
+      socket.off('booking:cancelled', handleBookingEvent);
+    };
+  }, [handleBookingEvent]);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['bookings', activeTab],
@@ -30,32 +51,39 @@ export default function BookingsScreen() {
 
   const bookings = data ?? [];
 
-  const renderBookingCard = ({ item }: { item: Booking }) => (
-    <Pressable
-      style={styles.bookingCard}
-      onPress={() => router.push(`/listing/${item.property._id}`)}
-    >
-      <Image
-        source={{ uri: item.property.images[0] }}
-        style={styles.bookingImage}
-        contentFit="cover"
-      />
-      <View style={styles.bookingInfo}>
-        <Text style={styles.bookingTitle} numberOfLines={1}>{item.property.title}</Text>
-        <Text style={styles.bookingDates}>{formatDateRange(item.checkIn, item.checkOut)}</Text>
-        <View style={styles.bookingBottom}>
-          <Text style={styles.bookingPrice}>{formatCurrency(item.totalPrice)}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] ?? Colors.textTertiary }]}>
-            <Text style={styles.statusText}>{item.status}</Text>
+  const renderBookingCard = ({ item }: { item: Booking }) => {
+    const bookingItem = item as any;
+    const displayPrice = item.totalPrice || bookingItem.total || bookingItem.pricing?.total || bookingItem.amount || 0;
+
+    return (
+      <Pressable
+        style={styles.bookingCard}
+        onPress={() => router.push(`/booking/${item._id}`)}
+      >
+        <Image
+          source={{ uri: (item.property?.images?.length ?? 0) > 0 ? (typeof item.property.images[0] === 'string' ? item.property.images[0] : item.property.images[0]?.url) : undefined }}
+          style={styles.bookingImage}
+          contentFit="cover"
+        />
+        <View style={styles.bookingInfo}>
+          <Text style={styles.bookingTitle} numberOfLines={1}>{item.property?.title ?? ''}</Text>
+          <Text style={styles.bookingDates}>{formatDateRange(item.checkIn, item.checkOut)}</Text>
+          <View style={styles.bookingBottom}>
+            <Text style={styles.bookingPrice}>
+              {displayPrice > 0 ? formatCurrency(displayPrice) : '—'}
+            </Text>
+            <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] ?? Colors.textTertiary }]}>
+              <Text style={styles.statusText}>{t(`status.${item.status}` as any)}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>My Bookings</Text>
+      <Text style={styles.header}>{t('bookings.title')}</Text>
 
       <View style={styles.tabRow}>
         {TABS.map((tab) => (
@@ -65,7 +93,7 @@ export default function BookingsScreen() {
             onPress={() => setActiveTab(tab)}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'upcoming' ? t('bookings.upcoming') : t('bookings.previous')}
             </Text>
           </Pressable>
         ))}
@@ -76,18 +104,20 @@ export default function BookingsScreen() {
       ) : bookings.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="calendar-outline" size={64} color={Colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No {activeTab} bookings</Text>
+          <Text style={styles.emptyTitle}>
+            {activeTab === 'upcoming' ? t('bookings.noUpcoming') : t('bookings.noPrevious')}
+          </Text>
           <Text style={styles.emptyText}>
             {activeTab === 'upcoming'
-              ? 'Your upcoming reservations will appear here'
-              : 'Your past reservations will appear here'}
+              ? t('bookings.noUpcomingSub')
+              : t('bookings.noPreviousSub')}
           </Text>
           {activeTab === 'upcoming' && (
             <Pressable
               style={styles.ctaButton}
               onPress={() => router.push('/(tabs)')}
             >
-              <Text style={styles.ctaText}>Browse Properties</Text>
+              <Text style={styles.ctaText}>{t('bookings.browseProperties')}</Text>
             </Pressable>
           )}
         </View>

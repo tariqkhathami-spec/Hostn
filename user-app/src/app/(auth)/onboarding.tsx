@@ -5,33 +5,37 @@ import PagerView from 'react-native-pager-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useUIStore } from '../../store/uiStore';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
-const SLIDES = [
-  {
-    icon: 'globe-outline' as const,
-    title: 'Explore Saudi Arabia',
-    subtitle: 'Discover vacation rentals across more than 180 cities and provinces',
-  },
-  {
-    icon: 'home-outline' as const,
-    title: 'Variety of Properties',
-    subtitle: 'From apartments and chalets to farms and resorts — find your perfect stay',
-  },
-  {
-    icon: 'calendar-outline' as const,
-    title: 'Flexible Booking',
-    subtitle: 'Book daily, weekly, or monthly — with secure payment and instant confirmation',
-  },
-];
+const SLIDE_ICONS = ['globe-outline', 'home-outline', 'calendar-outline'] as const;
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const pagerRef = useRef<PagerView>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const markOnboardingSeen = useUIStore((s) => s.markOnboardingSeen);
+  const { t } = useLanguage();
+
+  const SLIDES = [
+    {
+      icon: SLIDE_ICONS[0],
+      title: t('onboarding.slide1Title'),
+      subtitle: t('onboarding.slide1Sub'),
+    },
+    {
+      icon: SLIDE_ICONS[1],
+      title: t('onboarding.slide2Title'),
+      subtitle: t('onboarding.slide2Sub'),
+    },
+    {
+      icon: SLIDE_ICONS[2],
+      title: t('onboarding.slide3Title'),
+      subtitle: t('onboarding.slide3Sub'),
+    },
+  ];
 
   const handleNext = () => {
     if (currentPage < SLIDES.length - 1) {
@@ -55,7 +59,7 @@ export default function OnboardingScreen() {
       <View style={styles.header}>
         {currentPage < SLIDES.length - 1 && (
           <Pressable onPress={handleSkip} hitSlop={12}>
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
           </Pressable>
         )}
       </View>
@@ -89,7 +93,7 @@ export default function OnboardingScreen() {
 
         <Pressable style={styles.button} onPress={handleNext}>
           <Text style={styles.buttonText}>
-            {currentPage === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+            {currentPage === SLIDES.length - 1 ? t('onboarding.getStarted') : t('onboarding.next')}
           </Text>
         </Pressable>
       </View>

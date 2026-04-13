@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, TextInput, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,17 +12,35 @@ const AMENITY_OPTIONS = [
   'Air Conditioning', 'Garden', 'Gym', 'Jacuzzi', 'Sauna',
 ];
 
+const RATING_OPTIONS = [
+  { label: 'Any', value: null },
+  { label: '6+', value: 6 },
+  { label: '7+', value: 7 },
+  { label: '8+', value: 8 },
+  { label: '9+', value: 9 },
+];
+
+const DIRECTION_OPTIONS = [
+  { label: 'Any', value: null },
+  { label: 'North', value: 'north' },
+  { label: 'South', value: 'south' },
+  { label: 'East', value: 'east' },
+  { label: 'West', value: 'west' },
+  { label: 'NE', value: 'northeast' },
+  { label: 'NW', value: 'northwest' },
+  { label: 'SE', value: 'southeast' },
+  { label: 'SW', value: 'southwest' },
+];
+
 export default function FiltersScreen() {
   const router = useRouter();
-  const { propertyType, setPropertyType } = useSearchStore();
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-  const [bedrooms, setBedrooms] = useState(0);
-  const [bathrooms, setBathrooms] = useState(0);
+  const store = useSearchStore();
 
   const toggleAmenity = (a: string) => {
-    setSelectedAmenities((prev) =>
-      prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
-    );
+    const next = store.amenities.includes(a)
+      ? store.amenities.filter((x) => x !== a)
+      : [...store.amenities, a];
+    store.setAmenities(next);
   };
 
   const handleApply = () => {
@@ -30,10 +48,7 @@ export default function FiltersScreen() {
   };
 
   const handleReset = () => {
-    setPropertyType(null);
-    setSelectedAmenities([]);
-    setBedrooms(0);
-    setBathrooms(0);
+    store.resetFilters();
   };
 
   return (
@@ -55,24 +70,58 @@ export default function FiltersScreen() {
           {PROPERTY_TYPES.map((type) => (
             <Pressable
               key={type.id}
-              style={[styles.chip, propertyType === type.id && styles.chipActive]}
-              onPress={() => setPropertyType(propertyType === type.id ? null : type.id)}
+              style={[styles.chip, store.propertyType === type.id && styles.chipActive]}
+              onPress={() => store.setPropertyType(store.propertyType === type.id ? null : type.id)}
             >
-              <Text style={[styles.chipText, propertyType === type.id && styles.chipTextActive]}>
+              <Text style={[styles.chipText, store.propertyType === type.id && styles.chipTextActive]}>
                 {type.label}
               </Text>
             </Pressable>
           ))}
         </View>
 
+        {/* Price Range */}
+        <Text style={styles.sectionTitle}>Price Range (SAR)</Text>
+        <View style={styles.rangeRow}>
+          <View style={styles.rangeInputWrapper}>
+            <Text style={styles.rangeLabel}>Min</Text>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="0"
+              placeholderTextColor={Colors.textTertiary}
+              keyboardType="numeric"
+              value={store.minPrice != null ? String(store.minPrice) : ''}
+              onChangeText={(t) => {
+                const n = parseInt(t, 10);
+                store.setMinPrice(isNaN(n) ? null : Math.min(n, 4000));
+              }}
+            />
+          </View>
+          <Text style={styles.rangeDash}>-</Text>
+          <View style={styles.rangeInputWrapper}>
+            <Text style={styles.rangeLabel}>Max</Text>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="4000"
+              placeholderTextColor={Colors.textTertiary}
+              keyboardType="numeric"
+              value={store.maxPrice != null ? String(store.maxPrice) : ''}
+              onChangeText={(t) => {
+                const n = parseInt(t, 10);
+                store.setMaxPrice(isNaN(n) ? null : Math.min(n, 4000));
+              }}
+            />
+          </View>
+        </View>
+
         {/* Bedrooms */}
         <Text style={styles.sectionTitle}>Bedrooms</Text>
         <View style={styles.counterRow}>
-          <Pressable style={styles.counterBtn} onPress={() => setBedrooms(Math.max(0, bedrooms - 1))}>
+          <Pressable style={styles.counterBtn} onPress={() => store.setBedrooms(Math.max(0, store.bedrooms - 1))}>
             <Ionicons name="remove" size={20} color={Colors.primary} />
           </Pressable>
-          <Text style={styles.counterValue}>{bedrooms === 0 ? 'Any' : bedrooms}</Text>
-          <Pressable style={styles.counterBtn} onPress={() => setBedrooms(bedrooms + 1)}>
+          <Text style={styles.counterValue}>{store.bedrooms === 0 ? 'Any' : store.bedrooms}</Text>
+          <Pressable style={styles.counterBtn} onPress={() => store.setBedrooms(Math.min(8, store.bedrooms + 1))}>
             <Ionicons name="add" size={20} color={Colors.primary} />
           </Pressable>
         </View>
@@ -80,13 +129,103 @@ export default function FiltersScreen() {
         {/* Bathrooms */}
         <Text style={styles.sectionTitle}>Bathrooms</Text>
         <View style={styles.counterRow}>
-          <Pressable style={styles.counterBtn} onPress={() => setBathrooms(Math.max(0, bathrooms - 1))}>
+          <Pressable style={styles.counterBtn} onPress={() => store.setBathrooms(Math.max(0, store.bathrooms - 1))}>
             <Ionicons name="remove" size={20} color={Colors.primary} />
           </Pressable>
-          <Text style={styles.counterValue}>{bathrooms === 0 ? 'Any' : bathrooms}</Text>
-          <Pressable style={styles.counterBtn} onPress={() => setBathrooms(bathrooms + 1)}>
+          <Text style={styles.counterValue}>{store.bathrooms === 0 ? 'Any' : store.bathrooms}</Text>
+          <Pressable style={styles.counterBtn} onPress={() => store.setBathrooms(Math.min(8, store.bathrooms + 1))}>
             <Ionicons name="add" size={20} color={Colors.primary} />
           </Pressable>
+        </View>
+
+        {/* Rating */}
+        <Text style={styles.sectionTitle}>Minimum Rating</Text>
+        <View style={styles.chipRow}>
+          {RATING_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.label}
+              style={[styles.chip, store.ratingMin === opt.value && styles.chipActive]}
+              onPress={() => store.setRatingMin(opt.value)}
+            >
+              <Text style={[styles.chipText, store.ratingMin === opt.value && styles.chipTextActive]}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Deals Only Toggle */}
+        <View style={styles.toggleRow}>
+          <View>
+            <Text style={styles.sectionTitle}>Deals Only</Text>
+            <Text style={styles.toggleSubtext}>Show only discounted properties</Text>
+          </View>
+          <Switch
+            value={store.hasDiscount}
+            onValueChange={store.setHasDiscount}
+            trackColor={{ false: Colors.border, true: Colors.primary300 }}
+            thumbColor={store.hasDiscount ? Colors.primary : Colors.white}
+          />
+        </View>
+
+        {/* District */}
+        <Text style={styles.sectionTitle}>District</Text>
+        <TextInput
+          style={styles.textInput}
+          placeholder="Enter district name"
+          placeholderTextColor={Colors.textTertiary}
+          value={store.district ?? ''}
+          onChangeText={(t) => store.setDistrict(t.length > 0 ? t : null)}
+        />
+
+        {/* Direction */}
+        <Text style={styles.sectionTitle}>Direction</Text>
+        <View style={styles.chipRow}>
+          {DIRECTION_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.label}
+              style={[styles.chip, store.direction === opt.value && styles.chipActive]}
+              onPress={() => store.setDirection(opt.value)}
+            >
+              <Text style={[styles.chipText, store.direction === opt.value && styles.chipTextActive]}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Area Range */}
+        <Text style={styles.sectionTitle}>Area (m²)</Text>
+        <View style={styles.rangeRow}>
+          <View style={styles.rangeInputWrapper}>
+            <Text style={styles.rangeLabel}>Min</Text>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="0"
+              placeholderTextColor={Colors.textTertiary}
+              keyboardType="numeric"
+              value={store.minArea != null ? String(store.minArea) : ''}
+              onChangeText={(t) => {
+                const n = parseInt(t, 10);
+                store.setMinArea(isNaN(n) ? null : n);
+              }}
+            />
+          </View>
+          <Text style={styles.rangeDash}>-</Text>
+          <View style={styles.rangeInputWrapper}>
+            <Text style={styles.rangeLabel}>Max</Text>
+            <TextInput
+              style={styles.rangeInput}
+              placeholder="No limit"
+              placeholderTextColor={Colors.textTertiary}
+              keyboardType="numeric"
+              value={store.maxArea != null ? String(store.maxArea) : ''}
+              onChangeText={(t) => {
+                const n = parseInt(t, 10);
+                store.setMaxArea(isNaN(n) ? null : n);
+              }}
+            />
+          </View>
         </View>
 
         {/* Amenities */}
@@ -95,10 +234,10 @@ export default function FiltersScreen() {
           {AMENITY_OPTIONS.map((a) => (
             <Pressable
               key={a}
-              style={[styles.chip, selectedAmenities.includes(a) && styles.chipActive]}
+              style={[styles.chip, store.amenities.includes(a) && styles.chipActive]}
               onPress={() => toggleAmenity(a)}
             >
-              <Text style={[styles.chipText, selectedAmenities.includes(a) && styles.chipTextActive]}>
+              <Text style={[styles.chipText, store.amenities.includes(a) && styles.chipTextActive]}>
                 {a}
               </Text>
             </Pressable>
@@ -125,7 +264,10 @@ const styles = StyleSheet.create({
   title: { ...Typography.subtitle, color: Colors.textPrimary },
   resetText: { ...Typography.small, color: Colors.primary },
   scrollContent: { padding: Spacing.xl, paddingBottom: 100 },
-  sectionTitle: { ...Typography.bodyBold, color: Colors.textPrimary, marginTop: Spacing.xl, marginBottom: Spacing.md },
+  sectionTitle: {
+    ...Typography.bodyBold, color: Colors.textPrimary,
+    marginTop: Spacing.xl, marginBottom: Spacing.md,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   chip: {
     paddingHorizontal: Spacing.base, paddingVertical: Spacing.sm,
@@ -142,6 +284,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   counterValue: { ...Typography.h3, color: Colors.textPrimary, minWidth: 50, textAlign: 'center' },
+  rangeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+  },
+  rangeInputWrapper: { flex: 1 },
+  rangeLabel: { ...Typography.caption, color: Colors.textSecondary, marginBottom: Spacing.xs },
+  rangeInput: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+  },
+  rangeDash: { ...Typography.body, color: Colors.textSecondary, marginTop: Spacing.lg },
+  textInput: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.surface,
+  },
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: Spacing.xl,
+  },
+  toggleSubtext: { ...Typography.caption, color: Colors.textSecondary },
   footer: { padding: Spacing.xl, borderTopWidth: 1, borderTopColor: Colors.divider },
   applyButton: {
     backgroundColor: Colors.primary, paddingVertical: Spacing.base,
