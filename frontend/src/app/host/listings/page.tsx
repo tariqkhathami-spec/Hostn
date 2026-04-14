@@ -311,12 +311,31 @@ export default function HostListingsPage() {
                         )}
                       </div>
 
-                      {/* Row 3: Address (if exists, single truncated line) */}
-                      {property.location?.address && (
-                        <p className="text-xs text-gray-400 mt-1 truncate" title={property.location.address}>
-                          {property.location.address}
-                        </p>
-                      )}
+                      {/* Row 3: Copy Link + Map */}
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <button
+                          onClick={() => copyPropertyLink(property._id)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                        >
+                          {copiedId === property._id ? (
+                            <Check className="w-3 h-3 text-emerald-500" />
+                          ) : (
+                            <Link2 className="w-3 h-3" />
+                          )}
+                          {t.copyLink[lang]}
+                        </button>
+                        {hasCoords(property) && (
+                          <a
+                            href={googleMapsUrl(property)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            {t.viewOnMap[lang]}
+                          </a>
+                        )}
+                      </div>
 
                       {/* Row 4: Unit count + warnings */}
                       <div className="mt-auto pt-2">
@@ -380,34 +399,6 @@ export default function HostListingsPage() {
                       )}
                     </button>
 
-                    {/* Divider */}
-                    <div className="w-px h-4 bg-gray-200 mx-1" />
-
-                    {/* Copy Link */}
-                    <button
-                      onClick={() => copyPropertyLink(property._id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-white hover:text-primary-600 hover:shadow-sm transition-all"
-                    >
-                      {copiedId === property._id ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      ) : (
-                        <Link2 className="w-3.5 h-3.5" />
-                      )}
-                      {t.copyLink[lang]}
-                    </button>
-
-                    {/* Map */}
-                    {hasCoords(property) && (
-                      <a
-                        href={googleMapsUrl(property)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-white hover:text-primary-600 hover:shadow-sm transition-all"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        {t.viewOnMap[lang]}
-                      </a>
-                    )}
                   </div>
 
                   {/* Toggle */}
