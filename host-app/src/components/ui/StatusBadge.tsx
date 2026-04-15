@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
 
-type Status = 'pending' | 'confirmed' | 'in_payment' | 'waiting' | 'cancelled' | 'no_show' | 'completed' | 'rejected';
+type Status = 'pending' | 'confirmed' | 'in_payment' | 'waiting' | 'cancelled' | 'no_show' | 'completed' | 'rejected' | 'held';
 
 const statusConfig: Record<Status, { bg: string; text: string; label: string; labelAr: string }> = {
   pending: { bg: '#fef3c7', text: Colors.statusWaiting, label: 'Pending', labelAr: 'بانتظار القبول' },
@@ -13,6 +13,7 @@ const statusConfig: Record<Status, { bg: string; text: string; label: string; la
   rejected: { bg: '#fecaca', text: Colors.statusCancelled, label: 'Rejected', labelAr: 'مرفوض' },
   no_show: { bg: '#f3f4f6', text: Colors.statusNoShow, label: 'No Show', labelAr: 'عدم حضور' },
   completed: { bg: '#dcfce7', text: Colors.statusConfirmed, label: 'Completed', labelAr: 'مكتمل' },
+  held: { bg: '#ede9fe', text: '#7c3aed', label: 'Held', labelAr: 'محجوز مؤقتاً' },
 };
 
 interface Props {

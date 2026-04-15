@@ -10,6 +10,7 @@ export interface User {
   nationalId?: string;
   dateOfBirth?: string;
   gender?: 'male' | 'female';
+  // Wishlist stores unit IDs (converted from property-based to unit-based).
   wishlist: string[];
   isVerified?: boolean;
   createdAt: string;
@@ -74,6 +75,15 @@ export interface Listing {
   bookedDates?: { start: string; end: string }[];
   unavailableDates?: { start: string; end: string }[];
   host: HostInfo;
+  video?: { url?: string; thumbnail?: string };
+  arrivalInstructions?: string;
+  tourismLicense?: {
+    licenseNumber?: string;
+    licenseType?: 'tourism_permit' | string;
+    issueDate?: string;
+    expiryDate?: string;
+    status?: 'active' | 'expired' | 'pending' | string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -252,7 +262,8 @@ export interface WishlistList {
   _id: string;
   name: string;
   user: string;
-  properties: string[];
+  units: string[];
+  unitCount?: number;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;

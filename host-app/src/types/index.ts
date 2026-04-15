@@ -37,6 +37,14 @@ export interface Unit {
   features: string[];
   rooms: RoomConfig;
   pricing: UnitPricing;
+  video?: { url?: string; thumbnail?: string };
+  tourismLicense?: {
+    licenseNumber?: string;
+    licenseType?: 'tourism_permit' | string;
+    issueDate?: string;
+    expiryDate?: string;
+    status?: 'active' | 'expired' | 'pending' | string;
+  };
 }
 
 export interface RoomConfig {
@@ -74,7 +82,7 @@ export interface Booking {
   checkOut: string;
   totalAmount: number;
   hostAmount: number;
-  status: 'pending' | 'confirmed' | 'in_payment' | 'waiting' | 'cancelled' | 'no_show' | 'completed' | 'rejected';
+  status: 'pending' | 'confirmed' | 'in_payment' | 'waiting' | 'cancelled' | 'no_show' | 'completed' | 'rejected' | 'held';
   createdAt: string;
 }
 

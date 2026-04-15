@@ -5,7 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { supportService } from '../../services/support.service';
+import { contactService } from '../../services/contact.service';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 
 export default function ContactScreen() {
@@ -22,11 +22,11 @@ export default function ContactScreen() {
     if (!canSubmit) return;
     setLoading(true);
     try {
-      await supportService.createTicket({
+      await contactService.submit({
+        name: name.trim(),
+        email: email.trim(),
         subject: subject.trim(),
-        category: 'other',
-        priority: 'medium',
-        message: `From: ${name.trim()} (${email.trim()})\n\n${message.trim()}`,
+        message: message.trim(),
       });
       Alert.alert('Message Sent', 'Thank you for contacting us. We will get back to you shortly.', [
         { text: 'OK', onPress: () => router.back() },

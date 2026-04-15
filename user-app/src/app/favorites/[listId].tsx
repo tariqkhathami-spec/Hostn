@@ -56,28 +56,28 @@ export default function WishlistDetailScreen() {
     refetch: refetchProperties,
     isRefetching,
   } = useQuery({
-    queryKey: ['wishlist-properties', listId, list?.properties],
+    queryKey: ['wishlist-units', listId, list?.units],
     queryFn: async () => {
-      if (!list || list.properties.length === 0) return [];
+      if (!list || list.units.length === 0) return [];
       const results = await Promise.all(
-        list.properties.map((id) => listingsService.getById(id).catch(() => null))
+        list.units.map((id) => listingsService.getById(id).catch(() => null))
       );
       return results.filter(Boolean) as Listing[];
     },
-    enabled: !!list && list.properties.length > 0,
+    enabled: !!list && list.units.length > 0,
   });
 
-  const removeProperty = useMutation({
-    mutationFn: (propertyId: string) =>
-      wishlistsService.removeProperty(listId!, propertyId),
+  const removeUnit = useMutation({
+    mutationFn: (unitId: string) =>
+      wishlistsService.removeUnit(listId!, unitId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wishlist', listId] });
-      queryClient.invalidateQueries({ queryKey: ['wishlist-properties', listId] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist-units', listId] });
       queryClient.invalidateQueries({ queryKey: ['wishlists'] });
     },
   });
 
-  const handleRemove = (propertyId: string, title: string) => {
+  const handleRemove = (unitId: string, title: string) => {
     Alert.alert(
       'Remove from List',
       `Remove "${title}" from this list?`,
@@ -86,7 +86,7 @@ export default function WishlistDetailScreen() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => removeProperty.mutate(propertyId),
+          onPress: () => removeUnit.mutate(unitId),
         },
       ]
     );

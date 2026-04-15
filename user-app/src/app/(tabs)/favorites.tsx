@@ -45,16 +45,16 @@ export default function FavoritesScreen() {
 
   const lists = Array.isArray(listsRaw) ? listsRaw : [];
 
-  // Fetch cover images for all lists that have properties
-  const allPropertyIds = Array.from(
-    new Set(lists.flatMap((l: WishlistList) => (l.properties?.length > 0 ? [l.properties[0]] : [])))
+  // Fetch cover images for all lists that have units
+  const allUnitIds = Array.from(
+    new Set(lists.flatMap((l: WishlistList) => (l.units?.length > 0 ? [l.units[0]] : [])))
   );
 
   const { data: coverImages = {} } = useQuery({
-    queryKey: ['wishlist-covers', allPropertyIds],
+    queryKey: ['wishlist-covers', allUnitIds],
     queryFn: async () => {
       const entries = await Promise.all(
-        allPropertyIds.map(async (id) => {
+        allUnitIds.map(async (id) => {
           try {
             const listing = await listingsService.getById(id);
             const img =
@@ -68,7 +68,7 @@ export default function FavoritesScreen() {
       );
       return Object.fromEntries(entries) as Record<string, string | null>;
     },
-    enabled: allPropertyIds.length > 0,
+    enabled: allUnitIds.length > 0,
   });
 
   const createList = useMutation({
@@ -158,8 +158,8 @@ export default function FavoritesScreen() {
   };
 
   const getCoverUri = (list: WishlistList): string | null => {
-    if (!list.properties || list.properties.length === 0) return null;
-    return coverImages[list.properties[0]] ?? null;
+    if (!list.units || list.units.length === 0) return null;
+    return coverImages[list.units[0]] ?? null;
   };
 
   const renderListCard = ({ item }: { item: WishlistList }) => {
@@ -195,7 +195,7 @@ export default function FavoritesScreen() {
             {item.name}
           </Text>
           <Text style={styles.cardCount}>
-            {item.properties?.length ?? 0} {(item.properties?.length ?? 0) === 1 ? t('favorites.property') : t('favorites.properties')}
+            {item.units?.length ?? 0} {(item.units?.length ?? 0) === 1 ? t('favorites.property') : t('favorites.properties')}
           </Text>
         </View>
       </Pressable>

@@ -34,8 +34,9 @@ export const authService = {
     return api.put<User>('/auth/profile', data).then((r) => r.data);
   },
 
-  toggleWishlist(propertyId: string) {
-    return api.post<{ wishlist: string[] }>(`/auth/wishlist/${propertyId}`).then((r) => r.data);
+  // Route still uses /auth/wishlist/:id but the id is now a unit ID (wishlist is unit-based).
+  toggleWishlist(unitId: string) {
+    return api.post<{ wishlist: string[] }>(`/auth/wishlist/${unitId}`).then((r) => r.data);
   },
 
   upgradeToHost() {
