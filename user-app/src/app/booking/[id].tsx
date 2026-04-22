@@ -258,7 +258,7 @@ export default function BookingDetailScreen() {
         {/* Booking Reference */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('booking.reference')}</Text>
-          <Text style={styles.referenceText}>{booking._id}</Text>
+          <Text style={styles.referenceText}>{booking.reference ?? booking._id}</Text>
           <Text style={styles.bookedOnText}>
             {t('booking.bookedOn')} {formatDate(booking.createdAt)}
           </Text>

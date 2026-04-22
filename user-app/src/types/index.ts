@@ -104,6 +104,7 @@ export interface HostInfo {
 
 export interface Booking {
   _id: string;
+  reference?: string; // e.g., "HB-ABC12345" — human-readable booking reference
   property: Listing;
   guest: User;
   host: HostInfo;
@@ -204,6 +205,8 @@ export interface PriceBreakdown {
   securityDeposit?: number;
   couponDiscount?: number;
   total: number;
+  discountType?: string;
+  appliedDiscountTypes?: string[];
 }
 
 export interface SearchParams {

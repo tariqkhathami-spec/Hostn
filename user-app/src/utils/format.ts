@@ -16,7 +16,7 @@ export function formatCurrency(amount: number, currency = 'SAR'): string {
   // Use 'en' locale to guarantee Western numerals (0-9) on all JS engines.
   // 'en-SA' could produce Eastern Arabic numerals on some React Native runtimes.
   const formatted = (amount ?? 0).toLocaleString('en', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
   return `${formatted} ${currency}`;

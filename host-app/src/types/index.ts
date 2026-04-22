@@ -69,11 +69,15 @@ export interface UnitPricing {
   thursday: number;
   friday: number;
   saturday: number;
+  globalEnabled?: boolean;
+  weeklyEnabled?: boolean;
+  monthlyEnabled?: boolean;
 }
 
 export interface Booking {
   id: string;
   bookingNumber: string;
+  reference?: string; // e.g., "HB-ABC12345" — human-readable booking reference
   guestName: string;
   guestPhone: string;
   propertyName: string;
@@ -84,6 +88,7 @@ export interface Booking {
   hostAmount: number;
   status: 'pending' | 'confirmed' | 'in_payment' | 'waiting' | 'cancelled' | 'no_show' | 'completed' | 'rejected' | 'held';
   createdAt: string;
+  invoice?: { _id: string; invoiceNumber: string } | null;
 }
 
 export interface Review {
@@ -167,7 +172,7 @@ export interface CalendarUnit {
   isListed: boolean;
   bookedDates: string[];
   blockedDates?: string[];
-  discountRules?: { type: 'weekday' | 'weekend'; percent: number }[];
+  discountRules?: { type: 'weekday' | 'weekend'; percent: number; enabled?: boolean }[];
   datePricing?: { date: string; price?: number; isBlocked?: boolean; discountPercent?: number }[];
 }
 

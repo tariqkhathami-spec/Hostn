@@ -117,6 +117,9 @@ export default function BookingDetailScreen() {
         <View style={styles.topSection}>
           <StatusBadge status={booking.status} />
           <Text style={styles.bookingNumber}>#{booking.bookingNumber}</Text>
+          {booking.reference ? (
+            <Text style={styles.referenceLabel}>رقم الحجز: {booking.reference}</Text>
+          ) : null}
         </View>
 
         {/* Guest Info Card */}
@@ -321,6 +324,11 @@ const styles = StyleSheet.create({
   bookingNumber: {
     ...Typography.h3,
     color: Colors.primary,
+  },
+  referenceLabel: {
+    ...Typography.small,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: Colors.white,
