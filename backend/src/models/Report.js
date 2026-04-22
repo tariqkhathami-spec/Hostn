@@ -4,7 +4,12 @@ const reportSchema = new mongoose.Schema(
   {
     reporter: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'reporterType',
+      required: true,
+    },
+    reporterType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
       required: true,
     },
     targetType: {
@@ -61,7 +66,7 @@ const reportSchema = new mongoose.Schema(
     },
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Admin',
       default: null,
     },
     reviewedAt: {

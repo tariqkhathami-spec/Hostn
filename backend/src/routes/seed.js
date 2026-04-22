@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const Guest = require('../models/Guest');
+const Host = require('../models/Host');
+const Admin = require('../models/Admin');
 const Property = require('../models/Property');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
+const Payout = require('../models/Payout');
+const HostInvoice = require('../models/HostInvoice');
+const HostStatement = require('../models/HostStatement');
+const HostBankAccount = require('../models/HostBankAccount');
+
+const SEED_SECRET = 'hostn_seed_2026_x';
 
 // Temporary seed endpoint - POST /api/v1/seed/host-data
 // Protected by a simple secret key
@@ -16,48 +24,51 @@ router.post('/host-data', async (req, res) => {
 
     const results = { users: [], properties: [], bookings: [], reviews: [] };
 
-    // ── 1. Setup Host User ─────────────────────────────────────────────
-    let hostUser = await User.findOne({ phone: '500407888' });
-    if (hostUser) {
-      hostUser.role = 'host';
+    // ── 1. Setup Host User (in Host collection) ─────────────────────────
+    let hostUser = await Host.findOne({ phone: '500407888' });
+    if (!hostUser) {
+      hostUser = await Host.create({
+        name: 'طارق الخثعمي',
+        phone: '500407888',
+        phoneVerified: true,
+        isVerified: true,
+      });
+      results.users.push({ action: 'created', id: hostUser._id, role: 'host' });
+    } else {
       hostUser.name = 'طارق الخثعمي';
       hostUser.isVerified = true;
       await hostUser.save();
       results.users.push({ action: 'updated', id: hostUser._id, role: 'host' });
     }
 
-    // ── 2. Setup Guest Users ────────────────────────────────────────────
-    let guestUser = await User.findOne({ phone: '501234567' });
+    // ── 2. Setup Guest Users (in Guest collection) ──────────────────────
+    let guestUser = await Guest.findOne({ phone: '501234567' });
     if (!guestUser) {
-      guestUser = await User.create({
+      guestUser = await Guest.create({
         name: 'محمد الرمل',
         phone: '501234567',
         phoneVerified: true,
-        role: 'guest',
         isVerified: true,
       });
       results.users.push({ action: 'created', id: guestUser._id, name: 'محمد الرمل' });
     }
 
-    let guestUser2 = await User.findOne({ phone: '509876543' });
+    let guestUser2 = await Guest.findOne({ phone: '509876543' });
     if (!guestUser2) {
-      guestUser2 = await User.create({
+      guestUser2 = await Guest.create({
         name: 'سعود الحربي',
         phone: '509876543',
         phoneVerified: true,
-        role: 'guest',
         isVerified: true,
       });
       results.users.push({ action: 'created', id: guestUser2._id, name: 'سعود الحربي' });
     }
 
     // ── 3. Create 8 Mivara Chalets ──────────────────────────────────────
-    // Only create if none exist for this host
     const existingProps = await Property.find({ host: hostUser._id });
     if (existingProps.length >= 8) {
       results.properties = existingProps.map(p => ({ id: p._id, title: p.title, status: 'already_exists' }));
     } else {
-      // Clear existing
       if (existingProps.length > 0) {
         await Property.deleteMany({ host: hostUser._id });
         await Booking.deleteMany({ property: { $in: existingProps.map(p => p._id) } });
@@ -176,17 +187,303 @@ router.post('/host-data', async (req, res) => {
   }
 });
 
-// DEV ONLY: promote a user to admin
+// Temporary seed endpoint - POST /api/v1/seed/finance-data
+// Protected by the same shared secret. Idempotent: seeds 3 Remittances,
+// 3 Invoices, and 3 Statements for the demo host (phone 500407888).
+//
+// Safe to re-run — existing records for the demo host are wiped first so
+// counters stay consistent. (In production we would not wipe; this is a
+// dev-time helper only.)
+router.post('/finance-data', async (req, res) => {
+  try {
+    const { secret } = req.body;
+    if (secret !== SEED_SECRET) {
+      return res.status(403).json({ success: false, message: 'Invalid secret' });
+    }
+
+    const hostUser = await Host.findOne({ phone: '500407888' });
+    if (!hostUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Demo host not found. Seed /host-data first.',
+      });
+    }
+
+    const results = { payouts: [], invoices: [], statements: [], bankAccount: null };
+
+    // ── 1. Bank account (needed as ref on Payout) ────────────────────
+    let bankAccount = await HostBankAccount.findOne({ host: hostUser._id });
+    if (!bankAccount) {
+      bankAccount = await HostBankAccount.create({
+        host: hostUser._id,
+        bankName: 'Al Rajhi Bank',
+        bankNameAr: 'مصرف الراجحي',
+        iban: 'SA0380000000608010167519',
+        accountHolder: hostUser.name || 'طارق الخثعمي',
+        isVerified: true,
+        transferDuration: { type: 'after_departure', hours: 48 },
+      });
+      results.bankAccount = { action: 'created', id: bankAccount._id };
+    } else {
+      results.bankAccount = { action: 'existing', id: bankAccount._id };
+    }
+
+    // Wipe prior finance records for this host so re-running is clean.
+    // NOTE: this does not reset the Counter sequences, so numbers keep
+    // climbing across runs. Acceptable for a dev seed helper.
+    await Promise.all([
+      Payout.deleteMany({ host: hostUser._id }),
+      HostInvoice.deleteMany({ host: hostUser._id }),
+      HostStatement.deleteMany({ host: hostUser._id }),
+    ]);
+
+    // Pull a few of this host's recent bookings to attach to payouts/invoices.
+    const hostProps = await Property.find({ host: hostUser._id }).select('_id');
+    const propIds = hostProps.map((p) => p._id);
+    const hostBookings = await Booking.find({
+      property: { $in: propIds },
+      status: { $in: ['confirmed', 'completed'] },
+    })
+      .sort('-createdAt')
+      .limit(9)
+      .select('_id pricing.total checkIn checkOut');
+
+    // Split bookings into 3 groups of up to 3 each so every payout/invoice
+    // gets a realistic-looking set of references.
+    const bookingChunks = [
+      hostBookings.slice(0, 3).map((b) => b._id),
+      hostBookings.slice(3, 6).map((b) => b._id),
+      hostBookings.slice(6, 9).map((b) => b._id),
+    ];
+
+    // Sum of booking totals per chunk — used as the gross amount base.
+    const chunkGross = hostBookings
+      .reduce((acc, b, idx) => {
+        const group = Math.floor(idx / 3);
+        acc[group] = (acc[group] || 0) + (b.pricing?.total || 0);
+        return acc;
+      }, [0, 0, 0])
+      .map((v) => Math.round(v));
+
+    const now = new Date();
+    const monthStart = (offset) => new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const monthEnd = (offset) => new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 23, 59, 59);
+
+    // ── 2. Three Payouts (Remittances) ───────────────────────────────
+    // One executed (past month), one processing (mid), one upcoming (current).
+    const payoutDefs = [
+      {
+        status: 'executed',
+        periodOffset: -2,
+        executedAt: new Date(now.getFullYear(), now.getMonth() - 1, 5),
+        gross: Math.max(chunkGross[0], 6200),
+        bookings: bookingChunks[0],
+      },
+      {
+        status: 'processing',
+        periodOffset: -1,
+        gross: Math.max(chunkGross[1], 4800),
+        bookings: bookingChunks[1],
+      },
+      {
+        status: 'upcoming',
+        periodOffset: 0,
+        gross: Math.max(chunkGross[2], 3200),
+        bookings: bookingChunks[2],
+      },
+    ];
+
+    const commissionRate = 0.10; // 10% platform fee
+    const vatRate = 0.15;        // 15% VAT on commission
+
+    const payouts = [];
+    for (const def of payoutDefs) {
+      const gross = def.gross;
+      const platformFee = Math.round(gross * commissionRate);
+      const vat = Math.round(platformFee * vatRate);
+      const net = gross - platformFee - vat;
+
+      const payout = await Payout.create({
+        host: hostUser._id,
+        bankAccount: bankAccount._id,
+        bookings: def.bookings,
+        amount: net,
+        iban: bankAccount.iban,
+        bankName: bankAccount.bankName,
+        status: def.status,
+        executedAt: def.executedAt,
+        periodStart: monthStart(def.periodOffset),
+        periodEnd: monthEnd(def.periodOffset),
+        breakdown: {
+          grossAmount: gross,
+          platformFee,
+          vat,
+          netAmount: net,
+        },
+      });
+      payouts.push(payout);
+      results.payouts.push({
+        id: payout._id,
+        payoutNumber: payout.payoutNumber,
+        status: payout.status,
+        net,
+      });
+    }
+
+    // ── 3. Three HostInvoices (one per payout, monthly) ──────────────
+    const invoices = [];
+    for (let i = 0; i < payoutDefs.length; i++) {
+      const def = payoutDefs[i];
+      const payout = payouts[i];
+      const gross = def.gross;
+      const commission = Math.round(gross * commissionRate);
+      const vat = Math.round(commission * vatRate);
+      const total = commission + vat;
+
+      const invoice = await HostInvoice.create({
+        host: hostUser._id,
+        payout: payout._id,
+        bookings: def.bookings,
+        amount: total,
+        breakdown: {
+          commissionRate: Math.round(commissionRate * 100), // store as percent
+          grossBookings: gross,
+          commission,
+          vat,
+          total,
+        },
+        periodStart: monthStart(def.periodOffset),
+        periodEnd: monthEnd(def.periodOffset),
+        // Past invoices are paid; current month is still issued.
+        status: def.status === 'executed' ? 'paid' : 'issued',
+        issuedAt: monthEnd(def.periodOffset),
+      });
+      invoices.push(invoice);
+      results.invoices.push({
+        id: invoice._id,
+        invoiceNumber: invoice.invoiceNumber,
+        status: invoice.status,
+        total,
+      });
+    }
+
+    // ── 4. Three HostStatements (monthly ledger) ─────────────────────
+    // Walk forward through each month, building ledger entries that mirror
+    // what a real statement would look like: booking earnings as credits,
+    // payouts as debits, running balance.
+    let runningBalance = 0;
+    for (let i = 0; i < 3; i++) {
+      const def = payoutDefs[i];
+      const year = monthStart(def.periodOffset).getFullYear();
+      const month = monthStart(def.periodOffset).getMonth() + 1;
+      const openingBalance = runningBalance;
+
+      const entries = [];
+      let totalCredits = 0;
+      let totalDebits = 0;
+
+      // Booking earning entries — spread across the month
+      const chunkBookings = hostBookings.slice(i * 3, i * 3 + 3);
+      for (let j = 0; j < chunkBookings.length; j++) {
+        const bk = chunkBookings[j];
+        const earning = Math.round(bk.pricing?.total || 800 + j * 150);
+        runningBalance += earning;
+        totalCredits += earning;
+        entries.push({
+          date: new Date(year, month - 1, 5 + j * 7),
+          type: 'booking_earning',
+          description: `Booking earnings`,
+          descriptionAr: 'أرباح حجز',
+          reference: `BK-${String(bk._id).slice(-6).toUpperCase()}`,
+          referenceId: bk._id,
+          credit: earning,
+          debit: 0,
+          balance: runningBalance,
+        });
+      }
+
+      // Commission debit (10% of gross)
+      const gross = def.gross;
+      const commission = Math.round(gross * commissionRate);
+      const vatOnCommission = Math.round(commission * vatRate);
+      const commissionTotal = commission + vatOnCommission;
+      if (commissionTotal > 0) {
+        runningBalance -= commissionTotal;
+        totalDebits += commissionTotal;
+        entries.push({
+          date: monthEnd(def.periodOffset),
+          type: 'commission',
+          description: 'Platform commission + VAT',
+          descriptionAr: 'عمولة المنصة + ضريبة',
+          reference: invoices[i].invoiceNumber,
+          referenceId: invoices[i]._id,
+          credit: 0,
+          debit: commissionTotal,
+          balance: runningBalance,
+        });
+      }
+
+      // Payout debit — only for executed payouts (past months)
+      if (def.status === 'executed') {
+        const payoutAmount = payouts[i].amount;
+        runningBalance -= payoutAmount;
+        totalDebits += payoutAmount;
+        entries.push({
+          date: def.executedAt || monthEnd(def.periodOffset),
+          type: 'payout',
+          description: 'Payout to bank',
+          descriptionAr: 'تحويل إلى البنك',
+          reference: payouts[i].payoutNumber,
+          referenceId: payouts[i]._id,
+          credit: 0,
+          debit: payoutAmount,
+          balance: runningBalance,
+        });
+      }
+
+      const statement = await HostStatement.create({
+        host: hostUser._id,
+        period: { month, year },
+        openingBalance,
+        closingBalance: runningBalance,
+        totalCredits,
+        totalDebits,
+        entries,
+        status: def.status === 'executed' ? 'closed' : 'open',
+        generatedAt: monthEnd(def.periodOffset),
+      });
+      results.statements.push({
+        id: statement._id,
+        period: `${year}-${String(month).padStart(2, '0')}`,
+        entries: entries.length,
+        closingBalance: runningBalance,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Finance data seeded successfully',
+      data: results,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message, stack: error.stack });
+  }
+});
+
+// DEV ONLY: create (or promote) an admin account
 router.post('/make-admin', async (req, res) => {
   if (process.env.NODE_ENV === 'production') return res.status(404).json({ success: false });
   const { email, secret } = req.body;
   if (secret !== 'hostn_seed_2026_x') return res.status(403).json({ success: false });
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-  user.role = 'admin';
-  user.adminRole = 'super';
-  await user.save();
-  res.json({ success: true, message: `${email} is now admin` });
+
+  let admin = await Admin.findOne({ email });
+  if (!admin) {
+    admin = await Admin.create({ email, adminRole: 'super', name: email.split('@')[0] });
+    return res.json({ success: true, message: `${email} admin created`, adminId: admin._id });
+  }
+  admin.adminRole = 'super';
+  await admin.save();
+  res.json({ success: true, message: `${email} is now super admin` });
 });
 
 module.exports = router;

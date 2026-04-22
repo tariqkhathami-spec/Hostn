@@ -25,14 +25,23 @@ const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1571896349842-33c89
 
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-const todayPrice = (pricing?: Record<string, number>) => {
+// After PR F, `unit.pricing` can hold boolean flags (stackable/enabled)
+// alongside numeric prices. Guard with typeof so only numeric values
+// participate in the arithmetic.
+type PricingLike = Record<string, number | boolean | undefined>;
+const numericAt = (pricing: PricingLike | undefined, key: string): number => {
+  const v = pricing?.[key];
+  return typeof v === 'number' ? v : 0;
+};
+
+const todayPrice = (pricing?: PricingLike) => {
   if (!pricing) return 0;
   const todayDayKey = DAY_KEYS[new Date().getDay()];
-  return pricing[todayDayKey] || 0;
+  return numericAt(pricing, todayDayKey);
 };
 
 /** Compute avg nightly price for selected dates (day-of-week aware) */
-const avgPriceForDates = (pricing: Record<string, number> | undefined, checkIn: string, checkOut: string): { avg: number; nights: number } => {
+const avgPriceForDates = (pricing: PricingLike | undefined, checkIn: string, checkOut: string): { avg: number; nights: number } => {
   if (!pricing) return { avg: 0, nights: 0 };
   const start = new Date(checkIn + 'T00:00:00');
   const end = new Date(checkOut + 'T00:00:00');
@@ -42,7 +51,7 @@ const avgPriceForDates = (pricing: Record<string, number> | undefined, checkIn: 
   const current = new Date(start);
   while (current < end) {
     const dayName = DAY_KEYS[current.getDay()];
-    total += pricing[dayName] || 0;
+    total += numericAt(pricing, dayName);
     nights++;
     current.setDate(current.getDate() + 1);
   }

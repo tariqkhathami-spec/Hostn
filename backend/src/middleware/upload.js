@@ -9,6 +9,11 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
 
+// Document types (PDF)
+const DOCUMENT_TYPES = ['application/pdf'];
+const DOCUMENT_EXTENSIONS = ['.pdf'];
+const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB per document
+
 // Magic byte signatures for image formats
 const MAGIC_BYTES = {
   'image/jpeg': [Buffer.from([0xFF, 0xD8, 0xFF])],
@@ -49,12 +54,28 @@ function validateMagicBytes(buffer, mimetype) {
   return true;
 }
 
+// ── Document file filter (PDFs) ─────────────────────────────────────────────
+const documentFileFilter = (req, file, cb) => {
+  if (!DOCUMENT_TYPES.includes(file.mimetype)) {
+    return cb(new Error(`Invalid file type: ${file.mimetype}. Allowed: PDF`), false);
+  }
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!DOCUMENT_EXTENSIONS.includes(ext)) {
+    return cb(new Error(`Invalid file extension: ${ext}. Allowed: ${DOCUMENT_EXTENSIONS.join(', ')}`), false);
+  }
+  cb(null, true);
+};
+
 // ── Multer instances ─────────────────────────────────────────────────────────
 const multerOpts = { storage, fileFilter, limits: { fileSize: MAX_FILE_SIZE } };
 
 const multerSingleImage = multer(multerOpts).single('image');
 const multerSingleFile  = multer(multerOpts).single('file');
 const multerMultiple    = multer({ ...multerOpts, limits: { fileSize: MAX_FILE_SIZE, files: 10 } }).array('images', 10);
+
+// Document (PDF) upload
+const multerDocumentOpts = { storage, fileFilter: documentFileFilter, limits: { fileSize: MAX_DOCUMENT_SIZE } };
+const multerSingleDocument = multer(multerDocumentOpts).single('document');
 
 /**
  * Handle multer errors and validate magic bytes after upload.
@@ -104,4 +125,23 @@ function uploadMultiple(req, res, next) {
   multerMultiple(req, res, (err) => postProcess(err, req, res, next));
 }
 
-module.exports = { uploadSingle, uploadMultiple, validateMagicBytes };
+/**
+ * Single document upload — field name 'document'.
+ * Skips magic-byte validation (PDF magic bytes are complex).
+ */
+function uploadDocument(req, res, next) {
+  multerSingleDocument(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'File too large. Maximum 10MB.' });
+      }
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}
+
+module.exports = { uploadSingle, uploadMultiple, uploadDocument, validateMagicBytes };

@@ -1,5 +1,17 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const Guest = require('../models/Guest');
+const Host = require('../models/Host');
+const Admin = require('../models/Admin');
+
+const MODEL_BY_TYPE = { guest: Guest, host: Host, admin: Admin };
+
+/**
+ * Map a JWT's userType (or legacy role) to the correct Mongoose model.
+ * Accepts 'guest' / 'host' / 'admin' (lowercase) from JWT payload.
+ */
+function getModelForUserType(userType) {
+  return MODEL_BY_TYPE[userType] || null;
+}
 
 exports.protect = async (req, res, next) => {
   try {
@@ -17,7 +29,15 @@ exports.protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    // Support both new `userType` and legacy `role` field in JWT payload
+    const userType = decoded.userType || decoded.role;
+    const Model = getModelForUserType(userType);
+
+    if (!Model) {
+      return res.status(401).json({ success: false, message: 'Invalid user type in token' });
+    }
+
+    const user = await Model.findById(decoded.id).select('-password');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
@@ -37,6 +57,10 @@ exports.protect = async (req, res, next) => {
     }
 
     req.user = user;
+    // Attach userType for downstream authorization + polymorphic writes
+    req.user.userType = userType;
+    // Backward compat: legacy `role` field mirrors userType
+    if (!req.user.role) req.user.role = userType;
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -48,10 +72,12 @@ exports.protect = async (req, res, next) => {
 
 exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    // Check both userType (new) and role (legacy) — protect() sets both
+    const userRole = req.user.userType || req.user.role;
+    if (!roles.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        message: `Role '${req.user.role}' is not authorized for this action`,
+        message: `Role '${userRole}' is not authorized for this action`,
       });
     }
     next();
@@ -66,6 +92,13 @@ exports.authorize = (...roles) => {
 exports.authorizePermission = (...requiredPermissions) => {
   const { hasPermission } = require('../config/permissions');
   return (req, res, next) => {
+    // Only admins have sub-roles
+    if (req.user.userType !== 'admin' && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin permissions required',
+      });
+    }
     for (const perm of requiredPermissions) {
       if (!hasPermission(req.user, perm)) {
         return res.status(403).json({
@@ -78,3 +111,6 @@ exports.authorizePermission = (...requiredPermissions) => {
     next();
   };
 };
+
+// Export helper for other modules
+exports.getModelForUserType = getModelForUserType;

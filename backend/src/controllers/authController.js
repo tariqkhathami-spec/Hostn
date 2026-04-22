@@ -1,14 +1,75 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const User = require('../models/User');
+const Guest = require('../models/Guest');
+const Host = require('../models/Host');
+const Admin = require('../models/Admin');
 const RefreshToken = require('../models/RefreshToken');
 const { sendVerificationCode } = require('../services/email');
 const authentica = require('../services/authentica');
 
+const MODEL_BY_TYPE = { guest: Guest, host: Host, admin: Admin };
+const TYPE_CAPITALIZED = { guest: 'Guest', host: 'Host', admin: 'Admin' };
+
+/**
+ * Determine the target user type (guest|host|admin) from the request origin.
+ * - admin.*   → admin
+ * - business.* → host
+ * - anything else (hostn.co, localhost:3000, etc.) → guest
+ */
+function inferUserTypeFromOrigin(origin) {
+  if (!origin) return null;
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    if (host.startsWith('admin.')) return 'admin';
+    if (host.startsWith('business.')) return 'host';
+    return 'guest';
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Backward-compat: accept `role` body param as fallback when Origin header
+ * doesn't disambiguate (e.g. during the Phase 1 transition period before
+ * subdomain routing is live). Prefers Origin header.
+ */
+function resolveUserType(req) {
+  const fromOrigin = inferUserTypeFromOrigin(req.headers.origin || req.headers.referer);
+  if (fromOrigin) return fromOrigin;
+  const bodyRole = req.body?.role;
+  if (bodyRole && MODEL_BY_TYPE[bodyRole]) return bodyRole;
+  // Default to guest — matches legacy behavior
+  return 'guest';
+}
+
+function getModel(userType) {
+  return MODEL_BY_TYPE[userType] || null;
+}
+
+/**
+ * Given a user document, return the Mongoose Model it came from.
+ * Uses the discriminator attached by the protect middleware.
+ */
+function getUserModel(user) {
+  const modelName = user.constructor?.modelName || TYPE_CAPITALIZED[user.userType];
+  if (modelName === 'Guest') return Guest;
+  if (modelName === 'Host') return Host;
+  if (modelName === 'Admin') return Admin;
+  return null;
+}
+
 // Long-lived access token (30 days — matches refresh token lifetime)
-const generateAccessToken = (user) => {
+const generateAccessToken = (user, userType) => {
+  const ut = userType || user.userType || (user.constructor?.modelName || '').toLowerCase();
   return jwt.sign(
-    { id: user._id, email: user.email, role: user.role, tokenVersion: user.tokenVersion },
+    {
+      id: user._id,
+      email: user.email,
+      userType: ut,
+      role: ut, // legacy alias for middleware/frontend during transition
+      tokenVersion: user.tokenVersion,
+    },
     process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
@@ -36,8 +97,8 @@ const REFRESH_COOKIE_OPTIONS = {
  * Web: tokens set as HttpOnly cookies.
  * Mobile: tokens also returned in JSON body (client stores in SecureStore).
  */
-const sendAuthResponse = async (user, statusCode, res, req) => {
-  const accessToken = generateAccessToken(user);
+const sendAuthResponse = async (user, userType, statusCode, res, req) => {
+  const accessToken = generateAccessToken(user, userType);
 
   const deviceInfo = {
     userAgent: req.headers['user-agent'],
@@ -45,10 +106,16 @@ const sendAuthResponse = async (user, statusCode, res, req) => {
     platform: req.headers['x-platform'] || 'web',
   };
 
-  const { rawToken: refreshToken } = await RefreshToken.createToken(user._id, deviceInfo);
+  const { rawToken: refreshToken } = await RefreshToken.createToken(
+    user._id,
+    TYPE_CAPITALIZED[userType],
+    deviceInfo
+  );
 
   const userObj = user.toObject ? user.toObject() : { ...user };
   delete userObj.password;
+  userObj.userType = userType;
+  userObj.role = userType; // legacy alias
 
   // Set cookies (web)
   res.cookie('hostn_token', accessToken, ACCESS_COOKIE_OPTIONS);
@@ -67,18 +134,24 @@ const sendAuthResponse = async (user, statusCode, res, req) => {
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone } = req.body;
+    const userType = resolveUserType(req);
+    const Model = getModel(userType);
 
-    const existingEmail = await User.findOne({ email });
+    if (!Model) {
+      return res.status(400).json({ success: false, message: 'Invalid user type' });
+    }
+
+    const existingEmail = await Model.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
     let user;
 
-    // Check if a phone-only user exists (registered via OTP on mobile)
+    // Check if a phone-only user exists in this collection (registered via OTP on mobile)
     if (phone) {
-      const phoneUser = await User.findOne({
+      const phoneUser = await Model.findOne({
         phone,
         $or: [{ email: { $exists: false } }, { email: null }],
       });
@@ -87,23 +160,16 @@ exports.register = async (req, res, next) => {
         phoneUser.name = name;
         phoneUser.email = email;
         phoneUser.password = password;
-        if (role === 'host') phoneUser.role = 'host';
         await phoneUser.save();
         user = phoneUser;
       }
     }
 
     if (!user) {
-      user = await User.create({
-        name,
-        email,
-        password,
-        phone,
-        role: role === 'host' ? 'host' : 'guest',
-      });
+      user = await Model.create({ name, email, password, phone });
     }
 
-    await sendAuthResponse(user, 201, res, req);
+    await sendAuthResponse(user, userType, 201, res, req);
   } catch (error) {
     next(error);
   }
@@ -115,17 +181,22 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const userType = resolveUserType(req);
+    const Model = getModel(userType);
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
+    if (!Model) {
+      return res.status(400).json({ success: false, message: 'Invalid user type' });
     }
 
     let user;
     if (/^5\d{8}$/.test(email)) {
       // User might be entering their Saudi phone number
-      user = await User.findOne({ phone: email }).select('+password');
+      user = await Model.findOne({ phone: email }).select('+password');
     } else {
-      user = await User.findOne({ email }).select('+password');
+      user = await Model.findOne({ email }).select('+password');
     }
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -143,7 +214,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    await sendAuthResponse(user, 200, res, req);
+    await sendAuthResponse(user, userType, 200, res, req);
   } catch (error) {
     next(error);
   }
@@ -170,12 +241,19 @@ exports.refresh = async (req, res, next) => {
       return res.status(401).json({ success: false, message: result.reason });
     }
 
-    const user = await User.findById(result.userId);
+    // Determine the Model from the refresh token's userType discriminator
+    const userType = (result.userType || '').toLowerCase();
+    const Model = getModel(userType);
+    if (!Model) {
+      return res.status(401).json({ success: false, message: 'Unknown user type' });
+    }
+
+    const user = await Model.findById(result.userId);
     if (!user || user.isSuspended) {
       return res.status(401).json({ success: false, message: 'User not found or suspended' });
     }
 
-    const accessToken = generateAccessToken(user);
+    const accessToken = generateAccessToken(user, userType);
 
     // Set new cookies
     res.cookie('hostn_token', accessToken, ACCESS_COOKIE_OPTIONS);
@@ -212,8 +290,11 @@ exports.logoutAll = async (req, res, next) => {
   try {
     await RefreshToken.revokeAllForUser(req.user._id);
 
-    // Increment tokenVersion to invalidate all existing access tokens
-    await User.findByIdAndUpdate(req.user._id, { $inc: { tokenVersion: 1 } });
+    // Increment tokenVersion on the correct model to invalidate all existing access tokens
+    const Model = getUserModel(req.user);
+    if (Model) {
+      await Model.findByIdAndUpdate(req.user._id, { $inc: { tokenVersion: 1 } });
+    }
 
     res.cookie('hostn_token', '', { ...ACCESS_COOKIE_OPTIONS, expires: new Date(0) });
     res.cookie('hostn_refresh', '', { ...REFRESH_COOKIE_OPTIONS, expires: new Date(0) });
@@ -228,8 +309,12 @@ exports.logoutAll = async (req, res, next) => {
 // @access  Private
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id).populate('wishlist', 'title images location pricing ratings');
-    res.json({ success: true, user });
+    const Model = getUserModel(req.user);
+    const user = await Model.findById(req.user._id);
+    const userObj = user.toObject();
+    userObj.userType = req.user.userType;
+    userObj.role = req.user.userType; // legacy alias
+    res.json({ success: true, user: userObj });
   } catch (error) {
     next(error);
   }
@@ -241,13 +326,14 @@ exports.getMe = async (req, res, next) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const { name, phone, avatar, email, emailVerificationCode } = req.body;
+    const Model = getUserModel(req.user);
 
     // ── Email change flow ────────────────────────────────────────────────
     if (email) {
       const normalizedEmail = email.toLowerCase().trim();
 
-      // Check if email is already taken by another user
-      const existingEmailUser = await User.findOne({ email: normalizedEmail, _id: { $ne: req.user._id } });
+      // Check if email is already taken by another user in THIS collection
+      const existingEmailUser = await Model.findOne({ email: normalizedEmail, _id: { $ne: req.user._id } });
       if (existingEmailUser) {
         return res.status(400).json({ success: false, message: 'Email already registered to another account' });
       }
@@ -255,7 +341,7 @@ exports.updateProfile = async (req, res, next) => {
       // Step 2: verify code and apply email change
       if (emailVerificationCode) {
         const tokenHash = crypto.createHash('sha256').update(emailVerificationCode).digest('hex');
-        const raw = await User.collection.findOne({ _id: req.user._id });
+        const raw = await Model.collection.findOne({ _id: req.user._id });
 
         if (
           !raw.emailVerificationCode ||
@@ -269,7 +355,7 @@ exports.updateProfile = async (req, res, next) => {
         }
 
         // Apply the email change
-        await User.collection.updateOne(
+        await Model.collection.updateOne(
           { _id: req.user._id },
           {
             $set: { email: normalizedEmail },
@@ -277,7 +363,7 @@ exports.updateProfile = async (req, res, next) => {
           }
         );
 
-        const updatedUser = await User.findById(req.user._id);
+        const updatedUser = await Model.findById(req.user._id);
         return res.json({ success: true, user: updatedUser });
       }
 
@@ -285,7 +371,7 @@ exports.updateProfile = async (req, res, next) => {
       const code = crypto.randomInt(100000, 999999).toString();
       const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
-      await User.collection.updateOne(
+      await Model.collection.updateOne(
         { _id: req.user._id },
         {
           $set: {
@@ -312,7 +398,7 @@ exports.updateProfile = async (req, res, next) => {
 
     // ── Phone change flow (OTP required) ───────────────────────────────
     if (phone !== undefined) {
-      const currentUser = await User.findById(req.user._id);
+      const currentUser = await Model.findById(req.user._id);
       const currentPhone = currentUser.phone || '';
 
       if (phone && phone !== currentPhone) {
@@ -343,8 +429,8 @@ exports.updateProfile = async (req, res, next) => {
           }
         }
 
-        // Check phone not already taken (check both raw and full formats)
-        const existingPhoneUser = await User.findOne({
+        // Check phone not already taken within the SAME collection
+        const existingPhoneUser = await Model.findOne({
           phone: { $in: [rawPhone, phone, `0${rawPhone}`] },
           _id: { $ne: req.user._id },
         });
@@ -357,7 +443,7 @@ exports.updateProfile = async (req, res, next) => {
         if (name !== undefined) updates.name = name;
         if (avatar !== undefined) updates.avatar = avatar;
 
-        const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
+        const user = await Model.findByIdAndUpdate(req.user._id, updates, { new: true, runValidators: true });
         return res.json({ success: true, user });
       }
     }
@@ -368,7 +454,7 @@ exports.updateProfile = async (req, res, next) => {
     if (phone !== undefined) updates.phone = phone; // same phone, no verification needed
     if (avatar !== undefined) updates.avatar = avatar;
 
-    const user = await User.findByIdAndUpdate(
+    const user = await Model.findByIdAndUpdate(
       req.user._id,
       updates,
       { new: true, runValidators: true }
@@ -385,8 +471,9 @@ exports.updateProfile = async (req, res, next) => {
 exports.changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    const Model = getUserModel(req.user);
 
-    const user = await User.findById(req.user._id).select('+password');
+    const user = await Model.findById(req.user._id).select('+password');
     const isMatch = await user.comparePassword(currentPassword);
 
     if (!isMatch) {
@@ -401,68 +488,49 @@ exports.changePassword = async (req, res, next) => {
     await RefreshToken.revokeAllForUser(user._id);
 
     // Issue fresh tokens for current session
-    await sendAuthResponse(user, 200, res, req);
+    await sendAuthResponse(user, req.user.userType, 200, res, req);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Upgrade guest account to host
+// @desc    DEPRECATED — upgrade guest → host is no longer an in-place upgrade.
+//         In the new multi-collection model, guests who want to become hosts
+//         register a new account on business.hostn.co.
 // @route   PUT /api/auth/upgrade-to-host
 // @access  Private
-exports.upgradeToHost = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id);
-
-    if (user.role !== 'guest') {
-      return res.status(400).json({
-        success: false,
-        message: user.role === 'host' ? 'You are already a host' : 'Role upgrade not available',
-      });
-    }
-
-    user.role = 'host';
-    user.tokenVersion += 1;
-    await user.save();
-
-    // Revoke old refresh tokens and issue fresh ones with new role
-    await RefreshToken.revokeAllForUser(user._id);
-    await sendAuthResponse(user, 200, res, req);
-  } catch (error) {
-    next(error);
-  }
+exports.upgradeToHost = async (req, res) => {
+  return res.status(410).json({
+    success: false,
+    message:
+      'Guest accounts are separate from host accounts. To become a host, sign up for a new host account at business.hostn.co.',
+  });
 };
 
-// @desc    Toggle wishlist (adds/removes from default list + keeps user.wishlist in sync)
+// @desc    Toggle wishlist (guest only — hosts/admins don't have wishlists)
 // @route   POST /api/auth/wishlist/:propertyId
 // @access  Private
 exports.toggleWishlist = async (req, res, next) => {
   try {
+    // Wishlists are guest-only
+    if (req.user.userType !== 'guest') {
+      return res.status(403).json({ success: false, message: 'Only guests can use wishlist' });
+    }
+
     const Wishlist = require('../models/Wishlist');
-    const user = await User.findById(req.user._id);
     const unitId = req.params.propertyId; // Route still uses :propertyId but now stores unit IDs
 
-    // Toggle in user.wishlist
-    const index = user.wishlist.indexOf(unitId);
-    const adding = index === -1;
-    if (adding) {
-      user.wishlist.push(unitId);
-    } else {
-      user.wishlist.splice(index, 1);
-    }
-    await user.save();
-
-    // Also toggle in the default Wishlist list
+    // Toggle in the default Wishlist list
     const defaultList = await Wishlist.getOrCreateDefault(req.user._id);
-    const listIdx = defaultList.units.indexOf(unitId);
-    if (adding && listIdx === -1) {
+    const listIdx = defaultList.units.findIndex((u) => u.toString() === unitId);
+    if (listIdx === -1) {
       defaultList.units.push(unitId);
-    } else if (!adding && listIdx > -1) {
+    } else {
       defaultList.units.splice(listIdx, 1);
     }
     await defaultList.save();
 
-    res.json({ success: true, wishlist: user.wishlist });
+    res.json({ success: true, wishlist: defaultList.units });
   } catch (error) {
     next(error);
   }
@@ -474,6 +542,7 @@ exports.toggleWishlist = async (req, res, next) => {
 exports.linkPhone = async (req, res, next) => {
   try {
     const { phone, otp, countryCode = '+966' } = req.body;
+    const Model = getUserModel(req.user);
 
     if (!phone || !otp) {
       return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
@@ -489,8 +558,8 @@ exports.linkPhone = async (req, res, next) => {
       }
     }
 
-    // Check if phone already used by another account
-    const existingPhoneUser = await User.findOne({ phone, _id: { $ne: req.user._id } });
+    // Check if phone already used by another account in SAME collection
+    const existingPhoneUser = await Model.findOne({ phone, _id: { $ne: req.user._id } });
     if (existingPhoneUser) {
       return res.status(400).json({ success: false, message: 'Phone number already linked to another account' });
     }
@@ -515,13 +584,14 @@ exports.linkPhone = async (req, res, next) => {
 exports.linkEmail = async (req, res, next) => {
   try {
     const { email, password, name } = req.body;
+    const Model = getUserModel(req.user);
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    // Check if email already used
-    const existingEmailUser = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.user._id } });
+    // Check if email already used in SAME collection
+    const existingEmailUser = await Model.findOne({ email: email.toLowerCase(), _id: { $ne: req.user._id } });
     if (existingEmailUser) {
       return res.status(400).json({ success: false, message: 'Email already registered to another account' });
     }
@@ -552,12 +622,13 @@ exports.linkEmail = async (req, res, next) => {
 exports.deleteAccount = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const Model = getUserModel(req.user);
 
     // Revoke all refresh tokens
     await RefreshToken.revokeAllForUser(userId);
 
-    // Remove the user document
-    await User.findByIdAndDelete(userId);
+    // Remove the user document from the correct collection
+    await Model.findByIdAndDelete(userId);
 
     // Clear auth cookies
     res.cookie('hostn_token', '', { httpOnly: true, expires: new Date(0), path: '/' });
@@ -579,7 +650,9 @@ exports.forgotPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const userType = resolveUserType(req);
+    const Model = getModel(userType);
+    const user = await Model.findOne({ email: email.toLowerCase() });
 
     // Always return success to prevent email enumeration
     if (!user) {
@@ -591,12 +664,13 @@ exports.forgotPassword = async (req, res, next) => {
     const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
 
     // Store hashed token and expiry directly on user document
-    await User.collection.updateOne(
+    await Model.collection.updateOne(
       { _id: user._id },
       {
         $set: {
           passwordResetToken: resetTokenHash,
           passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+          passwordResetType: userType, // remember which collection the token belongs to
         },
       }
     );
@@ -629,15 +703,24 @@ exports.resetPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     }
 
-    // Hash the incoming token and find matching user
+    // Hash the incoming token and find matching user across all 3 collections
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    const user = await User.collection.findOne({
-      passwordResetToken: tokenHash,
-      passwordResetExpires: { $gt: new Date() },
-    });
+    let foundModel = null;
+    let user = null;
+    for (const [type, Model] of Object.entries(MODEL_BY_TYPE)) {
+      const doc = await Model.collection.findOne({
+        passwordResetToken: tokenHash,
+        passwordResetExpires: { $gt: new Date() },
+      });
+      if (doc) {
+        foundModel = Model;
+        user = doc;
+        break;
+      }
+    }
 
-    if (!user) {
+    if (!foundModel || !user) {
       return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
     }
 
@@ -645,11 +728,11 @@ exports.resetPassword = async (req, res, next) => {
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await User.collection.updateOne(
+    await foundModel.collection.updateOne(
       { _id: user._id },
       {
         $set: { password: hashedPassword },
-        $unset: { passwordResetToken: '', passwordResetExpires: '' },
+        $unset: { passwordResetToken: '', passwordResetExpires: '', passwordResetType: '' },
         $inc: { tokenVersion: 1 },
       }
     );
@@ -659,3 +742,10 @@ exports.resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+// Export helpers for other controllers
+exports.getModel = getModel;
+exports.getUserModel = getUserModel;
+exports.resolveUserType = resolveUserType;
+exports.inferUserTypeFromOrigin = inferUserTypeFromOrigin;
+exports.TYPE_CAPITALIZED = TYPE_CAPITALIZED;

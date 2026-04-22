@@ -1,5 +1,4 @@
 const Wishlist = require('../models/Wishlist');
-const User = require('../models/User');
 
 // @desc    Get all user's wishlist lists
 // @route   GET /api/v1/wishlists
@@ -154,11 +153,6 @@ exports.deleteList = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot delete default list' });
     }
 
-    // Remove these units from user.wishlist too
-    await User.findByIdAndUpdate(req.user._id, {
-      $pull: { wishlist: { $in: list.units } },
-    });
-
     await list.deleteOne();
 
     res.json({ success: true, message: 'List deleted' });
@@ -182,16 +176,13 @@ exports.toggleUnit = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    const idx = list.units.indexOf(unitId);
+    const idx = list.units.findIndex((u) => u.toString() === unitId);
     if (idx > -1) {
       list.units.splice(idx, 1);
     } else {
       list.units.push(unitId);
     }
     await list.save();
-
-    // Keep user.wishlist in sync: unit is wishlisted if it's in ANY list
-    await syncUserWishlist(req.user._id);
 
     res.json({ success: true, data: list });
   } catch (error) {
@@ -245,11 +236,3 @@ exports.getUnitMembership = async (req, res, next) => {
   }
 };
 
-/**
- * Sync user.wishlist with all Wishlist lists — union of all list units.
- */
-async function syncUserWishlist(userId) {
-  const lists = await Wishlist.find({ user: userId }).select('units');
-  const allIds = [...new Set(lists.flatMap((l) => l.units.map(String)))];
-  await User.findByIdAndUpdate(userId, { wishlist: allIds });
-}

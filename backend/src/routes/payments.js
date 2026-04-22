@@ -10,6 +10,8 @@ const {
   getMyPayments,
   getAllPayments,
   refundPayment,
+  simulatePayment,
+  getPaymentStatus,
 } = require('../controllers/paymentController');
 
 // Public webhook endpoint (called by Moyasar)
@@ -20,6 +22,11 @@ router.use(protect);
 
 router.post('/initiate', initiatePayment);
 router.post('/verify', verifyPayment);
+// PR K: simulator endpoints — gated server-side by `PAYMENT_SIMULATOR_ENABLED`.
+// `simulate` sets the chosen outcome on the Payment + Booking; `status`
+// returns current state without a Moyasar round-trip.
+router.post('/simulate', simulatePayment);
+router.get('/:id/status', getPaymentStatus);
 router.get('/my-payments', getMyPayments);
 router.get('/:id', getPayment);
 

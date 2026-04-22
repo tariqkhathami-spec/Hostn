@@ -8,22 +8,22 @@ import { cn } from '@/lib/utils';
 
 const tabs = [
   {
-    href: '/host/finance/remittances',
+    href: '/finance/remittances',
     icon: Banknote,
     label: { en: 'Remittances', ar: '\u0627\u0644\u062d\u0648\u0627\u0644\u0627\u062a \u0627\u0644\u0645\u0627\u0644\u064a\u0629' },
   },
   {
-    href: '/host/finance/invoices',
+    href: '/finance/invoices',
     icon: FileText,
     label: { en: 'Invoices', ar: '\u0627\u0644\u0641\u0648\u0627\u062a\u064a\u0631' },
   },
   {
-    href: '/host/finance/statements',
+    href: '/finance/statements',
     icon: ScrollText,
     label: { en: 'Statements', ar: '\u0643\u0634\u0648\u0641 \u0627\u0644\u062d\u0633\u0627\u0628\u0627\u062a' },
   },
   {
-    href: '/host/finance/payment-method',
+    href: '/finance/payment-method',
     icon: CreditCard,
     label: { en: 'Payment Method', ar: '\u0637\u0631\u064a\u0642\u0629 \u0627\u0633\u062a\u0644\u0627\u0645\u0643 \u0644\u0644\u0645\u0628\u0627\u0644\u063a' },
   },
@@ -36,9 +36,6 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  // Redirect /host/finance to first tab
-  const isIndex = pathname === '/host/finance';
-
   return (
     <div>
       {/* Tab bar */}
@@ -50,7 +47,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
               href={href}
               className={cn(
                 'flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors',
-                isActive(href) || (isIndex && href === tabs[0].href)
+                isActive(href)
                   ? 'border-primary-600 text-primary-700 bg-primary-50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               )}

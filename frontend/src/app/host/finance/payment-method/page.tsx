@@ -16,39 +16,56 @@ interface BankAccount {
   isActive: boolean;
   isVerified: boolean;
   transferDuration?: {
-    type: 'default' | 'custom';
+    type: 'after_departure' | 'amount_threshold' | 'weekly';
     hours: number;
+    thresholdAmount?: number;
+    weeklyDay?: number;
   };
 }
 
+// Day-of-week constants (0=Sunday … 6=Saturday)
+const DAYS = [
+  { en: 'Sun', ar: 'الأحد' },
+  { en: 'Mon', ar: 'الاثنين' },
+  { en: 'Tue', ar: 'الثلاثاء' },
+  { en: 'Wed', ar: 'الأربعاء' },
+  { en: 'Thu', ar: 'الخميس' },
+  { en: 'Fri', ar: 'الجمعة' },
+  { en: 'Sat', ar: 'السبت' },
+];
+
 const t: Record<string, Record<string, string>> = {
-  title: { en: 'Payment Method', ar: '\u0637\u0631\u064a\u0642\u0629 \u0627\u0633\u062a\u0644\u0627\u0645\u0643 \u0644\u0644\u0645\u0628\u0627\u0644\u063a' },
-  paymentReception: { en: 'Payment Reception Method', ar: '\u0637\u0631\u064a\u0642\u0629 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0645\u0628\u0627\u0644\u063a' },
-  receptionMethod: { en: 'Reception Method', ar: '\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0644\u0627\u0645' },
-  bankTransfer: { en: 'Bank Transfer', ar: '\u062a\u062d\u0648\u064a\u0644 \u0628\u0646\u0643\u064a' },
-  bankName: { en: 'Bank Name', ar: '\u0627\u0633\u0645 \u0627\u0644\u0628\u0646\u0643' },
-  bankNameAr: { en: 'Bank Name (Arabic)', ar: '\u0627\u0633\u0645 \u0627\u0644\u0628\u0646\u0643 (\u0639\u0631\u0628\u064a)' },
-  iban: { en: 'IBAN', ar: '\u0631\u0642\u0645 \u0627\u0644\u0627\u064a\u0628\u0627\u0646' },
-  accountHolder: { en: 'Account Holder', ar: '\u0627\u0633\u0645 \u0635\u0627\u062d\u0628 \u0627\u0644\u062d\u0633\u0627\u0628' },
-  edit: { en: 'Edit', ar: '\u062a\u0639\u062f\u064a\u0644' },
-  delete: { en: 'Delete', ar: '\u062d\u0630\u0641' },
-  save: { en: 'Save', ar: '\u062d\u0641\u0638' },
-  cancel: { en: 'Cancel', ar: '\u0625\u0644\u063a\u0627\u0621' },
-  addBank: { en: 'Add Bank Account', ar: '\u0625\u0636\u0627\u0641\u0629 \u062d\u0633\u0627\u0628 \u0628\u0646\u0643\u064a' },
-  noBankAccount: { en: 'No bank account added', ar: '\u0644\u0645 \u064a\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 \u062d\u0633\u0627\u0628 \u0628\u0646\u0643\u064a' },
-  noBankDesc: { en: 'Add your bank account to receive payouts', ar: '\u0623\u0636\u0641 \u062d\u0633\u0627\u0628\u0643 \u0627\u0644\u0628\u0646\u0643\u064a \u0644\u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u062d\u0648\u0627\u0644\u0627\u062a' },
-  transferDuration: { en: 'Transfer Duration', ar: '\u0645\u062f\u0629 \u062a\u062d\u0648\u064a\u0644 \u0627\u0644\u0645\u0628\u0627\u0644\u063a' },
-  durationType: { en: 'Duration Type', ar: '\u0646\u0648\u0639 \u0627\u0644\u0645\u062f\u0629' },
-  durationDefault: { en: 'Default', ar: '\u0627\u0641\u062a\u0631\u0627\u0636\u064a' },
-  durationCustom: { en: 'Custom', ar: '\u0645\u062e\u0635\u0635' },
-  hours: { en: 'hours', ar: '\u0633\u0627\u0639\u0629' },
-  duration: { en: 'Duration', ar: '\u0627\u0644\u0645\u062f\u0629' },
-  ibanError: { en: 'IBAN must start with SA followed by 22 digits', ar: '\u0631\u0642\u0645 \u0627\u0644\u0627\u064a\u0628\u0627\u0646 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0628\u062f\u0623 \u0628\u0640 SA \u0645\u062a\u0628\u0648\u0639\u064b\u0627 \u0628\u0640 22 \u0631\u0642\u0645' },
-  required: { en: 'This field is required', ar: '\u0647\u0630\u0627 \u0627\u0644\u062d\u0642\u0644 \u0645\u0637\u0644\u0648\u0628' },
-  savedSuccess: { en: 'Saved successfully', ar: '\u062a\u0645 \u0627\u0644\u062d\u0641\u0638 \u0628\u0646\u062c\u0627\u062d' },
-  deletedSuccess: { en: 'Bank account deleted', ar: '\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0628\u0646\u0643\u064a' },
-  deleteConfirm: { en: 'Are you sure you want to delete this bank account?', ar: '\u0647\u0644 \u0623\u0646\u062a \u0645\u062a\u0623\u0643\u062f \u0645\u0646 \u062d\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0628\u0646\u0643\u064a\u061f' },
-  durationSaved: { en: 'Transfer duration updated', ar: '\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0645\u062f\u0629 \u0627\u0644\u062a\u062d\u0648\u064a\u0644' },
+  title: { en: 'Payment Method', ar: 'طريقة استلامك للمبالغ' },
+  paymentReception: { en: 'Payment Reception Method', ar: 'طريقة استلام المبالغ' },
+  receptionMethod: { en: 'Reception Method', ar: 'طريقة الاستلام' },
+  bankTransfer: { en: 'Bank Transfer', ar: 'تحويل بنكي' },
+  bankName: { en: 'Bank Name', ar: 'اسم البنك' },
+  bankNameAr: { en: 'Bank Name (Arabic)', ar: 'اسم البنك (عربي)' },
+  iban: { en: 'IBAN', ar: 'رقم الايبان' },
+  accountHolder: { en: 'Account Holder', ar: 'اسم صاحب الحساب' },
+  edit: { en: 'Edit', ar: 'تعديل' },
+  delete: { en: 'Delete', ar: 'حذف' },
+  save: { en: 'Save', ar: 'حفظ' },
+  cancel: { en: 'Cancel', ar: 'إلغاء' },
+  addBank: { en: 'Add Bank Account', ar: 'إضافة حساب بنكي' },
+  noBankAccount: { en: 'No bank account added', ar: 'لم يتم إضافة حساب بنكي' },
+  noBankDesc: { en: 'Add your bank account to receive payouts', ar: 'أضف حسابك البنكي لاستلام الحوالات' },
+  // Transfer Duration
+  transferDuration: { en: 'Transfer Duration', ar: 'مدة تحويل المبالغ لحسابك' },
+  transferDurationSubtitle: { en: 'Choose your preferred transfer duration', ar: 'اختر المدة التي تفضل تحويل المبالغ خلالها' },
+  afterDeparture: { en: 'Direct transfer (48 hours after guest departure)', ar: 'التحويل المباشر (بعد 48 ساعة من مغادرة الضيف) افتراضي' },
+  amountThreshold: { en: 'Transfer upon reaching a specific amount', ar: 'التحويل عند وصول لمبلغ محدد' },
+  weeklyTransfer: { en: 'Weekly transfer', ar: 'التحويل الأسبوعي' },
+  enterAmount: { en: 'Enter amount', ar: 'أدخل المبلغ' },
+  sar: { en: 'SAR', ar: 'ر.س' },
+  selectDay: { en: 'Select the day you want to receive the transfer', ar: 'حدد اليوم الذي ترغب بوصول الحوالة فيه' },
+  hours: { en: 'hours', ar: 'ساعة' },
+  ibanError: { en: 'IBAN must start with SA followed by 22 digits', ar: 'رقم الايبان يجب أن يبدأ بـ SA متبوعًا بـ 22 رقم' },
+  required: { en: 'This field is required', ar: 'هذا الحقل مطلوب' },
+  savedSuccess: { en: 'Saved successfully', ar: 'تم الحفظ بنجاح' },
+  deletedSuccess: { en: 'Bank account deleted', ar: 'تم حذف الحساب البنكي' },
+  deleteConfirm: { en: 'Are you sure you want to delete this bank account?', ar: 'هل أنت متأكد من حذف هذا الحساب البنكي؟' },
+  durationSaved: { en: 'Transfer duration updated', ar: 'تم تحديث مدة التحويل' },
 };
 
 function maskIban(iban: string): string {
@@ -56,11 +73,18 @@ function maskIban(iban: string): string {
   return `${iban.slice(0, 4)}${'*'.repeat(iban.length - 8)}${iban.slice(-4)}`;
 }
 
+/** Map legacy transfer duration type values to new enum */
+function mapDurationType(raw: string | undefined): 'after_departure' | 'amount_threshold' | 'weekly' {
+  if (raw === 'amount_threshold') return 'amount_threshold';
+  if (raw === 'weekly') return 'weekly';
+  return 'after_departure'; // covers 'default', 'after_departure', undefined
+}
+
 export default function PaymentMethodPage() {
   const { language } = useLanguage();
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
-  usePageTitle(isAr ? '\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u0627\u0633\u062a\u0644\u0627\u0645' : 'Payment Method');
+  usePageTitle(isAr ? 'طريقة الاستلام' : 'Payment Method');
 
   const [account, setAccount] = useState<BankAccount | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +97,11 @@ export default function PaymentMethodPage() {
 
   // Transfer duration editing
   const [editingDuration, setEditingDuration] = useState(false);
-  const [durationForm, setDurationForm] = useState({ type: 'default' as 'default' | 'custom', hours: 48 });
+  const [durationForm, setDurationForm] = useState({
+    type: 'after_departure' as 'after_departure' | 'amount_threshold' | 'weekly',
+    thresholdAmount: 1000,
+    weeklyDay: 0,
+  });
 
   // Delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -95,8 +123,9 @@ export default function PaymentMethodPage() {
           accountHolder: acc.accountHolder || '',
         });
         setDurationForm({
-          type: acc.transferDuration?.type || 'default',
-          hours: acc.transferDuration?.hours || 48,
+          type: mapDurationType(acc.transferDuration?.type as string | undefined),
+          thresholdAmount: acc.transferDuration?.thresholdAmount || 1000,
+          weeklyDay: acc.transferDuration?.weeklyDay ?? 0,
         });
       }
     } catch {
@@ -159,7 +188,8 @@ export default function PaymentMethodPage() {
     try {
       const res = await hostFinanceApi.updateTransferDuration({
         type: durationForm.type,
-        hours: durationForm.type === 'default' ? 48 : durationForm.hours,
+        thresholdAmount: durationForm.type === 'amount_threshold' ? durationForm.thresholdAmount : undefined,
+        weeklyDay: durationForm.type === 'weekly' ? durationForm.weeklyDay : undefined,
       });
       setAccount(res.data?.data || null);
       setEditingDuration(false);
@@ -170,6 +200,15 @@ export default function PaymentMethodPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const resetDurationForm = () => {
+    setEditingDuration(false);
+    setDurationForm({
+      type: mapDurationType(account?.transferDuration?.type as string | undefined),
+      thresholdAmount: account?.transferDuration?.thresholdAmount || 1000,
+      weeklyDay: account?.transferDuration?.weeklyDay ?? 0,
+    });
   };
 
   if (loading) {
@@ -350,50 +389,104 @@ export default function PaymentMethodPage() {
             </div>
 
             <div className="p-5">
+              {/* Subtitle */}
+              <p className="text-sm text-gray-500 mb-4">{t.transferDurationSubtitle[lang]}</p>
+
               {editingDuration ? (
-                <div className="space-y-4 max-w-lg">
+                /* ─── Edit Mode: 3 radio options ─── */
+                <div className="space-y-3 max-w-lg">
+                  {/* Option 1: After departure (default) */}
+                  <label
+                    className={`flex items-center gap-3 cursor-pointer py-2 ${
+                      durationForm.type === 'after_departure' ? 'text-primary-700' : 'text-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="durationType"
+                      checked={durationForm.type === 'after_departure'}
+                      onChange={() => setDurationForm({ ...durationForm, type: 'after_departure' })}
+                      className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                    />
+                    <span className="text-sm">{t.afterDeparture[lang]}</span>
+                  </label>
+
+                  {/* Option 2: Amount threshold */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.durationType[lang]}</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                    <label
+                      className={`flex items-center gap-3 cursor-pointer py-2 ${
+                        durationForm.type === 'amount_threshold' ? 'text-primary-700' : 'text-gray-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="durationType"
+                        checked={durationForm.type === 'amount_threshold'}
+                        onChange={() => setDurationForm({ ...durationForm, type: 'amount_threshold' })}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                      />
+                      <span className="text-sm">{t.amountThreshold[lang]}</span>
+                    </label>
+                    {/* SAR input — visible when threshold is selected */}
+                    {durationForm.type === 'amount_threshold' && (
+                      <div className="flex items-center gap-2 mt-2 ms-7">
+                        <span className="text-sm text-gray-500 flex-shrink-0">{t.sar[lang]}</span>
                         <input
-                          type="radio"
-                          name="durationType"
-                          checked={durationForm.type === 'default'}
-                          onChange={() => setDurationForm({ type: 'default', hours: 48 })}
-                          className="text-primary-600 focus:ring-primary-500"
+                          type="number"
+                          min={100}
+                          step={100}
+                          value={durationForm.thresholdAmount}
+                          onChange={(e) => setDurationForm({ ...durationForm, thresholdAmount: parseInt(e.target.value) || 1000 })}
+                          placeholder={t.enterAmount[lang]}
+                          className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                         />
-                        <span className="text-sm text-gray-700">{t.durationDefault[lang]} (48 {t.hours[lang]})</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="durationType"
-                          checked={durationForm.type === 'custom'}
-                          onChange={() => setDurationForm({ type: 'custom', hours: durationForm.hours })}
-                          className="text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-sm text-gray-700">{t.durationCustom[lang]}</span>
-                      </label>
-                    </div>
+                        <span className="text-sm text-gray-400">{t.enterAmount[lang]}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {durationForm.type === 'custom' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{t.duration[lang]} ({t.hours[lang]})</label>
+                  {/* Option 3: Weekly */}
+                  <div>
+                    <label
+                      className={`flex items-center gap-3 cursor-pointer py-2 ${
+                        durationForm.type === 'weekly' ? 'text-primary-700' : 'text-gray-700'
+                      }`}
+                    >
                       <input
-                        type="number"
-                        min={24}
-                        max={336}
-                        value={durationForm.hours}
-                        onChange={(e) => setDurationForm({ ...durationForm, hours: parseInt(e.target.value) || 48 })}
-                        className="w-32 rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        type="radio"
+                        name="durationType"
+                        checked={durationForm.type === 'weekly'}
+                        onChange={() => setDurationForm({ ...durationForm, type: 'weekly' })}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300"
                       />
-                      <p className="text-xs text-gray-400 mt-1">24 — 336 {t.hours[lang]}</p>
-                    </div>
-                  )}
+                      <span className="text-sm">{t.weeklyTransfer[lang]}</span>
+                    </label>
+                    {/* Day-of-week selector — visible when weekly is selected */}
+                    {durationForm.type === 'weekly' && (
+                      <div className="mt-3 ms-7">
+                        <p className="text-xs text-gray-500 mb-2">{t.selectDay[lang]}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {DAYS.map((day, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setDurationForm({ ...durationForm, weeklyDay: idx })}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                                durationForm.weeklyDay === idx
+                                  ? 'bg-primary-600 text-white border-primary-600'
+                                  : 'bg-white text-gray-600 border-gray-300 hover:border-primary-400 hover:text-primary-600'
+                              }`}
+                            >
+                              {day[lang]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                  <div className="flex items-center gap-3 pt-2">
+                  {/* Save / Cancel */}
+                  <div className="flex items-center gap-3 pt-3">
                     <button
                       onClick={handleSaveDuration}
                       disabled={saving}
@@ -402,13 +495,7 @@ export default function PaymentMethodPage() {
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
                     </button>
                     <button
-                      onClick={() => {
-                        setEditingDuration(false);
-                        setDurationForm({
-                          type: account.transferDuration?.type || 'default',
-                          hours: account.transferDuration?.hours || 48,
-                        });
-                      }}
+                      onClick={resetDurationForm}
                       className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                     >
                       {t.cancel[lang]}
@@ -416,19 +503,70 @@ export default function PaymentMethodPage() {
                   </div>
                 </div>
               ) : (
+                /* ─── Display Mode: show the 3 options, highlight the active one ─── */
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-gray-500">{t.durationType[lang]}</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {account.transferDuration?.type === 'custom' ? t.durationCustom[lang] : t.durationDefault[lang]}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-t border-gray-50">
-                    <span className="text-sm text-gray-500">{t.duration[lang]}</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {account.transferDuration?.hours || 48} {t.hours[lang]}
-                    </span>
-                  </div>
+                  {(() => {
+                    const dtype = account.transferDuration?.type as string | undefined;
+                    const isAfterDep = dtype === 'after_departure' || dtype === 'default' || !dtype;
+                    const isThreshold = dtype === 'amount_threshold';
+                    const isWeekly = dtype === 'weekly';
+                    const savedDay = account.transferDuration?.weeklyDay ?? 0;
+                    return (
+                      <>
+                        {/* After departure */}
+                        <div className={`flex items-center gap-3 py-2 ${isAfterDep ? '' : 'opacity-40'}`}>
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isAfterDep ? 'border-primary-600' : 'border-gray-300'}`}>
+                            {isAfterDep && <div className="w-2 h-2 rounded-full bg-primary-600" />}
+                          </div>
+                          <span className="text-sm text-gray-900">{t.afterDeparture[lang]}</span>
+                        </div>
+
+                        {/* Amount threshold */}
+                        <div className={`py-2 ${isThreshold ? '' : 'opacity-40'}`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isThreshold ? 'border-primary-600' : 'border-gray-300'}`}>
+                              {isThreshold && <div className="w-2 h-2 rounded-full bg-primary-600" />}
+                            </div>
+                            <span className="text-sm text-gray-900">{t.amountThreshold[lang]}</span>
+                          </div>
+                          {isThreshold && (
+                            <p className="text-xs text-primary-600 font-medium mt-1 ms-7">
+                              {account.transferDuration?.thresholdAmount?.toLocaleString() || '1,000'} {t.sar[lang]}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Weekly */}
+                        <div className={`py-2 ${isWeekly ? '' : 'opacity-40'}`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isWeekly ? 'border-primary-600' : 'border-gray-300'}`}>
+                              {isWeekly && <div className="w-2 h-2 rounded-full bg-primary-600" />}
+                            </div>
+                            <span className="text-sm text-gray-900">{t.weeklyTransfer[lang]}</span>
+                          </div>
+                          {isWeekly && (
+                            <div className="mt-2 ms-7">
+                              <p className="text-xs text-gray-500 mb-1.5">{t.selectDay[lang]}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {DAYS.map((day, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-medium ${
+                                      savedDay === idx
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-gray-100 text-gray-400'
+                                    }`}
+                                  >
+                                    {day[lang]}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -80,7 +80,7 @@ exports.searchUnits = async (req, res, next) => {
     } = req.query;
 
     // ── Step 1: Property-level filter ──────────────────────────────
-    const propFilter = { isActive: true };
+    const propFilter = { isActive: true, isDeleted: { $ne: true } };
     if (city) propFilter['location.city'] = { $regex: new RegExp(String(city).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') };
     if (type) {
       const types = String(type).split(',').map(t => t.trim()).filter(Boolean);
@@ -100,7 +100,11 @@ exports.searchUnits = async (req, res, next) => {
     }
 
     // ── Step 2: Unit-level filter ──────────────────────────────────
-    const unitFilter = { isActive: true, property: { $in: matchingPropertyIds } };
+    const unitFilter = {
+      isActive: true,
+      isDeleted: { $ne: true },
+      property: { $in: matchingPropertyIds },
+    };
     if (guests) unitFilter['capacity.maxGuests'] = { $gte: Number(guests) };
     if (bedrooms) unitFilter['bedrooms.count'] = { $gte: Number(bedrooms) };
     if (rating) unitFilter['ratings.average'] = { $gte: Number(rating) };
@@ -168,23 +172,40 @@ exports.searchUnits = async (req, res, next) => {
     const skip = (safePage - 1) * safeLimit;
 
     // ── Step 6: Aggregation pipeline ───────────────────────────────
+
+    // Build date-aware price computation when checkIn/checkOut are provided
+    let avgPriceExpr;
+    if (checkIn && checkOut) {
+      // Compute average price for only the specific days in the guest's date range
+      const ciDate = new Date(checkIn);
+      const coDate = new Date(checkOut);
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayPrices = [];
+      const cur = new Date(ciDate);
+      while (cur < coDate) {
+        const dayField = `$pricing.${dayNames[cur.getDay()]}`;
+        dayPrices.push({ $ifNull: [dayField, 0] });
+        cur.setDate(cur.getDate() + 1);
+      }
+      avgPriceExpr = dayPrices.length > 0 ? { $avg: dayPrices } : { $literal: 0 };
+    } else {
+      // No dates selected — use 7-day average
+      avgPriceExpr = {
+        $avg: [
+          { $ifNull: ['$pricing.sunday', 0] },
+          { $ifNull: ['$pricing.monday', 0] },
+          { $ifNull: ['$pricing.tuesday', 0] },
+          { $ifNull: ['$pricing.wednesday', 0] },
+          { $ifNull: ['$pricing.thursday', 0] },
+          { $ifNull: ['$pricing.friday', 0] },
+          { $ifNull: ['$pricing.saturday', 0] },
+        ],
+      };
+    }
+
     const pipeline = [
       { $match: unitFilter },
-      {
-        $addFields: {
-          avgPrice: {
-            $avg: [
-              { $ifNull: ['$pricing.sunday', 0] },
-              { $ifNull: ['$pricing.monday', 0] },
-              { $ifNull: ['$pricing.tuesday', 0] },
-              { $ifNull: ['$pricing.wednesday', 0] },
-              { $ifNull: ['$pricing.thursday', 0] },
-              { $ifNull: ['$pricing.friday', 0] },
-              { $ifNull: ['$pricing.saturday', 0] },
-            ],
-          },
-        },
-      },
+      { $addFields: { avgPrice: avgPriceExpr } },
       // Apply discount to avgPrice so price filter matches what the guest actually pays
       {
         $addFields: {
@@ -315,7 +336,7 @@ exports.getUnits = async (req, res, next) => {
 
     const { page = 1, limit = 20 } = req.query;
 
-    const query = { property: propertyId, isActive: true };
+    const query = { property: propertyId, isActive: true, isDeleted: { $ne: true } };
 
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 50);
@@ -358,7 +379,8 @@ exports.getMyPropertyUnits = async (req, res, next) => {
     }
 
     const { page = 1, limit = 20 } = req.query;
-    const query = { property: propertyId };
+    // Exclude soft-deleted units from the host's management view — admin-only.
+    const query = { property: propertyId, isDeleted: { $ne: true } };
 
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 50);
@@ -391,11 +413,16 @@ exports.getUnit = async (req, res, next) => {
   try {
     const unit = await Unit.findById(req.params.id).populate({
       path: 'property',
-      select: 'title titleAr location host type images ratings direction rules pricing capacity',
+      select: 'title titleAr location host type images ratings direction rules pricing capacity isDeleted',
       populate: { path: 'host', select: 'name avatar isVerified _id createdAt' },
     });
 
-    if (!unit || !unit.isActive) {
+    if (!unit || !unit.isActive || unit.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Unit not found' });
+    }
+
+    // If the parent property has been soft-deleted, hide the unit from the public view.
+    if (unit.property && unit.property.isDeleted) {
       return res.status(404).json({ success: false, message: 'Unit not found' });
     }
 
@@ -440,6 +467,9 @@ exports.updateUnit = async (req, res, next) => {
 // @desc    Delete unit (soft-delete)
 // @route   DELETE /api/v1/units/:id
 // @access  Private (Host owner / Admin)
+//
+// Soft-delete: `isDeleted: true` + `deletedAt` + also clears `isActive` so
+// existing isActive-only filters don't need to know about deletion.
 exports.deleteUnit = async (req, res, next) => {
   try {
     const auth = await authorizeUnitOwner(req.params.id, req.user);
@@ -448,15 +478,21 @@ exports.deleteUnit = async (req, res, next) => {
     }
 
     auth.unit.isActive = false;
+    auth.unit.isDeleted = true;
+    auth.unit.deletedAt = new Date();
     await auth.unit.save();
 
-    // If this was the last active unit, deactivate the property too
+    // If this was the last active (non-deleted) unit, deactivate the property too.
     const remainingActive = await Unit.countDocuments({
       property: auth.unit.property,
       isActive: true,
+      isDeleted: { $ne: true },
     });
     if (remainingActive === 0) {
-      const totalUnits = await Unit.countDocuments({ property: auth.unit.property });
+      const totalUnits = await Unit.countDocuments({
+        property: auth.unit.property,
+        isDeleted: { $ne: true },
+      });
       if (totalUnits > 0) {
         // Property has units but none are active — deactivate property
         await Property.findByIdAndUpdate(auth.unit.property, { isActive: false });
@@ -490,12 +526,46 @@ exports.duplicateUnit = async (req, res, next) => {
     // Reset ratings on the copy
     doc.ratings = { average: 0, count: 0 };
 
-    // Remove excluded fields if specified
-    // e.g. body: { exclude: ['images', 'pricing', 'unavailableDates'] }
+    // Remove excluded fields if specified.
+    // Body: { exclude: ['images', 'pricing', 'unavailableDates'] }
+    //
+    // NOTE: "blocked dates" aren't just `unavailableDates` — they ALSO live as
+    // `{ isBlocked: true }` entries inside `datePricing`. Likewise, "pricing"
+    // covers both the day-of-week `pricing` object AND per-date price overrides
+    // in `datePricing`. So we expand the high-level exclude keys into the
+    // individual fields they actually touch.
     const { exclude = [] } = req.body;
     if (Array.isArray(exclude)) {
-      for (const field of exclude) {
-        delete doc[field];
+      const set = new Set(exclude);
+
+      if (set.has('images')) {
+        delete doc.images;
+      }
+
+      if (set.has('pricing')) {
+        delete doc.pricing;
+        delete doc.discountRules;
+        // Drop price-override entries but keep blocked-date entries (unless the
+        // user also asked to exclude blocked dates — handled below).
+        if (Array.isArray(doc.datePricing)) {
+          doc.datePricing = doc.datePricing
+            .filter((e) => e.isBlocked)
+            .map((e) => ({ date: e.date, isBlocked: true }));
+        }
+      }
+
+      if (set.has('unavailableDates')) {
+        delete doc.unavailableDates;
+        // Strip any blocked-date entries that snuck into datePricing.
+        if (Array.isArray(doc.datePricing)) {
+          doc.datePricing = doc.datePricing.filter((e) => !e.isBlocked);
+        }
+      }
+
+      // If BOTH pricing and unavailableDates were excluded, datePricing is now
+      // either empty or irrelevant — just clear it for a clean slate.
+      if (set.has('pricing') && set.has('unavailableDates')) {
+        doc.datePricing = [];
       }
     }
 
@@ -560,23 +630,60 @@ exports.updateUnitPricing = async (req, res, next) => {
       unit.pricing = { ...(unit.pricing?.toObject?.() || unit.pricing || {}), ...pricing };
     }
 
-    // 4. Date pricing overrides — merge into existing datePricing array
+    // 4. Date pricing overrides — merge-patch into existing datePricing.
+    //
+    // Semantics (PR F):
+    //   - Field missing from payload  → keep the existing value
+    //   - Field === null              → clear the existing value
+    //   - Field set to anything else  → overwrite
+    //
+    // This lets unblock-a-date preserve the custom price (item 4) while still
+    // letting the frontend explicitly wipe fields when the user sets a
+    // competing override (item 10: setting a date discount clears the price,
+    // and vice-versa).
     if (datePricing && Array.isArray(datePricing)) {
       const existing = unit.datePricing || [];
       const dateMap = new Map();
-      // Keep existing entries
       for (const dp of existing) {
         const key = new Date(dp.date).toISOString().slice(0, 10);
-        dateMap.set(key, dp);
+        // Convert subdoc to plain object so we can mutate fields freely
+        dateMap.set(key, dp.toObject ? dp.toObject() : { ...dp });
       }
-      // Upsert new entries
+
+      // Resolve a merge-patch field — undefined=keep, null=clear, else=set
+      const merge = (patch, existingVal) => {
+        if (patch === undefined) return existingVal;
+        if (patch === null) return undefined;
+        return patch;
+      };
+
       for (const dp of datePricing) {
         const key = new Date(dp.date).toISOString().slice(0, 10);
         if (dp.remove) {
-          dateMap.delete(key); // Remove override
-        } else {
-          dateMap.set(key, { date: new Date(dp.date), price: dp.price, isBlocked: dp.isBlocked ?? false, discountPercent: dp.discountPercent ?? undefined });
+          dateMap.delete(key);
+          continue;
         }
+        const prev = dateMap.get(key) || {};
+        const mergedPrice    = merge(dp.price,             prev.price);
+        const mergedBlocked  = dp.isBlocked !== undefined ? !!dp.isBlocked : !!prev.isBlocked;
+        const mergedDiscount = merge(dp.discountPercent,   prev.discountPercent);
+        const mergedDStack   = dp.discountStackable !== undefined ? !!dp.discountStackable : !!prev.discountStackable;
+
+        // If the entry has no meaningful data left, drop it entirely.
+        const hasPrice    = typeof mergedPrice    === 'number' && mergedPrice > 0;
+        const hasDiscount = typeof mergedDiscount === 'number' && mergedDiscount > 0;
+        if (!hasPrice && !hasDiscount && !mergedBlocked) {
+          dateMap.delete(key);
+          continue;
+        }
+
+        dateMap.set(key, {
+          date: new Date(dp.date),
+          price: mergedPrice,
+          isBlocked: mergedBlocked,
+          discountPercent: mergedDiscount,
+          discountStackable: mergedDStack,
+        });
       }
       unit.datePricing = Array.from(dateMap.values());
     }
@@ -612,9 +719,13 @@ exports.toggleUnitStatus = async (req, res, next) => {
       const remainingActive = await Unit.countDocuments({
         property: auth.unit.property,
         isActive: true,
+        isDeleted: { $ne: true },
       });
       if (remainingActive === 0) {
-        const totalUnits = await Unit.countDocuments({ property: auth.unit.property });
+        const totalUnits = await Unit.countDocuments({
+          property: auth.unit.property,
+          isDeleted: { $ne: true },
+        });
         if (totalUnits > 0) {
           await Property.findByIdAndUpdate(auth.unit.property, { isActive: false });
         }

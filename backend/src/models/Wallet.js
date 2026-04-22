@@ -4,9 +4,14 @@ const walletSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'userType',
       required: true,
       unique: true,
+    },
+    userType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
+      required: true,
     },
     balance: {
       type: Number,
@@ -21,10 +26,10 @@ const walletSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-walletSchema.statics.getOrCreate = async function (userId) {
+walletSchema.statics.getOrCreate = async function (userId, userType) {
   let wallet = await this.findOne({ user: userId });
   if (!wallet) {
-    wallet = await this.create({ user: userId });
+    wallet = await this.create({ user: userId, userType });
   }
   return wallet;
 };

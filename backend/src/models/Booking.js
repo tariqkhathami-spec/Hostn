@@ -1,7 +1,25 @@
 const mongoose = require('mongoose');
 
+// Human-readable booking reference — "HB-XXXXXXXX" (8 random alphanumeric chars)
+// Used on receipts, emails, support tickets, and invoice line items.
+// Random (not sequential) so it doesn't reveal booking volume.
+const REF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // skip 0/O/1/I for readability
+function generateBookingReference() {
+  let out = '';
+  for (let i = 0; i < 8; i++) {
+    out += REF_CHARS[Math.floor(Math.random() * REF_CHARS.length)];
+  }
+  return `HB-${out}`;
+}
+
 const bookingSchema = new mongoose.Schema(
   {
+    reference: {
+      type: String,
+      unique: true,
+      index: true,
+      // Generated in pre-save hook if not set
+    },
     property: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Property',
@@ -14,7 +32,7 @@ const bookingSchema = new mongoose.Schema(
     },
     guest: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Guest',
       required: true,
     },
     checkIn: {
@@ -74,8 +92,23 @@ bookingSchema.index({ createdAt: -1 });            // sort by newest
 bookingSchema.index({ status: 1, holdExpiresAt: 1 }); // hold expiry queries
 bookingSchema.index({ unit: 1, checkIn: 1, checkOut: 1 }); // unit-level availability
 
-// Validate checkOut > checkIn
-bookingSchema.pre('save', function (next) {
+// Generate reference + validate checkOut > checkIn
+bookingSchema.pre('save', async function (next) {
+  // Auto-generate reference on create. Retry up to 5 times on unique collision.
+  if (this.isNew && !this.reference) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = generateBookingReference();
+      const existing = await mongoose.model('Booking').exists({ reference: candidate });
+      if (!existing) {
+        this.reference = candidate;
+        break;
+      }
+    }
+    if (!this.reference) {
+      return next(new Error('Failed to generate unique booking reference after 5 attempts'));
+    }
+  }
+
   if (this.checkOut <= this.checkIn) {
     return next(new Error('Check-out date must be after check-in date'));
   }

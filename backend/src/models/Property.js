@@ -4,7 +4,7 @@ const propertySchema = new mongoose.Schema(
   {
     host: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Host',
       required: true,
     },
     title: {
@@ -112,6 +112,9 @@ const propertySchema = new mongoose.Schema(
     isApproved: { type: Boolean, default: true },
     moderationNote: { type: String },
     isFeatured: { type: Boolean, default: false },
+    // Soft-delete flags — deleted records are retained for audit but hidden from all non-admin queries.
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
     tags: [String],
     unavailableDates: [
       {
@@ -153,13 +156,13 @@ propertySchema.virtual('discountedPrice').get(function () {
   return this.pricing.perNight;
 });
 
-// Virtual: count of active units (populated via Unit model)
+// Virtual: count of active (non-deleted) units (populated via Unit model)
 propertySchema.virtual('units', {
   ref: 'Unit',
   localField: '_id',
   foreignField: 'property',
   count: true,
-  match: { isActive: true },
+  match: { isActive: true, isDeleted: { $ne: true } },
 });
 
 propertySchema.set('toJSON', { virtuals: true });

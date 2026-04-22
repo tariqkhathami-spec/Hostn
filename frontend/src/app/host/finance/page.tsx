@@ -43,10 +43,10 @@ const t: Record<string, Record<string, string>> = {
 };
 
 const quickLinks = [
-  { href: '/host/finance/remittances', icon: Banknote, labelKey: 'remittances', descKey: 'remittancesDesc', color: 'bg-blue-50 text-blue-600' },
-  { href: '/host/finance/invoices', icon: FileText, labelKey: 'invoices', descKey: 'invoicesDesc', color: 'bg-purple-50 text-purple-600' },
-  { href: '/host/finance/statements', icon: ScrollText, labelKey: 'statements', descKey: 'statementsDesc', color: 'bg-teal-50 text-teal-600' },
-  { href: '/host/finance/payment-method', icon: CreditCard, labelKey: 'paymentMethod', descKey: 'paymentMethodDesc', color: 'bg-orange-50 text-orange-600' },
+  { href: '/finance/remittances', icon: Banknote, labelKey: 'remittances', descKey: 'remittancesDesc', color: 'bg-blue-50 text-blue-600' },
+  { href: '/finance/invoices', icon: FileText, labelKey: 'invoices', descKey: 'invoicesDesc', color: 'bg-purple-50 text-purple-600' },
+  { href: '/finance/statements', icon: ScrollText, labelKey: 'statements', descKey: 'statementsDesc', color: 'bg-teal-50 text-teal-600' },
+  { href: '/finance/payment-method', icon: CreditCard, labelKey: 'paymentMethod', descKey: 'paymentMethodDesc', color: 'bg-orange-50 text-orange-600' },
 ];
 
 export default function FinancePage() {
@@ -90,11 +90,11 @@ export default function FinancePage() {
             <p className="text-sm text-gray-500">{t.totalPaidOut[lang]}</p>
           </div>
           <p className="text-2xl font-bold text-gray-900">
-            <span dir="ltr"><SarSymbol /> {summary.totalPaidOut.toLocaleString('en')}</span>
+            <span dir="ltr"><SarSymbol /> {summary.totalPaidOut.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </p>
           {summary.lastPayoutDate && (
             <p className="text-xs text-gray-400 mt-1">
-              {t.lastPayout[lang]}: <span dir="ltr"><SarSymbol /> {summary.lastPayoutAmount.toLocaleString('en')}</span>
+              {t.lastPayout[lang]}: <span dir="ltr"><SarSymbol /> {summary.lastPayoutAmount.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               {' \u2014 '}
               {new Date(summary.lastPayoutDate).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' })}
             </p>
@@ -110,7 +110,7 @@ export default function FinancePage() {
             <p className="text-sm text-gray-500">{t.pendingPayout[lang]}</p>
           </div>
           <p className="text-2xl font-bold text-gray-900">
-            <span dir="ltr"><SarSymbol /> {summary.pendingPayout.toLocaleString('en')}</span>
+            <span dir="ltr"><SarSymbol /> {summary.pendingPayout.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </p>
         </div>
 
@@ -123,7 +123,7 @@ export default function FinancePage() {
             <p className="text-sm text-gray-500">{t.totalCommission[lang]}</p>
           </div>
           <p className="text-2xl font-bold text-gray-900">
-            <span dir="ltr"><SarSymbol /> {summary.totalCommission.toLocaleString('en')}</span>
+            <span dir="ltr"><SarSymbol /> {summary.totalCommission.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </p>
         </div>
       </div>
@@ -136,7 +136,7 @@ export default function FinancePage() {
             <p className="text-sm font-medium text-amber-800">{t.noBankWarning[lang]}</p>
           </div>
           <Link
-            href="/host/finance/payment-method"
+            href="/finance/payment-method"
             className="text-sm font-semibold text-primary-600 hover:text-primary-700 whitespace-nowrap"
           >
             {t.setupNow[lang]} <ArrowRight className="w-3.5 h-3.5 inline rtl:rotate-180" />

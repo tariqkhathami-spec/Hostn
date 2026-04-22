@@ -197,7 +197,7 @@ exports.getInvoiceDetail = async (req, res) => {
       host: req.user._id,
     }).populate({
       path: 'bookings',
-      select: 'checkIn checkOut pricing status guest property',
+      select: 'reference checkIn checkOut pricing status guest property',
       populate: [
         { path: 'guest', select: 'name' },
         { path: 'property', select: 'title titleAr' },
@@ -452,23 +452,26 @@ exports.deleteBankAccount = async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 exports.updateTransferDuration = async (req, res) => {
   try {
-    const { type, hours } = req.body;
+    const { type, hours, thresholdAmount, weeklyDay } = req.body;
 
-    if (!type || !['default', 'custom'].includes(type)) {
+    const validTypes = ['after_departure', 'amount_threshold', 'weekly'];
+    if (!type || !validTypes.includes(type)) {
       return res.status(400).json({
         success: false,
-        message: 'type must be "default" or "custom"',
+        message: `type must be one of: ${validTypes.join(', ')}`,
       });
     }
 
-    const effectiveHours = type === 'default' ? 48 : (parseInt(hours) || 48);
+    const updateFields = {
+      'transferDuration.type': type,
+      'transferDuration.hours': type === 'after_departure' ? (parseInt(hours) || 48) : 48,
+      'transferDuration.thresholdAmount': type === 'amount_threshold' ? (parseFloat(thresholdAmount) || 0) : 0,
+      'transferDuration.weeklyDay': type === 'weekly' ? (parseInt(weeklyDay) ?? 0) : 0,
+    };
 
     const account = await HostBankAccount.findOneAndUpdate(
       { host: req.user._id, isActive: true },
-      {
-        'transferDuration.type': type,
-        'transferDuration.hours': effectiveHours,
-      },
+      updateFields,
       { new: true }
     );
 

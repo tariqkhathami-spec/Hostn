@@ -4,10 +4,14 @@ export interface User {
   email: string;
   phone?: string;
   avatar?: string;
+  /** New field: identifies which collection this user belongs to. Prefer over `role`. */
+  userType?: 'guest' | 'host' | 'admin';
+  /** Legacy alias — mirrors `userType`. Kept for backward compat during migration. */
   role: 'guest' | 'host' | 'admin';
   adminRole?: 'super' | 'support' | 'finance' | null;
   isVerified: boolean;
-  wishlist: string[];
+  /** Legacy: user-level wishlist. New code should use the Wishlist collection. */
+  wishlist?: string[];
   balance?: number;
   blockedByHosts?: number;
   guestRating?: number;
@@ -160,12 +164,30 @@ export interface Unit {
   amenities?: string[];
   features?: string[];
   images?: { url: string; caption?: string; isPrimary?: boolean }[];
-  pricing?: Record<string, number>;
+  // Pricing + discount flags (PR E + PR F). Numeric fields for day-of-week
+  // prices/cleaning fee + discount percents, boolean flags for stackable and
+  // enabled per discount type. `Record<string, number | boolean>` covers both
+  // without forcing every reader to narrow manually.
+  pricing?: {
+    sunday?: number; monday?: number; tuesday?: number; wednesday?: number;
+    thursday?: number; friday?: number; saturday?: number;
+    cleaningFee?: number;
+    discountPercent?: number;
+    globalStackable?: boolean;
+    globalEnabled?: boolean;
+    weeklyDiscount?: number;
+    weeklyStackable?: boolean;
+    weeklyEnabled?: boolean;
+    monthlyDiscount?: number;
+    monthlyStackable?: boolean;
+    monthlyEnabled?: boolean;
+    [key: string]: number | boolean | undefined;
+  };
   capacity?: { maxGuests?: number };
   ratings?: Ratings;
   unavailableDates?: { start: string; end: string }[];
-  datePricing?: { date: string; price?: number; isBlocked?: boolean; discountPercent?: number }[];
-  discountRules?: { type: 'weekday' | 'weekend'; percent: number }[];
+  datePricing?: { date: string; price?: number; isBlocked?: boolean; discountPercent?: number; discountStackable?: boolean }[];
+  discountRules?: { type: 'weekday' | 'weekend'; percent: number; stackable?: boolean; enabled?: boolean }[];
   createdAt?: string;
   updatedAt?: string;
 }

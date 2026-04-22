@@ -84,6 +84,7 @@ exports.createReview = async (req, res, next) => {
     if (property && property.host) {
       await Notification.createNotification({
         user: property.host,
+        userType: 'Host',
         type: 'review_received',
         title: 'New Review',
         message: `A guest has left a review on your property "${property.title}"`,

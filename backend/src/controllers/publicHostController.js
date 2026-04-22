@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const Host = require('../models/Host');
 const Property = require('../models/Property');
 const Review = require('../models/Review');
 
@@ -20,8 +20,8 @@ exports.getPublicHostProfile = async (req, res, next) => {
     const safePropPage = Math.max(1, parseInt(propertyPage) || 1);
     const safePropLimit = Math.min(Math.max(1, parseInt(propertyLimit) || 6), MAX_LIMIT);
 
-    // Fetch host (must be a host role)
-    const host = await User.findOne({ _id: req.params.id, role: { $in: ['host', 'admin'] } })
+    // Fetch host from the Host collection
+    const host = await Host.findById(req.params.id)
       .select('name avatar createdAt isVerified');
 
     if (!host) {
@@ -29,7 +29,7 @@ exports.getPublicHostProfile = async (req, res, next) => {
     }
 
     // Get all active property IDs for this host
-    const allProperties = await Property.find({ host: req.params.id, isActive: true })
+    const allProperties = await Property.find({ host: req.params.id, isActive: true, isDeleted: { $ne: true } })
       .select('_id');
     const propertyIds = allProperties.map((p) => p._id);
     const propertyCount = propertyIds.length;
@@ -67,7 +67,7 @@ exports.getPublicHostProfile = async (req, res, next) => {
 
     // Paginated properties
     const propSkip = (safePropPage - 1) * safePropLimit;
-    const properties = await Property.find({ host: req.params.id, isActive: true })
+    const properties = await Property.find({ host: req.params.id, isActive: true, isDeleted: { $ne: true } })
       .select('title titleAr images location type pricing capacity ratings tags isFeatured')
       .sort('-ratings.average')
       .skip(propSkip)

@@ -40,6 +40,10 @@ const {
   upsertLicense,
   deleteLicense,
 } = require('../controllers/tourismLicenseController');
+const {
+  getLoyaltyStatus,
+  getLoyaltySummary,
+} = require('../controllers/hostLoyaltyController');
 const { protect, authorize } = require('../middleware/auth');
 const { blockDatesRules, mongoIdParam } = require('../middleware/validate');
 const { uploadSingle } = require('../middleware/upload');
@@ -89,6 +93,10 @@ router.get('/reviews', getHostReviews);
 // Unit Points
 router.get('/properties-units', getPropertiesWithUnits);
 router.get('/units/:unitId/points', mongoIdParam('unitId'), getUnitPoints);
+
+// Host Loyalty
+router.get('/loyalty', getLoyaltyStatus);
+router.get('/loyalty/summary', getLoyaltySummary);
 
 // Tourism License
 router.get('/tourism-license', getLicenseOverview);

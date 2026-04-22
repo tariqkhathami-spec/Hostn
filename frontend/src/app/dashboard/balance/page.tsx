@@ -91,7 +91,7 @@ export default function BalancePage() {
               {lang === 'ar' ? '\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A' : 'Current Balance'}
             </p>
             <p className="text-3xl font-bold text-gray-900">
-              {loading ? '...' : <><span dir="ltr"><SarSymbol /> {balance.toLocaleString('en')}</span></>}
+              {loading ? '...' : <><span dir="ltr"><SarSymbol /> {balance.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></>}
             </p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function BalancePage() {
                   </div>
                 </div>
                 <span className={`text-sm font-bold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-500'}`}>
-                  <span dir="ltr">{tx.type === 'credit' ? '+' : '-'}<SarSymbol /> {tx.amount.toLocaleString('en')}</span>
+                  <span dir="ltr">{tx.type === 'credit' ? '+' : '-'}<SarSymbol /> {tx.amount.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </span>
               </div>
             ))}

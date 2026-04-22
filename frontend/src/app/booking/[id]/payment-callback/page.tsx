@@ -29,12 +29,43 @@ function PaymentCallbackContent() {
   }, [isAuthenticated]);
 
   const verifyPayment = async () => {
+    // PR K: when the simulator drove this callback (?simulated=1), read the
+    // current Payment state from /payments/:id/status instead of calling the
+    // Moyasar verify endpoint. The simulate endpoint has already written the
+    // outcome on the Payment + Booking.
+    const isSimulated = searchParams.get('simulated') === '1';
+    const simulatedPaymentId = searchParams.get('paymentId');
     const moyasarPaymentId = searchParams.get('id');
-    const moyasarStatus = searchParams.get('status');
-
-    // Get our internal payment ID from localStorage (stored during initiation)
     const storedPaymentId = localStorage.getItem(`hostn_payment_${bookingId}`);
 
+    if (isSimulated) {
+      const paymentId = simulatedPaymentId || storedPaymentId;
+      if (!paymentId) {
+        setStatus('failed');
+        setMessage('Simulated payment ID missing.');
+        return;
+      }
+      try {
+        const res = await paymentsApi.getStatus(paymentId);
+        const data = res.data.data;
+        if (data.status === 'completed') {
+          setStatus('success');
+          setMessage('Your booking has been confirmed! (simulated)');
+          localStorage.removeItem(`hostn_payment_${bookingId}`);
+          clearSearchCookies();
+        } else {
+          setStatus('failed');
+          setMessage(data.failureReason || `Simulated outcome: ${data.status}`);
+        }
+      } catch (error: any) {
+        setStatus('failed');
+        setMessage(error?.response?.data?.message || 'Could not load simulated payment status.');
+      }
+      return;
+    }
+
+    // Original Moyasar verify flow (preserved for when the real integration
+    // ships and ?simulated=1 is no longer set).
     if (!moyasarPaymentId || !storedPaymentId) {
       setStatus('failed');
       setMessage('Payment information is missing. Please contact support.');

@@ -366,7 +366,7 @@ export default function UnitForm({
     if (form.hasBedrooms) sections.push({ id: 'section-bedrooms', label: isAr ? 'غرف النوم' : 'Bedrooms' });
     if (form.hasPool) sections.push({ id: 'section-pools', label: isAr ? 'المسابح' : 'Pools' });
     if (form.hasKitchen) sections.push({ id: 'section-kitchen', label: isAr ? 'المطبخ' : 'Kitchen' });
-    if (form.hasLivingRooms) sections.push({ id: 'section-living', label: isAr ? 'غرفة المعيشة' : 'Living Room' });
+    if (form.hasLivingRooms) sections.push({ id: 'section-living', label: isAr ? 'مجلس' : 'Majlis' });
     sections.push(
       { id: 'section-additional', label: isAr ? 'مرافق إضافية' : 'More Amenities' },
       { id: 'section-features', label: isAr ? 'المميزات' : 'Features' },

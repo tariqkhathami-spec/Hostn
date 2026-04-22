@@ -56,13 +56,37 @@ exports.upsertLicense = async (req, res, next) => {
   try {
     const hostId = req.user._id;
     const { unitId } = req.params;
-    const { licenseNumber, licenseType, issueDate, expiryDate } = req.body;
+    const {
+      workType,
+      licenseNumber,
+      nationalId,
+      commercialRegister,
+      documentUrl,
+      issueDate,
+      expiryDate,
+    } = req.body;
 
     // Validate required fields
     if (!licenseNumber) {
       return res.status(400).json({
         success: false,
-        message: 'License number is required',
+        message: 'License / permit number is required',
+      });
+    }
+
+    const effectiveWorkType = workType || 'individual';
+
+    // Validate work-type-specific fields
+    if (effectiveWorkType === 'individual' && !nationalId) {
+      return res.status(400).json({
+        success: false,
+        message: 'National ID is required for individual work type',
+      });
+    }
+    if (effectiveWorkType === 'company' && !commercialRegister) {
+      return res.status(400).json({
+        success: false,
+        message: 'Commercial register number is required for company work type',
       });
     }
 
@@ -85,8 +109,11 @@ exports.upsertLicense = async (req, res, next) => {
 
     // Update the tourism license sub-document
     unit.tourismLicense = {
+      workType: effectiveWorkType,
       licenseNumber,
-      licenseType: licenseType || 'general',
+      nationalId: effectiveWorkType === 'individual' ? nationalId : undefined,
+      commercialRegister: effectiveWorkType === 'company' ? commercialRegister : undefined,
+      documentUrl: documentUrl || undefined,
       issueDate: issueDate ? new Date(issueDate) : new Date(),
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       status,

@@ -4,9 +4,15 @@ const activityLogSchema = new mongoose.Schema(
   {
     actor: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      refPath: 'actorType',
+      default: null,
     },
+    actorType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin', null],
+      default: null,
+    },
+    // Legacy lowercase role ('guest'|'host'|'admin') — kept for backward compat with existing logs
     actorRole: {
       type: String,
       enum: ['guest', 'host', 'admin'],

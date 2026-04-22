@@ -172,7 +172,7 @@ export default function InvoicesPage() {
                     <div>
                       <p className="text-gray-400 text-xs">{t.grossBookings[lang]}</p>
                       <p className="font-medium text-gray-700">
-                        <span dir="ltr"><SarSymbol /> {inv.breakdown.grossBookings.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {inv.breakdown.grossBookings.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                     <div>
@@ -182,13 +182,13 @@ export default function InvoicesPage() {
                     <div>
                       <p className="text-gray-400 text-xs">{t.commission[lang]}</p>
                       <p className="font-medium text-gray-700">
-                        <span dir="ltr"><SarSymbol /> {inv.breakdown.commission.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {inv.breakdown.commission.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-400 text-xs">{t.vat[lang]}</p>
                       <p className="font-medium text-gray-700">
-                        <span dir="ltr"><SarSymbol /> {inv.breakdown.vat.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {inv.breakdown.vat.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                   </div>
@@ -197,7 +197,7 @@ export default function InvoicesPage() {
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                   <p className="text-xs text-gray-400">{t.total[lang]}</p>
                   <p className="text-lg font-bold text-gray-900">
-                    <span dir="ltr"><SarSymbol /> {inv.amount.toLocaleString('en')}</span>
+                    <span dir="ltr"><SarSymbol /> {inv.amount.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </p>
                 </div>
               </div>

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Calendar, Home, MessageSquare, Settings,
   CreditCard, Star, BarChart3, Users, Building, BookOpen,
   FileText, Shield, LogOut, ChevronRight, Heart, Wallet, Globe, Newspaper,
-  Trophy, ShieldCheck,
+  Trophy, ShieldCheck, Award,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { notificationsApi, messagesApi } from '@/lib/api';
@@ -33,17 +33,20 @@ const guestNav: NavItem[] = [
   { href: '/dashboard/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
 ];
 
+// Host routes are served under business.hostn.co; middleware rewrites
+// '/bookings' → '/host/bookings' internally. URLs stay clean (no '/host' prefix).
 const hostNav: NavItem[] = [
-  { href: '/host', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
-  { href: '/host/listings', icon: Building, label: { en: 'My Listings', ar: 'عقاراتي' } },
-  { href: '/host/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' }, badgeKey: 'bookings' },
-  { href: '/host/calendar', icon: Calendar, label: { en: 'Calendar', ar: 'التقويم' } },
-  { href: '/host/finance', icon: CreditCard, label: { en: 'Finance', ar: 'المعاملات المالية' } },
-  { href: '/host/reviews', icon: Star, label: { en: 'Reviews', ar: 'التقييمات' } },
-  { href: '/host/unit-points', icon: Trophy, label: { en: 'Unit Points', ar: 'نقاط الوحدات' } },
-  { href: '/host/tourism-license', icon: ShieldCheck, label: { en: 'MOT License', ar: 'رخصة السياحة' } },
-  { href: '/host/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' }, badgeKey: 'messages' },
-  { href: '/host/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
+  { href: '/', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
+  { href: '/listings', icon: Building, label: { en: 'My Listings', ar: 'عقاراتي' } },
+  { href: '/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' }, badgeKey: 'bookings' },
+  { href: '/calendar', icon: Calendar, label: { en: 'Calendar', ar: 'التقويم' } },
+  { href: '/finance', icon: CreditCard, label: { en: 'Finance', ar: 'المعاملات المالية' } },
+  { href: '/reviews', icon: Star, label: { en: 'Reviews', ar: 'التقييمات' } },
+  { href: '/unit-points', icon: Trophy, label: { en: 'Unit Points', ar: 'نقاط الوحدات' } },
+  { href: '/tourism-license', icon: ShieldCheck, label: { en: 'MOT License', ar: 'رخصة السياحة' } },
+  { href: '/loyalty', icon: Award, label: { en: 'Loyalty', ar: 'برنامج الولاء' } },
+  { href: '/messages', icon: MessageSquare, label: { en: 'Messages', ar: 'الرسائل' }, badgeKey: 'messages' },
+  { href: '/settings', icon: Settings, label: { en: 'Settings', ar: 'الإعدادات' } },
 ];
 
 const adminNav: NavItem[] = [
@@ -131,7 +134,8 @@ export default function Sidebar({ role }: SidebarProps) {
   }, [pathname]);
 
   const isActive = (href: string) => {
-    if (href === '/host' || href === '/admin' || href === '/dashboard') {
+    // Roots need exact match to avoid matching every path under them.
+    if (href === '/' || href === '/host' || href === '/admin' || href === '/dashboard') {
       return pathname === href;
     }
     return pathname.startsWith(href);

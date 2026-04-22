@@ -5,9 +5,14 @@ const refreshTokenSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'userType',
       required: true,
       index: true,
+    },
+    userType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
+      required: true,
     },
     tokenHash: {
       type: String,
@@ -51,7 +56,7 @@ refreshTokenSchema.statics.generateRawToken = function () {
 };
 
 // Create a new refresh token for a user
-refreshTokenSchema.statics.createToken = async function (userId, deviceInfo = {}) {
+refreshTokenSchema.statics.createToken = async function (userId, userType, deviceInfo = {}) {
   const rawToken = this.generateRawToken();
   const tokenHash = this.hashToken(rawToken);
   const family = crypto.randomUUID();
@@ -59,6 +64,7 @@ refreshTokenSchema.statics.createToken = async function (userId, deviceInfo = {}
 
   await this.create({
     user: userId,
+    userType,
     tokenHash,
     family,
     expiresAt,
@@ -98,13 +104,14 @@ refreshTokenSchema.statics.rotateToken = async function (rawToken) {
 
   await this.create({
     user: existing.user,
+    userType: existing.userType,
     tokenHash: newTokenHash,
     family: existing.family,
     expiresAt: newExpiresAt,
     deviceInfo: existing.deviceInfo,
   });
 
-  return { valid: true, userId: existing.user, rawToken: newRawToken };
+  return { valid: true, userId: existing.user, userType: existing.userType, rawToken: newRawToken };
 };
 
 // Revoke all tokens for a user (password change, logout-all)

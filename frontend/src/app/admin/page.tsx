@@ -123,7 +123,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-2xl font-bold text-gray-900">
                 {card.isCurrency
-                  ? <span dir="ltr"><SarSymbol /> {card.value.toLocaleString('en')}</span>
+                  ? <span dir="ltr"><SarSymbol /> {card.value.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   : card.value.toLocaleString('en')}
               </div>
             </div>

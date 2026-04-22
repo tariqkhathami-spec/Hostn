@@ -1,14 +1,24 @@
 const mongoose = require('mongoose');
 
+const participantSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'participants.userType',
+      required: true,
+    },
+    userType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const conversationSchema = new mongoose.Schema(
   {
-    participants: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-      },
-    ],
+    participants: [participantSchema],
     booking: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Booking',
@@ -21,7 +31,11 @@ const conversationSchema = new mongoose.Schema(
     },
     lastMessage: {
       content: { type: String, default: '' },
-      sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      sender: {
+        type: mongoose.Schema.Types.ObjectId,
+        refPath: 'lastMessage.senderType',
+      },
+      senderType: { type: String, enum: ['Guest', 'Host', 'Admin'] },
       timestamp: { type: Date, default: Date.now },
     },
     unreadCount: {
@@ -35,7 +49,12 @@ const conversationSchema = new mongoose.Schema(
     },
     blockedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'blockedByType',
+      default: null,
+    },
+    blockedByType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin', null],
       default: null,
     },
     isArchived: {
@@ -49,25 +68,31 @@ const conversationSchema = new mongoose.Schema(
   }
 );
 
-conversationSchema.index({ participants: 1, updatedAt: -1 });
+conversationSchema.index({ 'participants.user': 1, updatedAt: -1 });
 conversationSchema.index({ booking: 1 }, { sparse: true });
 conversationSchema.index({ property: 1 });
 
 conversationSchema.methods.getOtherParticipant = function (userId) {
-  return this.participants.find(
-    (p) => p.toString() !== userId.toString()
+  const participant = this.participants.find(
+    (p) => p.user.toString() !== userId.toString()
   );
+  return participant ? { user: participant.user, userType: participant.userType } : null;
 };
 
+/**
+ * Find or create a 2-person conversation.
+ * @param participants Array of { user: ObjectId, userType: 'Guest'|'Host'|'Admin' }
+ */
 conversationSchema.statics.findOrCreate = async function ({
   participants,
   booking,
   property,
 }) {
-  const sorted = participants.map((p) => p.toString()).sort();
+  const userIds = participants.map((p) => p.user.toString()).sort();
 
   let query = {
-    participants: { $all: sorted, $size: 2 },
+    'participants.user': { $all: userIds },
+    participants: { $size: 2 },
   };
 
   if (booking) {
@@ -78,11 +103,11 @@ conversationSchema.statics.findOrCreate = async function ({
 
   if (!conversation) {
     const unreadCount = {};
-    sorted.forEach((p) => {
-      unreadCount[p] = 0;
+    userIds.forEach((id) => {
+      unreadCount[id] = 0;
     });
     conversation = await this.create({
-      participants: sorted,
+      participants,
       booking: booking || null,
       property: property || null,
       unreadCount,

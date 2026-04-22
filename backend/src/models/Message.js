@@ -9,7 +9,12 @@ const messageSchema = new mongoose.Schema(
     },
     sender: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'senderType',
+      required: true,
+    },
+    senderType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
       required: true,
     },
     content: {
@@ -25,7 +30,8 @@ const messageSchema = new mongoose.Schema(
     },
     readBy: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        user: { type: mongoose.Schema.Types.ObjectId, refPath: 'readBy.userType' },
+        userType: { type: String, enum: ['Guest', 'Host', 'Admin'] },
         readAt: { type: Date, default: Date.now },
       },
     ],
@@ -48,7 +54,7 @@ messageSchema.index({ sender: 1 });
 
 messageSchema.pre('save', function (next) {
   if (this.isNew) {
-    this.readBy = [{ user: this.sender, readAt: new Date() }];
+    this.readBy = [{ user: this.sender, userType: this.senderType, readAt: new Date() }];
   }
   next();
 });
@@ -60,15 +66,16 @@ messageSchema.post('save', async function () {
     conversation.lastMessage = {
       content: this.content.substring(0, 100),
       sender: this.sender,
+      senderType: this.senderType,
       timestamp: this.createdAt,
     };
 
-    const participants = conversation.participants.map((p) => p.toString());
     const senderId = this.sender.toString();
-    participants.forEach((p) => {
-      if (p !== senderId) {
-        const current = conversation.unreadCount.get(p) || 0;
-        conversation.unreadCount.set(p, current + 1);
+    conversation.participants.forEach((p) => {
+      const pid = (p.user || p).toString();
+      if (pid !== senderId) {
+        const current = conversation.unreadCount.get(pid) || 0;
+        conversation.unreadCount.set(pid, current + 1);
       }
     });
 

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLanguage } from '@/context/LanguageContext';
-import { hostApi } from '@/lib/api';
+import { hostApi, uploadApi } from '@/lib/api';
 import { usePageTitle } from '@/lib/usePageTitle';
 import {
   Loader2, ChevronDown, ChevronUp, ShieldCheck, Plus,
   Building2, X, AlertTriangle, FileCheck, Trash2, Pencil,
+  Upload, FileText, CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -14,8 +15,11 @@ import toast from 'react-hot-toast';
 // ── Types ─────────────────────────────────────────────────────────────
 
 interface LicenseData {
+  workType?: 'individual' | 'company';
   licenseNumber: string;
-  licenseType?: string;
+  nationalId?: string;
+  commercialRegister?: string;
+  documentUrl?: string;
   issueDate?: string;
   expiryDate?: string;
   status: 'pending' | 'active' | 'expired' | 'rejected';
@@ -45,12 +49,9 @@ const t: Record<string, Record<string, string>> = {
   helpTitle: { en: 'Need help?', ar: 'تريد مساعدة؟' },
   helpDesc: { en: 'Learn how to issue your tourism permit from the Ministry of Tourism', ar: 'كيفية إصدار التصريح' },
   addPermit: { en: 'Add Permit', ar: 'اضف تصريح' },
+  addLicense: { en: 'Add License', ar: 'اضف الرخصة' },
   editPermit: { en: 'Edit', ar: 'تعديل' },
   deletePermit: { en: 'Remove', ar: 'حذف' },
-  licenseNumber: { en: 'License Number', ar: 'رقم الرخصة' },
-  licenseType: { en: 'License Type', ar: 'نوع الرخصة' },
-  issueDate: { en: 'Issue Date', ar: 'تاريخ الإصدار' },
-  expiryDate: { en: 'Expiry Date', ar: 'تاريخ الانتهاء' },
   save: { en: 'Save', ar: 'حفظ' },
   cancel: { en: 'Cancel', ar: 'إلغاء' },
   units: { en: 'units', ar: 'وحدات' },
@@ -66,14 +67,36 @@ const t: Record<string, Record<string, string>> = {
   deleteConfirm: { en: 'Are you sure you want to remove this license?', ar: 'هل تريد إزالة هذه الرخصة؟' },
   warningTitle: { en: 'Units without permits', ar: 'وحدات بدون تصريح' },
   warningDesc: { en: 'Units without a tourism permit may be hidden from search results', ar: 'الوحدات بدون تصريح سياحي قد تكون مخفية من نتائج البحث' },
-  general: { en: 'General', ar: 'عام' },
-  seasonal: { en: 'Seasonal', ar: 'موسمي' },
-  event: { en: 'Event', ar: 'فعالية' },
   required: { en: 'This field is required', ar: 'هذا الحقل مطلوب' },
   addLicenseTitle: { en: 'Add Tourism License', ar: 'إضافة رخصة سياحة' },
   editLicenseTitle: { en: 'Edit Tourism License', ar: 'تعديل رخصة السياحة' },
   expires: { en: 'Expires', ar: 'ينتهي' },
   licenseNo: { en: 'License #', ar: 'رقم الرخصة' },
+
+  // Work type
+  workType: { en: 'Work Type', ar: 'نوع العمل' },
+  individual: { en: 'Individual', ar: 'فرد' },
+  company: { en: 'Company', ar: 'شركة' },
+
+  // Individual fields
+  motPermitNumber: { en: 'MOT Permit Number', ar: 'رقم تصريح وزارة السياحة' },
+  nationalId: { en: 'National ID Number', ar: 'رقم الهوية الوطنية' },
+  enterMotPermit: { en: 'Enter MOT permit number', ar: 'ادخل رقم تصريح وزارة السياحة' },
+  enterNationalId: { en: 'Enter national ID number', ar: 'ادخل رقم الهوية الوطنية' },
+
+  // Company fields
+  licenseNumber: { en: 'License Number', ar: 'رقم الرخصة' },
+  commercialRegister: { en: 'Commercial Register Number', ar: 'رقم السجل التجاري' },
+  enterLicenseNumber: { en: 'Enter license number', ar: 'ادخل رقم الرخصة' },
+  enterCommRegister: { en: 'Enter commercial register number', ar: 'ادخل رقم السجل التجاري' },
+
+  // Document upload
+  uploadPdf: { en: 'Upload PDF Document', ar: 'رفع ملف PDF' },
+  chooseFile: { en: 'Choose file', ar: 'اختيار ملف' },
+  uploading: { en: 'Uploading...', ar: 'جاري الرفع...' },
+  uploaded: { en: 'File uploaded', ar: 'تم رفع الملف' },
+  pdfOnly: { en: 'PDF format only, max 10MB', ar: 'صيغة PDF فقط، الحد الأقصى 10 ميجابايت' },
+  removeFile: { en: 'Remove file', ar: 'حذف الملف' },
 };
 
 // ── Status Badge ──────────────────────────────────────────────────────
@@ -119,13 +142,18 @@ export default function TourismLicensePage() {
   const [showModal, setShowModal] = useState(false);
   const [editingUnit, setEditingUnit] = useState<LicenseUnit | null>(null);
   const [formData, setFormData] = useState({
+    workType: 'individual' as 'individual' | 'company',
     licenseNumber: '',
-    licenseType: 'general',
-    issueDate: '',
-    expiryDate: '',
+    nationalId: '',
+    commercialRegister: '',
+    documentUrl: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
+
+  // File upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<LicenseUnit | null>(null);
@@ -168,10 +196,11 @@ export default function TourismLicensePage() {
   const openAddModal = (unit: LicenseUnit) => {
     setEditingUnit(unit);
     setFormData({
+      workType: 'individual',
       licenseNumber: '',
-      licenseType: 'general',
-      issueDate: '',
-      expiryDate: '',
+      nationalId: '',
+      commercialRegister: '',
+      documentUrl: '',
     });
     setFormErrors({});
     setShowModal(true);
@@ -180,13 +209,48 @@ export default function TourismLicensePage() {
   const openEditModal = (unit: LicenseUnit) => {
     setEditingUnit(unit);
     setFormData({
+      workType: unit.license?.workType || 'individual',
       licenseNumber: unit.license?.licenseNumber || '',
-      licenseType: unit.license?.licenseType || 'general',
-      issueDate: unit.license?.issueDate ? new Date(unit.license.issueDate).toISOString().split('T')[0] : '',
-      expiryDate: unit.license?.expiryDate ? new Date(unit.license.expiryDate).toISOString().split('T')[0] : '',
+      nationalId: unit.license?.nationalId || '',
+      commercialRegister: unit.license?.commercialRegister || '',
+      documentUrl: unit.license?.documentUrl || '',
     });
     setFormErrors({});
     setShowModal(true);
+  };
+
+  // ── File upload handler ───────────────────────────────────────────
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error(isAr ? 'يرجى اختيار ملف PDF' : 'Please select a PDF file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(isAr ? 'حجم الملف يتجاوز 10 ميجابايت' : 'File size exceeds 10MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('document', file);
+      const res = await uploadApi.uploadDocument(fd, 'tourism-licenses');
+      const url = res.data?.data?.url;
+      if (url) {
+        setFormData((prev) => ({ ...prev, documentUrl: url }));
+        toast.success(isAr ? 'تم رفع الملف بنجاح' : 'File uploaded successfully');
+      }
+    } catch {
+      toast.error(isAr ? 'فشل في رفع الملف' : 'Failed to upload file');
+    } finally {
+      setUploading(false);
+      // Reset the input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   // ── Save license ──────────────────────────────────────────────────
@@ -194,7 +258,8 @@ export default function TourismLicensePage() {
   const handleSave = async () => {
     const errors: Record<string, boolean> = {};
     if (!formData.licenseNumber.trim()) errors.licenseNumber = true;
-    if (!formData.expiryDate) errors.expiryDate = true;
+    if (formData.workType === 'individual' && !formData.nationalId.trim()) errors.nationalId = true;
+    if (formData.workType === 'company' && !formData.commercialRegister.trim()) errors.commercialRegister = true;
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -205,10 +270,11 @@ export default function TourismLicensePage() {
 
     try {
       await hostApi.upsertLicense(editingUnit.unitId, {
+        workType: formData.workType,
         licenseNumber: formData.licenseNumber.trim(),
-        licenseType: formData.licenseType,
-        issueDate: formData.issueDate || new Date().toISOString().split('T')[0],
-        expiryDate: formData.expiryDate,
+        nationalId: formData.workType === 'individual' ? formData.nationalId.trim() : undefined,
+        commercialRegister: formData.workType === 'company' ? formData.commercialRegister.trim() : undefined,
+        documentUrl: formData.documentUrl || undefined,
       });
       toast.success(t.saveSuccess[lang]);
       setShowModal(false);
@@ -232,15 +298,6 @@ export default function TourismLicensePage() {
     } catch {
       toast.error(isAr ? 'فشل في حذف الرخصة' : 'Failed to remove license');
     }
-  };
-
-  // ── Format date ───────────────────────────────────────────────────
-
-  const formatDate = (d?: string) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-    });
   };
 
   // ── Render ────────────────────────────────────────────────────────
@@ -347,8 +404,8 @@ export default function TourismLicensePage() {
                         {unit.license && (
                           <p className="text-xs text-gray-400 mt-0.5 truncate">
                             {t.licenseNo[lang]}: {unit.license.licenseNumber}
-                            {unit.license.expiryDate && (
-                              <> · {t.expires[lang]}: {formatDate(unit.license.expiryDate)}</>
+                            {unit.license.workType && (
+                              <> · {unit.license.workType === 'individual' ? t.individual[lang] : t.company[lang]}</>
                             )}
                           </p>
                         )}
@@ -397,7 +454,7 @@ export default function TourismLicensePage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/40" onClick={() => setShowModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 z-10">
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 z-10 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -420,69 +477,190 @@ export default function TourismLicensePage() {
 
             {/* Form */}
             <div className="space-y-4">
-              {/* License Number */}
+              {/* Work Type Toggle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t.licenseNumber[lang]} *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t.workType[lang]}</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, workType: 'individual' })}
+                    className={cn(
+                      'px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all',
+                      formData.workType === 'individual'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    )}
+                  >
+                    {t.individual[lang]}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, workType: 'company' })}
+                    className={cn(
+                      'px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition-all',
+                      formData.workType === 'company'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    )}
+                  >
+                    {t.company[lang]}
+                  </button>
+                </div>
+              </div>
+
+              {/* === Individual Fields === */}
+              {formData.workType === 'individual' && (
+                <>
+                  {/* MOT Permit Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t.motPermitNumber[lang]} *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.licenseNumber}
+                      onChange={(e) => {
+                        setFormData({ ...formData, licenseNumber: e.target.value });
+                        setFormErrors({ ...formErrors, licenseNumber: false });
+                      }}
+                      className={cn(
+                        'w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                        formErrors.licenseNumber ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      )}
+                      placeholder={t.enterMotPermit[lang]}
+                    />
+                    {formErrors.licenseNumber && (
+                      <p className="text-xs text-red-500 mt-1">{t.required[lang]}</p>
+                    )}
+                  </div>
+
+                  {/* National ID */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t.nationalId[lang]} *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.nationalId}
+                      onChange={(e) => {
+                        setFormData({ ...formData, nationalId: e.target.value });
+                        setFormErrors({ ...formErrors, nationalId: false });
+                      }}
+                      className={cn(
+                        'w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                        formErrors.nationalId ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      )}
+                      placeholder={t.enterNationalId[lang]}
+                    />
+                    {formErrors.nationalId && (
+                      <p className="text-xs text-red-500 mt-1">{t.required[lang]}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* === Company Fields === */}
+              {formData.workType === 'company' && (
+                <>
+                  {/* License Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t.licenseNumber[lang]} *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.licenseNumber}
+                      onChange={(e) => {
+                        setFormData({ ...formData, licenseNumber: e.target.value });
+                        setFormErrors({ ...formErrors, licenseNumber: false });
+                      }}
+                      className={cn(
+                        'w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                        formErrors.licenseNumber ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      )}
+                      placeholder={t.enterLicenseNumber[lang]}
+                    />
+                    {formErrors.licenseNumber && (
+                      <p className="text-xs text-red-500 mt-1">{t.required[lang]}</p>
+                    )}
+                  </div>
+
+                  {/* Commercial Register Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t.commercialRegister[lang]} *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.commercialRegister}
+                      onChange={(e) => {
+                        setFormData({ ...formData, commercialRegister: e.target.value });
+                        setFormErrors({ ...formErrors, commercialRegister: false });
+                      }}
+                      className={cn(
+                        'w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                        formErrors.commercialRegister ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      )}
+                      placeholder={t.enterCommRegister[lang]}
+                    />
+                    {formErrors.commercialRegister && (
+                      <p className="text-xs text-red-500 mt-1">{t.required[lang]}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* PDF Document Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.uploadPdf[lang]}</label>
                 <input
-                  type="text"
-                  value={formData.licenseNumber}
-                  onChange={(e) => {
-                    setFormData({ ...formData, licenseNumber: e.target.value });
-                    setFormErrors({ ...formErrors, licenseNumber: false });
-                  }}
-                  className={cn(
-                    'w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                    formErrors.licenseNumber ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                  )}
-                  placeholder={isAr ? 'ادخل رقم الرخصة' : 'Enter license number'}
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
-                {formErrors.licenseNumber && (
-                  <p className="text-xs text-red-500 mt-1">{t.required[lang]}</p>
+
+                {formData.documentUrl ? (
+                  /* File uploaded state */
+                  <div className="flex items-center gap-3 border border-emerald-200 bg-emerald-50 rounded-xl px-4 py-3">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-emerald-800">{t.uploaded[lang]}</p>
+                      <p className="text-xs text-emerald-600 truncate">{t.pdfOnly[lang]}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, documentUrl: '' })}
+                      className="p-1 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors"
+                      title={t.removeFile[lang]}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  /* Upload button */
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl px-4 py-4 text-sm text-gray-500 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50/50 transition-all disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        {t.uploading[lang]}
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        <span>{t.chooseFile[lang]}</span>
+                      </>
+                    )}
+                  </button>
                 )}
-              </div>
-
-              {/* License Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t.licenseType[lang]}</label>
-                <select
-                  value={formData.licenseType}
-                  onChange={(e) => setFormData({ ...formData, licenseType: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="general">{t.general[lang]}</option>
-                  <option value="seasonal">{t.seasonal[lang]}</option>
-                  <option value="event">{t.event[lang]}</option>
-                </select>
-              </div>
-
-              {/* Issue Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t.issueDate[lang]}</label>
-                <input
-                  type="date"
-                  value={formData.issueDate}
-                  onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-
-              {/* Expiry Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t.expiryDate[lang]} *</label>
-                <input
-                  type="date"
-                  value={formData.expiryDate}
-                  onChange={(e) => {
-                    setFormData({ ...formData, expiryDate: e.target.value });
-                    setFormErrors({ ...formErrors, expiryDate: false });
-                  }}
-                  className={cn(
-                    'w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-                    formErrors.expiryDate ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                  )}
-                />
-                {formErrors.expiryDate && (
-                  <p className="text-xs text-red-500 mt-1">{t.required[lang]}</p>
+                {!formData.documentUrl && !uploading && (
+                  <p className="text-xs text-gray-400 mt-1.5">{t.pdfOnly[lang]}</p>
                 )}
               </div>
             </div>
@@ -491,7 +669,7 @@ export default function TourismLicensePage() {
             <div className="flex items-center gap-3 mt-6">
               <button
                 onClick={handleSave}
-                disabled={submitting}
+                disabled={submitting || uploading}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

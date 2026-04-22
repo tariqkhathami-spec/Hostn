@@ -6,20 +6,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * PR L: all price formatters display 2 decimal places consistently across
+ * the app (e.g. "150.00", "14.85", "172.33"). Previously we showed integer
+ * values which hid the cumulative rounding error from `Math.round()` calls
+ * in the pricing helpers — see the Excel-vs-UI comparison in the PR.
+ */
 export function formatPrice(price: number, currency = 'SAR') {
   return new Intl.NumberFormat('en-SA', {
     style: 'currency',
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price);
 }
 
 /** Returns just the formatted number (no currency symbol) — use with SarSymbol component */
 export function formatPriceNumber(price: number) {
   return new Intl.NumberFormat('en-SA', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price);
 }
 
@@ -238,8 +244,8 @@ export function getAmenityIcon(amenity: string) {
     garden: '🌿',
     balcony: '🏙️',
     sea_view: '🌊',
-    mountain_view: '⟰️',
-    elevator: '🛗',
+    mountain_view: '⛰️',
+    elevator: '🏢',
     security: '🔒',
     pet_friendly: '🐾',
     smoking_allowed: '🚬',
@@ -279,7 +285,7 @@ export function getAmenityIcon(amenity: string) {
     projector: '📽️',
     shared_pool: '🏊',
     lit_pool: '🏊',
-    slide: '🛝',
+    slide: '🎢',
     two_sections: '🏠',
     two_separate_sections: '🏘️',
     two_sections_connected: '🏠',
@@ -300,7 +306,7 @@ export function getAmenityIcon(amenity: string) {
     table_tennis: '🏓',
     playstation: '🎮',
     sand_games: '🏖️',
-    kids_playground: '🛝',
+    kids_playground: '🎠',
     billiards: '🎱',
     trampoline: '🤸',
     massage_chairs: '💆',

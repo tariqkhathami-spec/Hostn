@@ -105,6 +105,8 @@ export const propertiesApi = {
   getOne: (id: string) => api.get(`/properties/${id}`),
   create: (data: Record<string, unknown>) => api.post('/properties', data),
   update: (id: string, data: Record<string, unknown>) => api.put(`/properties/${id}`, data),
+  /** Soft-delete a property (host owner / admin) */
+  remove: (id: string) => api.delete(`/properties/${id}`),
   getMyProperties: () => api.get('/properties/my-properties'),
   getCities: () => api.get('/properties/cities'),
   getSuggestions: (q: string) => api.get('/properties/suggestions', { params: { q } }),
@@ -193,11 +195,21 @@ export const hostApi = {
   getPropertiesWithUnits: () => api.get('/host/properties-units'),
   getUnitPoints: (unitId: string) => api.get(`/host/units/${unitId}/points`),
 
+  // Host Loyalty
+  getLoyaltyStatus: (params?: { quarter?: string }) =>
+    api.get('/host/loyalty', { params }),
+  getLoyaltySummary: () => api.get('/host/loyalty/summary'),
+
   // Tourism License
   getLicenseOverview: () => api.get('/host/tourism-license'),
   upsertLicense: (unitId: string, data: {
-    licenseNumber: string; licenseType?: string;
-    issueDate: string; expiryDate: string;
+    workType: 'individual' | 'company';
+    licenseNumber: string;
+    nationalId?: string;
+    commercialRegister?: string;
+    documentUrl?: string;
+    issueDate?: string;
+    expiryDate?: string;
   }) => api.put(`/host/units/${unitId}/tourism-license`, data),
   deleteLicense: (unitId: string) => api.delete(`/host/units/${unitId}/tourism-license`),
 };
@@ -220,7 +232,7 @@ export const hostFinanceApi = {
   upsertBankAccount: (data: { bankName: string; bankNameAr?: string; iban: string; accountHolder: string }) =>
     api.put('/host/finance/bank-account', data),
   deleteBankAccount: () => api.delete('/host/finance/bank-account'),
-  updateTransferDuration: (data: { type: string; hours: number }) =>
+  updateTransferDuration: (data: { type: string; hours?: number; thresholdAmount?: number; weeklyDay?: number }) =>
     api.put('/host/finance/transfer-duration', data),
 };
 
@@ -240,12 +252,20 @@ export const reviewsApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAYMENTS
 // ═══════════════════════════════════════════════════════════════════════════════
+export type SimulatedOutcome = 'approved' | 'declined' | 'insufficient_funds' | 'fraud' | 'cancelled' | 'timeout';
+
 export const paymentsApi = {
   initiate: (data: { bookingId: string }) => api.post('/payments/initiate', data),
   verify: (data: { paymentId: string; moyasarPaymentId: string }) =>
     api.post('/payments/verify', data),
   getOne: (id: string) => api.get(`/payments/${id}`),
   getMyPayments: () => api.get('/payments/my-payments'),
+  /** PR K: payment simulator (demo mode). Fire-and-succeed when the backend
+   *  has `PAYMENT_SIMULATOR_ENABLED=true` — otherwise the endpoint returns 404. */
+  simulate: (data: { paymentId: string; outcome: SimulatedOutcome }) =>
+    api.post('/payments/simulate', data),
+  /** PR K: simulator-aware status fetch (skips the Moyasar round-trip). */
+  getStatus: (paymentId: string) => api.get(`/payments/${paymentId}/status`),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -367,6 +387,10 @@ export const uploadApi = {
     }),
   multiple: (formData: FormData) =>
     api.post('/upload/multiple', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  uploadDocument: (formData: FormData, folder?: string) =>
+    api.post(`/upload/document${folder ? `?folder=${folder}` : ''}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 };

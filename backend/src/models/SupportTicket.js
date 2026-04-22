@@ -4,9 +4,15 @@ const ticketMessageSchema = new mongoose.Schema(
   {
     sender: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'messages.senderType',
       required: true,
     },
+    senderType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
+      required: true,
+    },
+    // Legacy: 'user' for guest/host sender, 'admin' for admin (kept for backward compat)
     senderRole: {
       type: String,
       enum: ['user', 'admin'],
@@ -28,7 +34,12 @@ const supportTicketSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'userType',
+      required: true,
+    },
+    userType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
       required: true,
     },
     subject: {
@@ -55,7 +66,7 @@ const supportTicketSchema = new mongoose.Schema(
     messages: [ticketMessageSchema],
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Admin',
       default: null,
     },
     relatedBooking: {

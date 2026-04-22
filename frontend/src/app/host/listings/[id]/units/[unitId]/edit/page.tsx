@@ -116,7 +116,7 @@ export default function EditUnitPage() {
     try {
       await unitsApi.update(unitId, payload);
       toast.success(t.success[lang]);
-      router.push(`/host/listings/${propertyId}/units`);
+      router.push(`/listings/${propertyId}/units`);
     } catch (err: unknown) {
       const errData = (err as { response?: { data?: { message?: string } } })?.response?.data;
       toast.error(errData?.message || t.error[lang]);
@@ -135,7 +135,7 @@ export default function EditUnitPage() {
   return (
     <div className="max-w-5xl mx-auto">
       <Link
-        href={`/host/listings/${propertyId}/units`}
+        href={`/listings/${propertyId}/units`}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4"
       >
         <ArrowLeft className="w-4 h-4 rtl:rotate-180" />

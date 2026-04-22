@@ -176,7 +176,7 @@ export default function StatementsPage() {
                       {monthNames[lang]?.[s.period.month - 1]} {s.period.year}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      <span dir="ltr"><SarSymbol /> {s.closingBalance.toLocaleString('en')}</span>
+                      <span dir="ltr"><SarSymbol /> {s.closingBalance.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </p>
                   </button>
                 ))}
@@ -206,27 +206,27 @@ export default function StatementsPage() {
                     <div>
                       <p className="text-xs text-gray-400">{t.openingBalance[lang]}</p>
                       <p className="text-sm font-semibold text-gray-900">
-                        <span dir="ltr"><SarSymbol /> {detail.openingBalance.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {detail.openingBalance.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">{t.closingBalance[lang]}</p>
                       <p className="text-sm font-semibold text-gray-900">
-                        <span dir="ltr"><SarSymbol /> {detail.closingBalance.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {detail.closingBalance.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">{t.totalCredits[lang]}</p>
                       <p className="text-sm font-semibold text-emerald-600 flex items-center gap-1">
                         <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span dir="ltr"><SarSymbol /> {detail.totalCredits.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {detail.totalCredits.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400">{t.totalDebits[lang]}</p>
                       <p className="text-sm font-semibold text-red-600 flex items-center gap-1">
                         <ArrowDownRight className="w-3.5 h-3.5" />
-                        <span dir="ltr"><SarSymbol /> {detail.totalDebits.toLocaleString('en')}</span>
+                        <span dir="ltr"><SarSymbol /> {detail.totalDebits.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </p>
                     </div>
                   </div>
@@ -264,19 +264,19 @@ export default function StatementsPage() {
                               <td className="px-4 py-3 text-end whitespace-nowrap">
                                 {entry.credit > 0 ? (
                                   <span className="text-emerald-600 font-medium" dir="ltr">
-                                    +<SarSymbol /> {entry.credit.toLocaleString('en')}
+                                    +<SarSymbol /> {entry.credit.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 ) : '-'}
                               </td>
                               <td className="px-4 py-3 text-end whitespace-nowrap">
                                 {entry.debit > 0 ? (
                                   <span className="text-red-600 font-medium" dir="ltr">
-                                    -<SarSymbol /> {entry.debit.toLocaleString('en')}
+                                    -<SarSymbol /> {entry.debit.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 ) : '-'}
                               </td>
                               <td className="px-4 py-3 text-end whitespace-nowrap font-semibold text-gray-900" dir="ltr">
-                                <SarSymbol /> {entry.balance.toLocaleString('en')}
+                                <SarSymbol /> {entry.balance.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                             </tr>
                           ))}

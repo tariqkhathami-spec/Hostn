@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const { uploadSingle, uploadMultiple } = require('../middleware/upload');
+const { uploadSingle, uploadMultiple, uploadDocument } = require('../middleware/upload');
 
 // Use S3 if AWS credentials are configured, otherwise fall back to Cloudinary
 const useS3 = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_S3_BUCKET);
@@ -96,6 +96,34 @@ router.post('/multiple', uploadMultiple, async (req, res) => {
   } catch (error) {
     console.error('[Upload] Multiple upload failed:', error.message);
     res.status(500).json({ success: false, message: 'Image upload failed. Please try again.' });
+  }
+});
+
+// @desc    Upload a single document (PDF)
+// @route   POST /api/v1/upload/document
+// @access  Private
+router.post('/document', uploadDocument, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const folder = req.query.folder || 'documents';
+    const result = await uploadImage(req.file.buffer, { folder });
+
+    res.json({
+      success: true,
+      data: {
+        url: result.url,
+        key: result.key || result.publicId || null,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        originalName: req.file.originalname,
+      },
+    });
+  } catch (error) {
+    console.error('[Upload] Document upload failed:', error.message);
+    res.status(500).json({ success: false, message: 'Document upload failed. Please try again.' });
   }
 });
 

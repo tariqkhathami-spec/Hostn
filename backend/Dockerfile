@@ -20,6 +20,9 @@ COPY package.json railway.toml ./
 # Copy source code (changes most often — last layer for cache efficiency)
 COPY src ./src
 
+# Copy one-off scripts (migrations, seeds) — needed for Railway pre-deploy commands
+COPY scripts ./scripts
+
 # Create uploads directory with correct ownership
 # NOTE: uploads/ is ephemeral in containers — use cloud storage in production
 RUN mkdir -p uploads && chown -R hostn:hostn /app

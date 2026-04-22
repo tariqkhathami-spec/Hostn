@@ -4,9 +4,14 @@ const notificationSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'userType',
       required: true,
       index: true,
+    },
+    userType: {
+      type: String,
+      enum: ['Guest', 'Host', 'Admin'],
+      required: true,
     },
     type: {
       type: String,
@@ -70,12 +75,13 @@ notificationSchema.index({ createdAt: -1 });
 // Static method to create and optionally send push
 notificationSchema.statics.createNotification = async function ({
   user,
+  userType,
   type,
   title,
   message,
   data = {},
 }) {
-  const notification = await this.create({ user, type, title, message, data });
+  const notification = await this.create({ user, userType, type, title, message, data });
   // TODO: Send APNs push notification here when device tokens are available
   return notification;
 };

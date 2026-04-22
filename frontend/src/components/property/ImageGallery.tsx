@@ -35,28 +35,31 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
     <>
       {/* Grid layout */}
       <div className="relative rounded-2xl overflow-hidden">
+        {/* PR G: removed `unoptimized` so Next.js serves AVIF/WebP with a
+            proper srcset. Each image gets a `sizes` hint matching its
+            container so the CDN picks an appropriately-sized variant. */}
         {primaryImages.length === 1 ? (
           <div className="aspect-[16/9] relative cursor-pointer" onClick={() => openAtIndex(0)}>
             <Image
               src={primaryImages[0].url}
               alt={title}
               fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 66vw, 960px"
               className="object-cover"
               priority
-              unoptimized
             />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 h-80 md:h-96">
+          <div className="grid grid-cols-2 gap-2 h-80 md:h-[28rem] lg:h-[32rem]">
             {/* Main image — always left half */}
             <div className="relative cursor-pointer" onClick={() => openAtIndex(0)}>
               <Image
                 src={primaryImages[0]?.url || ''}
                 alt={title}
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover hover:brightness-90 transition-all"
                 priority
-                unoptimized
               />
             </div>
             {/* Side images — right half, nested grid */}
@@ -66,8 +69,8 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
                   src={primaryImages[1].url}
                   alt={`${title} 2`}
                   fill
+                  sizes="(max-width: 768px) 50vw, 50vw"
                   className="object-cover hover:brightness-90 transition-all"
-                  unoptimized
                 />
               </div>
             ) : (
@@ -78,8 +81,8 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
                       src={img.url}
                       alt={`${title} ${i + 2}`}
                       fill
+                      sizes="(max-width: 768px) 25vw, 25vw"
                       className="object-cover hover:brightness-90 transition-all"
-                      unoptimized
                     />
                   </div>
                 ))}
@@ -116,7 +119,7 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
           <button
             onClick={() => setLightboxOpen(false)}
-            className="absolute top-4 right-4 text-white bg-white/10 rounded-full p-2 hover:bg-white/20 transition-colors z-10"
+            className="absolute top-4 ltr:right-4 rtl:left-4 text-white bg-white/10 rounded-full p-2 hover:bg-white/20 transition-colors z-10"
           >
             <X className="w-6 h-6" />
           </button>
@@ -133,8 +136,9 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
               src={sorted[currentIndex]?.url || ''}
               alt={`${title} ${currentIndex + 1}`}
               fill
+              sizes="(max-width: 1024px) 100vw, 1024px"
               className="object-contain"
-              unoptimized
+              priority
             />
           </div>
 
@@ -161,7 +165,7 @@ export default function ImageGallery({ images, title, videoCount = 0, onVideoCli
                   i === currentIndex ? 'border-primary-400' : 'border-transparent opacity-60 hover:opacity-100'
                 }`}
               >
-                <Image src={img.url} alt="" fill className="object-cover" unoptimized />
+                <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
               </button>
             ))}
           </div>

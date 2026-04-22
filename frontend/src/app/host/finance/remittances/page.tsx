@@ -244,7 +244,7 @@ export default function RemittancesPage() {
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                   <p className="text-xs text-gray-400">{t.amount[lang]}</p>
                   <p className="text-lg font-bold text-gray-900">
-                    <span dir="ltr"><SarSymbol /> {p.amount.toLocaleString('en')}</span>
+                    <span dir="ltr"><SarSymbol /> {p.amount.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </p>
                 </div>
               </div>

@@ -50,7 +50,7 @@ exports.getProperties = async (req, res, next) => {
       maxArea,
     } = req.query;
 
-    const query = { isActive: true };
+    const query = { isActive: true, isDeleted: { $ne: true } };
 
     if (city) query['location.city'] = { $regex: escapeRegex(String(city)), $options: 'i' };
     if (type) {
@@ -185,8 +185,11 @@ exports.getProperties = async (req, res, next) => {
       }
     }
 
-    // Only show properties that have at least one active unit
-    const propertiesWithActiveUnits = await Unit.distinct('property', { isActive: true });
+    // Only show properties that have at least one active (non-deleted) unit
+    const propertiesWithActiveUnits = await Unit.distinct('property', {
+      isActive: true,
+      isDeleted: { $ne: true },
+    });
     query._id = { ...(query._id || {}), $in: propertiesWithActiveUnits };
 
     const MAX_LIMIT = 50;
@@ -245,16 +248,19 @@ exports.getProperties = async (req, res, next) => {
 // @access  Public
 exports.getHomeFeed = async (req, res, next) => {
   try {
-    // Only show properties that have at least one active unit
-    const withUnits = await Unit.distinct('property', { isActive: true });
-    const baseFilter = { isActive: true, _id: { $in: withUnits } };
+    // Only show properties that have at least one active (non-deleted) unit
+    const withUnits = await Unit.distinct('property', {
+      isActive: true,
+      isDeleted: { $ne: true },
+    });
+    const baseFilter = { isActive: true, isDeleted: { $ne: true }, _id: { $in: withUnits } };
 
     const [featured, cities, luxury, families, business, topRated] = await Promise.all([
       Property.find({ ...baseFilter, isFeatured: true })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
         .limit(6),
-      Property.distinct('location.city', { isActive: true, _id: { $in: withUnits } }),
+      Property.distinct('location.city', { isActive: true, isDeleted: { $ne: true }, _id: { $in: withUnits } }),
       Property.find({ ...baseFilter, tags: { $in: ['luxury'] } })
         .populate('host', 'name avatar')
         .sort('-ratings.average')
@@ -317,6 +323,11 @@ exports.getProperty = async (req, res, next) => {
 
     const isHost = req.user && property.host._id.toString() === req.user._id.toString();
     const isAdmin = req.user && req.user.role === 'admin';
+
+    // Soft-deleted properties are only visible to admins
+    if (property.isDeleted && !isAdmin) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
 
     // Inactive properties are only visible to their owner or admins
     if (!property.isActive && !isHost && !isAdmin) {
@@ -418,12 +429,13 @@ exports.updateProperty = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Property not found' });
     }
 
-    if (property.host.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    const userType = req.user.userType || req.user.role;
+    if (property.host.toString() !== req.user._id.toString() && userType !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     const sanitizedBody = {};
-    const allowedFields = req.user.role === 'admin'
+    const allowedFields = userType === 'admin'
       ? [...ALLOWED_UPDATE_FIELDS, 'isActive', 'isFeatured', 'tags']
       : ALLOWED_UPDATE_FIELDS;
 
@@ -454,9 +466,16 @@ exports.updateProperty = async (req, res, next) => {
   }
 };
 
-// @desc    Delete property
+// @desc    Delete property (soft-delete)
 // @route   DELETE /api/properties/:id
 // @access  Private (Host owner only)
+//
+// Soft-delete semantics:
+// - `isDeleted` is set to true and `deletedAt` stamped
+// - `isActive` is also set to false so existing `isActive: true` filters still work
+// - The record is preserved for audit history + booking/invoice references
+// - Also soft-deletes all units under the property so the host's entire listing
+//   disappears from their dashboard in one action
 exports.deleteProperty = async (req, res, next) => {
   try {
     const property = await Property.findById(req.params.id);
@@ -470,7 +489,16 @@ exports.deleteProperty = async (req, res, next) => {
     }
 
     property.isActive = false;
+    property.isDeleted = true;
+    property.deletedAt = new Date();
     await property.save();
+
+    // Cascade soft-delete to all units under this property so they
+    // also disappear from the dashboard + any unit-level filters.
+    await Unit.updateMany(
+      { property: property._id, isDeleted: { $ne: true } },
+      { $set: { isActive: false, isDeleted: true, deletedAt: new Date() } }
+    );
 
     // Invalidate caches
     cacheDel('cities').catch(() => {});
@@ -487,22 +515,26 @@ exports.deleteProperty = async (req, res, next) => {
 // @access  Private
 exports.getMyProperties = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id }).sort('-createdAt');
+    // Hide soft-deleted properties from the host's dashboard.
+    const properties = await Property.find({
+      host: req.user._id,
+      isDeleted: { $ne: true },
+    }).sort('-createdAt');
 
-    // Attach unit counts per property
+    // Attach unit counts per property (also excluding soft-deleted units)
     const propertyIds = properties.map(p => p._id);
     const [totalCounts, activeCounts, unitImages] = await Promise.all([
       Unit.aggregate([
-        { $match: { property: { $in: propertyIds } } },
+        { $match: { property: { $in: propertyIds }, isDeleted: { $ne: true } } },
         { $group: { _id: '$property', count: { $sum: 1 } } },
       ]),
       Unit.aggregate([
-        { $match: { property: { $in: propertyIds }, isActive: true } },
+        { $match: { property: { $in: propertyIds }, isActive: true, isDeleted: { $ne: true } } },
         { $group: { _id: '$property', count: { $sum: 1 } } },
       ]),
       // Grab first image from the first unit that has images (for property thumbnail)
       Unit.aggregate([
-        { $match: { property: { $in: propertyIds }, 'images.0': { $exists: true } } },
+        { $match: { property: { $in: propertyIds }, isDeleted: { $ne: true }, 'images.0': { $exists: true } } },
         { $sort: { isActive: -1, createdAt: 1 } },
         { $group: { _id: '$property', image: { $first: { $arrayElemAt: ['$images', 0] } } } },
       ]),
@@ -584,7 +616,7 @@ exports.getCities = async (req, res, next) => {
     const cached = await cacheGet('cities');
     if (cached) return res.json({ success: true, data: cached });
 
-    const cities = await Property.distinct('location.city', { isActive: true });
+    const cities = await Property.distinct('location.city', { isActive: true, isDeleted: { $ne: true } });
     await cacheSet('cities', cities, 600); // 10 min TTL
     res.json({ success: true, data: cities });
   } catch (error) {
@@ -605,10 +637,10 @@ exports.getSuggestions = async (req, res, next) => {
     const regex = new RegExp(escapeRegex(String(q)), 'i');
 
     const [properties, cities] = await Promise.all([
-      Property.find({ isActive: true, $or: [{ title: regex }, { titleAr: regex }] })
+      Property.find({ isActive: true, isDeleted: { $ne: true }, $or: [{ title: regex }, { titleAr: regex }] })
         .select('title titleAr location.city type pricing.perNight images')
         .limit(5),
-      Property.distinct('location.city', { isActive: true, 'location.city': regex }),
+      Property.distinct('location.city', { isActive: true, isDeleted: { $ne: true }, 'location.city': regex }),
     ]);
 
     res.json({ success: true, data: { properties, cities: cities.slice(0, 5) } });
@@ -633,6 +665,7 @@ exports.getNearby = async (req, res, next) => {
 
     const properties = await Property.find({
       isActive: true,
+      isDeleted: { $ne: true },
       'location.geoJSON.coordinates': { $exists: true, $ne: [] },
       'location.geoJSON': {
         $nearSphere: {
@@ -695,11 +728,11 @@ exports.getPublicStats = async (req, res, next) => {
 
     const Booking = require('../models/Booking');
     const Review = require('../models/Review');
-    const User = require('../models/User');
+    const Host = require('../models/Host');
 
     const [propertyCount, hostCount, bookingCount, reviewCount] = await Promise.all([
-      Property.countDocuments({ isActive: true }),
-      User.countDocuments({ role: 'host' }),
+      Property.countDocuments({ isActive: true, isDeleted: { $ne: true } }),
+      Host.countDocuments(),
       Booking.countDocuments({ status: 'completed' }),
       Review.countDocuments(),
     ]);

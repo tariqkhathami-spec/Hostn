@@ -184,7 +184,7 @@ export default function UnitsList({ propertyId }: { propertyId: string }) {
                       {price > 0 && (
                         <div className="text-end flex-shrink-0">
                           <p className="text-lg font-bold text-primary-600">
-                            <span dir="ltr"><SarSymbol /> {price.toLocaleString('en')}</span>
+                            <span dir="ltr"><SarSymbol /> {price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </p>
                           <p className="text-xs text-gray-400">{t.avgPrice[lang]}</p>
                         </div>
@@ -346,14 +346,14 @@ export default function UnitsList({ propertyId }: { propertyId: string }) {
                           <div key={key} className="text-center bg-white border border-gray-100 rounded-lg px-1 py-2">
                             <p className="text-[10px] text-gray-400 mb-0.5">{l[lang as 'en' | 'ar']}</p>
                             <p className="text-xs font-semibold text-gray-700" dir="ltr">
-                              {(unit.pricing![key] || 0) > 0 ? unit.pricing![key].toLocaleString('en') : '—'}
+                              {(unit.pricing![key] || 0) > 0 ? unit.pricing![key].toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                             </p>
                           </div>
                         ))}
                       </div>
                       {(unit.pricing.cleaningFee ?? 0) > 0 && (
                         <p className="text-xs text-gray-500 mt-2">
-                          {isAr ? 'رسوم التنظيف' : 'Cleaning fee'}: <span dir="ltr"><SarSymbol /> {unit.pricing.cleaningFee.toLocaleString('en')}</span>
+                          {isAr ? 'رسوم التنظيف' : 'Cleaning fee'}: <span dir="ltr"><SarSymbol /> {unit.pricing.cleaningFee.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </p>
                       )}
                     </div>

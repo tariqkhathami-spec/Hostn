@@ -1,8 +1,29 @@
 const Report = require('../models/Report');
-const User = require('../models/User');
+const Guest = require('../models/Guest');
+const Host = require('../models/Host');
+const Admin = require('../models/Admin');
 const Property = require('../models/Property');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
+
+const TYPE_CAPITALIZED = { guest: 'Guest', host: 'Host', admin: 'Admin' };
+const MODEL_BY_TYPE = { guest: Guest, host: Host, admin: Admin };
+
+/**
+ * Check if a user exists in any of the three collections.
+ * Returns { userType: 'Guest'|'Host'|'Admin' } or null.
+ */
+async function findUserType(userId) {
+  const [g, h, a] = await Promise.all([
+    Guest.exists({ _id: userId }),
+    Host.exists({ _id: userId }),
+    Admin.exists({ _id: userId }),
+  ]);
+  if (g) return 'Guest';
+  if (h) return 'Host';
+  if (a) return 'Admin';
+  return null;
+}
 
 // @desc    Create a report
 // @route   POST /api/reports
@@ -23,7 +44,8 @@ exports.createReport = async (req, res) => {
     if (targetType === 'property') {
       targetExists = await Property.exists({ _id: targetId });
     } else if (targetType === 'user') {
-      targetExists = await User.exists({ _id: targetId });
+      // Search across all 3 user collections
+      targetExists = (await findUserType(targetId)) !== null;
     } else if (targetType === 'review') {
       const Review = require('../models/Review');
       targetExists = await Review.exists({ _id: targetId });
@@ -57,6 +79,7 @@ exports.createReport = async (req, res) => {
 
     const report = await Report.create({
       reporter: req.user._id,
+      reporterType: TYPE_CAPITALIZED[req.user.userType || 'guest'],
       targetType,
       targetId,
       reason,
@@ -158,7 +181,7 @@ exports.getAllReports = async (req, res) => {
 exports.getReport = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id)
-      .populate('reporter', 'name email avatar role')
+      .populate('reporter', 'name email avatar')
       .populate('reviewedBy', 'name avatar')
       .populate('relatedBooking', 'checkIn checkOut status pricing.total');
 
@@ -174,11 +197,15 @@ exports.getReport = async (req, res) => {
         model: 'Property',
       });
     } else if (report.targetType === 'user') {
-      await report.populate({
-        path: 'targetId',
-        select: 'name email avatar role isSuspended',
-        model: 'User',
-      });
+      // Search all 3 collections for the reported user
+      const type = await findUserType(report.targetId);
+      if (type) {
+        await report.populate({
+          path: 'targetId',
+          select: 'name email avatar isSuspended',
+          model: type,
+        });
+      }
     }
 
     res.json({ success: true, data: report });
@@ -208,29 +235,41 @@ exports.takeAction = async (req, res) => {
 
     // Execute the action
     if (actionTaken === 'warning' && report.targetType === 'user') {
-      await Notification.createNotification({
-        user: report.targetId,
-        type: 'system',
-        title: 'Account Warning',
-        message: 'Your account has received a warning due to reported behavior. Please review our community guidelines.',
-      });
+      const type = await findUserType(report.targetId);
+      if (type) {
+        await Notification.createNotification({
+          user: report.targetId,
+          userType: type,
+          type: 'system',
+          title: 'Account Warning',
+          message: 'Your account has received a warning due to reported behavior. Please review our community guidelines.',
+        });
+      }
     }
 
     if (actionTaken === 'suspension' && report.targetType === 'user') {
-      await User.findByIdAndUpdate(report.targetId, { isSuspended: true });
-      await Notification.createNotification({
-        user: report.targetId,
-        type: 'system',
-        title: 'Account Suspended',
-        message: 'Your account has been suspended due to policy violations.',
-      });
-      await ActivityLog.create({
-        actor: req.user._id,
-        action: 'user_suspended',
-        target: { type: 'User', id: report.targetId },
-        details: `Suspended due to report: ${report.reason}`,
-        ip: req.ip,
-      });
+      const type = await findUserType(report.targetId);
+      if (type) {
+        const Model = MODEL_BY_TYPE[type.toLowerCase()];
+        await Model.findByIdAndUpdate(report.targetId, { isSuspended: true });
+        await Notification.createNotification({
+          user: report.targetId,
+          userType: type,
+          type: 'system',
+          title: 'Account Suspended',
+          message: 'Your account has been suspended due to policy violations.',
+        });
+        await ActivityLog.create({
+          actor: req.user._id,
+          actorType: TYPE_CAPITALIZED[req.user.userType || 'admin'],
+          actorRole: req.user.userType || req.user.role,
+          actorAdminRole: req.user.adminRole || null,
+          action: 'user_suspended',
+          target: { type: 'User', id: report.targetId },
+          details: `Suspended due to report: ${report.reason}`,
+          ip: req.ip,
+        });
+      }
     }
 
     if (actionTaken === 'listing_removed' && report.targetType === 'property') {
@@ -239,6 +278,7 @@ exports.takeAction = async (req, res) => {
       if (property) {
         await Notification.createNotification({
           user: property.host,
+          userType: 'Host',
           type: 'listing_rejected',
           title: 'Listing Removed',
           message: `Your listing has been removed due to policy violations.`,
@@ -248,17 +288,24 @@ exports.takeAction = async (req, res) => {
     }
 
     if (actionTaken === 'account_banned' && report.targetType === 'user') {
-      await User.findByIdAndUpdate(report.targetId, {
-        isSuspended: true,
-        isBanned: true,
-      });
-      await ActivityLog.create({
-        actor: req.user._id,
-        action: 'user_suspended',
-        target: { type: 'User', id: report.targetId },
-        details: `Banned due to report: ${report.reason}`,
-        ip: req.ip,
-      });
+      const type = await findUserType(report.targetId);
+      if (type) {
+        const Model = MODEL_BY_TYPE[type.toLowerCase()];
+        await Model.findByIdAndUpdate(report.targetId, {
+          isSuspended: true,
+          isBanned: true,
+        });
+        await ActivityLog.create({
+          actor: req.user._id,
+          actorType: TYPE_CAPITALIZED[req.user.userType || 'admin'],
+          actorRole: req.user.userType || req.user.role,
+          actorAdminRole: req.user.adminRole || null,
+          action: 'user_suspended',
+          target: { type: 'User', id: report.targetId },
+          details: `Banned due to report: ${report.reason}`,
+          ip: req.ip,
+        });
+      }
     }
 
     await report.save();
@@ -266,6 +313,7 @@ exports.takeAction = async (req, res) => {
     // Notify reporter
     await Notification.createNotification({
       user: report.reporter,
+      userType: report.reporterType,
       type: 'system',
       title: 'Report Updated',
       message: `Your report has been reviewed. Status: ${report.status}`,

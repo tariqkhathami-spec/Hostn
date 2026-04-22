@@ -4,7 +4,7 @@ const savedPaymentMethodSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Guest',
       required: true,
     },
     provider: {

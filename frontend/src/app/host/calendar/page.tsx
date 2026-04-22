@@ -402,7 +402,7 @@ export default function HostCalendarPage() {
                   return (
                     <Link
                       key={unit._id}
-                      href={`/host/listings/${property._id}/units/${unit._id}/calendar`}
+                      href={`/listings/${property._id}/units/${unit._id}/calendar`}
                       className="block bg-white rounded-xl border border-gray-200 p-3 hover:border-primary-300 hover:shadow-sm transition-all cursor-pointer"
                     >
                       {/* Unit name */}
@@ -465,7 +465,7 @@ function MiniCalendarGrid({
       </div>
 
       {/* Day cells */}
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-y-1.5">
         {gridDays.map((date, idx) => {
           const key = formatDateKey(date);
           const isCurrentMonth = date.getMonth() === currentMonth;
@@ -495,7 +495,7 @@ function MiniCalendarGrid({
               key={idx}
               className={`
                 flex items-center justify-center
-                w-7 h-7 mx-auto
+                w-8 h-8 mx-auto
                 text-[11px] rounded-md
                 ${bgClass}
                 ${isToday ? 'ring-2 ring-primary-400' : ''}
@@ -561,9 +561,9 @@ function MiniCalendarGridSkeleton() {
       </div>
       {/* 5 rows of day cells */}
       {[1, 2, 3, 4, 5].map((row) => (
-        <div key={row} className="grid grid-cols-7 gap-0.5">
+        <div key={row} className="grid grid-cols-7 gap-y-1.5">
           {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <div key={i} className="h-7 w-7 bg-gray-100 rounded-md mx-auto" />
+            <div key={i} className="h-8 w-8 bg-gray-100 rounded-md mx-auto" />
           ))}
         </div>
       ))}

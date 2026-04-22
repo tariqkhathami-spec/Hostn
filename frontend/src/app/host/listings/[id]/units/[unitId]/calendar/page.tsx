@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
-import { unitsApi, bookingsApi } from '@/lib/api';
+import { unitsApi, bookingsApi, propertiesApi } from '@/lib/api';
 import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Lock,
   Unlock,
   X,
@@ -17,14 +18,23 @@ import {
   UserCheck,
   DollarSign,
   Percent,
-  Tag,
   Trash2,
   Plus,
+  MousePointerSquareDashed,
+  Eraser,
 } from 'lucide-react';
 import SarSymbol from '@/components/ui/SarSymbol';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '@/lib/usePageTitle';
 import type { Unit } from '@/types';
+import {
+  applicableDiscountsForNight,
+  effectiveDiscountPercent,
+  markAppliedDiscounts,
+  DISCOUNT_COLORS,
+  type DiscountType,
+  type PricingUnit,
+} from '@/lib/pricing';
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* Types                                                                      */
@@ -35,6 +45,7 @@ interface DatePricingEntry {
   price?: number;
   isBlocked?: boolean;
   discountPercent?: number;
+  discountStackable?: boolean;
 }
 
 interface DayPriceInfo {
@@ -67,9 +78,11 @@ const t: Record<string, Record<string, string>> = {
   weekendDesc:    { en: 'Thu \u2013 Sat',         ar: 'الخميس \u2013 السبت' },
   dayPrices:      { en: 'Day-of-week prices',     ar: 'أسعار أيام الأسبوع' },
   setSpecial:     { en: 'Set special price',      ar: 'تعيين سعر خاص' },
-  block:          { en: 'Reserved',               ar: 'محجوز' },
-  unblock:        { en: 'Unreserve',              ar: 'إلغاء التخصيص' },
-  removeOverride: { en: 'Remove override',        ar: 'إزالة التخصيص' },
+  // D3: action buttons renamed so they're distinct from the "Reserved" status.
+  block:          { en: 'Block',                  ar: 'حجز' },
+  unblock:        { en: 'Unblock',                ar: 'إلغاء الحجز' },
+  removeOverride: { en: 'Reset to default',       ar: 'إعادة للافتراضي' },
+  resetPrice:     { en: 'Also reset price to default', ar: 'إعادة السعر للافتراضي أيضاً' },
   save:           { en: 'Save',                   ar: 'حفظ' },
   cancel:         { en: 'Cancel',                 ar: 'إلغاء' },
   close:          { en: 'Close',                  ar: 'إغلاق' },
@@ -111,7 +124,6 @@ const t: Record<string, Record<string, string>> = {
   day:            { en: 'day',        ar: 'يوم' },
   priceForRange:  { en: 'Price for selected dates', ar: 'السعر للتواريخ المختارة' },
   applied:        { en: 'Applied to selected dates', ar: 'تم التطبيق على التواريخ المختارة' },
-  selectRangeHint:{ en: 'Click a start date, then an end date', ar: 'انقر تاريخ البداية ثم تاريخ النهاية' },
   // Discount section
   globalDiscount: { en: 'Global Discount',  ar: 'خصم عام' },
   globalDiscountDesc: { en: 'Applies to all bookings', ar: 'ينطبق على جميع الحجوزات' },
@@ -128,11 +140,53 @@ const t: Record<string, Record<string, string>> = {
   monthlyDiscount:     { en: 'Monthly Discount',     ar: 'خصم شهري' },
   monthlyDiscountDesc: { en: 'For stays of 30+ nights', ar: 'للإقامات 30 ليلة أو أكثر' },
   longStayDiscounts:   { en: 'Long-stay Discounts',  ar: 'خصومات الإقامة الطويلة' },
-  // Range mode toggle
-  selectRange:    { en: 'Select Range',   ar: 'تحديد نطاق' },
+  // D1: Multi-select toggle (replaces old "Select Range")
+  multiSelect:    { en: 'Multi-select',   ar: 'تحديد متعدد' },
   normalMode:     { en: 'Single Day',     ar: 'يوم واحد' },
-  // Unreserve note
+  multiSelectHint:{ en: 'Click a date to toggle, or click-and-drag to select many', ar: 'انقر تاريخاً للتحديد، أو انقر واسحب لتحديد عدة تواريخ' },
+  // Unblock note
   keepPriceNote:  { en: 'Custom price will be kept', ar: 'سيتم الاحتفاظ بالسعر المخصص' },
+  // D2: Clear dropdown — each option is scoped to the current selection
+  clearMenu:         { en: 'Clear / Reset', ar: 'مسح / إعادة' },
+  clearSelection:    { en: 'Clear selection',          ar: 'مسح التحديد' },
+  clearPriceOvr:     { en: 'Remove price overrides',   ar: 'إزالة الأسعار المخصصة' },
+  clearDiscountOvr:  { en: 'Remove discount overrides',ar: 'إزالة الخصومات' },
+  clearBlock:        { en: 'Unblock dates',            ar: 'إلغاء الحجز' },
+  pricesCleared:     { en: 'Price overrides removed',  ar: 'تمت إزالة الأسعار المخصصة' },
+  discountsCleared:  { en: 'Discount overrides removed', ar: 'تمت إزالة الخصومات' },
+  // D4: Discount summary inside single-date dialog
+  discountsApplied:  { en: 'Applicable discounts',     ar: 'الخصومات المطبقة' },
+  discountGlobal:    { en: 'Global',   ar: 'عام' },
+  discountWeekly:    { en: 'Weekly',   ar: 'أسبوعي' },
+  discountMonthly:   { en: 'Monthly',  ar: 'شهري' },
+  discountWeekday:   { en: 'Weekdays',  ar: 'أيام الأسبوع' },
+  discountWeekend:   { en: 'Weekend',  ar: 'نهاية الأسبوع' },
+  discountDate:      { en: 'Date-specific', ar: 'حسب التاريخ' },
+  noDiscountForDay:  { en: 'No discount applies to this day', ar: 'لا يوجد خصم ينطبق على هذا اليوم' },
+  effectivePrice:    { en: 'After discount', ar: 'بعد الخصم' },
+  // E4: Unified Discounts card
+  discountsTitle:    { en: 'Discounts', ar: 'الخصومات' },
+  addDiscount:       { en: 'Add discount', ar: 'إضافة خصم' },
+  noDiscountsYet:    { en: 'No discounts yet', ar: 'لا توجد خصومات بعد' },
+  stackable:         { en: 'Stackable', ar: 'قابل للتجميع' },
+  stackableHint:     { en: 'Stackable discounts add on top of the highest non-stackable one', ar: 'الخصومات القابلة للتجميع تُضاف فوق أعلى خصم غير قابل للتجميع' },
+  globalAlways:      { en: 'Always applies', ar: 'ينطبق دائماً' },
+  weeklyCondition:   { en: 'For stays of 7+ nights', ar: 'للإقامات 7 ليالٍ فأكثر' },
+  monthlyCondition:  { en: 'For stays of 30+ nights', ar: 'للإقامات 30 ليلة فأكثر' },
+  weekdaysCondition: { en: 'Sun–Wed', ar: 'الأحد–الأربعاء' },
+  weekendsCondition: { en: 'Thu–Sat', ar: 'الخميس–السبت' },
+  datesCondition:    { en: 'Selected dates', ar: 'التواريخ المحددة' },
+  discountType:      { en: 'Type', ar: 'النوع' },
+  discountPercentLabel: { en: 'Percent', ar: 'النسبة' },
+  dateSelectFirst:   { en: 'Select dates on the calendar first', ar: 'حدد التواريخ من التقويم أولاً' },
+  alreadyAdded:      { en: 'Already added', ar: 'مُضاف بالفعل' },
+  // PR F
+  enabled:           { en: 'Enabled',  ar: 'مفعل' },
+  notApplied:        { en: 'Not applied', ar: 'لا ينطبق' },
+  appliedTag:        { en: 'Applied',  ar: 'ينطبق' },
+  discountForDate:   { en: 'Date discount', ar: 'خصم لهذا التاريخ' },
+  selectedOutOfMonth:{ en: 'dates selected outside this month', ar: 'تواريخ محددة خارج هذا الشهر' },
+  setDiscountSave:   { en: 'Set Discount', ar: 'تعيين الخصم' },
 };
 
 const DAY_KEYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -189,25 +243,13 @@ function isWeekendDay(dayIndex: number): boolean {
   return dayIndex === 4 || dayIndex === 5 || dayIndex === 6;
 }
 
-/** Format a date range label like "Apr 15 - Apr 20 (6 days)" */
-function formatRangeLabel(start: string, end: string | null, count: number, isAr: boolean): string {
-  const fmt = (ds: string) => {
-    const d = new Date(ds + 'T00:00:00');
-    const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthsAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    return isAr ? `${d.getDate()} ${monthsAr[d.getMonth()]}` : `${monthsEn[d.getMonth()]} ${d.getDate()}`;
-  };
-  if (!end) return fmt(start);
-  const daysLabel = isAr ? (count === 1 ? 'يوم' : 'أيام') : (count === 1 ? 'day' : 'days');
-  return `${fmt(start)} - ${fmt(end)} (${count} ${daysLabel})`;
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* Component                                                                  */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function UnitPricingPage() {
   const params = useParams();
+  const router = useRouter();
   const propertyId = params.id as string;
   const unitId = params.unitId as string;
 
@@ -215,6 +257,34 @@ export default function UnitPricingPage() {
   const lang = language as 'en' | 'ar';
   const isAr = lang === 'ar';
   usePageTitle(isAr ? 'التقويم' : 'Calendar');
+
+  // PR J: property/unit switcher at the top of the page. Host can jump
+  // between their properties and units without going back to /listings.
+  interface SwitcherProperty { _id: string; title: string; titleAr?: string; }
+  interface SwitcherUnit { _id: string; nameEn?: string; nameAr?: string; }
+  const [switcherProperties, setSwitcherProperties] = useState<SwitcherProperty[]>([]);
+  const [switcherUnits, setSwitcherUnits] = useState<SwitcherUnit[]>([]);
+  useEffect(() => {
+    propertiesApi.getMyProperties()
+      .then((res) => setSwitcherProperties(res.data.data || res.data || []))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!propertyId) return;
+    unitsApi.getManage(propertyId)
+      .then((res) => setSwitcherUnits(res.data.data || []))
+      .catch(() => setSwitcherUnits([]));
+  }, [propertyId]);
+  const handlePropertyChange = (newPropId: string) => {
+    if (newPropId === propertyId) return;
+    // Go to the property's unit list so the host can pick which unit's
+    // calendar to view. (Different properties have different units.)
+    router.push(`/listings/${newPropId}/units`);
+  };
+  const handleUnitChange = (newUnitId: string) => {
+    if (newUnitId === unitId) return;
+    router.push(`/listings/${propertyId}/units/${newUnitId}/calendar`);
+  };
 
   /* ── state ── */
   const [unit, setUnit] = useState<Unit | null>(null);
@@ -239,42 +309,73 @@ export default function UnitPricingPage() {
   // Tab toggle (4E)
   const [activeTab, setActiveTab] = useState<'pricing' | 'discount'>('pricing');
 
-  // Multiselect date range (4D)
-  const [selectionStart, setSelectionStart] = useState<string | null>(null);
-  const [selectionEnd, setSelectionEnd] = useState<string | null>(null);
+  // D1: Multi-select state — replaces the old range (start/end) model with a
+  // free-form Set of selected date keys. A click toggles, a pointer-drag adds.
+  const [selectedSet, setSelectedSet] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
+  const dragAnchorRef = useRef<string | null>(null);
+  // Tracks whether dragging started on an already-selected date, so we can
+  // treat the drag as a "remove" operation instead of "add" (intuitive toggle).
+  const dragRemovingRef = useRef<boolean>(false);
   const [rangePrice, setRangePrice] = useState('');
   const [showRangePriceDialog, setShowRangePriceDialog] = useState(false);
-  const [rangeDiscount, setRangeDiscount] = useState('');
+  // D2: Clear/reset dropdown open state
+  const [showClearMenu, setShowClearMenu] = useState(false);
+  const clearMenuRef = useRef<HTMLDivElement>(null);
 
-  // Discount rules (Task J)
-  const [discountRules, setDiscountRules] = useState<{ type: 'weekday' | 'weekend'; percent: number }[]>([]);
+  // Discount rules — now include a per-rule `stackable` flag (PR E).
+  const [discountRules, setDiscountRules] = useState<{ type: 'weekday' | 'weekend'; percent: number; stackable?: boolean; enabled?: boolean }[]>([]);
+  // E4: Unified "Add discount" dialog replaces the old weekday/weekend-only
+  // add dialog. Type can be any of the 6 discount types.
   const [showAddDiscountDialog, setShowAddDiscountDialog] = useState(false);
-  const [newDiscountType, setNewDiscountType] = useState<'weekday' | 'weekend'>('weekday');
-  const [newDiscountPercent, setNewDiscountPercent] = useState(50);
+  const [newDiscountType, setNewDiscountType] = useState<DiscountType>('global');
+  const [newDiscountPercent, setNewDiscountPercent] = useState(10);
+  const [newDiscountStackable, setNewDiscountStackable] = useState(false);
   const [showRangeDiscountDialog, setShowRangeDiscountDialog] = useState(false);
   const [rangeDiscountPercent, setRangeDiscountPercent] = useState(10);
+  const [rangeDiscountStackable, setRangeDiscountStackable] = useState(false);
 
-  // Discount controls (4F)
-  const [globalDiscountInput, setGlobalDiscountInput] = useState('');
-  const [weeklyDiscountInput, setWeeklyDiscountInput] = useState('');
-  const [monthlyDiscountInput, setMonthlyDiscountInput] = useState('');
-  const [savingDiscount, setSavingDiscount] = useState(false);
+  // Saving flags for the 3 pricing-discount fields — E4's unified UI uses
+  // `savePricingDiscount(kind, percent, stackable)` which flips the matching flag.
+  const [savingGlobalDiscount, setSavingGlobalDiscount] = useState(false);
+  const [savingWeeklyDiscount, setSavingWeeklyDiscount] = useState(false);
+  const [savingMonthlyDiscount, setSavingMonthlyDiscount] = useState(false);
 
-  // Range mode toggle (single-click vs range select)
-  const [rangeMode, setRangeMode] = useState(false);
+  // D1 + F: Mode toggle — "Single day" (click opens popover) vs "Multi-select"
+  // (click toggles a date, drag fills across a range). Persisted in
+  // localStorage so the host's last choice survives reload.
+  const [multiSelectMode, setMultiSelectModeState] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('hostn_calendar_multiSelectMode');
+      if (saved === '1') setMultiSelectModeState(true);
+    } catch { /* ignore */ }
+  }, []);
+  const setMultiSelectMode = useCallback((next: boolean) => {
+    setMultiSelectModeState(next);
+    try {
+      window.localStorage.setItem('hostn_calendar_multiSelectMode', next ? '1' : '0');
+    } catch { /* ignore */ }
+  }, []);
+
+  // F: Single-date dialog discount state (item 3)
+  const [singleDiscountInput, setSingleDiscountInput] = useState('');
+  const [singleDiscountStackable, setSingleDiscountStackable] = useState(false);
 
   const todayKey = formatDateKey(new Date());
   const nowYear = new Date().getFullYear();
   const nowMonth = new Date().getMonth();
 
   /* ── Fetch unit data ── */
-  const fetchUnit = useCallback(async () => {
+  const fetchUnit = useCallback(async (): Promise<Unit | null> => {
     try {
       const res = await unitsApi.getOne(unitId);
       const data: Unit = res.data.data || res.data;
       setUnit(data);
+      return data;
     } catch {
       toast.error(t.error[lang]);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -310,44 +411,22 @@ export default function UnitPricingPage() {
     fetchBookedDates();
   }, [unitId]);
 
-  /* ── Multiselect range computation (4D) ── */
+  /* ── D1: Multi-select helpers ── */
   const clearSelection = useCallback(() => {
-    setSelectionStart(null);
-    setSelectionEnd(null);
+    setSelectedSet(new Set());
     setShowRangePriceDialog(false);
     setRangePrice('');
-    setRangeDiscount('');
     setShowRangeDiscountDialog(false);
     setRangeDiscountPercent(10);
+    setShowClearMenu(false);
   }, []);
-
-  const selectedSet = useMemo(() => {
-    if (!selectionStart) return new Set<string>();
-    if (!selectionEnd) return new Set([selectionStart]);
-    const a = new Date(selectionStart + 'T00:00:00');
-    const b = new Date(selectionEnd + 'T00:00:00');
-    const start = a <= b ? a : b;
-    const end = a <= b ? b : a;
-    const set = new Set<string>();
-    const current = new Date(start);
-    while (current <= end) {
-      set.add(formatDateKey(current));
-      current.setDate(current.getDate() + 1);
-    }
-    return set;
-  }, [selectionStart, selectionEnd]);
 
   const selectionDayCount = selectedSet.size;
 
-  /* ── Initialize discount inputs when unit loads ── */
+  /* ── Sync local discount rules from fetched unit ── */
   useEffect(() => {
-    if (unit?.pricing) {
-      setGlobalDiscountInput(String(unit.pricing.discountPercent || ''));
-      setWeeklyDiscountInput(String(unit.pricing.weeklyDiscount || ''));
-      setMonthlyDiscountInput(String(unit.pricing.monthlyDiscount || ''));
-    }
     setDiscountRules(unit?.discountRules || []);
-  }, [unit?.pricing, unit]);
+  }, [unit]);
 
   /* ── datePricing map ── */
   const datePricingMap = useMemo(() => {
@@ -379,18 +458,19 @@ export default function UnitPricingPage() {
   /* ── Navigation ── */
   const canGoPrev = currentYear > nowYear || (currentYear === nowYear && currentMonth > nowMonth);
 
+  // F: navigating months no longer wipes the multi-select — the host can
+  // span multiple months in a single selection. The popover for a specific
+  // date still closes on nav since the selected date is no longer in view.
   const prevMonth = () => {
     if (!canGoPrev) return;
     if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear((y) => y - 1); }
     else setCurrentMonth((m) => m - 1);
     setSelectedDate(null);
-    clearSelection();
   };
   const nextMonth = () => {
     if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear((y) => y + 1); }
     else setCurrentMonth((m) => m + 1);
     setSelectedDate(null);
-    clearSelection();
   };
 
   /* ── Save pricing from dialog ── */
@@ -463,51 +543,89 @@ export default function UnitPricingPage() {
     return '';
   };
 
-  /* ── Day click — single-click (normal) or range select ── */
+  /* ── D1: Day click — single-click in normal mode opens popover; in
+     multi-select mode a simple click toggles. Drag is handled separately
+     in the pointer event handlers. ── */
   const handleDayClick = (dateKey: string) => {
     if (dateKey < todayKey) return;
     if (bookedDates.has(dateKey)) return;
 
     setPricingDialog(null);
 
-    if (rangeMode) {
-      // Range selection mode: two-click behavior
-      if (!selectionStart || selectionEnd) {
-        setSelectionStart(dateKey);
-        setSelectionEnd(null);
-        setSelectedDate(null);
-        setShowRangePriceDialog(false);
-        setRangePrice('');
-        setRangeDiscount('');
-      } else {
-        if (dateKey === selectionStart) {
-          // Same day — cancel range, switch to normal, open popover
-          clearSelection();
-          setRangeMode(false);
-          setSelectedDate(dateKey);
-          const date = new Date(dateKey + 'T00:00:00');
-          const info = getDayPrice(date);
-          setSpecialPriceInput(info.price > 0 ? String(info.price) : '');
-          return;
-        }
-        if (dateKey < selectionStart) {
-          setSelectionEnd(selectionStart);
-          setSelectionStart(dateKey);
-        } else {
-          setSelectionEnd(dateKey);
-        }
-      }
-    } else {
-      // Normal mode: single click opens day popover
-      clearSelection();
-      setSelectedDate(dateKey);
-      const date = new Date(dateKey + 'T00:00:00');
-      const info = getDayPrice(date);
-      setSpecialPriceInput(info.price > 0 ? String(info.price) : '');
+    if (multiSelectMode) {
+      // In multi-select mode, clicks are handled by the pointer-down handler
+      // so the click event here is a no-op (prevents double-toggle).
+      return;
     }
+
+    // Single-day mode: open the day popover.
+    // F: don't clear the multi-select set — the host can flip between single
+    // and multi modes (and between months) without losing their selection.
+    setSelectedDate(dateKey);
+    const date = new Date(dateKey + 'T00:00:00');
+    const info = getDayPrice(date);
+    setSpecialPriceInput(info.price > 0 ? String(info.price) : '');
+    // F: seed the dialog's discount inputs from any existing per-date override
+    const override = datePricingMap.get(dateKey);
+    setSingleDiscountInput(override?.discountPercent ? String(override.discountPercent) : '');
+    setSingleDiscountStackable(!!override?.discountStackable);
   };
 
-  /* ── Save special price ── */
+  /* ── D1: Pointer-down on a day cell in multi-select mode starts a drag.
+     We also toggle the anchor date immediately so a simple click (no drag)
+     still works. Whether the drag adds or removes depends on the anchor's
+     initial state — this mirrors the feel of selecting icons on a desktop. ── */
+  const handleDayPointerDown = (dateKey: string, e: React.PointerEvent) => {
+    if (!multiSelectMode) return;
+    if (dateKey < todayKey) return;
+    if (bookedDates.has(dateKey)) return;
+    e.preventDefault();
+    // Release default pointer capture so pointerenter on other cells fires
+    // normally while the button/cell is "pressed".
+    (e.target as Element).releasePointerCapture?.(e.pointerId);
+
+    const wasSelected = selectedSet.has(dateKey);
+    dragAnchorRef.current = dateKey;
+    dragRemovingRef.current = wasSelected;
+    setIsDragging(true);
+
+    setSelectedSet((prev) => {
+      const next = new Set(prev);
+      if (wasSelected) next.delete(dateKey); else next.add(dateKey);
+      return next;
+    });
+  };
+
+  const handleDayPointerEnter = (dateKey: string) => {
+    if (!isDragging || !multiSelectMode) return;
+    if (dateKey < todayKey) return;
+    if (bookedDates.has(dateKey)) return;
+    setSelectedSet((prev) => {
+      const next = new Set(prev);
+      if (dragRemovingRef.current) next.delete(dateKey); else next.add(dateKey);
+      return next;
+    });
+  };
+
+  // Global pointer-up to end a drag (pointer can leave the calendar).
+  useEffect(() => {
+    if (!isDragging) return;
+    const end = () => {
+      setIsDragging(false);
+      dragAnchorRef.current = null;
+      dragRemovingRef.current = false;
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  }, [isDragging]);
+
+  /* ── Save special price (D5: auto-close popover on success)
+     F: setting a price on a single date ALSO clears any date-specific
+     discount on that date (mutual exclusion per item 10). ── */
   const saveSpecialPrice = async () => {
     if (!selectedDate) return;
     const val = Number(specialPriceInput);
@@ -515,9 +633,39 @@ export default function UnitPricingPage() {
     setSaving(true);
     try {
       await unitsApi.updatePricing(unitId, {
-        datePricing: [{ date: selectedDate, price: val, isBlocked: false }],
+        // `null` marks a field for clearing in the backend merge-patch.
+        datePricing: [{ date: selectedDate, price: val, isBlocked: false, discountPercent: null, discountStackable: false }],
       });
       toast.success(t.priceSaved[lang]);
+      setSelectedDate(null);
+      await fetchUnit();
+    } catch {
+      toast.error(t.error[lang]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── F: Save per-date discount from the single-date dialog.
+     Also clears any custom price override on that date (mutual exclusion). */
+  const saveSingleDiscount = async () => {
+    if (!selectedDate) return;
+    const val = Number(singleDiscountInput);
+    if (isNaN(val) || val < 0 || val > 100) return;
+    setSaving(true);
+    try {
+      await unitsApi.updatePricing(unitId, {
+        datePricing: [{
+          date: selectedDate,
+          // Send `null` to explicitly clear the existing price override.
+          price: null,
+          isBlocked: false,
+          discountPercent: val || null,
+          discountStackable: val > 0 ? singleDiscountStackable : false,
+        }],
+      });
+      toast.success(t.discountSaved[lang]);
+      setSelectedDate(null);
       await fetchUnit();
     } catch {
       toast.error(t.error[lang]);
@@ -537,7 +685,26 @@ export default function UnitPricingPage() {
       toast.success(block ? t.priceBlocked[lang] : t.priceUnblocked[lang]);
       // On block, close popover; on unblock, keep it open so user sees updated state
       if (block) setSelectedDate(null);
-      await fetchUnit();
+      const fresh = await fetchUnit();
+      // PR J: after UNBLOCK, re-seed the special-price input from the
+      // REFRESHED unit data directly (can't use getDayPrice — its `unit`
+      // closure is stale until the next render). Without this, users saw
+      // an empty/zero input even though PR F preserved the price server-side.
+      if (!block && fresh) {
+        const override = (fresh.datePricing || []).find(
+          (dp) => new Date(dp.date).toISOString().slice(0, 10) === selectedDate,
+        );
+        let price = 0;
+        if (override?.price && override.price > 0) {
+          price = override.price;
+        } else {
+          const d = new Date(selectedDate + 'T00:00:00');
+          const dayKey = DAY_KEYS_EN[d.getDay()];
+          const dayPrice = fresh.pricing?.[dayKey];
+          if (typeof dayPrice === 'number') price = dayPrice;
+        }
+        setSpecialPriceInput(price > 0 ? String(price) : '');
+      }
     } catch {
       toast.error(t.error[lang]);
     } finally {
@@ -563,7 +730,9 @@ export default function UnitPricingPage() {
     }
   };
 
-  /* ── Multiselect actions (4D) ── */
+  /* ── Multiselect actions (4D) ──
+     F: setting a price on a range CLEARS any date-specific discount on those
+     dates (mutual exclusion per item 10). ── */
   const applyRangePrice = async () => {
     const val = Number(rangePrice);
     if (!val || val <= 0 || selectedSet.size === 0) return;
@@ -573,6 +742,8 @@ export default function UnitPricingPage() {
         date,
         price: val,
         isBlocked: false,
+        discountPercent: null,
+        discountStackable: false,
       }));
       await unitsApi.updatePricing(unitId, { datePricing });
       toast.success(t.applied[lang]);
@@ -604,64 +775,71 @@ export default function UnitPricingPage() {
     }
   };
 
-  /* ── Save global / weekly discount (4F) ── */
-  const saveGlobalDiscount = async () => {
-    const val = Number(globalDiscountInput);
-    if (isNaN(val) || val < 0 || val > 100) return;
-    setSavingDiscount(true);
+  /* ── Save global / weekly / monthly discount — includes stackable flag (PR E) ── */
+  const savePricingDiscount = async (
+    kind: 'global' | 'weekly' | 'monthly',
+    percent: number,
+    stackable?: boolean,
+  ) => {
+    if (isNaN(percent) || percent < 0 || percent > 100) return;
+    const pricing: Record<string, number | boolean> = {};
+    if (kind === 'global') {
+      pricing.discountPercent = percent;
+      if (stackable !== undefined) pricing.globalStackable = stackable;
+    } else if (kind === 'weekly') {
+      pricing.weeklyDiscount = percent;
+      if (stackable !== undefined) pricing.weeklyStackable = stackable;
+    } else {
+      pricing.monthlyDiscount = percent;
+      if (stackable !== undefined) pricing.monthlyStackable = stackable;
+    }
+    const setter = kind === 'global' ? setSavingGlobalDiscount
+      : kind === 'weekly' ? setSavingWeeklyDiscount
+      : setSavingMonthlyDiscount;
+    setter(true);
     try {
-      await unitsApi.updatePricing(unitId, { pricing: { discountPercent: val } });
+      await unitsApi.updatePricing(unitId, { pricing });
       toast.success(t.discountSaved[lang]);
       await fetchUnit();
     } catch {
       toast.error(t.error[lang]);
     } finally {
-      setSavingDiscount(false);
+      setter(false);
     }
   };
 
-  const saveWeeklyDiscount = async () => {
-    const val = Number(weeklyDiscountInput);
-    if (isNaN(val) || val < 0 || val > 100) return;
-    setSavingDiscount(true);
+  // E4 + F: Toggle the stackable flag OR the enabled flag on a discount without
+  // changing the percent. `field` picks which flag; `value` is the new value.
+  const togglePricingDiscountFlag = async (
+    kind: 'global' | 'weekly' | 'monthly',
+    field: 'stackable' | 'enabled',
+    value: boolean,
+  ) => {
     try {
-      await unitsApi.updatePricing(unitId, { pricing: { weeklyDiscount: val } });
-      toast.success(t.discountSaved[lang]);
+      const pricing: Record<string, boolean> = {};
+      if (kind === 'global')  pricing[field === 'stackable' ? 'globalStackable'  : 'globalEnabled']  = value;
+      if (kind === 'weekly')  pricing[field === 'stackable' ? 'weeklyStackable'  : 'weeklyEnabled']  = value;
+      if (kind === 'monthly') pricing[field === 'stackable' ? 'monthlyStackable' : 'monthlyEnabled'] = value;
+      await unitsApi.updatePricing(unitId, { pricing });
       await fetchUnit();
     } catch {
       toast.error(t.error[lang]);
-    } finally {
-      setSavingDiscount(false);
-    }
-  };
-
-  const saveMonthlyDiscount = async () => {
-    const val = Number(monthlyDiscountInput);
-    if (isNaN(val) || val < 0 || val > 100) return;
-    setSavingDiscount(true);
-    try {
-      await unitsApi.updatePricing(unitId, { pricing: { monthlyDiscount: val } });
-      toast.success(t.discountSaved[lang]);
-      await fetchUnit();
-    } catch {
-      toast.error(t.error[lang]);
-    } finally {
-      setSavingDiscount(false);
     }
   };
 
   const applyRangeDiscount = async () => {
-    if (!selectionStart || !selectionEnd || rangeDiscountPercent <= 0) return;
+    if (selectedSet.size === 0 || rangeDiscountPercent <= 0) return;
     setSaving(true);
     try {
-      const dates: { date: string; discountPercent: number }[] = [];
-      const start = new Date(selectionStart + 'T00:00:00');
-      const end = new Date(selectionEnd + 'T00:00:00');
-      const s = start <= end ? start : end;
-      const e = start <= end ? end : start;
-      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        dates.push({ date: d.toISOString().slice(0, 10), discountPercent: rangeDiscountPercent });
-      }
+      const dates = Array.from(selectedSet).map((date) => ({
+        date,
+        // F: setting a discount on a range CLEARS any custom price override
+        // on those dates (mutual exclusion per item 10).
+        price: null,
+        discountPercent: rangeDiscountPercent,
+        // PR E: range-applied date discounts carry the stackable flag too.
+        discountStackable: rangeDiscountStackable,
+      }));
       await unitsApi.updatePricing(unitId, { datePricing: dates });
       toast.success(lang === 'ar' ? 'تم تطبيق الخصم' : 'Discount applied');
       clearSelection();
@@ -673,17 +851,70 @@ export default function UnitPricingPage() {
     }
   };
 
-  /* ── Discount rule handlers (Task J) ── */
-  const handleAddDiscountRule = async () => {
-    if (discountRules.some(r => r.type === newDiscountType)) {
+  /* ── D2: Clear-menu actions scoped to the current selection ── */
+  const applyBulkReset = async (kind: 'price' | 'discount' | 'block') => {
+    if (selectedSet.size === 0) return;
+    setSaving(true);
+    try {
+      const dates = Array.from(selectedSet);
+      let successMsg = '';
+      if (kind === 'price') {
+        // Clearing price overrides means removing the custom price from each
+        // datePricing entry. We fetch the current override to preserve any
+        // discount/block state — if those exist we keep the entry but drop
+        // the price; if nothing else remains, we remove the entry entirely.
+        const updates = dates.map((d) => {
+          const existing = datePricingMap.get(d);
+          const keepDiscount = existing?.discountPercent && existing.discountPercent > 0;
+          const keepBlock = existing?.isBlocked;
+          if (keepDiscount || keepBlock) {
+            return { date: d, price: undefined as unknown as number, isBlocked: !!keepBlock, discountPercent: keepDiscount ? existing!.discountPercent : undefined };
+          }
+          return { date: d, remove: true };
+        });
+        await unitsApi.updatePricing(unitId, { datePricing: updates });
+        successMsg = t.pricesCleared[lang];
+      } else if (kind === 'discount') {
+        const updates = dates.map((d) => {
+          const existing = datePricingMap.get(d);
+          const keepPrice = existing?.price && existing.price > 0;
+          const keepBlock = existing?.isBlocked;
+          if (keepPrice || keepBlock) {
+            return { date: d, price: keepPrice ? existing!.price : undefined, isBlocked: !!keepBlock, discountPercent: 0 };
+          }
+          return { date: d, remove: true };
+        });
+        await unitsApi.updatePricing(unitId, { datePricing: updates });
+        successMsg = t.discountsCleared[lang];
+      } else {
+        // Unblock: flip isBlocked=false on any blocked dates in range.
+        const updates = dates.map((d) => ({ date: d, isBlocked: false }));
+        await unitsApi.updatePricing(unitId, { datePricing: updates });
+        successMsg = t.priceUnblocked[lang];
+      }
+      toast.success(successMsg);
+      clearSelection();
+      await fetchUnit();
+    } catch {
+      toast.error(t.error[lang]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── Discount rule handlers ──
+     PR F: always call fetchUnit() after save so the calendar cells (which
+     read from unit.discountRules via the shared helper) update immediately. */
+  const handleAddDiscountRule = async (type: 'weekday' | 'weekend', percent: number, stackable: boolean) => {
+    if (discountRules.some((r) => r.type === type)) {
       toast.error(lang === 'ar' ? 'توجد قاعدة لهذا النوع بالفعل' : 'A rule for this day type already exists');
       return;
     }
-    const updated = [...discountRules, { type: newDiscountType, percent: newDiscountPercent }];
+    const updated = [...discountRules, { type, percent, stackable, enabled: true }];
     try {
       await unitsApi.update(unitId, { discountRules: updated });
       setDiscountRules(updated);
-      setShowAddDiscountDialog(false);
+      await fetchUnit();
       toast.success(lang === 'ar' ? 'تمت إضافة الخصم' : 'Discount added');
     } catch { toast.error(lang === 'ar' ? 'فشل' : 'Failed'); }
   };
@@ -693,8 +924,54 @@ export default function UnitPricingPage() {
     try {
       await unitsApi.update(unitId, { discountRules: updated });
       setDiscountRules(updated);
+      await fetchUnit();
       toast.success(lang === 'ar' ? 'تم حذف الخصم' : 'Discount removed');
     } catch { toast.error(lang === 'ar' ? 'فشل' : 'Failed'); }
+  };
+
+  const handleUpdateDiscountRule = async (idx: number, patch: Partial<{ percent: number; stackable: boolean; enabled: boolean }>) => {
+    const updated = discountRules.map((r, i) => i === idx ? { ...r, ...patch } : r);
+    try {
+      await unitsApi.update(unitId, { discountRules: updated });
+      setDiscountRules(updated);
+      await fetchUnit();
+    } catch { toast.error(lang === 'ar' ? 'فشل' : 'Failed'); }
+  };
+
+  /* ── E4: unified Add-Discount handler — routes to the right save path
+     based on `type`. Date-specific requires a non-empty selectedSet. ── */
+  const handleAddDiscount = async () => {
+    if (newDiscountPercent <= 0 || newDiscountPercent > 100) return;
+    try {
+      if (newDiscountType === 'global') {
+        await savePricingDiscount('global', newDiscountPercent, newDiscountStackable);
+      } else if (newDiscountType === 'weekly') {
+        await savePricingDiscount('weekly', newDiscountPercent, newDiscountStackable);
+      } else if (newDiscountType === 'monthly') {
+        await savePricingDiscount('monthly', newDiscountPercent, newDiscountStackable);
+      } else if (newDiscountType === 'weekday' || newDiscountType === 'weekend') {
+        await handleAddDiscountRule(newDiscountType, newDiscountPercent, newDiscountStackable);
+      } else if (newDiscountType === 'date') {
+        if (selectedSet.size === 0) {
+          toast.error(t.dateSelectFirst[lang]);
+          return;
+        }
+        const dates = Array.from(selectedSet).map((date) => ({
+          date,
+          discountPercent: newDiscountPercent,
+          discountStackable: newDiscountStackable,
+        }));
+        await unitsApi.updatePricing(unitId, { datePricing: dates });
+        toast.success(t.discountSaved[lang]);
+        clearSelection();
+        await fetchUnit();
+      }
+      setShowAddDiscountDialog(false);
+      setNewDiscountPercent(10);
+      setNewDiscountStackable(false);
+    } catch {
+      toast.error(t.error[lang]);
+    }
   };
 
   /* ── Close popover on outside click ── */
@@ -728,6 +1005,10 @@ export default function UnitPricingPage() {
     const isWeekend = isWeekendDay(dayIndex);
     const override = datePricingMap.get(selectedDate);
     const hasOverride = !!override;
+    // D6: "hasPriceOverride" is narrower than hasOverride — it specifically
+    // means there's a custom price set. Used to decide whether to show the
+    // "Also reset price to default" secondary action on a blocked date.
+    const hasPriceOverride = !!(override?.price && override.price > 0);
     const bookedInfo = bookedDates.get(selectedDate);
 
     let source: string;
@@ -747,8 +1028,34 @@ export default function UnitPricingPage() {
       ? `${dayNameFull}، ${date.getDate()} ${monthName}`
       : `${dayNameFull}, ${monthName} ${date.getDate()}`;
 
-    return { date, info, isWeekend, hasOverride, source, dateLabel, isBlocked: !!override?.isBlocked, bookedInfo };
-  }, [selectedDate, getDayPrice, datePricingMap, bookedDates, lang, isAr]);
+    // D4 + PR E + F: use the shared helper so this matches booking-time math.
+    // We don't pass a stay length — per-day display only shows discounts that
+    // would apply to a single-night stay (global + weekday/weekend + date).
+    // `markAppliedDiscounts` tags each with isApplied so the dialog can
+    // strike the ones shadowed by stacking rules.
+    const rawDiscounts = applicableDiscountsForNight(unit as PricingUnit, date);
+    const appliedDiscounts = markAppliedDiscounts(rawDiscounts);
+    const effectivePct = effectiveDiscountPercent(rawDiscounts);
+    const priceAfter = info.blocked ? 0 : Math.round(info.price * (1 - effectivePct / 100));
+
+    return {
+      date, info, isWeekend, hasOverride, hasPriceOverride, source, dateLabel,
+      isBlocked: !!override?.isBlocked, bookedInfo,
+      appliedDiscounts, effectivePct, priceAfter,
+    };
+  }, [selectedDate, getDayPrice, datePricingMap, bookedDates, lang, isAr, unit, discountRules]);
+
+  // F: how many selected dates fall outside the currently-visible month.
+  const selectionOutOfMonthCount = useMemo(() => {
+    if (selectedSet.size === 0) return 0;
+    let count = 0;
+    for (const key of selectedSet) {
+      // Parse "YYYY-MM-DD" without relying on timezone conversion.
+      const [y, m] = key.split('-').map(Number);
+      if (!(y === currentYear && m - 1 === currentMonth)) count++;
+    }
+    return count;
+  }, [selectedSet, currentYear, currentMonth]);
 
   /* ── Day-of-week badge data ── */
   const dayBadges = useMemo(() => {
@@ -802,16 +1109,49 @@ export default function UnitPricingPage() {
       {/* ── Header ── */}
       <div className="mb-6">
         <Link
-          href={`/host/listings/${propertyId}/units`}
+          href={`/listings/${propertyId}/units`}
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 transition-colors mb-3"
         >
           <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
           {t.back[lang]}
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{t.title[lang]}</h1>
-        {unitName && (
-          <p className="text-sm text-gray-500 mt-1">{unitName}</p>
-        )}
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">{t.title[lang]}</h1>
+        {/* PR J: property + unit switchers so host can hop between calendars
+            without going back to /listings. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {switcherProperties.length > 0 && (
+            <select
+              value={propertyId}
+              onChange={(e) => handlePropertyChange(e.target.value)}
+              className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+              aria-label={isAr ? 'اختر العقار' : 'Select property'}
+            >
+              {switcherProperties.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {isAr ? (p.titleAr || p.title) : (p.title || p.titleAr)}
+                </option>
+              ))}
+            </select>
+          )}
+          {switcherUnits.length > 1 && (
+            <select
+              value={unitId}
+              onChange={(e) => handleUnitChange(e.target.value)}
+              className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+              aria-label={isAr ? 'اختر الوحدة' : 'Select unit'}
+            >
+              {switcherUnits.map((u) => (
+                <option key={u._id} value={u._id}>
+                  {(isAr ? (u.nameAr || u.nameEn) : (u.nameEn || u.nameAr)) || (isAr ? 'بدون اسم' : 'Untitled')}
+                </option>
+              ))}
+            </select>
+          )}
+          {/* If only one unit exists, still show its name as a static label */}
+          {switcherUnits.length === 1 && unitName && (
+            <span className="text-sm text-gray-500">{unitName}</span>
+          )}
+        </div>
       </div>
 
       {/* ── Tab Toggle (4E) ── */}
@@ -865,7 +1205,7 @@ export default function UnitPricingPage() {
               <span className="text-base font-bold text-gray-900" dir="ltr">
                 {weekdayAvg > 0 ? (
                   <>
-                    <SarSymbol size={14} /> {weekdayAvg.toLocaleString('en')}
+                    <SarSymbol size={14} /> {weekdayAvg.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </>
                 ) : (
                   <span className="text-gray-400 font-normal">&mdash;</span>
@@ -892,7 +1232,7 @@ export default function UnitPricingPage() {
               <span className="text-base font-bold text-gray-900" dir="ltr">
                 {weekendAvg > 0 ? (
                   <>
-                    <SarSymbol size={14} /> {weekendAvg.toLocaleString('en')}
+                    <SarSymbol size={14} /> {weekendAvg.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </>
                 ) : (
                   <span className="text-gray-400 font-normal">&mdash;</span>
@@ -917,7 +1257,7 @@ export default function UnitPricingPage() {
             >
               <span className="font-medium">{badge.label}</span>
               <span className="mt-1 font-bold text-sm text-gray-900" dir="ltr">
-                {badge.price > 0 ? badge.price.toLocaleString('en') : '\u2014'}
+                {badge.price > 0 ? badge.price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '\u2014'}
               </span>
             </button>
           ))}
@@ -925,149 +1265,145 @@ export default function UnitPricingPage() {
       </div>
       )}
 
-      {/* ── Discount Tab Content (4F) ── */}
+      {/* ── Discount Tab Content — E4: unified list of all discounts ── */}
       {activeTab === 'discount' && (
-      <div className="space-y-4 mb-6">
-        {/* Long-stay Discounts */}
+      <div className="space-y-3 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar className="w-4 h-4 text-primary-600" />
-            <h3 className="text-base font-semibold text-gray-900">{t.longStayDiscounts[lang]}</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-            {/* Weekly (7+ nights) */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700 mb-1">{t.weeklyDiscount[lang]}</p>
-              <p className="text-xs text-gray-400 mb-2">{t.weeklyDiscountDesc[lang]}</p>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={weeklyDiscountInput}
-                    onChange={(e) => setWeeklyDiscountInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') saveWeeklyDiscount(); }}
-                    placeholder="0"
-                    className="w-full px-3 py-2 pe-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                  />
-                  <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                </div>
-                <button
-                  onClick={saveWeeklyDiscount}
-                  disabled={savingDiscount}
-                  className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {savingDiscount ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
-                </button>
-              </div>
-              {(unit?.pricing?.weeklyDiscount ?? 0) > 0 && (
-                <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-medium">
-                  <Tag className="w-3 h-3" />
-                  {unit?.pricing?.weeklyDiscount}% {t.off[lang]}
-                </div>
-              )}
-            </div>
-
-            {/* Monthly (30+ nights) */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-700 mb-1">{t.monthlyDiscount[lang]}</p>
-              <p className="text-xs text-gray-400 mb-2">{t.monthlyDiscountDesc[lang]}</p>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={monthlyDiscountInput}
-                    onChange={(e) => setMonthlyDiscountInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') saveMonthlyDiscount(); }}
-                    placeholder="0"
-                    className="w-full px-3 py-2 pe-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-                  />
-                  <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                </div>
-                <button
-                  onClick={saveMonthlyDiscount}
-                  disabled={savingDiscount}
-                  className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
-                >
-                  {savingDiscount ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
-                </button>
-              </div>
-              {(unit?.pricing?.monthlyDiscount ?? 0) > 0 && (
-                <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-medium">
-                  <Tag className="w-3 h-3" />
-                  {unit?.pricing?.monthlyDiscount}% {t.off[lang]}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Discount Rules (weekday/weekend) */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">{lang === 'ar' ? 'قواعد الخصم' : 'Discount Rules'}</h3>
-            <button onClick={() => setShowAddDiscountDialog(true)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-xs font-medium hover:bg-primary-100 transition-colors">
-              <Plus className="w-3.5 h-3.5" /> {lang === 'ar' ? 'إضافة' : 'Add'}
-            </button>
-          </div>
-          {discountRules.length === 0 ? (
-            <p className="text-sm text-gray-400">{lang === 'ar' ? 'لا توجد قواعد خصم' : 'No discount rules'}</p>
-          ) : (
-            <div className="space-y-2">
-              {discountRules.map((rule, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded">-{rule.percent}%</span>
-                    <span className="text-sm text-gray-700">{rule.type === 'weekday' ? (lang === 'ar' ? 'أيام الأسبوع' : 'Weekdays') : (lang === 'ar' ? 'نهاية الأسبوع' : 'Weekends')}</span>
-                  </div>
-                  <button onClick={() => handleRemoveDiscountRule(idx)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Global Discount */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Percent className="w-4 h-4 text-primary-600" />
-            <h3 className="text-base font-semibold text-gray-900">{t.globalDiscount[lang]}</h3>
-          </div>
-          <p className="text-xs text-gray-400 mb-3">{t.globalDiscountDesc[lang]}</p>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-[200px]">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={globalDiscountInput}
-                onChange={(e) => setGlobalDiscountInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') saveGlobalDiscount(); }}
-                placeholder="0"
-                className="w-full px-3 py-2 pe-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
-              />
-              <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Percent className="w-4 h-4 text-primary-600" />
+              <h3 className="text-base font-semibold text-gray-900">{t.discountsTitle[lang]}</h3>
             </div>
             <button
-              onClick={saveGlobalDiscount}
-              disabled={savingDiscount}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+              onClick={() => { setNewDiscountType('global'); setNewDiscountPercent(10); setNewDiscountStackable(false); setShowAddDiscountDialog(true); }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg text-xs font-medium hover:bg-primary-100 transition-colors"
             >
-              {savingDiscount ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
+              <Plus className="w-3.5 h-3.5" /> {t.addDiscount[lang]}
             </button>
           </div>
-          {(unit?.pricing?.discountPercent ?? 0) > 0 && (
-            <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-medium">
-              <Tag className="w-3 h-3" />
-              {unit?.pricing?.discountPercent}% {t.off[lang]}
-            </div>
-          )}
+          <p className="text-xs text-gray-400 mb-4">{t.stackableHint[lang]}</p>
+
+          {/* Build the flat list of all active discounts */}
+          {(() => {
+            const rows: {
+              type: DiscountType;
+              percent: number;
+              stackable: boolean;
+              enabled: boolean;
+              condition: string;
+              onRemove: () => void;
+              onToggleStack: () => void;
+              onToggleEnabled: () => void;
+            }[] = [];
+            const p = unit.pricing || {};
+            const isEn = (flag?: boolean) => flag !== false; // default true
+            if ((p.discountPercent || 0) > 0) {
+              rows.push({
+                type: 'global', percent: p.discountPercent || 0,
+                stackable: !!p.globalStackable, enabled: isEn(p.globalEnabled),
+                condition: t.globalAlways[lang],
+                onRemove: () => savePricingDiscount('global', 0),
+                onToggleStack: () => togglePricingDiscountFlag('global', 'stackable', !p.globalStackable),
+                onToggleEnabled: () => togglePricingDiscountFlag('global', 'enabled', !isEn(p.globalEnabled)),
+              });
+            }
+            if ((p.weeklyDiscount || 0) > 0) {
+              rows.push({
+                type: 'weekly', percent: p.weeklyDiscount || 0,
+                stackable: !!p.weeklyStackable, enabled: isEn(p.weeklyEnabled),
+                condition: t.weeklyCondition[lang],
+                onRemove: () => savePricingDiscount('weekly', 0),
+                onToggleStack: () => togglePricingDiscountFlag('weekly', 'stackable', !p.weeklyStackable),
+                onToggleEnabled: () => togglePricingDiscountFlag('weekly', 'enabled', !isEn(p.weeklyEnabled)),
+              });
+            }
+            if ((p.monthlyDiscount || 0) > 0) {
+              rows.push({
+                type: 'monthly', percent: p.monthlyDiscount || 0,
+                stackable: !!p.monthlyStackable, enabled: isEn(p.monthlyEnabled),
+                condition: t.monthlyCondition[lang],
+                onRemove: () => savePricingDiscount('monthly', 0),
+                onToggleStack: () => togglePricingDiscountFlag('monthly', 'stackable', !p.monthlyStackable),
+                onToggleEnabled: () => togglePricingDiscountFlag('monthly', 'enabled', !isEn(p.monthlyEnabled)),
+              });
+            }
+            for (let i = 0; i < discountRules.length; i++) {
+              const rule = discountRules[i];
+              rows.push({
+                type: rule.type as 'weekday' | 'weekend',
+                percent: rule.percent,
+                stackable: !!rule.stackable,
+                enabled: isEn(rule.enabled),
+                condition: rule.type === 'weekday' ? t.weekdaysCondition[lang] : t.weekendsCondition[lang],
+                onRemove: () => handleRemoveDiscountRule(i),
+                onToggleStack: () => handleUpdateDiscountRule(i, { stackable: !rule.stackable }),
+                onToggleEnabled: () => handleUpdateDiscountRule(i, { enabled: !isEn(rule.enabled) }),
+              });
+            }
+            if (rows.length === 0) {
+              return (
+                <div className="text-center py-8 text-sm text-gray-400 bg-gray-50 rounded-lg">
+                  {t.noDiscountsYet[lang]}
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-2">
+                {rows.map((row, idx) => {
+                  const color = DISCOUNT_COLORS[row.type];
+                  const typeLabel = row.type === 'global' ? t.discountGlobal[lang]
+                    : row.type === 'weekly' ? t.discountWeekly[lang]
+                    : row.type === 'monthly' ? t.discountMonthly[lang]
+                    : row.type === 'weekday' ? t.discountWeekday[lang]
+                    : row.type === 'weekend' ? t.discountWeekend[lang]
+                    : t.discountDate[lang];
+                  return (
+                    <div
+                      key={`${row.type}-${idx}`}
+                      className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${color.bg} ${color.ring} ${row.enabled ? '' : 'opacity-50'}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className={`w-3 h-3 rounded-full ${color.dot} shrink-0`} />
+                        <div className="min-w-0 flex-1">
+                          <div className={`text-sm font-semibold ${color.text}`}>{typeLabel}</div>
+                          <div className="text-xs text-gray-500 truncate">{row.condition}</div>
+                        </div>
+                        <div className={`text-sm font-bold ${color.text}`} dir="ltr">-{row.percent}%</div>
+                      </div>
+                      {/* F: iOS-style on/off switch controls whether the discount
+                          actively applies. When off, the whole row dims. */}
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none" title={t.enabled[lang]}>
+                        <button
+                          type="button"
+                          onClick={row.onToggleEnabled}
+                          className={`relative inline-flex w-8 h-4 rounded-full transition-colors ${row.enabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                          aria-label={t.enabled[lang]}
+                        >
+                          <span className={`absolute top-0.5 ${row.enabled ? 'end-0.5' : 'start-0.5'} w-3 h-3 rounded-full bg-white shadow transition-all`} />
+                        </button>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={row.stackable}
+                          onChange={row.onToggleStack}
+                          className="w-3.5 h-3.5 accent-primary-600 cursor-pointer"
+                        />
+                        <span className="text-xs text-gray-600">{t.stackable[lang]}</span>
+                      </label>
+                      <button
+                        onClick={row.onRemove}
+                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title={lang === 'ar' ? 'إزالة' : 'Remove'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
       )}
@@ -1091,14 +1427,16 @@ export default function UnitPricingPage() {
               </span>
             </div>
             <button
-              onClick={() => { setRangeMode(!rangeMode); clearSelection(); setSelectedDate(null); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
-                rangeMode
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+              onClick={() => { setMultiSelectMode(!multiSelectMode); clearSelection(); setSelectedDate(null); }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                multiSelectMode
+                  ? 'bg-blue-50 text-blue-700 border-blue-300 ring-1 ring-blue-200'
                   : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
               }`}
+              title={multiSelectMode ? t.multiSelectHint[lang] : ''}
             >
-              {rangeMode ? t.selectRange[lang] : t.normalMode[lang]}
+              <MousePointerSquareDashed className="w-3.5 h-3.5" />
+              {multiSelectMode ? t.multiSelect[lang] : t.normalMode[lang]}
             </button>
           </div>
           <button
@@ -1169,6 +1507,9 @@ export default function UnitPricingPage() {
               <div
                 key={idx}
                 onClick={() => isClickable && handleDayClick(key)}
+                onPointerDown={(e) => isClickable && handleDayPointerDown(key, e)}
+                onPointerEnter={() => isClickable && handleDayPointerEnter(key)}
+                style={multiSelectMode && isClickable ? { touchAction: 'none', userSelect: 'none' } : undefined}
                 className={`
                   relative min-h-[70px] p-2 ${cellBg}
                   ${isCurrentMonth ? '' : 'opacity-40'}
@@ -1203,21 +1544,55 @@ export default function UnitPricingPage() {
                   )}
                 </div>
 
-                {isCurrentMonth && !dayInfo.blocked && dayInfo.price > 0 && (
-                  <div className={`mt-1 text-xs ${priceBg}`} dir="ltr">
-                    <SarSymbol size={9} /> {dayInfo.price.toLocaleString('en')}
-                  </div>
-                )}
-
-                {/* Discount badge */}
+                {/* F-item-5: show both original (struck) and discounted price
+                    when a discount applies. Per-day preview ignores stay length
+                    (weekly/monthly only kick in at booking time). */}
                 {(() => {
-                  const isWknd = [4,5,6].includes(date.getDay());
-                  const ruleDiscount = discountRules.find(r => (r.type === 'weekend' && isWknd) || (r.type === 'weekday' && !isWknd))?.percent ?? 0;
-                  const dateDiscount = datePricingMap?.get(key)?.discountPercent ?? 0;
-                  const effective = Math.max(ruleDiscount, dateDiscount);
-                  return effective > 0 && isCurrentMonth && !dayInfo?.blocked ? (
-                    <div className="text-[8px] text-orange-500 font-medium">-{effective}%</div>
-                  ) : null;
+                  if (!isCurrentMonth || dayInfo.blocked || dayInfo.price <= 0) return null;
+                  const applicable = applicableDiscountsForNight(unit as PricingUnit, date);
+                  const effective = applicable.length > 0 ? effectiveDiscountPercent(applicable) : 0;
+                  const discounted = effective > 0 ? Math.round(dayInfo.price * (1 - effective / 100)) : dayInfo.price;
+                  return (
+                    <div className={`mt-1 text-xs ${priceBg}`} dir="ltr">
+                      {effective > 0 ? (
+                        <>
+                          <span className="text-gray-400 line-through me-1">
+                            <SarSymbol size={8} /> {dayInfo.price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="font-semibold text-gray-900">
+                            <SarSymbol size={9} /> {discounted.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <SarSymbol size={9} /> {dayInfo.price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Discount badge + color dots. Weekly/monthly already excluded
+                    by the helper when no stay length is given. */}
+                {(() => {
+                  if (!isCurrentMonth || dayInfo?.blocked) return null;
+                  const applicable = applicableDiscountsForNight(unit as PricingUnit, date);
+                  if (applicable.length === 0) return null;
+                  const effective = effectiveDiscountPercent(applicable);
+                  const tooltip = applicable.map((d) => `${d.type} -${d.percent}%${d.stackable ? ' (stack)' : ''}`).join(' + ');
+                  return (
+                    <div className="flex items-center justify-between gap-1 mt-0.5" title={tooltip}>
+                      <div className="flex items-center gap-0.5">
+                        {applicable.slice(0, 3).map((d, i) => (
+                          <span key={i} className={`w-1.5 h-1.5 rounded-full ${DISCOUNT_COLORS[d.type].dot}`} />
+                        ))}
+                        {applicable.length > 3 && (
+                          <span className="text-[8px] text-gray-400">+{applicable.length - 3}</span>
+                        )}
+                      </div>
+                      <span className="text-[9px] text-orange-500 font-semibold" dir="ltr">-{effective}%</span>
+                    </div>
+                  );
                 })()}
 
                 {isCurrentMonth && dayInfo.blocked && (
@@ -1287,26 +1662,78 @@ export default function UnitPricingPage() {
         )}
       </div>
 
-      {/* ── Selection Action Bar (4D) ── */}
-      {selectionStart && (
+      {/* ── Selection Action Bar (D1 + D2) ── */}
+      {(multiSelectMode || selectedSet.size > 0) && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="text-sm font-medium text-blue-800">
-              {selectionEnd ? (
-                <span>{formatRangeLabel(selectionStart, selectionEnd, selectionDayCount, isAr)}</span>
+              {selectedSet.size > 0 ? (
+                <span className="flex flex-wrap items-center gap-x-2">
+                  <span>
+                    {selectedSet.size} {selectedSet.size === 1 ? t.day[lang] : t.days[lang]}{' '}
+                    {isAr ? 'محدد' : 'selected'}
+                  </span>
+                  {/* F: hint that some selected dates aren't in the visible month */}
+                  {selectionOutOfMonthCount > 0 && (
+                    <span className="text-xs text-blue-500">
+                      ({selectionOutOfMonthCount} {t.selectedOutOfMonth[lang]})
+                    </span>
+                  )}
+                </span>
               ) : (
-                <span className="text-blue-600">{t.selectRangeHint[lang]}</span>
+                <span className="text-blue-600">{t.multiSelectHint[lang]}</span>
               )}
             </div>
-            <button
-              onClick={clearSelection}
-              className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg transition-colors"
-            >
-              {t.clearSel[lang]}
-            </button>
+
+            {/* D2: Clear / Reset dropdown (replaces single "Clear" button) */}
+            <div className="relative" ref={clearMenuRef}>
+              <button
+                onClick={() => setShowClearMenu((v) => !v)}
+                disabled={selectedSet.size === 0}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 bg-white border border-gray-200 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Eraser className="w-3.5 h-3.5" />
+                {t.clearMenu[lang]}
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showClearMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showClearMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowClearMenu(false)} />
+                  <div className="absolute top-full mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden min-w-[220px] end-0">
+                    <button
+                      onClick={() => { clearSelection(); }}
+                      className="block w-full px-4 py-2.5 text-sm text-start text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      {t.clearSelection[lang]}
+                    </button>
+                    <button
+                      onClick={() => { setShowClearMenu(false); applyBulkReset('price'); }}
+                      disabled={saving}
+                      className="block w-full px-4 py-2.5 text-sm text-start text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 border-t border-gray-100"
+                    >
+                      {t.clearPriceOvr[lang]}
+                    </button>
+                    <button
+                      onClick={() => { setShowClearMenu(false); applyBulkReset('discount'); }}
+                      disabled={saving}
+                      className="block w-full px-4 py-2.5 text-sm text-start text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 border-t border-gray-100"
+                    >
+                      {t.clearDiscountOvr[lang]}
+                    </button>
+                    <button
+                      onClick={() => { setShowClearMenu(false); applyBulkReset('block'); }}
+                      disabled={saving}
+                      className="block w-full px-4 py-2.5 text-sm text-start text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 border-t border-gray-100"
+                    >
+                      {t.clearBlock[lang]}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          {selectionEnd && (
+          {selectedSet.size > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               {/* Block / Unblock buttons */}
               <button
@@ -1379,27 +1806,124 @@ export default function UnitPricingPage() {
               </div>
             )}
 
-            {/* Current price info */}
-            <div className={`rounded-lg p-3 mb-4 ${
-              selectedDateInfo.isBlocked ? 'bg-red-50 border border-red-100' :
-              selectedDateInfo.info.isOverride ? 'bg-blue-50 border border-blue-100' :
-              'bg-gray-50 border border-gray-100'
-            }`}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">{selectedDateInfo.source}</span>
-                {selectedDateInfo.isBlocked ? (
-                  <span className="flex items-center gap-1 text-sm font-medium text-red-500">
-                    <Lock className="w-3.5 h-3.5" />
-                    {t.blocked[lang]}
-                  </span>
-                ) : (
+            {/* D6: For a blocked date, show a SINGLE "Reserved" banner — no
+                 duplicate status label in the price row. For other dates, show
+                 the normal price row with source. */}
+            {selectedDateInfo.isBlocked ? (
+              <div className="rounded-lg p-3 mb-4 bg-red-50 border border-red-100 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-red-500 shrink-0" />
+                <span className="text-sm font-medium text-red-700">{t.blocked[lang]}</span>
+              </div>
+            ) : (
+              <div className={`rounded-lg p-3 mb-4 ${
+                selectedDateInfo.info.isOverride ? 'bg-blue-50 border border-blue-100' :
+                'bg-gray-50 border border-gray-100'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">{selectedDateInfo.source}</span>
                   <span className="text-sm font-semibold text-gray-900" dir="ltr">
-                    <SarSymbol size={12} /> {selectedDateInfo.info.price.toLocaleString('en')}
+                    <SarSymbol size={12} /> {selectedDateInfo.info.price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     <span className="text-xs text-gray-400 ms-1">{t.perNight[lang]}</span>
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* D4 + F: Applicable discounts summary (hide for blocked dates).
+                F-item-2: discounts shadowed by the stacking rule (lower
+                non-stackable losing to a higher non-stackable) are struck
+                through so the host can see why only some contribute. */}
+            {!selectedDateInfo.isBlocked && (
+              <div className="mb-4 rounded-lg border border-gray-100 bg-orange-50/40 p-3">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Percent className="w-3.5 h-3.5 text-orange-500" />
+                  <span className="text-xs font-semibold text-gray-700">{t.discountsApplied[lang]}</span>
+                </div>
+                {selectedDateInfo.appliedDiscounts.length === 0 ? (
+                  <p className="text-xs text-gray-400">{t.noDiscountForDay[lang]}</p>
+                ) : (
+                  <>
+                    <ul className="space-y-0.5 text-xs">
+                      {selectedDateInfo.appliedDiscounts.map((d, i) => {
+                        const label = d.type === 'global' ? t.discountGlobal[lang]
+                          : d.type === 'weekly' ? t.discountWeekly[lang]
+                          : d.type === 'monthly' ? t.discountMonthly[lang]
+                          : d.type === 'weekday' ? t.discountWeekday[lang]
+                          : d.type === 'weekend' ? t.discountWeekend[lang]
+                          : t.discountDate[lang];
+                        const color = DISCOUNT_COLORS[d.type];
+                        const dim = !d.isApplied;
+                        return (
+                          <li key={i} className={`flex items-center justify-between ${dim ? 'opacity-40 line-through' : ''}`}>
+                            <span className="flex items-center gap-1.5 text-gray-600">
+                              <span className={`w-2 h-2 rounded-full ${color.dot}`} />
+                              {label}
+                              {d.stackable && (
+                                <span className="text-[10px] text-gray-400 no-underline">({t.stackable[lang]})</span>
+                              )}
+                            </span>
+                            <span className={`font-medium ${color.text}`} dir="ltr">-{d.percent}%</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-orange-100">
+                      <span className="text-xs text-gray-500">{t.effectivePrice[lang]}</span>
+                      <div className="flex items-center gap-2">
+                        {selectedDateInfo.effectivePct > 0 && (
+                          <span className="text-xs text-gray-400 line-through" dir="ltr">
+                            <SarSymbol size={10} /> {selectedDateInfo.info.price.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
+                        <span className="text-sm font-bold text-gray-900" dir="ltr">
+                          <SarSymbol size={11} /> {selectedDateInfo.priceAfter.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
-            </div>
+            )}
+
+            {/* F-item-3: Set date-specific discount from the dialog */}
+            {!selectedDateInfo.isBlocked && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {t.discountForDate[lang]}
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={singleDiscountInput}
+                      onChange={(e) => setSingleDiscountInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveSingleDiscount(); }}
+                      placeholder="0"
+                      className="w-full px-3 py-2 pe-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
+                    />
+                    <span className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                  </div>
+                  <button
+                    onClick={saveSingleDiscount}
+                    disabled={saving}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save[lang]}
+                  </button>
+                </div>
+                <label className="flex items-center gap-1.5 mt-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={singleDiscountStackable}
+                    onChange={(e) => setSingleDiscountStackable(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-primary-600 cursor-pointer"
+                  />
+                  <span className="text-xs text-gray-600">{t.stackable[lang]}</span>
+                </label>
+              </div>
+            )}
 
             {/* Set special price */}
             {!selectedDateInfo.isBlocked && (
@@ -1433,9 +1957,10 @@ export default function UnitPricingPage() {
               </div>
             )}
 
-            {/* Action buttons */}
+            {/* Action buttons — D6 simplifies the blocked state to a single
+                primary action + an optional secondary link when there's also
+                a custom price override to reset. */}
             <div className="flex flex-col gap-2">
-              {/* Block / Unblock */}
               {selectedDateInfo.isBlocked ? (
                 <>
                   <button
@@ -1446,29 +1971,39 @@ export default function UnitPricingPage() {
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
                     {t.unblock[lang]}
                   </button>
-                  <p className="text-[11px] text-gray-400 text-center">{t.keepPriceNote[lang]}</p>
+                  {selectedDateInfo.hasPriceOverride && (
+                    <button
+                      onClick={removeOverride}
+                      disabled={saving}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2 transition-colors disabled:opacity-50"
+                    >
+                      {t.resetPrice[lang]}
+                    </button>
+                  )}
                 </>
               ) : (
-                <button
-                  onClick={() => toggleBlock(true)}
-                  disabled={saving}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                  {t.block[lang]}
-                </button>
-              )}
-
-              {/* Remove override */}
-              {selectedDateInfo.hasOverride && (
-                <button
-                  onClick={removeOverride}
-                  disabled={saving}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                  {t.removeOverride[lang]}
-                </button>
+                <>
+                  <button
+                    onClick={() => toggleBlock(true)}
+                    disabled={saving}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                    {t.block[lang]}
+                  </button>
+                  {/* For non-blocked dates with an override (custom price or date
+                      discount), offer a "Reset to default" action. */}
+                  {selectedDateInfo.hasOverride && (
+                    <button
+                      onClick={removeOverride}
+                      disabled={saving}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                      {t.removeOverride[lang]}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -1569,49 +2104,106 @@ export default function UnitPricingPage() {
         </div>
       )}
 
-      {/* ── Add Discount Rule Dialog (Task J) ── */}
+      {/* ── E4: Unified Add-Discount Dialog ── */}
       {showAddDiscountDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4" onClick={() => setShowAddDiscountDialog(false)}>
-          <div className="bg-white rounded-xl shadow-xl border w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold">{lang === 'ar' ? 'إضافة خصم' : 'Add Discount'}</h3>
-              <button onClick={() => setShowAddDiscountDialog(false)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5 text-gray-400" /></button>
+              <h3 className="text-base font-semibold text-gray-900">{t.addDiscount[lang]}</h3>
+              <button onClick={() => setShowAddDiscountDialog(false)} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
             </div>
-            {/* Day type selector */}
+
+            {/* Type picker — grid of 6 */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{lang === 'ar' ? 'نوع الأيام' : 'Day Type'}</label>
-              <div className="flex gap-2">
-                {(['weekday', 'weekend'] as const).map(type => {
-                  const exists = discountRules.some(r => r.type === type);
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.discountType[lang]}</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['global', 'weekly', 'monthly', 'weekday', 'weekend', 'date'] as DiscountType[]).map((type) => {
+                  const alreadySet =
+                    (type === 'global'  && (unit?.pricing?.discountPercent ?? 0) > 0) ||
+                    (type === 'weekly'  && (unit?.pricing?.weeklyDiscount  ?? 0) > 0) ||
+                    (type === 'monthly' && (unit?.pricing?.monthlyDiscount ?? 0) > 0) ||
+                    ((type === 'weekday' || type === 'weekend') && discountRules.some((r) => r.type === type));
+                  const disabledDate = type === 'date' && selectedSet.size === 0;
+                  const disabled = alreadySet || disabledDate;
+                  const color = DISCOUNT_COLORS[type];
+                  const typeLabel = type === 'global' ? t.discountGlobal[lang]
+                    : type === 'weekly' ? t.discountWeekly[lang]
+                    : type === 'monthly' ? t.discountMonthly[lang]
+                    : type === 'weekday' ? t.discountWeekday[lang]
+                    : type === 'weekend' ? t.discountWeekend[lang]
+                    : t.discountDate[lang];
                   return (
-                    <button key={type} onClick={() => !exists && setNewDiscountType(type)} disabled={exists}
-                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all border ${newDiscountType === type ? 'bg-primary-50 text-primary-700 border-primary-300' : exists ? 'bg-gray-100 text-gray-300 border-gray-200 cursor-not-allowed' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
-                      {type === 'weekday' ? (lang === 'ar' ? 'أيام الأسبوع' : 'Weekdays') : (lang === 'ar' ? 'نهاية الأسبوع' : 'Weekends')}
-                      {exists && <span className="block text-[10px] text-gray-400 mt-0.5">{lang === 'ar' ? 'موجود' : 'exists'}</span>}
+                    <button
+                      key={type}
+                      onClick={() => !disabled && setNewDiscountType(type)}
+                      disabled={disabled}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
+                        newDiscountType === type && !disabled
+                          ? `${color.bg} ${color.text} ${color.ring} ring-2`
+                          : disabled
+                          ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${color.dot}`} />
+                      <span className="flex-1 text-start">{typeLabel}</span>
+                      {alreadySet && <span className="text-[9px] text-gray-400">{t.alreadyAdded[lang]}</span>}
+                      {disabledDate && <span className="text-[9px] text-gray-400">{t.dateSelectFirst[lang]}</span>}
                     </button>
                   );
                 })}
               </div>
             </div>
+
             {/* Percent slider + input */}
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{lang === 'ar' ? 'نسبة الخصم' : 'Discount %'}</label>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.discountPercentLabel[lang]}</label>
               <div className="flex items-center gap-3">
-                <input type="range" min="0" max="100" value={newDiscountPercent} onChange={e => setNewDiscountPercent(Number(e.target.value))}
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600" />
+                <input
+                  type="range" min="0" max="100"
+                  value={newDiscountPercent}
+                  onChange={(e) => setNewDiscountPercent(Number(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
+                />
                 <div className="relative w-20">
-                  <input type="number" min="0" max="100" value={newDiscountPercent} onChange={e => setNewDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
-                    className="w-full px-2 py-1.5 pe-7 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none" />
+                  <input
+                    type="number" min="0" max="100"
+                    value={newDiscountPercent}
+                    onChange={(e) => setNewDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                    className="w-full px-2 py-1.5 pe-7 border border-gray-300 rounded-lg text-sm text-center focus:ring-2 focus:ring-primary-500 outline-none"
+                  />
                   <span className="absolute end-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
                 </div>
               </div>
             </div>
+
+            {/* Stackable toggle */}
+            <label className="flex items-center gap-2 mb-5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={newDiscountStackable}
+                onChange={(e) => setNewDiscountStackable(e.target.checked)}
+                className="w-4 h-4 accent-primary-600 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">{t.stackable[lang]}</span>
+              <span className="text-xs text-gray-400">— {t.stackableHint[lang]}</span>
+            </label>
+
             <div className="flex gap-2">
-              <button onClick={() => setShowAddDiscountDialog(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium">{lang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
-              <button onClick={handleAddDiscountRule}
-                disabled={newDiscountPercent <= 0 || discountRules.some(r => r.type === newDiscountType)}
-                className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">
-                {lang === 'ar' ? 'حفظ' : 'Save'}
+              <button
+                onClick={() => setShowAddDiscountDialog(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                {t.cancel[lang]}
+              </button>
+              <button
+                onClick={handleAddDiscount}
+                disabled={newDiscountPercent <= 0}
+                className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-primary-700 transition-colors"
+              >
+                {t.save[lang]}
               </button>
             </div>
           </div>
@@ -1636,6 +2228,16 @@ export default function UnitPricingPage() {
                 <span className="absolute end-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
               </div>
             </div>
+            {/* PR E: stackable toggle on the range-applied date-specific discount */}
+            <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rangeDiscountStackable}
+                onChange={(e) => setRangeDiscountStackable(e.target.checked)}
+                className="w-4 h-4 accent-primary-600 cursor-pointer"
+              />
+              <span className="text-sm text-gray-700">{t.stackable[lang]}</span>
+            </label>
             <div className="flex gap-2">
               <button onClick={() => setShowRangeDiscountDialog(false)} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">{t.cancel[lang]}</button>
               <button onClick={() => { applyRangeDiscount(); setShowRangeDiscountDialog(false); }}

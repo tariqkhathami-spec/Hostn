@@ -122,11 +122,29 @@ export default function HostMessagesPage() {
   const selectedConv = conversations.find(c => c._id === selectedId);
   const getOtherParticipant = (conv: Conversation): User | null => {
     if (!user) return null;
-    const other = conv.participants.find(p => {
-      const pId = typeof p === 'string' ? p : p._id;
-      return pId !== user._id;
-    });
-    return other && typeof other !== 'string' ? other : null;
+    // Phase 1: participants is [{user: User, userType: 'Guest'|'Host'|'Admin'}].
+    // Some legacy docs or unpopulated responses may still be flat [User]; handle both.
+    const entries = (conv.participants || []) as unknown[];
+    for (const entry of entries) {
+      if (!entry) continue;
+      // New shape: { user, userType }
+      if (typeof entry === 'object' && 'user' in (entry as Record<string, unknown>)) {
+        const sub = (entry as { user: User | string }).user;
+        const subUser = typeof sub === 'object' ? (sub as User) : null;
+        const subId = subUser?._id || (typeof sub === 'string' ? sub : undefined);
+        if (subId && subId !== user._id && subUser) return subUser;
+      }
+      // Legacy shape: flat User doc
+      else if (typeof entry === 'object' && '_id' in (entry as Record<string, unknown>)) {
+        const flat = entry as User;
+        if (flat._id !== user._id) return flat;
+      }
+      // String shape: just an ObjectId
+      else if (typeof entry === 'string' && entry !== user._id) {
+        return { _id: entry, name: '' } as User;
+      }
+    }
+    return null;
   };
   const getUnread = (conv: Conversation): number => user ? (conv.unreadCount?.[user._id] || 0) : 0;
 

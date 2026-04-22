@@ -17,8 +17,22 @@ interface AuthContextType {
   upgradeToHost: () => Promise<void>;
 }
 
-export function getRoleRedirect(role?: string): string {
-  switch (role) {
+/**
+ * Return the path to redirect to after authentication.
+ *
+ * When running under the business.hostn.co or admin.hostn.co subdomains, the
+ * middleware rewrites the subdomain root to /host or /admin, so we return '/'.
+ * On the main domain, we return the legacy prefixed paths — though these
+ * should now 404 on the main domain post-Phase-2. This function is kept for
+ * backward-compat with existing calls.
+ */
+export function getRoleRedirect(userType?: string): string {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.startsWith('business.')) return '/';
+    if (host.startsWith('admin.')) return '/';
+  }
+  switch (userType) {
     case 'host': return '/host';
     case 'admin': return '/admin';
     default: return '/dashboard';

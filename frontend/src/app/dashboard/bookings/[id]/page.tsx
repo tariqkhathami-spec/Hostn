@@ -261,31 +261,31 @@ export default function BookingDetailPage() {
             <div className="space-y-3 text-sm">
               {pricing?.perNight != null && (
                 <div className="flex justify-between text-gray-600">
-                  <span dir="ltr"><SarSymbol /> {pricing.perNight.toLocaleString('en')} x {nights} {isAr ? 'ليالي' : 'nights'}</span>
-                  <span dir="ltr"><SarSymbol /> {pricing.subtotal?.toLocaleString('en')}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.perNight.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x {nights} {isAr ? 'ليالي' : 'nights'}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.subtotal?.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               {(pricing?.cleaningFee || 0) > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>{isAr ? 'رسوم التنظيف' : 'Cleaning fee'}</span>
-                  <span dir="ltr"><SarSymbol /> {pricing.cleaningFee.toLocaleString('en')}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.cleaningFee.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               {(pricing?.serviceFee || 0) > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>{isAr ? 'رسوم الخدمة' : 'Service fee'}</span>
-                  <span dir="ltr"><SarSymbol /> {pricing.serviceFee.toLocaleString('en')}</span>
+                  <span dir="ltr"><SarSymbol /> {pricing.serviceFee.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               {(pricing?.discount || 0) > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>{isAr ? 'خصم' : 'Discount'}</span>
-                  <span dir="ltr">- <SarSymbol /> {pricing.discount.toLocaleString('en')}</span>
+                  <span dir="ltr">- <SarSymbol /> {pricing.discount.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               <div className="border-t border-gray-200 pt-3 flex justify-between font-semibold text-gray-900">
                 <span>{isAr ? 'الإجمالي' : 'Total'}</span>
-                <span dir="ltr"><SarSymbol /> {pricing?.total?.toLocaleString('en') || '0'}</span>
+                <span dir="ltr"><SarSymbol /> {pricing?.total?.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0'}</span>
               </div>
             </div>
           </div>

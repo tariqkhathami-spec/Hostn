@@ -40,6 +40,12 @@ const unitSchema = new mongoose.Schema(
     // ── A. Toggle ─────────────────────────────────────────────────
     isActive: { type: Boolean, default: true },
 
+    // ── Soft-delete ───────────────────────────────────────────────
+    // Deleted units are retained for audit + booking history, but hidden
+    // from all non-admin queries. `isActive` is ALSO set to false on delete.
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+
     // ── C-i. Name (bilingual) ────────────────────────────────────
     nameEn: {
       type: String,
@@ -226,8 +232,15 @@ const unitSchema = new mongoose.Schema(
 
     // ── Q. Tourism License (MOT) ─────────────────────────────────
     tourismLicense: {
-      licenseNumber: { type: String, trim: true },
-      licenseType: { type: String },
+      workType: {
+        type: String,
+        enum: ['individual', 'company'],
+        default: 'individual',
+      },
+      licenseNumber: { type: String, trim: true },     // MOT permit number (individual) OR license number (company)
+      nationalId: { type: String, trim: true },         // National ID for individual
+      commercialRegister: { type: String, trim: true }, // Commercial register for company
+      documentUrl: { type: String },                    // PDF file URL
       issueDate: { type: Date },
       expiryDate: { type: Date },
       status: {
@@ -247,6 +260,11 @@ const unitSchema = new mongoose.Schema(
     ],
 
     // ── Pricing (per-day breakdown) ──────────────────────────────
+    // Discount semantics (PR E):
+    // - Every discount carries an optional `stackable` flag (default false).
+    // - Per-night effective discount = sum(stackable applicable) + max(non-stackable applicable), capped at 100%.
+    // - Legacy data defaults to stackable:false so behavior is unchanged for
+    //   existing units until the host opts in.
     pricing: {
       sunday: { type: Number, min: 0, default: 0 },
       monday: { type: Number, min: 0, default: 0 },
@@ -256,15 +274,27 @@ const unitSchema = new mongoose.Schema(
       friday: { type: Number, min: 0, default: 0 },
       saturday: { type: Number, min: 0, default: 0 },
       cleaningFee: { type: Number, default: 0, min: 0 },
+      // Each discount has a `percent`, a `stackable` flag (see PR E), and an
+      // `enabled` on/off toggle (PR F). `enabled` defaults to TRUE so existing
+      // units with a non-zero percent still apply their discount; the host
+      // can then disable without losing the value.
       discountPercent: { type: Number, default: 0, min: 0, max: 100 },
+      globalStackable: { type: Boolean, default: false },
+      globalEnabled: { type: Boolean, default: true },
       weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
+      weeklyStackable: { type: Boolean, default: false },
+      weeklyEnabled: { type: Boolean, default: true },
       monthlyDiscount: { type: Number, default: 0, min: 0, max: 100 },
+      monthlyStackable: { type: Boolean, default: false },
+      monthlyEnabled: { type: Boolean, default: true },
     },
 
     // ── Discount rules (weekday/weekend) ────────────────────────────
     discountRules: [{
       type: { type: String, enum: ['weekday', 'weekend'], required: true },
       percent: { type: Number, required: true, min: 0, max: 100 },
+      stackable: { type: Boolean, default: false },
+      enabled: { type: Boolean, default: true },
     }],
 
     // ── Per-date price overrides ─────────────────────────────────────
@@ -274,6 +304,7 @@ const unitSchema = new mongoose.Schema(
         price: { type: Number, min: 0 },         // override price (null = use day-of-week default)
         isBlocked: { type: Boolean, default: false }, // true = unavailable
         discountPercent: { type: Number, min: 0, max: 100 },
+        discountStackable: { type: Boolean, default: false },
       },
     ],
 

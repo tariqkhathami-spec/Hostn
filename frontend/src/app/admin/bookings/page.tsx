@@ -141,7 +141,7 @@ export default function AdminBookingsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      <span dir="ltr"><SarSymbol /> {(b.pricing?.total || b.totalPrice)?.toLocaleString('en')}</span>
+                      <span dir="ltr"><SarSymbol /> {(b.pricing?.total || b.totalPrice)?.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </td>
                     <td className="px-4 py-3">
                       <button

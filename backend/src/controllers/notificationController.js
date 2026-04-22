@@ -130,13 +130,16 @@ exports.registerDeviceToken = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Device token is required' });
     }
 
-    // Store device token on user (add field if needed)
-    const User = require('../models/User');
-    await User.findByIdAndUpdate(req.user._id, {
-      $addToSet: {
-        deviceTokens: { token, platform: platform || 'ios', updatedAt: new Date() },
-      },
-    });
+    // Store device token on the correct user collection
+    const { getUserModel } = require('./authController');
+    const Model = getUserModel(req.user);
+    if (Model) {
+      await Model.findByIdAndUpdate(req.user._id, {
+        $addToSet: {
+          deviceTokens: { token, platform: platform || 'ios', updatedAt: new Date() },
+        },
+      });
+    }
 
     res.json({ success: true, message: 'Device token registered' });
   } catch (error) {

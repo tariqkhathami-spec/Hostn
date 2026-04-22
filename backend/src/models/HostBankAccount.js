@@ -4,7 +4,7 @@ const hostBankAccountSchema = new mongoose.Schema(
   {
     host: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Host',
       required: true,
       index: true,
     },
@@ -42,14 +42,25 @@ const hostBankAccountSchema = new mongoose.Schema(
     transferDuration: {
       type: {
         type: String,
-        enum: ['default', 'custom'],
-        default: 'default',
+        enum: ['after_departure', 'amount_threshold', 'weekly'],
+        default: 'after_departure',
       },
       hours: {
         type: Number,
         default: 48,
         min: [24, 'Minimum transfer duration is 24 hours'],
         max: [336, 'Maximum transfer duration is 336 hours (14 days)'],
+      },
+      thresholdAmount: {
+        type: Number,
+        default: 0,
+        min: [0, 'Threshold amount cannot be negative'],
+      },
+      weeklyDay: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 6, // 0=Sunday, 1=Monday, ..., 6=Saturday
       },
     },
   },

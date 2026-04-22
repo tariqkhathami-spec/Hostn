@@ -364,14 +364,20 @@ function UnitDetailContent() {
       <Header />
       <main className="min-h-screen">
         <div className="container-custom py-8">
-          {/* Breadcrumb: Home > Search > City > Unit Name */}
+          {/* Breadcrumb — PR J: Home > City > Type > Unit Name (city added
+              before type per user feedback). City links to a type-agnostic
+              search in that city; type links to the type filter. */}
           <nav className="text-sm text-gray-500 mb-4">
             <a href="/" className="hover:text-primary-600">{t('breadcrumb.home')}</a>
             <span className="mx-2">/</span>
-            <a href="/search" className="hover:text-primary-600">{t('breadcrumb.properties')}</a>
+            <a href={`/search?city=${encodeURIComponent(property.location.city)}`} className="hover:text-primary-600">
+              {isAr
+                ? (CITIES.find((c) => c.value.toLowerCase() === property.location.city.toLowerCase())?.ar || property.location.city)
+                : property.location.city}
+            </a>
             <span className="mx-2">/</span>
-            <a href={`/search?city=${property.location.city}`} className="hover:text-primary-600">
-              {isAr ? (CITIES.find(c => c.value.toLowerCase() === property.location.city.toLowerCase())?.ar || property.location.city) : property.location.city}
+            <a href={`/search?type=${property.type}`} className="hover:text-primary-600">
+              {getPropertyTypeLabel(property.type, language as 'en' | 'ar')}
             </a>
             <span className="mx-2">/</span>
             <span className="text-gray-800 line-clamp-1">{displayTitle}</span>
@@ -461,7 +467,7 @@ function UnitDetailContent() {
                 <h3 className="text-base font-bold text-emerald-900">{isAr ? 'وعد Hostn' : 'The Hostn Promise'}</h3>
                 <p className="text-sm text-emerald-700">{isAr ? 'نضمن صحة المعلومات ونظافة المكان' : 'We guarantee correct information and place cleaning'}</p>
               </div>
-              <ChevronRight className={`w-5 h-5 text-emerald-500 flex-shrink-0 transition-transform duration-200 ${showPromise ? 'rotate-90' : ''}`} />
+              <ChevronRight className={`w-5 h-5 text-emerald-500 flex-shrink-0 transition-transform duration-200 rtl:rotate-180 ${showPromise ? 'rotate-90' : ''}`} />
             </button>
             <div className={`transition-all duration-300 ease-in-out ${showPromise ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
               <div className="px-4 pb-4 ps-16 text-sm text-emerald-800 leading-relaxed">

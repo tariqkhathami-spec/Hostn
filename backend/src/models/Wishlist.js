@@ -4,7 +4,7 @@ const wishlistSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Guest',
       required: true,
       index: true,
     },
@@ -33,24 +33,18 @@ wishlistSchema.index({ user: 1, isDefault: 1 });
 wishlistSchema.index({ user: 1, name: 1 }, { unique: true });
 
 /**
- * Get or lazily create the default wishlist for a user.
- * Migrates any existing user.wishlist IDs into the new list.
+ * Get or lazily create the default wishlist for a guest.
  */
 wishlistSchema.statics.getOrCreateDefault = async function (userId) {
   let list = await this.findOne({ user: userId, isDefault: true });
   if (list) return list;
-
-  // Migrate existing user.wishlist into the new default list
-  const User = require('./User');
-  const user = await User.findById(userId).select('wishlist');
-  const existingIds = user?.wishlist || [];
 
   try {
     list = await this.create({
       user: userId,
       name: 'مفضلاتي',
       isDefault: true,
-      units: existingIds,
+      units: [],
     });
   } catch (err) {
     // Race condition: another request created it — just fetch it

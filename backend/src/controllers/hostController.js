@@ -90,11 +90,12 @@ exports.getDashboardStats = async (req, res, next) => {
 // @access  Private (Host)
 exports.getRecentBookings = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id }).select('_id');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id');
     const propertyIds = properties.map((p) => p._id);
 
     const bookings = await Booking.find({ property: { $in: propertyIds } })
       .populate('property', 'title titleAr images location type')
+      .populate('unit', 'nameEn nameAr')
       .populate('guest', 'name email phone avatar')
       .sort('-createdAt')
       .limit(Math.min(parseInt(req.query.limit) || 10, 50));
@@ -110,7 +111,7 @@ exports.getRecentBookings = async (req, res, next) => {
 // @access  Private (Host)
 exports.getNotifications = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id }).select('_id title');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title');
     const propertyIds = properties.map((p) => p._id);
     const propertyMap = {};
     properties.forEach((p) => { propertyMap[p._id.toString()] = p.title; });
@@ -177,7 +178,7 @@ exports.getEarnings = async (req, res, next) => {
     const { year } = req.query;
     const targetYear = parseInt(year) || new Date().getFullYear();
 
-    const properties = await Property.find({ host: req.user._id }).select('_id');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id');
     const propertyIds = properties.map((p) => p._id);
 
     const startDate = new Date(targetYear, 0, 1);
@@ -444,7 +445,7 @@ exports.getHostReviews = async (req, res, next) => {
     const safePage = Math.max(1, parseInt(page) || 1);
     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 10), MAX_LIMIT);
 
-    const properties = await Property.find({ host: req.user._id }).select('_id title');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title');
     const propertyIds = propertyId
       ? [propertyId]
       : properties.map((p) => p._id);
@@ -555,7 +556,7 @@ exports.togglePropertyStatus = async (req, res, next) => {
 // @access  Private (Host)
 exports.getHostProperties = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id }).sort('title');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).sort('title');
 
     // Group properties by their tag (e.g., "شاليهات ميفارا") to form property groups
     const groups = {};
@@ -619,7 +620,7 @@ exports.getHostProperties = async (req, res, next) => {
 exports.getHostBookings = async (req, res, next) => {
   try {
     const { status, page = 1 } = req.query;
-    const properties = await Property.find({ host: req.user._id }).select('_id title');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title');
     const propertyIds = properties.map(p => p._id);
 
     const query = { property: { $in: propertyIds } };
@@ -664,7 +665,7 @@ exports.getHostBookings = async (req, res, next) => {
 // @access  Private (Host)
 exports.getUpcomingGuests = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id }).select('_id');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id');
     const propertyIds = properties.map(p => p._id);
     const now = new Date();
 
@@ -732,11 +733,11 @@ exports.getHostCalendarAll = async (req, res, next) => {
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 0, 23, 59, 59);
 
-    const properties = await Property.find({ host: req.user._id }).select('_id title tags isActive');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title tags isActive');
     const propertyIds = properties.map(p => p._id);
 
     // Fetch units for all properties
-    const units = await Unit.find({ property: { $in: propertyIds } }).select('_id property nameEn nameAr isActive unavailableDates');
+    const units = await Unit.find({ property: { $in: propertyIds }, isDeleted: { $ne: true } }).select('_id property nameEn nameAr isActive unavailableDates');
 
     const bookings = await Booking.find({
       property: { $in: propertyIds },
@@ -842,7 +843,7 @@ exports.getHostCalendarAll = async (req, res, next) => {
 // @access  Private (Host)
 exports.getHostDashboardStats = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id }).select('_id');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id');
     const propertyIds = properties.map(p => p._id);
 
     const allBookings = await Booking.find({ property: { $in: propertyIds } });

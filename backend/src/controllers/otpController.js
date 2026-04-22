@@ -1,19 +1,33 @@
 const jwt = require('jsonwebtoken');
 const OTP = require('../models/OTP');
-const User = require('../models/User');
+const Guest = require('../models/Guest');
+const Host = require('../models/Host');
+const Admin = require('../models/Admin');
 const RefreshToken = require('../models/RefreshToken');
 const authentica = require('../services/authentica');
+const { resolveUserType, inferUserTypeFromOrigin } = require('./authController');
+
+const MODEL_BY_TYPE = { guest: Guest, host: Host, admin: Admin };
+const TYPE_CAPITALIZED = { guest: 'Guest', host: 'Host', admin: 'Admin' };
 
 // Long-lived access token (30 days — matches refresh token & authController)
-const generateAccessToken = (user) => {
+const generateAccessToken = (user, userType) => {
   return jwt.sign(
-    { id: user._id, phone: user.phone, role: user.role, tokenVersion: user.tokenVersion },
+    {
+      id: user._id,
+      phone: user.phone,
+      userType,
+      role: userType, // legacy alias
+      tokenVersion: user.tokenVersion,
+    },
     process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
 };
 
-// Test accounts — bypass OTP with code 0000; role assigned on first login
+// Test accounts — bypass OTP with code 0000.
+// Each test phone maps to a role; the user is created in the collection
+// matching the request's Origin (or the mapped role if Origin is ambiguous).
 const TEST_ACCOUNTS = {
   '500000001': 'admin',
   '500000002': 'host',
@@ -63,8 +77,10 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
-    // Check if user is suspended (try multiple phone formats)
-    const existingUser = await User.findOne({
+    // Check if user is suspended in the target collection (based on origin)
+    const userType = resolveUserType(req);
+    const Model = MODEL_BY_TYPE[userType] || Guest;
+    const existingUser = await Model.findOne({
       phone: { $in: [phone, `0${phone}`, `${countryCode}${phone}`, phone.replace(/^0+/, '')] },
     });
     if (existingUser && existingUser.isSuspended) {
@@ -146,7 +162,6 @@ exports.sendOTP = async (req, res, next) => {
       resendCooldown: 30,
     });
   } catch (error) {
-    // Return user-friendly message if Authentica service provided one
     if (error.userMessage) {
       return res.status(error.status || 503).json({
         success: false,
@@ -154,7 +169,6 @@ exports.sendOTP = async (req, res, next) => {
       });
     }
 
-    // Handle rate limit / cooldown errors
     if (error.message && error.message.includes('Too many')) {
       return res.status(429).json({ success: false, message: error.message });
     }
@@ -163,7 +177,7 @@ exports.sendOTP = async (req, res, next) => {
   }
 };
 
-// @desc    Verify OTP and login/register
+// @desc    Verify OTP and login/register into the correct role collection
 // @route   POST /api/v1/auth/verify-otp
 // @access  Public
 exports.verifyOTP = async (req, res, next) => {
@@ -175,6 +189,18 @@ exports.verifyOTP = async (req, res, next) => {
         success: false,
         message: 'Phone number and OTP are required',
       });
+    }
+
+    // Determine which role-specific collection to register/authenticate against.
+    // Priority:
+    //   1. Origin header (subdomain) — production source of truth
+    //   2. Test account role (backward compat for the 500000001/2/3 test phones)
+    //   3. Fallback 'guest'
+    const originType = inferUserTypeFromOrigin(req.headers.origin || req.headers.referer);
+    const userType = originType || TEST_ACCOUNTS[phone] || resolveUserType(req);
+    const Model = MODEL_BY_TYPE[userType];
+    if (!Model) {
+      return res.status(400).json({ success: false, message: 'Invalid user type' });
     }
 
     // Test accounts: accept 0000
@@ -201,27 +227,7 @@ exports.verifyOTP = async (req, res, next) => {
       phone.replace(/^0+/, ''),                 // strip leading zeros
     ];
 
-    // Fix corrupted Extended JSON dates before Mongoose hydration.
-    // Some docs have createdAt/updatedAt as { $date: '...' } objects
-    // (from a MongoDB import) instead of native BSON Date — this makes
-    // Mongoose throw "Cast to date failed" on findOne or save.
-    const rawCol = User.collection;
-    const rawDoc = await rawCol.findOne({ phone: { $in: phoneVariants } });
-    if (rawDoc) {
-      const dateFix = {};
-      if (rawDoc.createdAt && typeof rawDoc.createdAt === 'object' && rawDoc.createdAt.$date) {
-        dateFix.createdAt = new Date(rawDoc.createdAt.$date);
-      }
-      if (rawDoc.updatedAt && typeof rawDoc.updatedAt === 'object' && rawDoc.updatedAt.$date) {
-        dateFix.updatedAt = new Date(rawDoc.updatedAt.$date);
-      }
-      if (Object.keys(dateFix).length > 0) {
-        await rawCol.updateOne({ _id: rawDoc._id }, { $set: dateFix });
-        console.log(`[OTP] Fixed corrupted date fields for user ${rawDoc._id}`);
-      }
-    }
-
-    let user = await User.findOne({ phone: { $in: phoneVariants } });
+    let user = await Model.findOne({ phone: { $in: phoneVariants } });
     let isNewUser = false;
 
     if (!user) {
@@ -229,28 +235,22 @@ exports.verifyOTP = async (req, res, next) => {
       const createData = {
         phone,
         phoneVerified: true,
-        role: TEST_ACCOUNTS[phone] || 'guest',
         name: `User ${phone.slice(-4)}`,
       };
-      if (TEST_ACCOUNTS[phone] === 'admin') createData.adminRole = 'super';
-      user = await User.create(createData);
+      if (userType === 'admin') createData.adminRole = TEST_ACCOUNTS[phone] === 'admin' ? 'super' : 'support';
+      user = await Model.create(createData);
     } else {
       // Normalize phone to the format without leading 0 for consistency
       if (user.phone !== phone) {
         console.log(`[OTP] Normalizing phone from "${user.phone}" to "${phone}"`);
         user.phone = phone;
       }
-      // Ensure test accounts always have the correct role
-      if (TEST_ACCOUNTS[phone] && user.role !== TEST_ACCOUNTS[phone]) {
-        user.role = TEST_ACCOUNTS[phone];
-        if (TEST_ACCOUNTS[phone] === 'admin') user.adminRole = 'super';
-      }
       user.phoneVerified = true;
       await user.save();
     }
 
     // Generate access token
-    const token = generateAccessToken(user);
+    const token = generateAccessToken(user, userType);
 
     // Generate refresh token
     const deviceInfo = {
@@ -258,10 +258,16 @@ exports.verifyOTP = async (req, res, next) => {
       ip: req.ip,
       platform: req.headers['x-platform'] || 'web',
     };
-    const { rawToken: refreshToken } = await RefreshToken.createToken(user._id, deviceInfo);
+    const { rawToken: refreshToken } = await RefreshToken.createToken(
+      user._id,
+      TYPE_CAPITALIZED[userType],
+      deviceInfo
+    );
 
     const userObj = user.toObject ? user.toObject() : user;
     delete userObj.password;
+    userObj.userType = userType;
+    userObj.role = userType; // legacy alias
 
     // Set cookies for web clients
     res.cookie('hostn_token', token, {

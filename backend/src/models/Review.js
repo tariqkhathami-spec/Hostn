@@ -9,7 +9,7 @@ const reviewSchema = new mongoose.Schema(
     },
     guest: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Guest',
       required: true,
     },
     booking: {

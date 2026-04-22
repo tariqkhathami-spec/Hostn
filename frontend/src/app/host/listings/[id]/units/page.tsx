@@ -7,7 +7,7 @@ import { unitsApi, propertiesApi } from '@/lib/api';
 import {
   Plus, Loader2, ArrowLeft, Copy, Calendar, Pencil,
   ToggleLeft, ToggleRight, Bed, Users, Droplets, Building,
-  X, ImageOff, DollarSign, CalendarOff,
+  X, ImageOff, DollarSign, CalendarOff, Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -34,7 +34,7 @@ const t: Record<string, Record<string, string>> = {
   bedrooms:     { en: 'Bedrooms', ar: '\u063a\u0631\u0641 \u0646\u0648\u0645' },
   bathrooms:    { en: 'Bathrooms', ar: '\u062d\u0645\u0627\u0645\u0627\u062a' },
   avgPrice:     { en: 'Avg price', ar: '\u0645\u062a\u0648\u0633\u0637 \u0627\u0644\u0633\u0639\u0631' },
-  propertyFor:  { en: 'Units for:', ar: '\u0648\u062d\u062f\u0627\u062a:' },
+  propertyFor:  { en: 'Units for', ar: '\u0648\u062d\u062f\u0627\u062a \u0639\u0642\u0627\u0631' },
   confirmDelete:{ en: 'Are you sure you want to deactivate this unit?', ar: 'هل تريد تعطيل هذه الوحدة؟' },
   dupTitle:     { en: 'Duplicate Unit', ar: 'نسخ الوحدة' },
   dupDesc:      { en: 'Select what to exclude from the copy:', ar: 'اختر ما تريد استبعاده من النسخة:' },
@@ -44,6 +44,13 @@ const t: Record<string, Record<string, string>> = {
   dupConfirm:   { en: 'Duplicate', ar: 'نسخ' },
   cancel:       { en: 'Cancel', ar: 'إلغاء' },
   pricing:      { en: 'Calendar', ar: 'التقويم' },
+  delete:       { en: 'Delete', ar: 'حذف' },
+  deleteUnit:   { en: 'Delete unit', ar: 'حذف الوحدة' },
+  deleteUnitConfirm: {
+    en: 'This will remove the unit from your listings. Active bookings will remain. Continue?',
+    ar: 'سيؤدي هذا إلى إزالة الوحدة من قوائمك. ستبقى الحجوزات النشطة. متابعة؟',
+  },
+  unitDeleted:  { en: 'Unit deleted', ar: 'تم حذف الوحدة' },
 };
 
 export default function UnitsListPage() {
@@ -55,11 +62,15 @@ export default function UnitsListPage() {
   usePageTitle(isAr ? 'الوحدات' : 'Units');
 
   const [units, setUnits] = useState<Unit[]>([]);
-  const [propertyTitle, setPropertyTitle] = useState('');
+  // Keep both titles so we can show the right one per-language instead of
+  // always preferring English.
+  const [propertyTitle, setPropertyTitle] = useState<{ en: string; ar: string }>({ en: '', ar: '' });
   const [loading, setLoading] = useState(true);
   const [dupDialogId, setDupDialogId] = useState<string | null>(null);
   const [dupExclude, setDupExclude] = useState<Record<string, boolean>>({ images: false, pricing: false, unavailableDates: false });
   const [dupLoading, setDupLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => { load(); }, [propertyId]);
 
@@ -73,7 +84,10 @@ export default function UnitsListPage() {
     try {
       const propRes = await propertiesApi.getOne(propertyId);
       const prop = propRes.data.data || propRes.data;
-      setPropertyTitle(prop.title || prop.titleAr || '');
+      setPropertyTitle({
+        en: prop.title || prop.titleAr || '',
+        ar: prop.titleAr || prop.title || '',
+      });
     } catch {
       // Property may be inactive — still show units
     }
@@ -101,6 +115,22 @@ export default function UnitsListPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await unitsApi.remove(deleteTarget.id);
+      setUnits((prev) => prev.filter((u) => u._id !== deleteTarget.id));
+      toast.success(t.unitDeleted[lang]);
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || (isAr ? 'فشل في الحذف' : 'Delete failed'));
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleToggle = async (id: string) => {
     try {
       await unitsApi.toggle(id);
@@ -113,10 +143,12 @@ export default function UnitsListPage() {
   };
 
   /** Average of 7-day pricing */
-  const avgPrice = (pricing?: Record<string, number>) => {
+  const avgPrice = (pricing?: Record<string, number | boolean | undefined>) => {
     if (!pricing) return 0;
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const prices = days.map((d) => pricing[d] || 0).filter((p) => p > 0);
+    const prices = days
+      .map((d) => (typeof pricing[d] === 'number' ? pricing[d] as number : 0))
+      .filter((p) => p > 0);
     return prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
   };
 
@@ -137,7 +169,7 @@ export default function UnitsListPage() {
   return (
     <div>
       {/* Header */}
-      <Link href="/host/listings" className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4">
+      <Link href="/listings" className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4">
         <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
         {t.back[lang]}
       </Link>
@@ -145,12 +177,16 @@ export default function UnitsListPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t.title[lang]}</h1>
-          {propertyTitle && (
-            <p className="text-sm text-gray-500 mt-0.5">{t.propertyFor[lang]} {propertyTitle}</p>
+          {propertyTitle[lang] && (
+            <p className="text-sm text-gray-500 mt-0.5">
+              {t.propertyFor[lang]}
+              {isAr ? ' ' : ': '}
+              <span className="font-medium text-gray-700">{propertyTitle[lang]}</span>
+            </p>
           )}
         </div>
         <Link
-          href={`/host/listings/${propertyId}/units/new`}
+          href={`/listings/${propertyId}/units/new`}
           className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -216,7 +252,7 @@ export default function UnitsListPage() {
                 {avgPrice(unit.pricing) > 0 && (
                   <p className="text-sm font-bold text-primary-600 mb-3">
                     <span dir="ltr">
-                      <SarSymbol /> {avgPrice(unit.pricing).toLocaleString('en')}
+                      <SarSymbol /> {avgPrice(unit.pricing).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     {' '}/{' '}{isAr ? 'ليلة' : 'night'}{' '}
                     <span className="font-normal text-gray-400 text-xs">({t.avgPrice[lang]})</span>
@@ -227,14 +263,14 @@ export default function UnitsListPage() {
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/host/listings/${propertyId}/units/${unit._id}/edit`}
+                      href={`/listings/${propertyId}/units/${unit._id}/edit`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       {t.edit[lang]}
                     </Link>
                     <Link
-                      href={`/host/listings/${propertyId}/units/${unit._id}/calendar`}
+                      href={`/listings/${propertyId}/units/${unit._id}/calendar`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                     >
                       <Calendar className="w-3.5 h-3.5" />
@@ -246,6 +282,14 @@ export default function UnitsListPage() {
                     >
                       <Copy className="w-3.5 h-3.5" />
                       {t.duplicate[lang]}
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget({ id: unit._id, name: unitName(unit) })}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 rounded-lg text-xs font-medium text-red-600 transition-colors"
+                      title={t.deleteUnit[lang]}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {t.delete[lang]}
                     </button>
                   </div>
                   <button
@@ -333,6 +377,53 @@ export default function UnitsListPage() {
                 {dupLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 <Copy className="w-4 h-4" />
                 {t.dupConfirm[lang]}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete confirmation modal ───────────────────────────── */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-5 pt-5 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center">
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </div>
+                <h3 className="text-base font-bold text-gray-900">{t.deleteUnit[lang]}</h3>
+              </div>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteLoading}
+                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-5 pb-4">
+              <p className="text-sm text-gray-700 mb-3">{t.deleteUnitConfirm[lang]}</p>
+              <p className="text-sm font-semibold text-gray-900 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                {deleteTarget.name}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 px-5 pb-5">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteLoading}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {t.cancel[lang]}
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteLoading}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleteLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                <Trash2 className="w-4 h-4" />
+                {t.delete[lang]}
               </button>
             </div>
           </div>

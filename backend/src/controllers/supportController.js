@@ -158,6 +158,7 @@ exports.replyToTicket = async (req, res) => {
     if (notifyUser) {
       await Notification.createNotification({
         user: notifyUser,
+        userType: ticket.userType,
         type: 'support_reply',
         title: 'Support Reply',
         message: `Your support ticket "${ticket.subject}" has a new reply`,
@@ -250,6 +251,7 @@ exports.updateTicketStatus = async (req, res) => {
 
     await Notification.createNotification({
       user: ticket.user,
+      userType: ticket.userType,
       type: 'support_reply',
       title: 'Ticket Updated',
       message: `Your ticket "${ticket.subject}" status changed to ${status.replace('_', ' ')}`,

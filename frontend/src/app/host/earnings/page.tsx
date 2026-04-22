@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function EarningsRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace('/host/finance/statements');
+    router.replace('/finance/statements');
   }, [router]);
   return null;
 }

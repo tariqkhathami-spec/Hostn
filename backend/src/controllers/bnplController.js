@@ -5,7 +5,7 @@
 const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
-const User = require('../models/User');
+const Guest = require('../models/Guest');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const bnpl = require('../services/bnplService');
@@ -80,7 +80,7 @@ exports.createTabbyCheckout = async (req, res, next) => {
       });
     }
 
-    const user = await User.findById(req.user._id);
+    const user = await Guest.findById(req.user._id);
     const property = booking.property;
 
     // Create Tabby session
@@ -203,6 +203,7 @@ exports.verifyTabbyPayment = async (req, res, next) => {
         if (property) {
           await Notification.createNotification({
             user: property.host,
+            userType: 'Host',
             type: 'payment_success',
             title: 'تم استلام الدفع عبر تابي',
             message: `تم استلام ${payment.amount} ر.س عبر تابي (4 أقساط) لحجز في ${property.title}`,
@@ -213,6 +214,7 @@ exports.verifyTabbyPayment = async (req, res, next) => {
         // Notify guest
         await Notification.createNotification({
           user: req.user._id,
+          userType: 'Guest',
           type: 'payment_success',
           title: 'تم تأكيد الدفع عبر تابي',
           message: `تم تأكيد دفعتك بقيمة ${payment.amount} ر.س عبر تابي (4 أقساط بدون فوائد)`,
@@ -306,7 +308,7 @@ exports.createTamaraCheckout = async (req, res, next) => {
       });
     }
 
-    const user = await User.findById(req.user._id);
+    const user = await Guest.findById(req.user._id);
     const property = booking.property;
 
     // Create Tamara session
@@ -426,6 +428,7 @@ exports.verifyTamaraPayment = async (req, res, next) => {
         if (property) {
           await Notification.createNotification({
             user: property.host,
+            userType: 'Host',
             type: 'payment_success',
             title: 'تم استلام الدفع عبر تمارا',
             message: `تم استلام ${payment.amount} ر.س عبر تمارا (4 أقساط) لحجز في ${property.title}`,
@@ -435,6 +438,7 @@ exports.verifyTamaraPayment = async (req, res, next) => {
 
         await Notification.createNotification({
           user: req.user._id,
+          userType: 'Guest',
           type: 'payment_success',
           title: 'تم تأكيد الدفع عبر تمارا',
           message: `تم تأكيد دفعتك بقيمة ${payment.amount} ر.س عبر تمارا (4 أقساط بدون فوائد)`,
