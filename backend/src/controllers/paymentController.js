@@ -374,51 +374,68 @@ exports.simulatePayment = async (req, res, next) => {
     await payment.save();
 
     // Mirror the booking-side state so host + downstream endpoints see the
-    // expected paymentStatus. Notifications mirror `verifyPayment`.
+    // expected paymentStatus. Notifications + audit are best-effort: the
+    // critical Payment + Booking saves above must not be undone by a
+    // non-critical side-effect failure.
     const booking = await Booking.findById(payment.booking);
     if (booking) {
       if (spec.bookingPaymentStatus) booking.paymentStatus = spec.bookingPaymentStatus;
       await booking.save();
 
-      const Property = require('../models/Property');
-      const property = await Property.findById(booking.property);
+      try {
+        const Property = require('../models/Property');
+        const property = await Property.findById(booking.property);
 
-      if (spec.paymentStatus === 'completed' && property) {
-        await Notification.createNotification({
-          user: property.host,
-          userType: 'Host',
-          type: 'payment_success',
-          title: 'Payment Received (simulated)',
-          message: `Simulated payment of ${payment.amount} SAR received for booking at ${property.title}`,
-          data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id, simulated: true },
-        });
-        await Notification.createNotification({
-          user: req.user._id,
-          userType: 'Guest',
-          type: 'payment_success',
-          title: 'Payment Successful (simulated)',
-          message: `Your simulated payment of ${payment.amount} SAR has been recorded`,
-          data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
-        });
-      } else if (spec.paymentStatus === 'failed' || spec.paymentStatus === 'cancelled') {
-        await Notification.createNotification({
-          user: req.user._id,
-          userType: 'Guest',
-          type: 'payment_failed',
-          title: 'Payment Failed (simulated)',
-          message: `Simulated payment failure — ${spec.failureReason}`,
-          data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
-        });
+        if (spec.paymentStatus === 'completed' && property) {
+          await Notification.createNotification({
+            user: property.host,
+            userType: 'Host',
+            type: 'payment_success',
+            title: 'Payment Received (simulated)',
+            message: `Simulated payment of ${payment.amount} SAR received for booking at ${property.title}`,
+            data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id, simulated: true },
+          });
+          await Notification.createNotification({
+            user: req.user._id,
+            userType: 'Guest',
+            type: 'payment_success',
+            title: 'Payment Successful (simulated)',
+            message: `Your simulated payment of ${payment.amount} SAR has been recorded`,
+            data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
+          });
+        } else if (spec.paymentStatus === 'failed' || spec.paymentStatus === 'cancelled') {
+          await Notification.createNotification({
+            user: req.user._id,
+            userType: 'Guest',
+            type: 'payment_failed',
+            title: 'Payment Failed (simulated)',
+            message: `Simulated payment failure — ${spec.failureReason}`,
+            data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
+          });
+        }
+      } catch (notifErr) {
+        console.warn('[simulatePayment] notification dispatch failed:', notifErr?.message);
       }
     }
 
-    await ActivityLog.create({
-      actor: req.user._id,
-      action: `payment_simulated_${outcome}`,
-      target: { type: 'Payment', id: payment._id },
-      details: `Simulated payment outcome: ${outcome}`,
-      ip: req.ip,
-    });
+    // PR: map the simulated outcome onto the existing enum values in
+    // `ActivityLog.action`. Wrapped in try/catch so any future enum
+    // mismatch can't fail the whole simulator endpoint after Payment
+    // and Booking have already been updated successfully.
+    try {
+      const auditAction = spec.paymentStatus === 'completed'
+        ? 'payment_completed'
+        : 'payment_failed';
+      await ActivityLog.create({
+        actor: req.user._id,
+        action: auditAction,
+        target: { type: 'Payment', id: payment._id },
+        details: `Simulated payment outcome: ${outcome}`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.warn('[simulatePayment] ActivityLog.create failed:', logErr?.message);
+    }
 
     res.json({
       success: true,
