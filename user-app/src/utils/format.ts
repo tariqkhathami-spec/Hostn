@@ -1,4 +1,4 @@
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, isValid } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
 /**
@@ -22,8 +22,13 @@ export function formatCurrency(amount: number, currency = 'SAR'): string {
   return `${formatted} ${currency}`;
 }
 
-export function formatDate(date: string | Date, pattern = 'MMM d, yyyy'): string {
+export function formatDate(
+  date: string | Date | null | undefined,
+  pattern = 'MMM d, yyyy',
+): string {
+  if (date == null) return '';
   const d = typeof date === 'string' ? parseISO(date) : date;
+  if (!isValid(d)) return '';
   // Explicitly use English locale to ensure Western numerals in dates
   return format(d, pattern, { locale: enUS });
 }
