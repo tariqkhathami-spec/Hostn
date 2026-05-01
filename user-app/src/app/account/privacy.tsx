@@ -3,10 +3,12 @@ import { ScrollView, Text, Pressable, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing } from '../../constants/theme';
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -14,31 +16,21 @@ export default function PrivacyScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Privacy Policy</Text>
+        <Text style={styles.title}>{t('account.privacy')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Privacy Policy</Text>
-        <Text style={styles.body}>
-          At Hostn, we take your privacy seriously. This policy describes how we collect, use, and protect your personal information.
-        </Text>
-        <Text style={styles.subheading}>Information We Collect</Text>
-        <Text style={styles.body}>
-          We collect information you provide directly, such as your name, phone number, email, and payment details. We also collect usage data to improve our services.
-        </Text>
-        <Text style={styles.subheading}>How We Use Your Information</Text>
-        <Text style={styles.body}>
-          Your information is used to process bookings, communicate with you, improve our platform, and comply with legal obligations.
-        </Text>
-        <Text style={styles.subheading}>Data Security</Text>
-        <Text style={styles.body}>
-          We use industry-standard encryption and security measures to protect your data. Payment information is processed through certified payment gateways.
-        </Text>
-        <Text style={styles.subheading}>Your Rights</Text>
-        <Text style={styles.body}>
-          You have the right to access, correct, or delete your personal information. Contact us at support@hostn.co for any privacy-related requests.
-        </Text>
-        <Text style={styles.updated}>Last updated: March 2026</Text>
+        <Text style={styles.heading}>{t('account.privacy')}</Text>
+        <Text style={styles.body}>{t('privacy.intro')}</Text>
+        <Text style={styles.subheading}>{t('privacy.section1')}</Text>
+        <Text style={styles.body}>{t('privacy.section1Body')}</Text>
+        <Text style={styles.subheading}>{t('privacy.section2')}</Text>
+        <Text style={styles.body}>{t('privacy.section2Body')}</Text>
+        <Text style={styles.subheading}>{t('privacy.section3')}</Text>
+        <Text style={styles.body}>{t('privacy.section3Body')}</Text>
+        <Text style={styles.subheading}>{t('privacy.section4')}</Text>
+        <Text style={styles.body}>{t('privacy.section4Body')}</Text>
+        <Text style={styles.updated}>{t('terms.lastUpdated')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
