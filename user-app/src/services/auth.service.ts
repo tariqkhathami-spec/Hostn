@@ -39,10 +39,6 @@ export const authService = {
     return api.post<{ wishlist: string[] }>(`/auth/wishlist/${unitId}`).then((r) => r.data);
   },
 
-  upgradeToHost() {
-    return api.put<User>('/auth/upgrade-to-host').then((r) => r.data);
-  },
-
   deleteAccount() {
     return api.delete<{ message: string }>('/auth/account').then((r) => r.data);
   },
