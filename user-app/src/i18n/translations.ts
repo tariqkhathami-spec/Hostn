@@ -332,6 +332,9 @@ export const translations = {
     'payment.viewBookings': 'View My Bookings',
     'payment.tryAgain': 'Try Again',
     'payment.goBack': 'Go Back',
+    'payment.removeCardTitle': 'Remove card?',
+    'payment.removeCardMessage': 'Are you sure you want to remove this card?',
+    'payment.removeCardConfirm': 'Remove',
 
     // Host Profile
     'host.memberSince': 'Member since',
@@ -691,6 +694,9 @@ export const translations = {
     'payment.viewBookings': 'عرض حجوزاتي',
     'payment.tryAgain': 'حاول مرة أخرى',
     'payment.goBack': 'العودة',
+    'payment.removeCardTitle': 'حذف البطاقة؟',
+    'payment.removeCardMessage': 'هل أنت متأكد من حذف هذه البطاقة؟',
+    'payment.removeCardConfirm': 'حذف',
 
     // Host Profile
     'host.memberSince': 'عضو منذ',

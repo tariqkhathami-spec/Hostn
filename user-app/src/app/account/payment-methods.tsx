@@ -6,11 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentsService } from '../../services/payments.service';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 import type { PaymentMethod } from '../../types';
 
 export default function PaymentMethodsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   const { data: methods, isLoading } = useQuery({
     queryKey: ['paymentMethods'],
@@ -23,10 +25,18 @@ export default function PaymentMethodsScreen() {
   });
 
   const handleDelete = (id: string) => {
-    Alert.alert('Remove Card', 'Are you sure you want to remove this card?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
-    ]);
+    Alert.alert(
+      t('payment.removeCardTitle'),
+      t('payment.removeCardMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('payment.removeCardConfirm'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(id),
+        },
+      ],
+    );
   };
 
   return (
