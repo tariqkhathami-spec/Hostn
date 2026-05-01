@@ -289,6 +289,20 @@ export const translations = {
     'profile.deleteConfirmFinal': 'This will permanently delete your account and all associated data. Are you absolutely sure?',
     'profile.deletePermanently': 'Delete Permanently',
 
+    // About Screen
+    'about.version': 'Version {version}',
+    'about.description': "Hostn is Saudi Arabia's premier vacation rental platform, connecting travelers with unique stays across the Kingdom. From luxury villas in Jeddah to cozy chalets in Al Baha, we make it easy to discover, book, and enjoy the best accommodations Saudi Arabia has to offer.",
+    'about.value.trusted': 'Trusted',
+    'about.value.trustedDesc': 'Verified hosts and secure payments',
+    'about.value.properties': '1,000+ Properties',
+    'about.value.propertiesDesc': 'Across Saudi Arabia',
+    'about.value.topRated': 'Top Rated',
+    'about.value.topRatedDesc': '4.8 average guest rating',
+    'about.value.localExpertise': 'Local Expertise',
+    'about.value.localExpertiseDesc': 'Built for the Saudi market',
+    'about.website': 'Website',
+    'about.copyright': 'Made with love in Saudi Arabia',
+
     // Notifications
     'notifications.title': 'Notifications',
     'notifications.empty': 'No notifications',
@@ -655,6 +669,20 @@ export const translations = {
     'profile.deleteConfirm': 'هل أنت متأكد من حذف حسابك؟ هذا الإجراء نهائي ولا يمكن التراجع عنه.',
     'profile.deleteConfirmFinal': 'سيتم حذف حسابك وجميع البيانات المرتبطة به نهائيًا. هل أنت متأكد تمامًا؟',
     'profile.deletePermanently': 'حذف نهائي',
+
+    // About Screen
+    'about.version': 'الإصدار {version}',
+    'about.description': 'Hostn هو المنصة الرائدة لتأجير الإقامات في المملكة العربية السعودية، يربط المسافرين بإقامات مميزة في جميع أنحاء المملكة. من الفلل الفاخرة في جدة إلى الشاليهات الدافئة في الباحة، نسهّل عليك اكتشاف أفضل أماكن الإقامة وحجزها والاستمتاع بها.',
+    'about.value.trusted': 'موثوق',
+    'about.value.trustedDesc': 'مضيفون موثّقون ومدفوعات آمنة',
+    'about.value.properties': 'أكثر من ١٬٠٠٠ عقار',
+    'about.value.propertiesDesc': 'في جميع أنحاء المملكة العربية السعودية',
+    'about.value.topRated': 'الأعلى تقييمًا',
+    'about.value.topRatedDesc': 'متوسط تقييم الضيوف ٤٫٨',
+    'about.value.localExpertise': 'خبرة محلية',
+    'about.value.localExpertiseDesc': 'مصمَّم للسوق السعودي',
+    'about.website': 'الموقع الإلكتروني',
+    'about.copyright': 'صُنع بحب في المملكة العربية السعودية',
 
     // Notifications
     'notifications.title': 'الإشعارات',
