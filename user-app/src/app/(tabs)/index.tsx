@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { listingsService } from '../../services/listings.service';
 import { useAuthStore } from '../../store/authStore';
+import { useSearchStore } from '../../store/searchStore';
 import { formatCurrency } from '../../utils/format';
 import { SAUDI_CITIES } from '../../constants/config';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t, language, isRTL } = useLanguage();
   const user = useAuthStore((s) => s.user);
+  const setCity = useSearchStore((s) => s.setCity);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['homeFeed'],
@@ -39,10 +41,9 @@ export default function HomeScreen() {
   };
 
   const handleCityPress = (cityId: string, cityName: string) => {
-    router.push({
-      pathname: '/results',
-      params: { city: cityId, cityName },
-    });
+    // Mutate the Zustand store so subsequent filter-sheet edits compose against the chosen city.
+    setCity(cityId, cityName);
+    router.push('/results');
   };
 
   return (
