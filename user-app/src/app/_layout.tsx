@@ -47,13 +47,6 @@ export default function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="search" />
-              <Stack.Screen name="results" />
-              <Stack.Screen name="filters" />
-              <Stack.Screen name="listing" />
-              <Stack.Screen name="checkout" />
-              <Stack.Screen name="chat" />
-              <Stack.Screen name="account" />
             </Stack>
             </LanguageProvider>
           </QueryClientProvider>
