@@ -365,9 +365,11 @@ export default function ListingDetailScreen() {
                       <Text style={styles.hostMeta}>{t('detail.verifiedHost')}</Text>
                     )}
                   </View>
-                  <Pressable style={styles.contactButton} onPress={handleContactHost}>
-                    <Text style={styles.contactText}>{t('detail.contact')}</Text>
-                  </Pressable>
+                  {listing.host?._id ? (
+                    <Pressable style={styles.contactButton} onPress={handleContactHost}>
+                      <Text style={styles.contactText}>{t('detail.contact')}</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </View>
             </>

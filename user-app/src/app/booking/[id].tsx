@@ -78,7 +78,10 @@ export default function BookingDetailScreen() {
   };
 
   const handleContactHost = () => {
-    if (!booking) return;
+    if (!booking?.host?._id || !booking?.property?._id) {
+      Alert.alert('تعذر فتح المحادثة', 'لا يمكن فتح المحادثة لهذا الحجز حالياً.');
+      return;
+    }
     const hostName = booking.host?.name ?? booking.host?.firstName ?? '';
     router.push({
       pathname: `/chat/${booking.host._id}`,
@@ -87,12 +90,18 @@ export default function BookingDetailScreen() {
   };
 
   const handleViewProperty = () => {
-    if (!booking) return;
+    if (!booking?.property?._id) {
+      Alert.alert('تعذر فتح العقار', 'لم يعد العقار متاحاً.');
+      return;
+    }
     router.push(`/listing/${booking.property._id}`);
   };
 
   const handleViewHost = () => {
-    if (!booking) return;
+    if (!booking?.host?._id) {
+      Alert.alert('تعذر فتح الملف', 'الملف الشخصي غير متاح.');
+      return;
+    }
     router.push(`/host/${booking.host._id}`);
   };
 

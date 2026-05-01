@@ -23,6 +23,7 @@ const menuItems = [
   { label: 'more.complaints', icon: 'warning-outline', route: '/content/complaints' },
   { label: 'more.changeRequests', icon: 'create-outline', route: '/content/change-requests' },
   { label: 'more.referrals', icon: 'link-outline', route: '/content/referrals' },
+  { label: 'more.discountCodes', icon: 'pricetags-outline', route: '/content/discount-codes' },
   { label: 'more.onboarding', icon: 'school-outline', route: '/(auth)/onboarding' },
   { label: 'more.invoices', icon: 'receipt-outline', route: '/invoices' },
   { label: 'more.terms', icon: 'checkmark-circle-outline', route: '/legal/terms', badge: 'تم التوقيع' },

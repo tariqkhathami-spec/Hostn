@@ -5,9 +5,11 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { hostService } from '../../services/host.service';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
@@ -36,11 +38,27 @@ const compensationTiers = [
 ];
 
 export default function ProtectionScreen() {
+  const router = useRouter();
   const { data, isLoading, isError } = useQuery({
     queryKey: ['protectionProgram'],
     queryFn: hostService.getProtectionProgram,
     retry: false,
   });
+
+  const handleClaims = () => {
+    Alert.alert(
+      'مركز المطالبات',
+      'هذه الميزة قيد التطوير. للإبلاغ عن مطالبة الآن، يرجى التواصل مع الدعم.',
+      [
+        { text: 'إغلاق', style: 'cancel' },
+        { text: 'تواصل مع الدعم', onPress: () => router.push('/messages/support' as any) },
+      ]
+    );
+  };
+
+  const handleTerms = () => {
+    router.push('/legal/terms' as any);
+  };
 
   return (
     <ScreenWrapper>
@@ -127,18 +145,14 @@ export default function ProtectionScreen() {
           <View style={styles.actions}>
             <Button
               title="مركز المطالبات"
-              onPress={() => {
-                // Future: router.push('/protection/claims');
-              }}
+              onPress={handleClaims}
               variant="primary"
               size="lg"
               fullWidth
             />
             <Button
               title="الشروط والأحكام"
-              onPress={() => {
-                // Future: open terms
-              }}
+              onPress={handleTerms}
               variant="outline"
               size="lg"
               fullWidth
