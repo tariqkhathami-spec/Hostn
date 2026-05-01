@@ -32,6 +32,8 @@ export const translations = {
     'listing.totalFor': 'Total for {nights}: {price}',
     'listing.nightLabel': '{count} night',
     'listing.nightsLabel': '{count} nights',
+    'listing.incompleteTitle': 'This listing is incomplete',
+    'listing.incompleteSub': 'Booking is unavailable until the host finishes setting it up.',
 
     // Property Types
     'type.chalet': 'Chalet',
@@ -394,6 +396,8 @@ export const translations = {
     'listing.totalFor': 'إجمالي {nights}: {price}',
     'listing.nightLabel': '{count} ليلة',
     'listing.nightsLabel': '{count} ليالٍ',
+    'listing.incompleteTitle': 'هذا الإعلان غير مكتمل',
+    'listing.incompleteSub': 'الحجز غير متاح حتى ينهي المضيف إعداده.',
 
     // Property Types
     'type.chalet': 'شاليه',

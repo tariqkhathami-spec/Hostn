@@ -201,6 +201,16 @@ export default function ListingDetailScreen() {
     (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)
   );
 
+  // Treat the listing as "incomplete" when the host hasn't finished setting it up:
+  // no images, no nightly price, no title, or no city. The screen still renders so
+  // an admin or the host can see what's missing, but Book Now is disabled and the
+  // bottom bar shows a clear "this listing is incomplete" notice instead of "0.00 SAR".
+  const isIncomplete =
+    sortedImages.length === 0 ||
+    !originalPrice ||
+    !displayTitle ||
+    !city;
+
   // Extract map coordinates
   const coords = listing.location?.coordinates ?? listing.location?.geoJSON?.coordinates;
   let lat: number | undefined;
@@ -256,11 +266,11 @@ export default function ListingDetailScreen() {
               </Pressable>
             </View>
           </View>
-          <View style={styles.imageBadge}>
-            <Text style={styles.imageBadgeText}>
-              1/{sortedImages.length}
-            </Text>
-          </View>
+          {sortedImages.length > 0 && (
+            <View style={styles.imageBadge}>
+              <Text style={styles.imageBadgeText}>1/{sortedImages.length}</Text>
+            </View>
+          )}
         </View>
 
         {/* Header info — always visible */}
@@ -527,17 +537,37 @@ export default function ListingDetailScreen() {
 
       {/* Sticky Bottom Bar */}
       <View style={styles.bottomBar}>
-        <View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-            {hasDiscount && (
-              <Text style={styles.bottomOriginalPrice}>{formatCurrency(originalPrice)}</Text>
-            )}
-            <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
+        {isIncomplete ? (
+          <View style={styles.incompleteNotice}>
+            <Ionicons name="information-circle-outline" size={20} color={Colors.textSecondary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.incompleteTitle} numberOfLines={1}>
+                {t('listing.incompleteTitle')}
+              </Text>
+              <Text style={styles.incompleteSub} numberOfLines={2}>
+                {t('listing.incompleteSub')}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.bottomPerNight}>{t('common.perNight')}</Text>
-        </View>
-        <Pressable style={styles.bookButton} onPress={handleBook}>
-          <Text style={styles.bookText}>{t('detail.bookNow')}</Text>
+        ) : (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+              {hasDiscount && (
+                <Text style={styles.bottomOriginalPrice}>{formatCurrency(originalPrice)}</Text>
+              )}
+              <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
+            </View>
+            <Text style={styles.bottomPerNight}>{t('common.perNight')}</Text>
+          </View>
+        )}
+        <Pressable
+          style={[styles.bookButton, isIncomplete && styles.bookButtonDisabled]}
+          onPress={handleBook}
+          disabled={isIncomplete}
+        >
+          <Text style={[styles.bookText, isIncomplete && styles.bookTextDisabled]}>
+            {t('detail.bookNow')}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -801,5 +831,20 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: Radius.md,
   },
+  bookButtonDisabled: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   bookText: { ...Typography.bodyBold, color: Colors.white },
+  bookTextDisabled: { color: Colors.textTertiary },
+  incompleteNotice: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginRight: Spacing.md,
+  },
+  incompleteTitle: { ...Typography.smallBold, color: Colors.textPrimary },
+  incompleteSub: { ...Typography.caption, color: Colors.textSecondary, marginTop: 2 },
 });
