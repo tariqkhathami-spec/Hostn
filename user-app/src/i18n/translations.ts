@@ -411,6 +411,13 @@ export const translations = {
     'payment.removeCardTitle': 'Remove card?',
     'payment.removeCardMessage': 'Are you sure you want to remove this card?',
     'payment.removeCardConfirm': 'Remove',
+    'payment.expires': 'Expires {month}/{year}',
+    'payment.default': 'Default',
+    'payment.emptyTitle': 'No saved cards',
+    'payment.emptyText': 'Add a card to speed up your checkout',
+    'payment.addCard': 'Add Card',
+    'payment.addCardSoonTitle': 'Coming soon',
+    'payment.addCardSoonBody': 'Adding a card from this screen is coming soon. For now, save a card during checkout.',
 
     // Host Profile
     'host.memberSince': 'Member since',
@@ -849,6 +856,13 @@ export const translations = {
     'payment.removeCardTitle': 'حذف البطاقة؟',
     'payment.removeCardMessage': 'هل أنت متأكد من حذف هذه البطاقة؟',
     'payment.removeCardConfirm': 'حذف',
+    'payment.expires': 'تنتهي في {month}/{year}',
+    'payment.default': 'الافتراضية',
+    'payment.emptyTitle': 'لا توجد بطاقات محفوظة',
+    'payment.emptyText': 'أضف بطاقة لتسريع عملية الدفع',
+    'payment.addCard': 'إضافة بطاقة',
+    'payment.addCardSoonTitle': 'قريبًا',
+    'payment.addCardSoonBody': 'إضافة البطاقة من هذه الشاشة قيد التطوير. حاليًا، يمكنك حفظ البطاقة أثناء عملية الدفع.',
 
     // Host Profile
     'host.memberSince': 'عضو منذ',
