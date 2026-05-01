@@ -211,6 +211,7 @@ export const translations = {
     'chat.noConversationsSub': 'Start a conversation by contacting a host',
     'chat.emptyChat': 'Send a message to start the conversation',
     'chat.placeholder': 'Type a message...',
+    'chat.deletedUser': 'Deleted user',
 
     // Checkout
     'checkout.title': 'Review & Pay',
@@ -353,6 +354,7 @@ export const translations = {
     'common.done': 'Done',
     'common.loading': 'Loading...',
     'common.tryAgain': 'Try Again',
+    'common.back': 'Back',
     'common.somethingWrong': 'Something went wrong',
     'common.unexpectedError': 'An unexpected error occurred. Please try again.',
     'common.perNight': 'per night',
@@ -568,6 +570,7 @@ export const translations = {
     'chat.noConversationsSub': 'ابدأ محادثة بالتواصل مع مضيف من صفحة العقار',
     'chat.emptyChat': 'أرسل رسالة لبدء المحادثة',
     'chat.placeholder': 'اكتب رسالة...',
+    'chat.deletedUser': 'مستخدم محذوف',
 
     // Checkout
     'checkout.title': 'مراجعة ودفع',
@@ -710,6 +713,7 @@ export const translations = {
     'common.done': 'تم',
     'common.loading': 'جارٍ التحميل...',
     'common.tryAgain': 'حاول مرة أخرى',
+    'common.back': 'رجوع',
     'common.somethingWrong': 'حدث خطأ ما',
     'common.unexpectedError': 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.',
     'common.perNight': 'لكل ليلة',

@@ -35,7 +35,7 @@ export default function ListingDetailScreen() {
   const isAr = language === 'ar';
 
   // Try fetching as unit first, fall back to property
-  const { data: listing, isLoading } = useQuery({
+  const { data: listing, isLoading, isError, refetch } = useQuery({
     queryKey: ['listing', id],
     queryFn: async () => {
       try {
@@ -114,10 +114,30 @@ export default function ListingDetailScreen() {
     });
   };
 
-  if (isLoading || !listing) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !listing || !id) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.errorState}>
+          <Ionicons name="alert-circle-outline" size={56} color={Colors.textSecondary} />
+          <Text style={styles.errorTitle}>{t('common.somethingWrong')}</Text>
+          <Text style={styles.errorMessage}>{t('common.unexpectedError')}</Text>
+          <View style={styles.errorActions}>
+            <Pressable style={styles.errorButtonPrimary} onPress={() => refetch()}>
+              <Text style={styles.errorButtonPrimaryText}>{t('common.tryAgain')}</Text>
+            </Pressable>
+            <Pressable style={styles.errorButtonSecondary} onPress={() => router.back()}>
+              <Text style={styles.errorButtonSecondaryText}>{t('common.back')}</Text>
+            </Pressable>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -527,6 +547,35 @@ export default function ListingDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, justifyContent: 'center' },
+  errorState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  errorTitle: { ...Typography.h3, color: Colors.textPrimary, textAlign: 'center' },
+  errorMessage: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
+  errorActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  errorButtonPrimary: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  errorButtonPrimaryText: { ...Typography.bodyBold, color: Colors.white },
+  errorButtonSecondary: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  errorButtonSecondaryText: { ...Typography.bodyBold, color: Colors.textPrimary },
   imageContainer: { position: 'relative' },
   heroImage: { width: SCREEN_WIDTH, height: 280 },
   imageOverlay: {
