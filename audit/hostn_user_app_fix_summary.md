@@ -95,7 +95,33 @@ responses always return `{data, pagination}` and callers explicitly
 destructure. Today the rule is implicit ("you get an array, except when
 you don't"), and that's exactly why this bug was easy to miss.
 
-### FU2 — DD3 fix at the source (HIGH)
+### FU2 — DD3 fix at the source (HIGH) — ✅ closed 2026-05-02 (`99f4943`)
+
+**Status:** Closed. Fix applied at the service layer (option c from
+the original brief): `auth.service.getMe()` now returns
+`r.data?.user ?? r.data`, so the auth store holds a clean User on
+every code path. The defensive unwrap at the top of
+`profile.tsx` (added in Task 5.4) was removed — no other components
+in the user-app had the same defensive-unwrap pattern (verified via
+grep over `useAuthStore` consumers and `?.user ??` patterns).
+
+**Verification (cold boot, simulator):**
+- `xcrun simctl terminate booted com.hostn.app` → `xcrun simctl
+  launch booted com.hostn.app` (fresh JS bundle from Metro).
+- Home tab shows "Welcome, ضيف" — `user.firstName` reads correctly
+  off the store. Pre-fix this would have been blank because the
+  store held the wrapper.
+- Deep-link `xcrun simctl openurl booted "hostn-app:///account/profile"`.
+  Edit Profile screen renders with First Name = "ضيف", Phone =
+  "+966 500000003", and the orange **"Register as a host"** CTA
+  visible. Pre-fix, the CTA was invisible to every relaunched
+  session because `user?.role === 'guest'` was always false on the
+  wrapper.
+- `tsc --noEmit`: 0 errors.
+
+---
+
+### FU2 — original plan (kept for history)
 
 Root cause: `GET /auth/me` returns `{success, user}` but
 `api.ts:38` only unwraps `{success, data}`, so on cold boot the auth
