@@ -102,6 +102,25 @@ export interface HostInfo {
   createdAt?: string;
 }
 
+/**
+ * Backend returns booking pricing nested under a single `pricing` object on
+ * both list and detail endpoints (verified via curl 2026-05-02 against
+ * /api/v1/bookings/my-bookings and /api/v1/bookings/:id). The earlier
+ * top-level `totalPrice`/`serviceFee`/`vat` fields were a client-only
+ * fiction — the type was wrong, and code that read them got `undefined`
+ * at runtime which formatCurrency rendered as "0.00 SAR".
+ */
+export interface BookingPricing {
+  perNight?: number;
+  nights?: number;
+  subtotal?: number;
+  cleaningFee?: number;
+  serviceFee?: number;
+  discount?: number;
+  vat?: number;
+  total?: number;
+}
+
 export interface Booking {
   _id: string;
   reference?: string; // e.g., "HB-ABC12345" — human-readable booking reference
@@ -111,13 +130,12 @@ export interface Booking {
   checkIn: string;
   checkOut: string;
   guests: number;
-  totalPrice: number;
-  serviceFee: number;
-  vat: number;
-  securityDeposit?: number;
-  discountAmount?: number;
+  pricing: BookingPricing;
+  // 'unpaid' is the real backend value emitted while a hold is awaiting
+  // payment — it was missing from the union and caused the i18n bundle
+  // miss that surfaced as "status.unpaid" rendering raw.
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
-  paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
+  paymentStatus: 'pending' | 'unpaid' | 'paid' | 'refunded' | 'failed';
   paymentMethod?: string;
   couponCode?: string;
   createdAt: string;
@@ -159,15 +177,49 @@ export interface Message {
   createdAt: string;
 }
 
+// Backend uses compound type values; see backend/src/models/Notification.js.
+export type NotificationType =
+  | 'booking_created'
+  | 'booking_confirmed'
+  | 'booking_rejected'
+  | 'booking_cancelled'
+  | 'booking_completed'
+  | 'payment_success'
+  | 'payment_failed'
+  | 'review_received'
+  | 'listing_approved'
+  | 'listing_rejected'
+  | 'new_message'
+  | 'support_reply'
+  | 'report_update'
+  | 'system';
+
 export interface Notification {
   _id: string;
   user: string;
-  type: 'booking' | 'message' | 'payment' | 'promotion' | 'system';
+  userType: 'Guest' | 'Host' | 'Admin';
+  type: NotificationType;
   title: string;
-  body: string;
-  data?: Record<string, string>;
-  read: boolean;
+  message: string;
+  data?: {
+    bookingId?: string;
+    propertyId?: string;
+    paymentId?: string;
+    reviewId?: string;
+    conversationId?: string;
+    ticketId?: string;
+    reportId?: string;
+  };
+  isRead: boolean;
+  readAt?: string;
+  push?: {
+    sent: boolean;
+    sentAt?: string;
+    deviceToken?: string;
+    apnsId?: string;
+  };
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface WalletInfo {

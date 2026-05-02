@@ -104,10 +104,34 @@ export default function BookingDetailScreen() {
     );
   }
 
+  // Localise status pills with miss-detection: t() falls back to the raw
+  // key on bundle miss (LanguageContext.tsx:48), so `t('status.unknown')`
+  // returns the literal string 'status.unknown'. Compare the lookup
+  // against the key it was given to detect the miss and fall back to the
+  // human-ish backend value instead of a leaked i18n key.
+  const localiseStatus = (value: string | undefined) => {
+    if (!value) return '';
+    const key = (`status.${value}`) as any;
+    const translated = t(key);
+    return translated !== key ? translated : value;
+  };
+
   const statusColor = STATUS_COLORS[booking.status] ?? Colors.textTertiary;
-  const statusLabel = t(`status.${booking.status}` as any) || booking.status;
+  const statusLabel = localiseStatus(booking.status);
   const paymentStatusColor = PAYMENT_STATUS_COLORS[booking.paymentStatus] ?? Colors.textTertiary;
-  const paymentStatusLabel = t(`status.${booking.paymentStatus}` as any) || booking.paymentStatus;
+  const paymentStatusLabel = localiseStatus(booking.paymentStatus);
+
+  // Pricing now lives nested under booking.pricing — not as flat fields.
+  // The Booking type was rewritten to match the verified backend shape;
+  // these reads no longer need a top-level fallback because there are no
+  // top-level money fields anymore.
+  const pricing = booking.pricing ?? {};
+  const total = pricing.total ?? 0;
+  const serviceFee = pricing.serviceFee ?? 0;
+  const vat = pricing.vat ?? 0;
+  const discount = pricing.discount ?? 0;
+  const cleaningFee = pricing.cleaningFee ?? 0;
+  const subtotal = pricing.subtotal ?? 0;
   const nights = getNights(booking.checkIn, booking.checkOut);
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
   const imageUri = typeof booking.property?.images?.[0] === 'string'
@@ -198,35 +222,37 @@ export default function BookingDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('booking.priceBreakdown')}</Text>
           <View style={styles.priceCard}>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>{t('checkout.total')}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(booking.totalPrice)}</Text>
-            </View>
+            {subtotal > 0 && (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>{t('booking.subtotal')}</Text>
+                <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
+              </View>
+            )}
+            {cleaningFee > 0 && (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>{t('checkout.cleaningFee')}</Text>
+                <Text style={styles.priceValue}>{formatCurrency(cleaningFee)}</Text>
+              </View>
+            )}
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>{t('checkout.serviceFee')}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(booking.serviceFee)}</Text>
+              <Text style={styles.priceValue}>{formatCurrency(serviceFee)}</Text>
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>{t('checkout.vat')}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(booking.vat)}</Text>
+              <Text style={styles.priceValue}>{formatCurrency(vat)}</Text>
             </View>
-            {(booking.discountAmount ?? 0) > 0 && (
+            {discount > 0 && (
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>{t('checkout.couponDiscount')}</Text>
                 <Text style={[styles.priceValue, { color: Colors.success }]}>
-                  -{formatCurrency(booking.discountAmount!)}
+                  -{formatCurrency(discount)}
                 </Text>
-              </View>
-            )}
-            {(booking.securityDeposit ?? 0) > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>{t('booking.securityDeposit')}</Text>
-                <Text style={styles.priceValue}>{formatCurrency(booking.securityDeposit!)}</Text>
               </View>
             )}
             <View style={[styles.priceRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>{t('checkout.total')}</Text>
-              <Text style={styles.totalValue}>{formatCurrency(booking.totalPrice)}</Text>
+              <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
             </View>
           </View>
         </View>

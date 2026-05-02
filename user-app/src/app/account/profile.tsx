@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,9 @@ import { useAuthStore } from '../../store/authStore';
 import { formatPhone } from '../../utils/format';
 import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+
+const HOST_APP_DEEP_LINK = 'hostn-host://';
+const HOST_APP_WEB_URL = 'https://business.hostn.co';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -25,19 +28,18 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState(derivedLastName);
   const [email, setEmail] = useState(user?.email ?? '');
 
+  // Seed inputs when user becomes available after mount (e.g. auth
+  // bootstrap finishes after this screen mounts). prev || X means we
+  // never overwrite something the user has already typed.
+  useEffect(() => {
+    if (!user) return;
+    setFirstName((prev) => prev || user.firstName || (user.name ? user.name.split(' ')[0] : ''));
+    setLastName((prev) => prev || user.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : ''));
+    setEmail((prev) => prev || user.email || '');
+  }, [user]);
+
   const updateProfile = useMutation({
     mutationFn: () => authService.updateProfile({ firstName, lastName, email }),
-    onSuccess: (updatedUser) => {
-      setUser(updatedUser);
-      Alert.alert(t('common.success'), t('common.success'));
-    },
-    onError: (error: any) => {
-      Alert.alert(t('common.error'), error.response?.data?.message || t('common.somethingWrong'));
-    },
-  });
-
-  const upgradeToHost = useMutation({
-    mutationFn: () => authService.upgradeToHost(),
     onSuccess: (updatedUser) => {
       setUser(updatedUser);
       Alert.alert(t('common.success'), t('common.success'));
@@ -64,7 +66,18 @@ export default function ProfileScreen() {
       t('profile.becomeHostMsg'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('profile.upgrade'), onPress: () => upgradeToHost.mutate() },
+        {
+          text: t('profile.upgrade'),
+          onPress: async () => {
+            const canOpenDeepLink = await Linking.canOpenURL(HOST_APP_DEEP_LINK).catch(() => false);
+            const target = canOpenDeepLink ? HOST_APP_DEEP_LINK : HOST_APP_WEB_URL;
+            try {
+              await Linking.openURL(target);
+            } catch {
+              Alert.alert(t('common.error'), t('common.somethingWrong'));
+            }
+          },
+        },
       ]
     );
   };
@@ -147,19 +160,9 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>{t('account.title')}</Text>
 
           {user?.role === 'guest' && (
-            <Pressable
-              style={styles.hostButton}
-              onPress={handleBecomeHost}
-              disabled={upgradeToHost.isPending}
-            >
-              {upgradeToHost.isPending ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <>
-                  <Ionicons name="home-outline" size={20} color={Colors.white} />
-                  <Text style={styles.hostButtonText}>{t('profile.becomeHost')}</Text>
-                </>
-              )}
+            <Pressable style={styles.hostButton} onPress={handleBecomeHost}>
+              <Ionicons name="home-outline" size={20} color={Colors.white} />
+              <Text style={styles.hostButtonText}>{t('profile.becomeHost')}</Text>
             </Pressable>
           )}
 

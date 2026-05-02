@@ -6,10 +6,12 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { contactService } from '../../services/contact.service';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 
 export default function ContactScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -28,11 +30,20 @@ export default function ContactScreen() {
         subject: subject.trim(),
         message: message.trim(),
       });
-      Alert.alert('Message Sent', 'Thank you for contacting us. We will get back to you shortly.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('contact.successTitle'), t('contact.successBody'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
-    } catch {
-      Alert.alert('Error', 'Failed to send your message. Please try again later.');
+    } catch (error: any) {
+      const status = error?.response?.status;
+      let body: string;
+      if (typeof status === 'number' && status >= 400 && status < 500) {
+        body = t('contact.error4xx');
+      } else if (typeof status === 'number' && status >= 500) {
+        body = t('contact.error5xx');
+      } else {
+        body = t('contact.errorBody');
+      }
+      Alert.alert(t('common.error'), body);
     } finally {
       setLoading(false);
     }
@@ -44,7 +55,7 @@ export default function ContactScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Contact Us</Text>
+        <Text style={styles.title}>{t('account.contactUs')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -57,34 +68,34 @@ export default function ContactScreen() {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Ionicons name="mail-outline" size={20} color={Colors.primary} />
-              <Text style={styles.infoText}>support@hostn.co</Text>
+              <Text style={styles.infoText}>{t('contact.email')}</Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="call-outline" size={20} color={Colors.primary} />
-              <Text style={styles.infoText}>+966 11 000 0000</Text>
+              <Text style={styles.infoText}>{t('contact.phone')}</Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={20} color={Colors.primary} />
-              <Text style={styles.infoText}>Sun - Thu, 9 AM - 6 PM (AST)</Text>
+              <Text style={styles.infoText}>{t('contact.hours')}</Text>
             </View>
           </View>
 
           {/* Form */}
-          <Text style={styles.formHeading}>Send us a message</Text>
+          <Text style={styles.formHeading}>{t('contact.formHeading')}</Text>
 
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>{t('contact.name')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Your full name"
+            placeholder={t('contact.namePlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={name}
             onChangeText={setName}
           />
 
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{t('profile.email')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="your@email.com"
+            placeholder={t('contact.emailPlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={email}
             onChangeText={setEmail}
@@ -92,19 +103,19 @@ export default function ContactScreen() {
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>Subject</Text>
+          <Text style={styles.label}>{t('contact.subject')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="What is this about?"
+            placeholder={t('contact.subjectPlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={subject}
             onChangeText={setSubject}
           />
 
-          <Text style={styles.label}>Message</Text>
+          <Text style={styles.label}>{t('contact.message')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Tell us more..."
+            placeholder={t('contact.messagePlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={message}
             onChangeText={setMessage}
@@ -121,7 +132,7 @@ export default function ContactScreen() {
             {loading ? (
               <ActivityIndicator color={Colors.white} />
             ) : (
-              <Text style={styles.submitText}>Send Message</Text>
+              <Text style={styles.submitText}>{t('contact.send')}</Text>
             )}
           </Pressable>
         </ScrollView>

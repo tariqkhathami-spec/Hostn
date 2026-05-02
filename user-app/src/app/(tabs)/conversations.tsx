@@ -24,8 +24,10 @@ export default function ConversationsScreen() {
 
   const conversations = data ?? [];
 
-  const getOtherParticipant = (conv: Conversation) =>
-    conv.participants.find((p) => p._id !== userId) ?? conv.participants[0];
+  const getOtherParticipant = (conv: Conversation) => {
+    const participants = conv.participants ?? [];
+    return participants.find((p) => p._id !== userId) ?? participants[0] ?? null;
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -50,14 +52,18 @@ export default function ConversationsScreen() {
           }
           renderItem={({ item }) => {
             const other = getOtherParticipant(item);
+            const avatarUri = other?.avatar;
+            const firstName = other?.firstName ?? '';
+            const lastName = other?.lastName ?? '';
+            const fullName = `${firstName} ${lastName}`.trim() || t('chat.deletedUser');
             return (
               <Pressable
                 style={styles.conversationItem}
                 onPress={() => router.push(`/chat/${item._id}`)}
               >
                 <View style={styles.avatar}>
-                  {other.avatar ? (
-                    <Image source={{ uri: other.avatar }} style={styles.avatarImage} />
+                  {avatarUri ? (
+                    <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                   ) : (
                     <Ionicons name="person" size={24} color={Colors.textSecondary} />
                   )}
@@ -65,7 +71,7 @@ export default function ConversationsScreen() {
                 <View style={styles.convInfo}>
                   <View style={styles.convTop}>
                     <Text style={styles.convName} numberOfLines={1}>
-                      {other.firstName ?? 'Host'} {other.lastName ?? ''}
+                      {fullName}
                     </Text>
                     <Text style={styles.convTime}>
                       {item.lastMessage ? formatDate(item.lastMessage.createdAt, 'MMM d') : ''}

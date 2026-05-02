@@ -4,11 +4,13 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSearchStore } from '../../store/searchStore';
+import { useLanguage, type TranslationKey } from '../../i18n';
 import { PROPERTY_TYPES } from '../../constants/config';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 
 export default function TypeGuestsScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { propertyType, guests, setPropertyType, setGuests } = useSearchStore();
 
   const handleNext = () => {
@@ -21,12 +23,12 @@ export default function TypeGuestsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Property & Guests</Text>
+        <Text style={styles.title}>{t('search.propertyGuests')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Property Type */}
-      <Text style={styles.sectionTitle}>Property Type</Text>
+      <Text style={styles.sectionTitle}>{t('search.propertyType')}</Text>
       <View style={styles.typeGrid}>
         {PROPERTY_TYPES.map((type) => (
           <Pressable
@@ -42,14 +44,14 @@ export default function TypeGuestsScreen() {
             <Text
               style={[styles.typeLabel, propertyType === type.id && styles.typeLabelActive]}
             >
-              {type.label}
+              {t(`type.${type.id}` as TranslationKey)}
             </Text>
           </Pressable>
         ))}
       </View>
 
       {/* Guests */}
-      <Text style={styles.sectionTitle}>Number of Guests</Text>
+      <Text style={styles.sectionTitle}>{t('search.numberOfGuests')}</Text>
       <View style={styles.guestRow}>
         <Pressable
           style={styles.guestButton}
@@ -66,7 +68,7 @@ export default function TypeGuestsScreen() {
 
       <View style={styles.footer}>
         <Pressable style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextText}>Next</Text>
+          <Text style={styles.nextText}>{t('search.next')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

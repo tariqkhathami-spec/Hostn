@@ -62,7 +62,15 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
   const guests = listing.capacity?.maxGuests;
   const bedrooms = isUnit ? (item.bedrooms?.count ?? item.rooms?.bedrooms ?? listing.capacity?.bedrooms) : listing.capacity?.bedrooms;
   const bathrooms = isUnit ? (item.bathroomCount ?? item.rooms?.bathrooms ?? listing.capacity?.bathrooms) : listing.capacity?.bathrooms;
-  const typeLabel = t(('type.' + listing.type) as any) ?? listing.type;
+  // Property-type badge: only render when listing.type is set AND the translation
+  // bundle actually has a key for it. t() falls back to the raw key on miss
+  // (so undefined/unknown types would render the literal "type.undefined" or
+  // "type.studio"), and `?? listing.type` was dead code because t() never
+  // returns nullish. Compare the lookup against the key it was given to detect
+  // a miss; show the badge only when we have a real translation.
+  const typeKey = listing.type ? (('type.' + listing.type) as any) : null;
+  const typeLabel = typeKey ? t(typeKey) : '';
+  const showTypeBadge = !!typeKey && typeLabel !== typeKey;
 
   // Date-aware pricing
   const nights = checkIn && checkOut ? getNights(checkIn, checkOut) : 0;
@@ -111,10 +119,12 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
             <Text style={styles.discountText}>{discount}{t('listing.off')}</Text>
           </View>
         )}
-        {/* Property type badge */}
-        <View style={styles.typeBadge}>
-          <Text style={styles.typeText}>{typeLabel}</Text>
-        </View>
+        {/* Property type badge — hidden when type is missing or untranslated */}
+        {showTypeBadge && (
+          <View style={styles.typeBadge}>
+            <Text style={styles.typeText}>{typeLabel}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.info}>

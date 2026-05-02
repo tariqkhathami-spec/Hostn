@@ -66,7 +66,7 @@ export default function ResultsScreen() {
           return unitResult;
         }
       } catch (err) {
-        console.debug('[results] searchUnits failed, falling back to search:', err);
+        if (__DEV__) console.debug('[results] searchUnits failed, falling back to search:', err);
       }
       return listingsService.search(params as any);
     },
@@ -86,7 +86,7 @@ export default function ResultsScreen() {
       const updatedUser = await authService.getMe();
       setUser(updatedUser);
     } catch (err) {
-      console.debug('[results] toggleWishlist failed:', err);
+      if (__DEV__) console.debug('[results] toggleWishlist failed:', err);
     }
   };
 

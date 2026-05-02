@@ -3,10 +3,12 @@ import { ScrollView, Text, Pressable, View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing } from '../../constants/theme';
 
 export default function TermsScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -14,31 +16,21 @@ export default function TermsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Terms of Use</Text>
+        <Text style={styles.title}>{t('account.terms')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Terms of Use</Text>
-        <Text style={styles.body}>
-          Welcome to Hostn. By using our platform, you agree to these terms and conditions. Please read them carefully before using our services.
-        </Text>
-        <Text style={styles.subheading}>1. Account Registration</Text>
-        <Text style={styles.body}>
-          You must provide accurate information when creating an account. You are responsible for maintaining the security of your account credentials.
-        </Text>
-        <Text style={styles.subheading}>2. Booking & Payments</Text>
-        <Text style={styles.body}>
-          All bookings are subject to availability and host approval. Payments are processed securely through our payment partners. Cancellation policies vary by property.
-        </Text>
-        <Text style={styles.subheading}>3. User Conduct</Text>
-        <Text style={styles.body}>
-          Users must comply with all applicable laws and respect the properties they rent. Any damage to properties may result in additional charges.
-        </Text>
-        <Text style={styles.subheading}>4. Liability</Text>
-        <Text style={styles.body}>
-          Hostn acts as a platform connecting guests with hosts. We are not responsible for the condition of properties or the conduct of users.
-        </Text>
-        <Text style={styles.updated}>Last updated: March 2026</Text>
+        <Text style={styles.heading}>{t('account.terms')}</Text>
+        <Text style={styles.body}>{t('terms.intro')}</Text>
+        <Text style={styles.subheading}>{t('terms.section1')}</Text>
+        <Text style={styles.body}>{t('terms.section1Body')}</Text>
+        <Text style={styles.subheading}>{t('terms.section2')}</Text>
+        <Text style={styles.body}>{t('terms.section2Body')}</Text>
+        <Text style={styles.subheading}>{t('terms.section3')}</Text>
+        <Text style={styles.body}>{t('terms.section3Body')}</Text>
+        <Text style={styles.subheading}>{t('terms.section4')}</Text>
+        <Text style={styles.body}>{t('terms.section4Body')}</Text>
+        <Text style={styles.updated}>{t('terms.lastUpdated')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
