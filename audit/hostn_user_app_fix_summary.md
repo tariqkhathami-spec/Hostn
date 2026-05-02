@@ -147,6 +147,74 @@ generic bell icon for everything (compound types miss `ICON_MAP`).
      `markRead.mutate(item._id)` is fine; just gated by the right
      field).
 
+### FU4 — R19 deep investigation: checkout calendar day taps (HIGH)
+
+Task 5.5 partially addressed R19: the calendar UI was moved out of
+the parent ScrollView into a bottom-sheet Modal (matching the
+country-picker pattern). That's a clean UX improvement. But the
+underlying day-tap bug persists at a deeper level than the screen
+restructure can fix. Diagnostic findings:
+
+  - Calendar header arrows (TouchableOpacity) fire correctly in
+    both the inline and Modal layouts.
+  - Calendar day cells do NOT fire `onDayPress`, regardless of
+    `markingType` ("period" → TouchableWithoutFeedback for marked
+    days; default → TouchableOpacity for all days; both broken).
+  - Verified via `onTouchStart` logging on a wrapper View that touch
+    DOES reach the Calendar's parent — it just doesn't propagate to
+    the day touchables.
+  - Same Calendar config / props in `search/dates.tsx` (top-level,
+    no ScrollView) works perfectly. Same RN version, same
+    react-native-calendars version. The only structural difference
+    is parentage, which has now been eliminated as a factor.
+  - App was killed and relaunched with a fresh JS bundle to rule out
+    hot-reload state pollution. Same result.
+
+**Likely cause:** react-native-calendars 1.1314 + RN 0.81 + iOS 26
+simulator interaction. Possible angles for the follow-up:
+
+  - Upgrade `react-native-calendars` to the latest 1.x and retest.
+  - Try the `dayComponent` prop with a custom day implementation
+    using `Pressable` (bypasses the package's internal touchables
+    entirely).
+  - Replace the inline calendar with a "Choose dates" button that
+    pushes to a dedicated date-picker screen mirroring
+    `search/dates.tsx` — guaranteed-working pattern, but a UX flow
+    change.
+  - Try on a real device to rule out a simulator-only quirk.
+
+Until this lands, users on the checkout screen cannot edit dates
+that were preset from the search flow. The dates carried over from
+search/dates do work for booking; only in-checkout editing is
+broken. Mitigation: dates are always editable from the search flow.
+
+### FU5 (DD8) — Google Maps SDK not configured (MEDIUM)
+
+Discovered while verifying R20. The listing detail's Location tab
+has `MapView` with `provider={PROVIDER_GOOGLE}`, but the simulator
+renders the MapView area blank for listings that have valid
+coordinates (curl confirmed
+`location.geoJSON.coordinates: [50.05, 26.40]` on Sunset Beach
+Resort). Likely root cause is a missing or unauthorized Google Maps
+iOS SDK key. Visible consequence: location tab on every listing
+shows a blank rectangle instead of a map.
+
+**Do:**
+  - Confirm Google Maps iOS SDK is properly initialized — check
+    `ios/<app>/AppDelegate.m` for `GMSServices provideAPIKey:` call,
+    and `app.json`'s `ios.config.googleMapsApiKey` value.
+  - If the key is set, validate it against the Google Cloud
+    Console: Maps SDK for iOS API enabled, no usage cap reached,
+    bundle id matches the key restriction.
+  - If switching providers is preferable, drop `PROVIDER_GOOGLE` so
+    iOS uses Apple Maps (works without keys, slightly different
+    feature set).
+
+This blocks visual verification of R20 too — once maps render,
+re-confirm the no-coords placeholder by either curl-creating a
+listing without coords or spot-checking the placeholder branch
+visually.
+
 ---
 
 ## Phase 6 verification checklist — additions
