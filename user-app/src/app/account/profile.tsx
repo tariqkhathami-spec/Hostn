@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,10 +15,16 @@ const HOST_APP_WEB_URL = 'https://business.hostn.co';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const rawUser = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
   const { t } = useLanguage();
+
+  // DD3: on cold boot the auth store can hold the {success, user} wrapper
+  // from getMe() instead of the inner User. Unwrap defensively here so
+  // every read in this screen tolerates either shape; remove once DD3
+  // is fixed at the api / auth-service layer.
+  const user = ((rawUser as any)?.user ?? rawUser) as typeof rawUser;
 
   // Map `name` field to firstName/lastName when they're not set
   const derivedFirstName = user?.firstName || (user?.name ? user.name.split(' ')[0] : '');
@@ -27,6 +33,16 @@ export default function ProfileScreen() {
   const [firstName, setFirstName] = useState(derivedFirstName);
   const [lastName, setLastName] = useState(derivedLastName);
   const [email, setEmail] = useState(user?.email ?? '');
+
+  // Seed inputs when user becomes available after mount (e.g. auth
+  // bootstrap finishes after this screen mounts). prev || X means we
+  // never overwrite something the user has already typed.
+  useEffect(() => {
+    if (!user) return;
+    setFirstName((prev) => prev || user.firstName || (user.name ? user.name.split(' ')[0] : ''));
+    setLastName((prev) => prev || user.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : ''));
+    setEmail((prev) => prev || user.email || '');
+  }, [user]);
 
   const updateProfile = useMutation({
     mutationFn: () => authService.updateProfile({ firstName, lastName, email }),

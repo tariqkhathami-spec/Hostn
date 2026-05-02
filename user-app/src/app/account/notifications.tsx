@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   notifBody: { ...Typography.small, color: Colors.textSecondary, marginTop: 2 },
   notifTime: { ...Typography.caption, color: Colors.textTertiary, marginTop: 4 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl, gap: Spacing.md },
   emptyTitle: { ...Typography.h3, color: Colors.textPrimary },
-  emptyText: { ...Typography.body, color: Colors.textSecondary },
+  emptyText: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
 });
