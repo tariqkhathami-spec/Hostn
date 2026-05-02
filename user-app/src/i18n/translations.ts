@@ -216,6 +216,7 @@ export const translations = {
     'chat.emptyChat': 'Send a message to start the conversation',
     'chat.placeholder': 'Type a message...',
     'chat.deletedUser': 'Deleted user',
+    'chat.startFailed': 'Could not start the conversation. Please try again.',
 
     // Checkout
     'checkout.title': 'Review & Pay',
@@ -661,6 +662,7 @@ export const translations = {
     'chat.emptyChat': 'أرسل رسالة لبدء المحادثة',
     'chat.placeholder': 'اكتب رسالة...',
     'chat.deletedUser': 'مستخدم محذوف',
+    'chat.startFailed': 'تعذّر بدء المحادثة. يرجى المحاولة مرة أخرى.',
 
     // Checkout
     'checkout.title': 'مراجعة ودفع',

@@ -124,7 +124,7 @@ export default function CheckoutScreen() {
         const unit = await listingsService.getUnit(listingId!);
         if (unit) return unit;
       } catch (err) {
-        console.debug('[checkout] getUnit failed, falling back to getById:', err);
+        if (__DEV__) console.debug('[checkout] getUnit failed, falling back to getById:', err);
       }
       return listingsService.getById(listingId!);
     },
@@ -322,7 +322,7 @@ export default function CheckoutScreen() {
           });
           currentHoldId = holdRes?.data?.holdId ?? null;
         } catch (err) {
-          console.debug('[checkout] createHold failed, proceeding without hold:', err);
+          if (__DEV__) console.debug('[checkout] createHold failed, proceeding without hold:', err);
         }
       }
 

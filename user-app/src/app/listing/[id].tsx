@@ -45,7 +45,7 @@ export default function ListingDetailScreen() {
           return { ...unit, _isUnit: true };
         }
       } catch (err) {
-        console.debug('[listing] getUnit failed, falling back to getById:', err);
+        if (__DEV__) console.debug('[listing] getUnit failed, falling back to getById:', err);
       }
       return listingsService.getById(id!);
     },
@@ -79,7 +79,7 @@ export default function ListingDetailScreen() {
       const updated = await authService.getMe();
       setUser(updated);
     } catch (err) {
-      console.debug('[listing] toggleWishlist failed:', err);
+      if (__DEV__) console.debug('[listing] toggleWishlist failed:', err);
     }
   };
 
@@ -90,7 +90,7 @@ export default function ListingDetailScreen() {
         message: `Check out ${listing.title} on Hostn! ${listing.location?.city ?? ''}`,
       });
     } catch (err) {
-      console.debug('[listing] share failed:', err);
+      if (__DEV__) console.debug('[listing] share failed:', err);
     }
   };
 
