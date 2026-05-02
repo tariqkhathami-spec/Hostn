@@ -15,16 +15,10 @@ const HOST_APP_WEB_URL = 'https://business.hostn.co';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const rawUser = useAuthStore((s) => s.user);
+  const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
   const { t } = useLanguage();
-
-  // DD3: on cold boot the auth store can hold the {success, user} wrapper
-  // from getMe() instead of the inner User. Unwrap defensively here so
-  // every read in this screen tolerates either shape; remove once DD3
-  // is fixed at the api / auth-service layer.
-  const user = ((rawUser as any)?.user ?? rawUser) as typeof rawUser;
 
   // Map `name` field to firstName/lastName when they're not set
   const derivedFirstName = user?.firstName || (user?.name ? user.name.split(' ')[0] : '');

@@ -26,8 +26,19 @@ export const authService = {
       .then((r) => r.data);
   },
 
-  getMe() {
-    return api.get<User>('/auth/me').then((r) => r.data);
+  getMe(): Promise<User> {
+    // GET /auth/me returns {success, user} — not the standard
+    // {success, data} envelope, so the api.ts response interceptor
+    // doesn't unwrap it. Without this explicit `.user` extract, the
+    // auth store ended up holding the wrapper after cold-boot
+    // bootstrap (DD3 / FU2): role-gated UI like the Become Host CTA
+    // would break because `user.role` reads undefined on the wrapper.
+    // After verify-otp, `login()` already passes the inner user, so
+    // this getMe() path was the only DD3 source.
+    return api.get('/auth/me').then((r) => {
+      const d = r.data as any;
+      return (d?.user ?? d) as User;
+    });
   },
 
   updateProfile(data: Partial<User>) {
