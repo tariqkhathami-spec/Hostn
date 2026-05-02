@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSearchStore } from '../../store/searchStore';
+import { useLanguage } from '../../i18n';
 import { SAUDI_CITIES } from '../../constants/config';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 export default function DestinationScreen() {
   const router = useRouter();
   const setCity = useSearchStore((s) => s.setCity);
+  const { t, language } = useLanguage();
   const [search, setSearch] = useState('');
 
   const filtered = SAUDI_CITIES.filter(
@@ -29,7 +31,7 @@ export default function DestinationScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="close" size={26} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Where to?</Text>
+        <Text style={styles.title}>{t('search.whereTo')}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -37,7 +39,7 @@ export default function DestinationScreen() {
         <Ionicons name="search" size={20} color={Colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search cities..."
+          placeholder={t('search.searchCities')}
           placeholderTextColor={Colors.textTertiary}
           value={search}
           onChangeText={setSearch}
@@ -49,15 +51,19 @@ export default function DestinationScreen() {
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Pressable style={styles.cityRow} onPress={() => handleSelect(item.id, item.name)}>
-            <Ionicons name="location-outline" size={22} color={Colors.primary} />
-            <View>
-              <Text style={styles.cityName}>{item.name}</Text>
-              <Text style={styles.cityNameAr}>{item.nameAr}</Text>
-            </View>
-          </Pressable>
-        )}
+        renderItem={({ item }) => {
+          const primary = language === 'ar' ? item.nameAr : item.name;
+          const secondary = language === 'ar' ? item.name : item.nameAr;
+          return (
+            <Pressable style={styles.cityRow} onPress={() => handleSelect(item.id, item.name)}>
+              <Ionicons name="location-outline" size={22} color={Colors.primary} />
+              <View>
+                <Text style={styles.cityName}>{primary}</Text>
+                <Text style={styles.cityNameAr}>{secondary}</Text>
+              </View>
+            </Pressable>
+          );
+        }}
       />
     </SafeAreaView>
   );

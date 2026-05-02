@@ -6,13 +6,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar, DateData } from 'react-native-calendars';
 import { format, addDays } from 'date-fns';
 import { useSearchStore } from '../../store/searchStore';
+import { useLanguage } from '../../i18n';
+import { setCalendarLocale } from '../../i18n/calendarLocale';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 export default function DatesScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const { checkIn, checkOut, setDates, city, cityName } = useSearchStore();
   const [startDate, setStartDate] = useState<string | null>(checkIn);
   const [endDate, setEndDate] = useState<string | null>(checkOut);
+
+  setCalendarLocale(language);
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -72,11 +77,12 @@ export default function DatesScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Select Dates</Text>
+        <Text style={styles.title}>{t('search.selectDates')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <Calendar
+        key={language}
         minDate={today}
         markingType="period"
         markedDates={getMarkedDates()}
@@ -93,13 +99,13 @@ export default function DatesScreen() {
 
       <View style={styles.dateDisplay}>
         <View style={styles.dateBox}>
-          <Text style={styles.dateLabel}>Check-in</Text>
-          <Text style={styles.dateValue}>{startDate ?? 'Select date'}</Text>
+          <Text style={styles.dateLabel}>{t('search.checkIn')}</Text>
+          <Text style={styles.dateValue}>{startDate ?? t('search.selectDate')}</Text>
         </View>
         <Ionicons name="arrow-forward" size={20} color={Colors.textTertiary} />
         <View style={styles.dateBox}>
-          <Text style={styles.dateLabel}>Check-out</Text>
-          <Text style={styles.dateValue}>{endDate ?? 'Select date'}</Text>
+          <Text style={styles.dateLabel}>{t('search.checkOut')}</Text>
+          <Text style={styles.dateValue}>{endDate ?? t('search.selectDate')}</Text>
         </View>
       </View>
 
@@ -110,7 +116,7 @@ export default function DatesScreen() {
           disabled={!startDate || !endDate}
         >
           <Ionicons name="search" size={20} color={Colors.white} />
-          <Text style={styles.searchText}>Search</Text>
+          <Text style={styles.searchText}>{t('search.search')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
