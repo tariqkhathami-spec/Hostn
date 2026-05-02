@@ -147,46 +147,30 @@ generic bell icon for everything (compound types miss `ICON_MAP`).
      `markRead.mutate(item._id)` is fine; just gated by the right
      field).
 
-### FU4 — R19 deep investigation: checkout calendar day taps (HIGH)
+### FU4 — RETRACTED. R19 is actually fixed by Task 5.5
 
-Task 5.5 partially addressed R19: the calendar UI was moved out of
-the parent ScrollView into a bottom-sheet Modal (matching the
-country-picker pattern). That's a clean UX improvement. But the
-underlying day-tap bug persists at a deeper level than the screen
-restructure can fix. Diagnostic findings:
+Initial conclusion: "tap bug persists at a deeper level than the
+Modal restructure can fix." Owner verification corrected this — the
+calendar's day taps DO register inside the Modal sheet introduced
+in Task 5.5. The reason all my own day-tap simulator clicks failed
+is mundane: `mcp__computer-use__left_click` aimed at the visual
+center of each grid cell (e.g. (268, 607) for day 7), but the
+actual TouchableOpacity hit area is the smaller centered "circle"
+around the day number — taps on the cell padding fall outside the
+TouchableOpacity and don't fire onPress. The owner clicked day 31
+on a real cursor and it landed correctly, populating the check-out
+field as expected.
 
-  - Calendar header arrows (TouchableOpacity) fire correctly in
-    both the inline and Modal layouts.
-  - Calendar day cells do NOT fire `onDayPress`, regardless of
-    `markingType` ("period" → TouchableWithoutFeedback for marked
-    days; default → TouchableOpacity for all days; both broken).
-  - Verified via `onTouchStart` logging on a wrapper View that touch
-    DOES reach the Calendar's parent — it just doesn't propagate to
-    the day touchables.
-  - Same Calendar config / props in `search/dates.tsx` (top-level,
-    no ScrollView) works perfectly. Same RN version, same
-    react-native-calendars version. The only structural difference
-    is parentage, which has now been eliminated as a factor.
-  - App was killed and relaunched with a fresh JS bundle to rule out
-    hot-reload state pollution. Same result.
+Net: R19 is closed by Task 5.5 (Modal restructure + lift out of
+ScrollView). Re-categorize the audit's "date taps don't register"
+as a hit-area sensitivity issue rather than a hard bug. If the
+audit author was using a similar mouse-driven test environment,
+they may have hit the same coordinate aim trap.
 
-**Likely cause:** react-native-calendars 1.1314 + RN 0.81 + iOS 26
-simulator interaction. Possible angles for the follow-up:
-
-  - Upgrade `react-native-calendars` to the latest 1.x and retest.
-  - Try the `dayComponent` prop with a custom day implementation
-    using `Pressable` (bypasses the package's internal touchables
-    entirely).
-  - Replace the inline calendar with a "Choose dates" button that
-    pushes to a dedicated date-picker screen mirroring
-    `search/dates.tsx` — guaranteed-working pattern, but a UX flow
-    change.
-  - Try on a real device to rule out a simulator-only quirk.
-
-Until this lands, users on the checkout screen cannot edit dates
-that were preset from the search flow. The dates carried over from
-search/dates do work for booking; only in-checkout editing is
-broken. Mitigation: dates are always editable from the search flow.
+No follow-up task needed. This entry is kept (rather than deleted)
+as a record of the misdiagnosis, so future readers don't repeat
+the investigation when the simulator looks "broken" under
+mouse-driven testing.
 
 ### FU5 (DD8) — Google Maps SDK not configured (MEDIUM)
 
