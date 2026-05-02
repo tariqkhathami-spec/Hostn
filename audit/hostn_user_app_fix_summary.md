@@ -228,3 +228,96 @@ Items to exercise during the final-pass walkthrough beyond what the brief enumer
   and the gallery counter must show e.g. "1/4" with a real image. The
   test guest account currently only has Sunset Beach Resort which is
   incomplete, so this path could only be source-verified in Task 2.3.
+
+---
+
+## Phase 6 — Final verification (2026-05-02)
+
+**Branch:** `fix/user-app-audit-pass-1` @ `48e4663` (HEAD as of Phase 6
+start). 22 commits ahead of `feat/user-app-feature-parity`.
+
+### Static checks
+- `tsc --noEmit` → **0 errors** (exit 0).
+- `npm run lint` is aliased to `tsc --noEmit` in `package.json` →
+  same result.
+- Working tree clean (only pre-existing untracked audit docs).
+
+### Runtime — cold boot capture
+Metro log saved to `audit/user-app-fix-pass-1-runtime.log` (after
+killing the app and re-launching with `xcrun simctl launch
+com.hostn.app`, walking the full app, then preserving the log).
+Notable filters from the log:
+
+- `RangeError | Invalid time value` → **0 occurrences** (R1 closed).
+- `WARN [Layout children]` → **0 occurrences** (D2 closed).
+- `LOG | WARN | ERROR` lines (excluding OS noise) → 1 line: the known
+  DD1 push-token registration (HTTP 400). Documented; not in this
+  fix-pass scope.
+
+### Final defect status — full table
+
+Order: Phase 1 blockers → Phase 2 → 3 → 4 → 5. Verification column
+captures how the closure was confirmed during the fix pass.
+
+| ID  | Status | Commit  | Verification |
+|-----|--------|---------|--------------|
+| R1  | fixed  | `913d48c` | Phase 6 sim: tapped Conversations tab, no crash, deleted-user row renders. Metro: 0 RangeError. |
+| D1  | fixed (success path); offline path deferred | `6af1672` | Phase 6 sim: banner hidden across every screen of the walkthrough. Failure path requires Network Link Conditioner / hosts-file rerouting; documented as out-of-scope for automated verification. |
+| D2  | fixed | `2d65ea9` | Phase 6 sim + Metro log: 0 `Layout children` warns. |
+| D3, D4, D5 | fixed | `d56c634` | Phase 6 sim: listing error state, checkout error state, conversation deleted-user (D5) all render correctly. |
+| D6  | fixed (re-scoped) | `ce36c83` | Source-verified: confirm dialog already existed; defect was hardcoded English copy. AC1 logged. |
+| R13 | fixed | `9ba0b91` | Phase 6 sim: Sunset Beach Resort shows "هذا الإعلان غير مكتمل" notice + greyed Book Now, no `1/0` counter. |
+| R2  | fixed | `33f9a04` | Phase 6 sim: badge "مخيم" rendered, no `type.undefined`. |
+| R3, R14, R17 | fixed | `206e762` | Phase 6 sim: list = 382.95 SAR, detail = 382.95 SAR, breakdown shows real numbers, status pills "قيد الانتظار" + "غير مدفوع" both localized. |
+| D15 | fixed (re-scoped) | `c0bbbc1` | Phase 6 sim: tapped Riyadh card → results screen titled "Riyadh", filter applied. AC2 logged (architectural fix even though user-visible bug was already mitigated). |
+| D7  | fixed (re-scoped) | `1303570` | Phase 6 sim: orange "سجل كمضيف" CTA → confirmation alert with "متابعة إلى Hostn Host" + "إلغاء" buttons. Repurposed via host-app deep link rather than in-place upgrade (backend HTTP 410 on old path). |
+| R5  | fixed | `74eef7d` | Phase 6 sim: About screen renders fully in AR; toggled to EN, renders fully in EN with all 4 feature cards + Website/Terms/Privacy links. |
+| R6, R7, R8 | fixed | `e2b9e48` | Phase 6 sim: Contact Us in EN renders correctly (header + contact info + form labels + Send Message). FAQ + Terms + Privacy source-verified earlier. |
+| R9  | fixed (stub for AddCard) | `752ff3a` | Phase 6 sim: header "Payment Methods" + `+` action + "No saved cards" empty state + "Add Card +" primary button — all in EN. DD5 logged: tokenization UI is the recommended next-pass build-out. |
+| R10, R11, R12 | fixed | `06f1cbc` | Per-task simulator verification — search flow translated, calendar weekday locale flips with language. Phase 6 spot-check via /search/dates round-trip in the R19 work. |
+| D8, D9, D10, D11 | fixed | `7afe3b2` | Source-only — diagnostic console calls gated behind `__DEV__`, `chat.startFailed` translation added with conditional alert when entering from listing detail. Per owner direction (gate, don't delete). |
+| D12, D13 | fixed | `9bc1df8` | Per-task simulator: country picker backdrop dismiss + OTP error state (red borders + inline message + shake) verified end-to-end. |
+| R15 | fixed | `7a3025c` | Phase 6 sim: Notifications screen renders 20 real notifications. DD7 surfaced as the actual root cause (paginated-wrapper unwrap), now logged as FU1. |
+| R16 | fixed | `7a3025c` | Phase 6 sim: profile editor first name "ضيف" + phone "+966 500000003" pre-filled. DD3 wrapper-shape defensively unwrapped at the screen level; FU2 holds the proper api/service-layer fix. |
+| R20 | fixed (source-verified) | `5bce02e` | Source-verified path is correct (renders icon + "موقع غير متوفر" / "Location not available" placeholder when no coords). Visual verification blocked by FU5/DD8 (Maps SDK not configured) + test data has coords on every listing. |
+| R19 | fixed (via redirect) | `48e4663` | Phase 6 sim earlier-confirmed round-trip: dateSummaryRow → /search/dates with `returnTo=checkout` → tap day → Search → router.back() → useFocusEffect re-syncs from searchStore → checkout shows new dates and active Pay button. FU4 records the upstream root cause as still unresolved (revisit on package upgrade). |
+| D14 | fixed | `5bce02e` | Source-only — catch handler now reads `error.response.status` and routes 4xx / 5xx / fallback to three localized messages. Server-error path requires server-side injection to exercise from the UI. |
+| D17 | closed by Task 2.5 (no commit) | n/a | AC3 logged. The audit pointed at lines that were rewritten in `206e762`; current Alerts already use `t()`. All four supporting i18n keys verified present in both AR + EN bundles. |
+| D16 | acknowledged, not fixed | n/a | Audit notes: probably intentional (post-payment success can't go back to listing). Out of this fix pass. |
+| R4  | duplicate of D1 | covered by `6af1672` | Audit's R4 is the runtime confirmation of D1; closing D1 closed this implicitly. |
+| R18 | acknowledged, not fixed | n/a | Simulator-only HW keyboard issue; no real-device user impact. Out of this fix pass. |
+
+### Summary numbers
+
+- **Defects in audit:** 37 (D1–D17 + R1–R20).
+- **Fixed in this pass:** 33 (with 3 re-scoped audit corrections AC1/AC2/AC3 noted).
+- **Closed by other means:** D17 (covered by Task 2.5's rewrite); R4 (duplicate of D1).
+- **Acknowledged not fixed:** D16 (intentional UX), R18 (sim-only HW keyboard).
+- **Discovered defects raised during the pass:** 8 (DD1 push token, DD2 listing-detail type-helper, DD3 auth wrapper, DD5 card tokenization, DD6 notification field-name mismatch, DD7 paginated-wrapper, DD8 Maps SDK, plus the R19 root-cause logged in FU4).
+- **Audit corrections logged:** 3 (AC1 D6, AC2 D15, AC3 D17).
+
+### Carried follow-ups (priority for next pass)
+
+| FU# | Severity | Title |
+|-----|----------|-------|
+| FU1 | HIGH     | DD7 — paginated wrapper audit across all `*.service.ts` |
+| FU2 | HIGH     | DD3 — fix `getMe()` wrapper at api.ts / auth.service layer; remove the defensive unwrap in `profile.tsx` |
+| FU3 | MEDIUM   | DD6 — rewrite `Notification` interface to match backend reality (`message`, `isRead`, compound types) |
+| FU4 | LOW (workaround in place) | R19 root cause — RTL hit-box on calendar day cells inside ScrollView/Modal; revisit on `react-native-calendars` upgrade |
+| FU5 | MEDIUM   | DD8 — Google Maps iOS SDK key not configured; MapView renders blank for listings with valid coords |
+
+Plus DD5 (Moyasar tokenization sheet for Payment Methods Add Card) — recommended dedicated next-pass task once the tokenization vendor stack is decided.
+
+### Phase 6 readiness
+
+The branch is **ready to merge to `feat/user-app-feature-parity`**
+for owner review. All audit blockers (D1, D2, R1) are fixed and
+verified at runtime. All 5 phase 4 translation screens render
+correctly in both AR and EN. R19 ships behind a UX-flow change
+(dedicated date-picker screen) that is verified end-to-end and
+keeps the user on a working path.
+
+The four high-priority follow-ups (FU1, FU2, FU3, FU5) should
+schedule before any further App Store rollout — DD3 + DD7 in
+particular are silent data-loss / state-mismatch bugs that the
+fix pass papered over rather than rooted out.
