@@ -211,25 +211,30 @@ export default function PhoneScreen() {
       {/* Country Selector Modal */}
       <Modal
         visible={countryModalVisible}
+        transparent
         animationType="slide"
-        presentationStyle="pageSheet"
         onRequestClose={() => setCountryModalVisible(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('auth.selectCountry')}</Text>
-            <Pressable onPress={() => setCountryModalVisible(false)} hitSlop={12}>
-              <Ionicons name="close" size={24} color={Colors.textPrimary} />
-            </Pressable>
-          </View>
-          <FlatList
-            data={GCC_COUNTRIES}
-            keyExtractor={(item) => item.code}
-            renderItem={renderCountryItem}
-            contentContainerStyle={styles.countryList}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
-        </SafeAreaView>
+        <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
+          {/* Inner Pressable swallows taps so they don't bubble to the backdrop. */}
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <SafeAreaView edges={['bottom']} style={styles.modalSheetSafe}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>{t('auth.selectCountry')}</Text>
+                <Pressable onPress={() => setCountryModalVisible(false)} hitSlop={12}>
+                  <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                </Pressable>
+              </View>
+              <FlatList
+                data={GCC_COUNTRIES}
+                keyExtractor={(item) => item.code}
+                renderItem={renderCountryItem}
+                contentContainerStyle={styles.countryList}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+              />
+            </SafeAreaView>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -354,9 +359,20 @@ const styles = StyleSheet.create({
     color: Colors.textWhite,
   },
   // Modal styles
-  modalContainer: {
+  modalBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
     backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  modalSheetSafe: {
+    flexShrink: 1,
   },
   modalHeader: {
     flexDirection: 'row',
