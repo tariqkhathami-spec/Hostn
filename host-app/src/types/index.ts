@@ -1,18 +1,50 @@
+// Property = container + stay rules. Bookable fields (pricing, capacity, rooms,
+// amenities, images) live on Unit, NOT on Property — see /property/edit/[id].tsx
+// and the Phase 8 calendar spec at audit/gathern_calendar_feature_spec.md §4.
+//
+// Field shape varies between endpoints:
+//  - GET /host/properties (list)  uses name/nameAr + address.{city,…} + flat location.{lat,lng}
+//  - GET /properties/:id (detail) uses title/titleAr + location.{city,district,coordinates} + host
+// Both shapes are declared as optional below so consumers can read either.
+export interface PropertyRules {
+  checkInTime: string;
+  checkOutTime: string;
+  minNights: number;
+  maxNights: number;
+  smokingAllowed: boolean;
+  petsAllowed: boolean;
+  partiesAllowed: boolean;
+}
+
 export interface Property {
   id: string;
+  _id?: string;
   name: string;
   nameAr: string;
+  title?: string;
+  titleAr?: string;
+  type?: string;
+  direction?: string;
   classification: string;
   status: 'listed' | 'unlisted';
   units: Unit[];
   unitCount: number;
-  address: {
+  activeUnitCount?: number;
+  address?: {
     city: string;
     street: string;
     direction: string;
     coordinates: { lat: number; lng: number };
   };
-  location: { lat: number; lng: number };
+  location?: {
+    city?: string;
+    district?: string;
+    lat?: number;
+    lng?: number;
+    coordinates?: { lat: number; lng: number };
+  };
+  rules?: PropertyRules;
+  host?: { _id: string; name?: string };
   createdAt: string;
 }
 

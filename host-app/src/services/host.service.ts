@@ -9,7 +9,10 @@ export const hostService = {
 
   // Properties
   getProperties: () => api.get<{ data: Property[] }>('/host/properties').then(r => r.data),
-  getProperty: (id: string) => api.get<{ data: Property }>(`/host/properties/${id}`).then(r => r.data),
+  // Backend exposes property detail at /properties/:id (no /host prefix); the
+  // /host/properties/:id route returns 404. Ownership is enforced at the
+  // screen level by comparing property.host._id to the logged-in host id.
+  getProperty: (id: string) => api.get<{ data: Property }>(`/properties/${id}`).then(r => r.data),
   /** @deprecated Use getUnit instead — kept for screens still using /host/units/:id */
   getUnitLegacy: (id: string) => api.get<{ data: Unit }>(`/host/units/${id}`).then(r => r.data),
   /** @deprecated Use updateUnit instead — kept for screens still using PATCH /host/units/:id */
