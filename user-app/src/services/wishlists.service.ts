@@ -34,18 +34,45 @@ export const wishlistsService = {
     return api.delete(`/wishlists/${id}`).then((r) => r.data);
   },
 
-  addProperty(listId: string, propertyId: string) {
+  toggleUnit(listId: string, unitId: string) {
     return api
-      .post(`/wishlists/${listId}/properties`, { propertyId })
+      .post(`/wishlists/${listId}/units/${unitId}`)
       .then((r) => {
         const d = r.data as any;
         return (d.data ?? d) as WishlistList;
       });
   },
 
-  removeProperty(listId: string, propertyId: string) {
+  addUnit(listId: string, unitId: string) {
     return api
-      .delete(`/wishlists/${listId}/properties/${propertyId}`)
+      .post(`/wishlists/${listId}/units/${unitId}`)
+      .then((r) => {
+        const d = r.data as any;
+        return (d.data ?? d) as WishlistList;
+      });
+  },
+
+  removeUnit(listId: string, unitId: string) {
+    return api
+      .post(`/wishlists/${listId}/units/${unitId}`)
+      .then((r) => {
+        const d = r.data as any;
+        return (d.data ?? d) as WishlistList;
+      });
+  },
+
+  moveUnit(unitId: string, fromListId: string, toListId: string) {
+    return api
+      .put(`/wishlists/move`, { unitId, fromListId, toListId })
       .then((r) => r.data);
+  },
+
+  getUnitMembership(unitId: string) {
+    return api
+      .get(`/wishlists/unit/${unitId}/membership`)
+      .then((r) => {
+        const d = r.data as any;
+        return (d.data ?? d) as { _id: string; units: string[] }[];
+      });
   },
 };

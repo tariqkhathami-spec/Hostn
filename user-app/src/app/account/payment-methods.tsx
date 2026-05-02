@@ -6,11 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentsService } from '../../services/payments.service';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 import type { PaymentMethod } from '../../types';
 
 export default function PaymentMethodsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   const { data: methods, isLoading } = useQuery({
     queryKey: ['paymentMethods'],
@@ -23,10 +25,26 @@ export default function PaymentMethodsScreen() {
   });
 
   const handleDelete = (id: string) => {
-    Alert.alert('Remove Card', 'Are you sure you want to remove this card?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
-    ]);
+    Alert.alert(
+      t('payment.removeCardTitle'),
+      t('payment.removeCardMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('payment.removeCardConfirm'),
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(id),
+        },
+      ],
+    );
+  };
+
+  const handleAddCard = () => {
+    Alert.alert(
+      t('payment.addCardSoonTitle'),
+      t('payment.addCardSoonBody'),
+      [{ text: t('common.ok') }],
+    );
   };
 
   return (
@@ -35,8 +53,10 @@ export default function PaymentMethodsScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>Payment Methods</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.title}>{t('account.paymentMethods')}</Text>
+        <Pressable onPress={handleAddCard} hitSlop={12} accessibilityLabel={t('payment.addCard')}>
+          <Ionicons name="add" size={26} color={Colors.primary} />
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -44,8 +64,12 @@ export default function PaymentMethodsScreen() {
       ) : !methods?.length ? (
         <View style={styles.emptyState}>
           <Ionicons name="card-outline" size={64} color={Colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No saved cards</Text>
-          <Text style={styles.emptyText}>Add a card to speed up your checkout</Text>
+          <Text style={styles.emptyTitle}>{t('payment.emptyTitle')}</Text>
+          <Text style={styles.emptyText}>{t('payment.emptyText')}</Text>
+          <Pressable style={styles.emptyCta} onPress={handleAddCard}>
+            <Ionicons name="add" size={18} color={Colors.white} />
+            <Text style={styles.emptyCtaText}>{t('payment.addCard')}</Text>
+          </Pressable>
         </View>
       ) : (
         <FlatList
@@ -57,11 +81,13 @@ export default function PaymentMethodsScreen() {
               <Ionicons name="card" size={28} color={Colors.primary} />
               <View style={styles.cardInfo}>
                 <Text style={styles.cardBrand}>{item.brand} •••• {item.last4}</Text>
-                <Text style={styles.cardExpiry}>Expires {item.expiryMonth}/{item.expiryYear}</Text>
+                <Text style={styles.cardExpiry}>
+                  {t('payment.expires', { month: item.expiryMonth, year: item.expiryYear })}
+                </Text>
               </View>
               {item.isDefault && (
                 <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultText}>Default</Text>
+                  <Text style={styles.defaultText}>{t('payment.default')}</Text>
                 </View>
               )}
               <Pressable onPress={() => handleDelete(item._id)} hitSlop={8}>
@@ -93,7 +119,13 @@ const styles = StyleSheet.create({
   cardExpiry: { ...Typography.caption, color: Colors.textSecondary, marginTop: 2 },
   defaultBadge: { backgroundColor: Colors.success + '20', paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: Radius.xs },
   defaultText: { ...Typography.tiny, color: Colors.success, fontWeight: '600' },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl },
   emptyTitle: { ...Typography.h3, color: Colors.textPrimary },
-  emptyText: { ...Typography.body, color: Colors.textSecondary },
+  emptyText: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
+  emptyCta: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
+    borderRadius: Radius.md, marginTop: Spacing.md,
+  },
+  emptyCtaText: { ...Typography.bodyBold, color: Colors.white },
 });

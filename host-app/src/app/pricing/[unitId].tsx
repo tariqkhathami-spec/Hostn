@@ -24,8 +24,10 @@ import type { Property, Unit, UnitPricing, UnitDiscount, CustomOffer } from '../
 
 type TabKey = 'prices' | 'offers';
 
+type DayRateKey = 'midWeek' | 'thursday' | 'friday' | 'saturday';
+
 interface DayRateConfig {
-  key: keyof UnitPricing;
+  key: DayRateKey;
   label: string;
   description: string;
 }

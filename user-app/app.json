@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.hostn.app",
       "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "LSApplicationQueriesSchemes": ["hostn-host"]
       },
       "config": {
         "googleMapsApiKey": "AIzaSyD9mcyuKK3L2TUkZ7vep6xF_eUV5DzIDUw"

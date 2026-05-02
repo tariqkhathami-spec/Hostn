@@ -2,8 +2,17 @@ import api from './api';
 import type { SupportTicket } from '../types';
 
 export const supportService = {
-  getTickets() {
-    return api.get<SupportTicket[]>('/support').then((r) => r.data);
+  getTickets(): Promise<SupportTicket[]> {
+    // /support is paginated. The api.ts response interceptor preserves
+    // the {data, pagination} wrapper for paginated responses, so this
+    // service has to unwrap explicitly. Without this, the consumer
+    // calling tickets.filter(...) would crash with "filter is not a
+    // function" on the wrapper object as soon as the user has any
+    // tickets (or interacts with the filter chips).
+    return api.get('/support').then((r) => {
+      const d = r.data as any;
+      return Array.isArray(d) ? d : (d?.data ?? []);
+    });
   },
 
   getTicket(id: string) {

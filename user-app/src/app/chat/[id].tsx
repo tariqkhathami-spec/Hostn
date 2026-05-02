@@ -48,9 +48,20 @@ export default function ChatScreen() {
         }
       })
       .catch((err) => {
-        console.warn('Chat conversation creation failed:', err?.response?.data?.message ?? err?.message);
-        // If create fails, id might already be a conversation ID — try using it
-        if (!cancelled) setConversationId(id);
+        if (__DEV__) {
+          console.warn('Chat conversation creation failed:', err?.response?.data?.message ?? err?.message);
+        }
+        // From conversation list, id IS the conversation id and the fallback works.
+        // From a listing (propertyId set), createConversation was required — surface error.
+        if (!cancelled) {
+          setConversationId(id);
+          if (propertyId) {
+            Alert.alert(
+              t('common.error' as any) || 'Error',
+              t('chat.startFailed' as any) || 'Could not start the conversation. Please try again.',
+            );
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setCreating(false);

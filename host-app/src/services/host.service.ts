@@ -141,6 +141,17 @@ export const hostService = {
   getVatEntries: () => api.get('/host/vat').then(r => r.data),
   addVatEntry: (data: Record<string, unknown>) => api.post('/host/vat', data).then(r => r.data),
 
+  // Unit Points
+  getPropertiesUnits: () => api.get('/host/properties-units').then(r => r.data),
+  getUnitPoints: (unitId: string) => api.get(`/host/units/${unitId}/points`).then(r => r.data),
+
+  // Tourism License
+  getTourismLicense: () => api.get('/host/tourism-license').then(r => r.data),
+  updateUnitTourismLicense: (unitId: string, data: Record<string, unknown>) =>
+    api.put(`/host/units/${unitId}/tourism-license`, data).then(r => r.data),
+  deleteUnitTourismLicense: (unitId: string) =>
+    api.delete(`/host/units/${unitId}/tourism-license`).then(r => r.data),
+
   // Permits
   getPermits: () => api.get('/host/properties/permits').then(r => r.data),
   uploadPermit: (unitId: string, data: FormData) => api.post(`/host/units/${unitId}/permit`, data, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data),

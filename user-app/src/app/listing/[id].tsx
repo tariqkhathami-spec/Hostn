@@ -35,7 +35,7 @@ export default function ListingDetailScreen() {
   const isAr = language === 'ar';
 
   // Try fetching as unit first, fall back to property
-  const { data: listing, isLoading } = useQuery({
+  const { data: listing, isLoading, isError, refetch } = useQuery({
     queryKey: ['listing', id],
     queryFn: async () => {
       try {
@@ -45,7 +45,7 @@ export default function ListingDetailScreen() {
           return { ...unit, _isUnit: true };
         }
       } catch (err) {
-        console.debug('[listing] getUnit failed, falling back to getById:', err);
+        if (__DEV__) console.debug('[listing] getUnit failed, falling back to getById:', err);
       }
       return listingsService.getById(id!);
     },
@@ -79,7 +79,7 @@ export default function ListingDetailScreen() {
       const updated = await authService.getMe();
       setUser(updated);
     } catch (err) {
-      console.debug('[listing] toggleWishlist failed:', err);
+      if (__DEV__) console.debug('[listing] toggleWishlist failed:', err);
     }
   };
 
@@ -90,7 +90,7 @@ export default function ListingDetailScreen() {
         message: `Check out ${listing.title} on Hostn! ${listing.location?.city ?? ''}`,
       });
     } catch (err) {
-      console.debug('[listing] share failed:', err);
+      if (__DEV__) console.debug('[listing] share failed:', err);
     }
   };
 
@@ -114,10 +114,30 @@ export default function ListingDetailScreen() {
     });
   };
 
-  if (isLoading || !listing) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !listing || !id) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.errorState}>
+          <Ionicons name="alert-circle-outline" size={56} color={Colors.textSecondary} />
+          <Text style={styles.errorTitle}>{t('common.somethingWrong')}</Text>
+          <Text style={styles.errorMessage}>{t('common.unexpectedError')}</Text>
+          <View style={styles.errorActions}>
+            <Pressable style={styles.errorButtonPrimary} onPress={() => refetch()}>
+              <Text style={styles.errorButtonPrimaryText}>{t('common.tryAgain')}</Text>
+            </Pressable>
+            <Pressable style={styles.errorButtonSecondary} onPress={() => router.back()}>
+              <Text style={styles.errorButtonSecondaryText}>{t('common.back')}</Text>
+            </Pressable>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -181,6 +201,16 @@ export default function ListingDetailScreen() {
     (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)
   );
 
+  // Treat the listing as "incomplete" when the host hasn't finished setting it up:
+  // no images, no nightly price, no title, or no city. The screen still renders so
+  // an admin or the host can see what's missing, but Book Now is disabled and the
+  // bottom bar shows a clear "this listing is incomplete" notice instead of "0.00 SAR".
+  const isIncomplete =
+    sortedImages.length === 0 ||
+    !originalPrice ||
+    !displayTitle ||
+    !city;
+
   // Extract map coordinates
   const coords = listing.location?.coordinates ?? listing.location?.geoJSON?.coordinates;
   let lat: number | undefined;
@@ -236,11 +266,11 @@ export default function ListingDetailScreen() {
               </Pressable>
             </View>
           </View>
-          <View style={styles.imageBadge}>
-            <Text style={styles.imageBadgeText}>
-              1/{sortedImages.length}
-            </Text>
-          </View>
+          {sortedImages.length > 0 && (
+            <View style={styles.imageBadge}>
+              <Text style={styles.imageBadgeText}>1/{sortedImages.length}</Text>
+            </View>
+          )}
         </View>
 
         {/* Header info — always visible */}
@@ -450,9 +480,10 @@ export default function ListingDetailScreen() {
                   )}
                 </>
               ) : (
-                <Text style={styles.noMapText}>
-                  {isAr ? 'لم يتم تحديد الموقع على الخريطة' : 'Location not available on map'}
-                </Text>
+                <View style={styles.mapPlaceholder}>
+                  <Ionicons name="map-outline" size={36} color={Colors.textTertiary} />
+                  <Text style={styles.mapPlaceholderText}>{t('detail.locationUnavailable')}</Text>
+                </View>
               )}
               {/* Address */}
               <View style={styles.addressRow}>
@@ -507,17 +538,37 @@ export default function ListingDetailScreen() {
 
       {/* Sticky Bottom Bar */}
       <View style={styles.bottomBar}>
-        <View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-            {hasDiscount && (
-              <Text style={styles.bottomOriginalPrice}>{formatCurrency(originalPrice)}</Text>
-            )}
-            <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
+        {isIncomplete ? (
+          <View style={styles.incompleteNotice}>
+            <Ionicons name="information-circle-outline" size={20} color={Colors.textSecondary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.incompleteTitle} numberOfLines={1}>
+                {t('listing.incompleteTitle')}
+              </Text>
+              <Text style={styles.incompleteSub} numberOfLines={2}>
+                {t('listing.incompleteSub')}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.bottomPerNight}>{t('common.perNight')}</Text>
-        </View>
-        <Pressable style={styles.bookButton} onPress={handleBook}>
-          <Text style={styles.bookText}>{t('detail.bookNow')}</Text>
+        ) : (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+              {hasDiscount && (
+                <Text style={styles.bottomOriginalPrice}>{formatCurrency(originalPrice)}</Text>
+              )}
+              <Text style={styles.bottomPrice}>{formatCurrency(price)}</Text>
+            </View>
+            <Text style={styles.bottomPerNight}>{t('common.perNight')}</Text>
+          </View>
+        )}
+        <Pressable
+          style={[styles.bookButton, isIncomplete && styles.bookButtonDisabled]}
+          onPress={handleBook}
+          disabled={isIncomplete}
+        >
+          <Text style={[styles.bookText, isIncomplete && styles.bookTextDisabled]}>
+            {t('detail.bookNow')}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -527,6 +578,35 @@ export default function ListingDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, justifyContent: 'center' },
+  errorState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  errorTitle: { ...Typography.h3, color: Colors.textPrimary, textAlign: 'center' },
+  errorMessage: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
+  errorActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  errorButtonPrimary: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  errorButtonPrimaryText: { ...Typography.bodyBold, color: Colors.white },
+  errorButtonSecondary: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  errorButtonSecondaryText: { ...Typography.bodyBold, color: Colors.textPrimary },
   imageContainer: { position: 'relative' },
   heroImage: { width: SCREEN_WIDTH, height: 280 },
   imageOverlay: {
@@ -676,7 +756,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontStyle: 'italic',
   },
-  noMapText: { ...Typography.small, color: Colors.textTertiary },
+  mapPlaceholder: {
+    height: 160,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  mapPlaceholderText: { ...Typography.body, color: Colors.textSecondary },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -752,5 +840,20 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: Radius.md,
   },
+  bookButtonDisabled: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   bookText: { ...Typography.bodyBold, color: Colors.white },
+  bookTextDisabled: { color: Colors.textTertiary },
+  incompleteNotice: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginRight: Spacing.md,
+  },
+  incompleteTitle: { ...Typography.smallBold, color: Colors.textPrimary },
+  incompleteSub: { ...Typography.caption, color: Colors.textSecondary, marginTop: 2 },
 });

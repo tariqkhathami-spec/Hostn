@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { API_URL } from '../../constants/config';
 import { Colors, Typography, Spacing } from '../../constants/theme';
-import api from '../../services/api';
+
+// Backend mounts /health/ready at the root, not under the /api/v* prefix that
+// API_URL points to. Strip the api-version suffix so the health probe hits the
+// real route instead of 404'ing and showing a permanent "offline" banner.
+const HEALTH_URL = API_URL.replace(/\/api\/v\d+\/?$/, '') + '/health/ready';
 
 export default function NetworkBanner() {
   const [isOffline, setIsOffline] = useState(false);
@@ -10,7 +16,7 @@ export default function NetworkBanner() {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        await api.get('/health/ready', { timeout: 5000 });
+        await axios.get(HEALTH_URL, { timeout: 5000 });
         setIsOffline(false);
       } catch {
         setIsOffline(true);

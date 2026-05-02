@@ -1,4 +1,4 @@
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, isValid } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 
 /**
@@ -16,14 +16,19 @@ export function formatCurrency(amount: number, currency = 'SAR'): string {
   // Use 'en' locale to guarantee Western numerals (0-9) on all JS engines.
   // 'en-SA' could produce Eastern Arabic numerals on some React Native runtimes.
   const formatted = (amount ?? 0).toLocaleString('en', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
   return `${formatted} ${currency}`;
 }
 
-export function formatDate(date: string | Date, pattern = 'MMM d, yyyy'): string {
+export function formatDate(
+  date: string | Date | null | undefined,
+  pattern = 'MMM d, yyyy',
+): string {
+  if (date == null) return '';
   const d = typeof date === 'string' ? parseISO(date) : date;
+  if (!isValid(d)) return '';
   // Explicitly use English locale to ensure Western numerals in dates
   return format(d, pattern, { locale: enUS });
 }

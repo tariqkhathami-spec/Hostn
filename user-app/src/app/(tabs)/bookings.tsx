@@ -52,8 +52,7 @@ export default function BookingsScreen() {
   const bookings = data ?? [];
 
   const renderBookingCard = ({ item }: { item: Booking }) => {
-    const bookingItem = item as any;
-    const displayPrice = item.totalPrice || bookingItem.total || bookingItem.pricing?.total || bookingItem.amount || 0;
+    const displayPrice = item.pricing?.total ?? 0;
 
     return (
       <Pressable

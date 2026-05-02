@@ -25,6 +25,14 @@ export const paymentsService = {
   setDefault(id: string) {
     return api.put(`/payment-methods/${id}/default`).then((r) => r.data);
   },
+
+  simulate(paymentId: string, outcome: 'approved' | 'declined' | 'insufficient_funds' | 'fraud' | 'cancelled' | 'timeout') {
+    return api.post('/payments/simulate', { paymentId, outcome }).then((r) => r.data);
+  },
+
+  getStatus(paymentId: string) {
+    return api.get(`/payments/${paymentId}/status`).then((r) => r.data);
+  },
 };
 
 export const bnplService = {

@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,7 +31,25 @@ export default function OtpScreen() {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    shakeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const handleCodeChange = (next: string) => {
+    if (errorMsg) setErrorMsg(null);
+    setCode(next);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -54,10 +73,8 @@ export default function OtpScreen() {
       router.replace('/(tabs)');
     } catch (error: any) {
       setCode('');
-      Alert.alert(
-        t('auth.invalidCode'),
-        error.response?.data?.message || t('auth.invalidCodeMsg')
-      );
+      setErrorMsg(error.response?.data?.message || t('auth.invalidCodeMsg'));
+      triggerShake();
     } finally {
       setLoading(false);
     }
@@ -92,20 +109,23 @@ export default function OtpScreen() {
           </Text>
         </View>
 
-        <Pressable style={styles.codeContainer} onPress={() => inputRef.current?.focus()}>
-          {Array.from({ length: OTP_LENGTH }).map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.codeBox,
-                i < code.length && styles.codeBoxFilled,
-                i === code.length && styles.codeBoxActive,
-              ]}
-            >
-              <Text style={styles.codeDigit}>{code[i] || ''}</Text>
-            </View>
-          ))}
-        </Pressable>
+        <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+          <Pressable style={styles.codeContainer} onPress={() => inputRef.current?.focus()}>
+            {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.codeBox,
+                  i < code.length && styles.codeBoxFilled,
+                  i === code.length && !errorMsg && styles.codeBoxActive,
+                  errorMsg && styles.codeBoxError,
+                ]}
+              >
+                <Text style={[styles.codeDigit, errorMsg && styles.codeDigitError]}>{code[i] || ''}</Text>
+              </View>
+            ))}
+          </Pressable>
+        </Animated.View>
 
         <TextInput
           ref={inputRef}
@@ -113,14 +133,16 @@ export default function OtpScreen() {
           keyboardType="number-pad"
           maxLength={OTP_LENGTH}
           value={code}
-          onChangeText={setCode}
+          onChangeText={handleCodeChange}
           autoFocus
           textContentType="oneTimeCode"
         />
 
-        {loading && (
+        {errorMsg ? (
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        ) : loading ? (
           <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
-        )}
+        ) : null}
 
         <View style={styles.resendRow}>
           <Text style={styles.resendText}>{t('auth.didntReceive')}</Text>
@@ -188,9 +210,22 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primary50,
   },
+  codeBoxError: {
+    borderColor: Colors.error,
+    backgroundColor: 'transparent',
+  },
   codeDigit: {
     ...Typography.h2,
     color: Colors.textPrimary,
+  },
+  codeDigitError: {
+    color: Colors.error,
+  },
+  errorText: {
+    ...Typography.small,
+    color: Colors.error,
+    textAlign: 'center',
+    marginVertical: Spacing.lg,
   },
   hiddenInput: {
     position: 'absolute',

@@ -1,28 +1,34 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage, type TranslationKey } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
-const FAQ_DATA = [
-  { q: 'How do I book a property?', a: 'Search for your destination, select dates and guests, choose a property, and tap "Book Now" to proceed to checkout.' },
-  { q: 'What payment methods are accepted?', a: 'We accept Visa, Mastercard, Mada, Apple Pay, and Buy Now Pay Later options through Tabby and Tamara.' },
-  { q: 'How do I cancel a booking?', a: 'Go to My Bookings, select the booking you want to cancel, and tap "Cancel Booking". Cancellation policies vary by property.' },
-  { q: 'How do I contact a host?', a: 'You can message a host directly from the listing detail page by tapping "Contact Host".' },
-  { q: 'Is my payment secure?', a: 'Yes, all payments are processed through Moyasar, a certified payment gateway. We never store your card details.' },
-  { q: 'How do refunds work?', a: 'Refunds are processed according to the property\'s cancellation policy. Approved refunds appear in your wallet within 5-10 business days.' },
-  { q: 'Can I save properties to view later?', a: 'Yes! Tap the heart icon on any listing to add it to your Favorites.' },
+const FAQ_KEYS: { qKey: TranslationKey; aKey: TranslationKey }[] = [
+  { qKey: 'faq.q1', aKey: 'faq.a1' },
+  { qKey: 'faq.q2', aKey: 'faq.a2' },
+  { qKey: 'faq.q3', aKey: 'faq.a3' },
+  { qKey: 'faq.q4', aKey: 'faq.a4' },
+  { qKey: 'faq.q5', aKey: 'faq.a5' },
+  { qKey: 'faq.q6', aKey: 'faq.a6' },
+  { qKey: 'faq.q7', aKey: 'faq.a7' },
 ];
 
 export default function FaqScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
 
-  const filtered = FAQ_DATA.filter(
-    (f) => f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase())
+  const items = useMemo(
+    () => FAQ_KEYS.map(({ qKey, aKey }) => ({ q: t(qKey), a: t(aKey) })),
+    [t],
   );
+
+  const needle = search.toLowerCase();
+  const filtered = items.filter((f) => f.q.toLowerCase().includes(needle) || f.a.toLowerCase().includes(needle));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -30,7 +36,7 @@ export default function FaqScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.title}>FAQ</Text>
+        <Text style={styles.title}>{t('account.faq')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -38,7 +44,7 @@ export default function FaqScreen() {
         <Ionicons name="search" size={18} color={Colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search questions..."
+          placeholder={t('faq.searchPlaceholder')}
           placeholderTextColor={Colors.textTertiary}
           value={search}
           onChangeText={setSearch}
