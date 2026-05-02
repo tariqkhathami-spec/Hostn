@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert, ActivityIndicator,
+  View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert, ActivityIndicator, Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -407,7 +407,10 @@ export default function CheckoutScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Property Summary */}
         <View style={styles.propertyCard}>
           <Image source={{ uri: typeof listing.images?.[0] === 'string' ? listing.images[0] : listing.images?.[0]?.url }} style={styles.propertyImage} contentFit="cover" />
@@ -457,30 +460,10 @@ export default function CheckoutScreen() {
             </Pressable>
           </View>
 
-          {/* Calendar */}
-          {showCalendar && (
-            <View style={styles.calendarContainer}>
-              <Text style={styles.calendarHint}>
-                {selectingCheckOut
-                  ? (isAr ? 'اختر تاريخ المغادرة' : 'Select check-out date')
-                  : (isAr ? 'اختر تاريخ الوصول' : 'Select check-in date')}
-              </Text>
-              <Calendar
-                minDate={today}
-                markingType="period"
-                markedDates={getMarkedDates()}
-                onDayPress={handleDayPress}
-                theme={{
-                  todayTextColor: Colors.primary,
-                  arrowColor: Colors.primary,
-                  textDayFontSize: 14,
-                  textMonthFontSize: 16,
-                  textMonthFontWeight: '600',
-                  textDayHeaderFontSize: 12,
-                }}
-              />
-            </View>
-          )}
+          {/* Calendar moved out of the ScrollView into a Modal below — RN
+             ScrollView's pan responder intercepts the calendar's day taps
+             when the calendar is rendered inline (R19), so the inline
+             approach silently dropped every date selection. */}
 
           {/* Min nights warning */}
           {minNights > 1 && nights > 0 && nights < minNights && (
@@ -684,6 +667,45 @@ export default function CheckoutScreen() {
           )}
         </Pressable>
       </View>
+
+      <Modal
+        visible={showCalendar}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        {/* Plain Views all the way down. Wrapping in a Pressable backdrop
+            (for tap-to-dismiss) intercepted the calendar's day taps —
+            the X button is the only close affordance here. */}
+        <View style={styles.calendarBackdrop}>
+          <View style={styles.calendarSheet}>
+            <View style={styles.calendarSheetHeader}>
+              <Text style={styles.calendarHint}>
+                {selectingCheckOut
+                  ? (isAr ? 'اختر تاريخ المغادرة' : 'Select check-out date')
+                  : (isAr ? 'اختر تاريخ الوصول' : 'Select check-in date')}
+              </Text>
+              <Pressable onPress={() => setShowCalendar(false)} hitSlop={12}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </Pressable>
+            </View>
+            <Calendar
+              minDate={today}
+              markingType="period"
+              markedDates={getMarkedDates()}
+              onDayPress={handleDayPress}
+              theme={{
+                todayTextColor: Colors.primary,
+                arrowColor: Colors.primary,
+                textDayFontSize: 14,
+                textMonthFontSize: 16,
+                textMonthFontWeight: '600',
+                textDayHeaderFontSize: 12,
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -747,17 +769,28 @@ const styles = StyleSheet.create({
   dateValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dateValue: { ...Typography.small, color: Colors.textPrimary },
   datePlaceholder: { color: Colors.textTertiary },
-  calendarContainer: {
-    marginTop: Spacing.md,
+  calendarBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  calendarSheet: {
     backgroundColor: Colors.white,
-    borderRadius: Radius.md,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     overflow: 'hidden',
-    ...Shadows.card,
+    paddingBottom: Spacing.xl,
+  },
+  calendarSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
   },
   calendarHint: {
     ...Typography.caption,
     color: Colors.primary,
-    textAlign: 'center',
     paddingVertical: Spacing.sm,
     fontWeight: '600',
   },

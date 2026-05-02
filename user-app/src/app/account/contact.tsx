@@ -33,8 +33,17 @@ export default function ContactScreen() {
       Alert.alert(t('contact.successTitle'), t('contact.successBody'), [
         { text: t('common.ok'), onPress: () => router.back() },
       ]);
-    } catch {
-      Alert.alert(t('common.error'), t('contact.errorBody'));
+    } catch (error: any) {
+      const status = error?.response?.status;
+      let body: string;
+      if (typeof status === 'number' && status >= 400 && status < 500) {
+        body = t('contact.error4xx');
+      } else if (typeof status === 'number' && status >= 500) {
+        body = t('contact.error5xx');
+      } else {
+        body = t('contact.errorBody');
+      }
+      Alert.alert(t('common.error'), body);
     } finally {
       setLoading(false);
     }

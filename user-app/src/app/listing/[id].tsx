@@ -480,9 +480,10 @@ export default function ListingDetailScreen() {
                   )}
                 </>
               ) : (
-                <Text style={styles.noMapText}>
-                  {isAr ? 'لم يتم تحديد الموقع على الخريطة' : 'Location not available on map'}
-                </Text>
+                <View style={styles.mapPlaceholder}>
+                  <Ionicons name="map-outline" size={36} color={Colors.textTertiary} />
+                  <Text style={styles.mapPlaceholderText}>{t('detail.locationUnavailable')}</Text>
+                </View>
               )}
               {/* Address */}
               <View style={styles.addressRow}>
@@ -755,7 +756,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     fontStyle: 'italic',
   },
-  noMapText: { ...Typography.small, color: Colors.textTertiary },
+  mapPlaceholder: {
+    height: 160,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  mapPlaceholderText: { ...Typography.body, color: Colors.textSecondary },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',

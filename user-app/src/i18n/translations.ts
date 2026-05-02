@@ -57,6 +57,7 @@ export const translations = {
     'detail.location': 'Location',
     'detail.policies': 'Policies',
     'detail.approximateLocation': 'Approximate location shown',
+    'detail.locationUnavailable': 'Location not available',
     'detail.checkIn': 'Check-in',
     'detail.checkOut': 'Check-out',
     'detail.minNights': 'Min nights',
@@ -320,6 +321,8 @@ export const translations = {
     'contact.successTitle': 'Message Sent',
     'contact.successBody': 'Thank you for contacting us. We will get back to you shortly.',
     'contact.errorBody': 'Failed to send your message. Please try again later.',
+    'contact.error4xx': 'Please check your input and try again.',
+    'contact.error5xx': 'Server error. Please try again later.',
 
     // FAQ Screen
     'faq.searchPlaceholder': 'Search questions…',
@@ -503,6 +506,7 @@ export const translations = {
     'detail.location': 'الموقع',
     'detail.policies': 'الشروط والسياسات',
     'detail.approximateLocation': 'يُعرض الموقع التقريبي',
+    'detail.locationUnavailable': 'موقع غير متوفر',
     'detail.checkIn': 'تسجيل الدخول',
     'detail.checkOut': 'تسجيل الخروج',
     'detail.minNights': 'الحد الأدنى للإقامة',
@@ -766,6 +770,8 @@ export const translations = {
     'contact.successTitle': 'تم إرسال الرسالة',
     'contact.successBody': 'شكرًا لتواصلك معنا. سنرد عليك في أقرب وقت.',
     'contact.errorBody': 'تعذّر إرسال رسالتك. يرجى المحاولة لاحقًا.',
+    'contact.error4xx': 'يرجى التحقق من البيانات المُدخلة والمحاولة مرة أخرى.',
+    'contact.error5xx': 'حدث خطأ في الخادم. يرجى المحاولة لاحقًا.',
 
     // FAQ Screen
     'faq.searchPlaceholder': 'ابحث في الأسئلة…',

@@ -59,6 +59,96 @@ Tracked in `audit/hostn_user_app_audit.md` and the fix brief. Not duplicated her
 
 ---
 
+## Post-Phase-6 follow-up tasks
+
+These come out of discovered defects in this fix pass. Owner direction
+is to schedule them right after Phase 6 sign-off — DD3 and DD7 in
+particular cannot be left unfixed before shipping the user-app.
+
+### FU1 — DD7 audit: pagination wrapper across all services (HIGH)
+
+Root cause: `user-app/src/services/api.ts:38-44` response interceptor
+preserves the `{data, pagination}` wrapper for paginated responses but
+unwraps to the inner array for non-paginated responses. Every service
+method that calls a paginated endpoint and assumes a flat array is
+silently broken. Confirmed broken in `notifications.service.getAll`
+(Task 5.4) — 27 real notifications were hidden behind a never-true
+`length === 0` check. The same pattern likely affects:
+
+  - `user-app/src/services/bookings.service.ts` (list endpoints)
+  - `user-app/src/services/listings.service.ts` (search/listings list)
+  - `user-app/src/services/conversations.service.ts` or chat.service
+    (conversation list)
+  - `user-app/src/services/support.service.ts` / `tickets.service.ts`
+  - `user-app/src/services/transactions.service.ts` / `wallet.service.ts`
+  - `user-app/src/services/payments.service.ts` (saved-cards list, if
+    paginated)
+
+**Do:** grep every `*.service.ts` file, identify each method that calls
+a paginated endpoint, and apply the same shape-tolerance fix used in
+`notifications.service.getAll` — `Array.isArray(d) ? d : (d?.data ?? [])`.
+Where the screen actually wants pagination (infinite scroll, etc.),
+wire the pagination through instead of throwing it away.
+
+**Alternative (cleaner):** invert the interceptor so that paginated
+responses always return `{data, pagination}` and callers explicitly
+destructure. Today the rule is implicit ("you get an array, except when
+you don't"), and that's exactly why this bug was easy to miss.
+
+### FU2 — DD3 fix at the source (HIGH)
+
+Root cause: `GET /auth/me` returns `{success, user}` but
+`api.ts:38` only unwraps `{success, data}`, so on cold boot the auth
+store ends up holding the wrapper instead of the inner User. Tasks 3.1
+and 5.4 both hit this — Task 3.1 worked around it by re-logging in,
+Task 5.4 added a defensive unwrap at the top of `ProfileScreen`. The
+defensive unwraps will rot the longer they live and they don't catch
+every consumer (e.g. role-gated UI elsewhere is still subject to
+DD3 on cold boot).
+
+**Do (any one):**
+  - Backend: reshape `getMe`'s response to `{success, data: userObj}`
+    so the standard interceptor unwraps correctly.
+  - Frontend interceptor: add a `'user' in d` branch at
+    `user-app/src/services/api.ts:38` so the wrapper is unwrapped.
+  - `auth.service.getMe`: return `r.data?.user ?? r.data` so the
+    service hides the shape from callers.
+
+After this lands, remove the defensive unwrap at the top of
+`user-app/src/app/account/profile.tsx` (the `(rawUser as any)?.user ??
+rawUser` line) and audit other components that read `useAuthStore.user`
+for the same defensive-unwrap pattern.
+
+### FU3 — DD6 fix Notification type to match backend reality (MEDIUM)
+
+Root cause: `user-app/src/types/index.ts:180-189` declares
+`body: string`, `read: boolean`, and a narrow `type` union
+`'booking' | 'message' | 'payment' | 'promotion' | 'system'`. The
+backend actually sends `message`, `isRead`, and compound types like
+`payment_failed` / `payment_success`. After the Task 5.4 unwrap fix,
+notification rows now render — but with no body text (reading
+`item.body` instead of `item.message`), with the unread purple dot on
+every row (reading `item.read` instead of `item.isRead`), and with the
+generic bell icon for everything (compound types miss `ICON_MAP`).
+
+**Do:** same pattern as the Booking type rewrite in Task 2.5 (commit
+`206e762`):
+  1. Curl `/notifications` against a real account, capture the
+     authoritative shape.
+  2. Rewrite the `Notification` interface to match — at minimum:
+     `message: string`, `isRead: boolean`, `type: string` (or a
+     wider union that covers the actual compound values), plus the
+     `userType`, `data`, `push` fields the backend sends.
+  3. Update every reader: the row in `account/notifications.tsx`
+     (`item.body` → `item.message`, `!item.read` → `!item.isRead`),
+     and `ICON_MAP` so payment_failed/payment_success have icons.
+  4. Verify in simulator that rows render full content and that
+     tapping an unread row marks it read (the existing
+     `markRead.mutate(item._id)` is fine; just gated by the right
+     field).
+
+---
+
 ## Phase 6 verification checklist — additions
 
 Items to exercise during the final-pass walkthrough beyond what the brief enumerates:
