@@ -177,15 +177,49 @@ export interface Message {
   createdAt: string;
 }
 
+// Backend uses compound type values; see backend/src/models/Notification.js.
+export type NotificationType =
+  | 'booking_created'
+  | 'booking_confirmed'
+  | 'booking_rejected'
+  | 'booking_cancelled'
+  | 'booking_completed'
+  | 'payment_success'
+  | 'payment_failed'
+  | 'review_received'
+  | 'listing_approved'
+  | 'listing_rejected'
+  | 'new_message'
+  | 'support_reply'
+  | 'report_update'
+  | 'system';
+
 export interface Notification {
   _id: string;
   user: string;
-  type: 'booking' | 'message' | 'payment' | 'promotion' | 'system';
+  userType: 'Guest' | 'Host' | 'Admin';
+  type: NotificationType;
   title: string;
-  body: string;
-  data?: Record<string, string>;
-  read: boolean;
+  message: string;
+  data?: {
+    bookingId?: string;
+    propertyId?: string;
+    paymentId?: string;
+    reviewId?: string;
+    conversationId?: string;
+    ticketId?: string;
+    reportId?: string;
+  };
+  isRead: boolean;
+  readAt?: string;
+  push?: {
+    sent: boolean;
+    sentAt?: string;
+    deviceToken?: string;
+    apnsId?: string;
+  };
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface WalletInfo {
