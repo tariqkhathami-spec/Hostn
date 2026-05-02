@@ -147,58 +147,38 @@ generic bell icon for everything (compound types miss `ICON_MAP`).
      `markRead.mutate(item._id)` is fine; just gated by the right
      field).
 
-### FU4 — R19 partially fixed; root cause not yet identified (HIGH)
+### FU4 — R19 fixed via redirect to /search/dates
 
-Status timeline on this fix pass:
-  1. Initial Task 5.5 conclusion: "tap bug persists despite Modal
-     restructure."
-  2. Mid-pass retraction: thought it was fixed because owner clicked
-     day 31 successfully.
-  3. Final verification (this pass): owner reports "all other days
-     are not clickable, only day 31 works." Confirmed in simulator
-     with custom Pressable-based `dayComponent` — onPress fires for
-     day 31 every time, but clicks on every other tested day
-     (5, 10, 12, 17, 26, 30) never reach the Pressable's onPress at
-     all. Replicates with both a fresh app launch and a hot reload.
+Status: closed user-facing. Root cause (RTL hit-box on the package's
+day cells when nested in a ScrollView/Modal/SafeAreaView stack)
+remains unresolved upstream.
 
-What we shipped in Task 5.5:
-  - Calendar moved out of the parent ScrollView into a bottom-sheet
-    Modal (clean UX, matches country-picker pattern).
-  - `keyboardShouldPersistTaps="handled"` on the ScrollView (helps
-    other inputs).
-  - Custom `CalendarDayCell` Pressable as the `dayComponent` —
-    defensive layer that bypasses the package's internal
-    TouchableOpacity/TouchableWithoutFeedback. Rendering looks
-    cleaner and one cell (day 31, the bottom-right cell in the RTL
-    layout) reliably accepts presses.
+What we shipped:
+  - `search/dates.tsx` accepts a new `returnTo` param. When
+    `returnTo === 'checkout'`, the Search button calls `router.back()`
+    after `setDates(...)` instead of pushing to `/results`. The
+    existing search-flow path (no `returnTo`) is unchanged.
+  - `checkout/[listingId].tsx` no longer renders the calendar
+    inline / in a Modal. Instead, a single tappable summary row
+    shows the current dates and routes to
+    `/search/dates?returnTo=checkout&listingId={id}`.
+  - `checkout` uses `useFocusEffect` to re-read `checkIn`/`checkOut`
+    from `searchStore` whenever the screen regains focus, so the
+    newly-picked dates render immediately on return.
+  - The `DATES_UNAVAILABLE` createHold-failure path (which used to
+    re-open the in-checkout calendar) now also pushes to the same
+    dedicated picker.
 
-What's still broken: most day cells silently swallow taps. The
-issue is platform-stack-level — touch reaches the Calendar's
-parent View (verified via `onTouchStart` log on a wrapper) but
-doesn't propagate to the day-cell Pressables / TouchableOpacities,
-except for one specific cell (day 31).
+Why this works: the `search/dates.tsx` calendar is rendered as a
+direct child of `SafeAreaView` with no parent ScrollView and no
+Modal wrapper. Day taps fire reliably there — verified throughout
+prior tasks of this fix pass.
 
-**Next angles to try (in order):**
-  - Upgrade `react-native-calendars` from 1.1314 to the latest 1.x
-    and retest.
-  - Replace the inline calendar with a navigation push to a
-    dedicated date-picker screen mirroring `search/dates.tsx`
-    (which works perfectly). UX-flow change, but
-    guaranteed-working pattern. Simple param contract:
-    `/search/dates?returnTo=checkout&listingId=X` — when set, the
-    dates screen calls `router.back()` after `setDates`, and
-    checkout re-syncs from `searchStore` via `useFocusEffect`.
-  - Test on a real device — rule out a simulator-only quirk in
-    iOS 26 Simulator + RN 0.81 + react-native-calendars
-    interaction.
-  - File an issue on the react-native-calendars GitHub with a
-    minimal repro.
-
-**Mitigation today:** dates carried into checkout from the
-`/search/dates` flow at the start of the booking journey work
-correctly for booking. Only in-checkout edits silently fail. The
-incomplete-listing test data we have can't actually book anyway,
-so this surfaces less than it would on real listings.
+**Revisit if** `react-native-calendars` publishes a fix for the
+inline tap-routing issue, or if you want to inline the calendar back
+into checkout for any reason (e.g. fewer screen transitions). At
+that point: try the upgrade, and if it works, drop the redirect and
+restore the inline calendar.
 
 ### FU5 (DD8) — Google Maps SDK not configured (MEDIUM)
 

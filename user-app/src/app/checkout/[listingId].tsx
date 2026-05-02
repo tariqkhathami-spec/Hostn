@@ -1,14 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert, ActivityIndicator, Modal,
+  View, Text, ScrollView, Pressable, TextInput, StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Calendar, DateData } from 'react-native-calendars';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { listingsService } from '../../services/listings.service';
 import { bookingsService } from '../../services/bookings.service';
 import { couponsService } from '../../services/coupons.service';
@@ -16,52 +15,6 @@ import { useSearchStore } from '../../store/searchStore';
 import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
-
-// Custom day component for the checkout calendar. We replace the package's
-// default day so taps reliably reach a Pressable — react-native-calendars'
-// internal TouchableOpacity/TouchableWithoutFeedback wasn't firing onPress
-// for any day except the last visible one when rendered in this Modal +
-// SafeAreaView + RTL stack on iOS 26 (R19). Pressable bypasses the issue.
-function CalendarDayCell(props: any) {
-  const { date, state, marking, onPress, children } = props;
-  const isDisabled = state === 'disabled' || marking?.disabled;
-  const isToday = state === 'today';
-  const isStart = marking?.startingDay;
-  const isEnd = marking?.endingDay;
-  const isInRange = !!marking && !isStart && !isEnd;
-
-  let bg: string = 'transparent';
-  let textColor: string = Colors.textPrimary;
-  if (isStart || isEnd) {
-    bg = Colors.primary;
-    textColor = Colors.white;
-  } else if (isInRange) {
-    bg = Colors.primary + '20';
-    textColor = Colors.primary;
-  }
-  if (isDisabled) textColor = Colors.textTertiary;
-  else if (isToday && !isStart && !isEnd) textColor = Colors.primary;
-
-  return (
-    <Pressable
-      disabled={isDisabled}
-      onPress={() => !isDisabled && onPress?.(date)}
-      style={({ pressed }) => ({
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: bg,
-        justifyContent: 'center',
-        alignItems: 'center',
-        opacity: pressed && !isDisabled ? 0.6 : 1,
-      })}
-    >
-      <Text style={{ fontSize: 14, color: textColor, fontWeight: isStart || isEnd ? '600' : '400' }}>
-        {children}
-      </Text>
-    </Pressable>
-  );
-}
 
 function calculateDateRangePrice(
   listing: any, checkIn: string, checkOut: string
@@ -147,8 +100,17 @@ export default function CheckoutScreen() {
   const [children, setChildren] = useState(Math.max(0, searchStore.children));
   const totalGuests = adults + children;
 
-  const [showCalendar, setShowCalendar] = useState(!checkIn);
-  const [selectingCheckOut, setSelectingCheckOut] = useState(false);
+  // R19 workaround: when the user returns from the /search/dates picker
+  // (we push to it from the dateSummaryRow below), pull the freshly
+  // chosen dates out of searchStore. useFocusEffect re-fires every time
+  // this screen regains focus.
+  useFocusEffect(
+    useCallback(() => {
+      const next = useSearchStore.getState();
+      if (next.checkIn && next.checkIn !== checkIn) setCheckIn(next.checkIn);
+      if (next.checkOut && next.checkOut !== checkOut) setCheckOut(next.checkOut);
+    }, [checkIn, checkOut])
+  );
 
   const PAYMENT_METHODS = [
     { id: 'card', label: isAr ? 'بطاقة ائتمان / مدى' : 'Credit Card / mada', icon: 'card-outline' },
@@ -184,75 +146,6 @@ export default function CheckoutScreen() {
         ? (listing as any).property
         : (listing as any).property?._id || (listing as any).property?.id)
     : undefined;
-
-  // Calendar date selection — matches web MiniCalendar logic
-  const handleDayPress = useCallback((day: DateData) => {
-    if (!selectingCheckOut || !checkIn) {
-      setCheckIn(day.dateString);
-      setCheckOut('');
-      setSelectingCheckOut(true);
-    } else {
-      if (day.dateString > checkIn) {
-        setCheckOut(day.dateString);
-        setSelectingCheckOut(false);
-        setShowCalendar(false);
-      } else {
-        setCheckIn(day.dateString);
-        setCheckOut('');
-      }
-    }
-  }, [checkIn, selectingCheckOut]);
-
-  const getMarkedDates = useCallback(() => {
-    const marked: Record<string, any> = {};
-
-    // Mark unavailable/booked dates
-    const unavailable = [
-      ...((listing as any)?.unavailableDates || []).map((d: string | Date) =>
-        typeof d === 'string' ? d : format(new Date(d), 'yyyy-MM-dd')
-      ),
-      ...((listing as any)?.bookedDates || []).flatMap((range: { start: string; end: string }) => {
-        const dates: string[] = [];
-        const start = new Date(range.start);
-        const end = new Date(range.end);
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          dates.push(format(new Date(d), 'yyyy-MM-dd'));
-        }
-        return dates;
-      }),
-    ];
-    for (const d of unavailable) {
-      marked[d] = { disabled: true, disableTouchEvent: true, textColor: Colors.textTertiary };
-    }
-
-    // Mark selected range
-    if (checkIn) {
-      marked[checkIn] = {
-        ...(marked[checkIn] || {}),
-        startingDay: true,
-        color: Colors.primary,
-        textColor: Colors.white,
-      };
-    }
-    if (checkIn && checkOut) {
-      marked[checkOut] = {
-        ...(marked[checkOut] || {}),
-        endingDay: true,
-        color: Colors.primary,
-        textColor: Colors.white,
-      };
-      let current = addDays(new Date(checkIn), 1);
-      const end = new Date(checkOut);
-      while (current < end) {
-        const key = format(current, 'yyyy-MM-dd');
-        if (!marked[key]?.disabled) {
-          marked[key] = { color: Colors.primary + '20', textColor: Colors.primary };
-        }
-        current = addDays(current, 1);
-      }
-    }
-    return marked;
-  }, [checkIn, checkOut, listing]);
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -346,7 +239,10 @@ export default function CheckoutScreen() {
         );
         setCheckIn('');
         setCheckOut('');
-        setShowCalendar(true);
+        router.push({
+          pathname: '/search/dates',
+          params: { returnTo: 'checkout', listingId: listingId! },
+        });
       }
     } finally {
       setHoldLoading(false);
@@ -478,38 +374,36 @@ export default function CheckoutScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('booking.dates')}</Text>
 
-          {/* Date display / toggle */}
-          <View style={styles.dateRow}>
-            <Pressable
-              style={[styles.dateField, !selectingCheckOut && showCalendar && styles.dateFieldActive]}
-              onPress={() => { setSelectingCheckOut(false); setShowCalendar(true); }}
-            >
-              <Text style={styles.dateLabel}>{t('search.checkIn')}</Text>
-              <View style={styles.dateValueRow}>
-                <Ionicons name="calendar-outline" size={14} color={Colors.textTertiary} />
-                <Text style={[styles.dateValue, !checkIn && styles.datePlaceholder]}>
-                  {checkIn ? format(new Date(checkIn), 'MMM d, yyyy') : t('search.checkIn')}
-                </Text>
-              </View>
-            </Pressable>
-            <Pressable
-              style={[styles.dateField, selectingCheckOut && showCalendar && styles.dateFieldActive]}
-              onPress={() => { setSelectingCheckOut(true); setShowCalendar(true); }}
-            >
-              <Text style={styles.dateLabel}>{t('search.checkOut')}</Text>
-              <View style={styles.dateValueRow}>
-                <Ionicons name="calendar-outline" size={14} color={Colors.textTertiary} />
-                <Text style={[styles.dateValue, !checkOut && styles.datePlaceholder]}>
-                  {checkOut ? format(new Date(checkOut), 'MMM d, yyyy') : t('search.checkOut')}
-                </Text>
-              </View>
-            </Pressable>
-          </View>
-
-          {/* Calendar moved out of the ScrollView into a Modal below — RN
-             ScrollView's pan responder intercepts the calendar's day taps
-             when the calendar is rendered inline (R19), so the inline
-             approach silently dropped every date selection. */}
+          {/* R19 workaround: the inline / Modal Calendar reliably drops
+              taps on every day cell except the bottom-right one. Push to
+              the dedicated /search/dates screen, which uses the exact
+              same Calendar but renders top-level (no parent ScrollView /
+              Modal) where day taps work correctly. The dates flow back
+              through searchStore and are picked up via useFocusEffect. */}
+          <Pressable
+            style={styles.dateSummaryRow}
+            onPress={() =>
+              router.push({
+                pathname: '/search/dates',
+                params: { returnTo: 'checkout', listingId: listingId! },
+              })
+            }
+          >
+            <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
+            <View style={styles.dateSummaryText}>
+              <Text style={styles.dateSummaryLabel}>{t('booking.dates')}</Text>
+              <Text style={[styles.dateSummaryValue, !hasValidDates && styles.datePlaceholder]}>
+                {hasValidDates
+                  ? formatDateRange(checkIn, checkOut)
+                  : (isAr ? 'اختر التواريخ' : 'Select dates')}
+              </Text>
+            </View>
+            <Ionicons
+              name={isAr ? 'chevron-back' : 'chevron-forward'}
+              size={20}
+              color={Colors.textTertiary}
+            />
+          </Pressable>
 
           {/* Min nights warning */}
           {minNights > 1 && nights > 0 && nights < minNights && (
@@ -714,45 +608,6 @@ export default function CheckoutScreen() {
         </Pressable>
       </View>
 
-      <Modal
-        visible={showCalendar}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCalendar(false)}
-      >
-        {/* Plain Views all the way down. Wrapping in a Pressable backdrop
-            (for tap-to-dismiss) intercepted the calendar's day taps —
-            the X button is the only close affordance here. */}
-        <View style={styles.calendarBackdrop}>
-          <View style={styles.calendarSheet}>
-            <View style={styles.calendarSheetHeader}>
-              <Text style={styles.calendarHint}>
-                {selectingCheckOut
-                  ? (isAr ? 'اختر تاريخ المغادرة' : 'Select check-out date')
-                  : (isAr ? 'اختر تاريخ الوصول' : 'Select check-in date')}
-              </Text>
-              <Pressable onPress={() => setShowCalendar(false)} hitSlop={12}>
-                <Ionicons name="close" size={24} color={Colors.textPrimary} />
-              </Pressable>
-            </View>
-            <Calendar
-              minDate={today}
-              markingType="period"
-              markedDates={getMarkedDates()}
-              onDayPress={handleDayPress}
-              dayComponent={CalendarDayCell}
-              theme={{
-                todayTextColor: Colors.primary,
-                arrowColor: Colors.primary,
-                textDayFontSize: 14,
-                textMonthFontSize: 16,
-                textMonthFontWeight: '600',
-                textDayHeaderFontSize: 12,
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -805,42 +660,21 @@ const styles = StyleSheet.create({
   section: { marginTop: Spacing.xl },
   sectionTitle: { ...Typography.bodyBold, color: Colors.textPrimary, marginBottom: Spacing.md },
 
-  // Date picker
-  dateRow: { flexDirection: 'row', gap: Spacing.md },
-  dateField: {
-    flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm,
-    padding: Spacing.md,
-  },
-  dateFieldActive: { borderColor: Colors.primary, borderWidth: 2 },
-  dateLabel: { ...Typography.caption, color: Colors.textSecondary, marginBottom: 4 },
-  dateValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dateValue: { ...Typography.small, color: Colors.textPrimary },
-  datePlaceholder: { color: Colors.textTertiary },
-  calendarBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  calendarSheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-    paddingBottom: Spacing.xl,
-  },
-  calendarSheetHeader: {
+  // Date picker — tappable summary row that pushes to /search/dates
+  dateSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.md,
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.sm,
   },
-  calendarHint: {
-    ...Typography.caption,
-    color: Colors.primary,
-    paddingVertical: Spacing.sm,
-    fontWeight: '600',
-  },
+  dateSummaryText: { flex: 1 },
+  dateSummaryLabel: { ...Typography.caption, color: Colors.textSecondary, marginBottom: 2 },
+  dateSummaryValue: { ...Typography.smallBold, color: Colors.textPrimary },
+  datePlaceholder: { color: Colors.textTertiary },
   warningBox: {
     flexDirection: 'row',
     alignItems: 'center',

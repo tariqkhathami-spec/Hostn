@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, DateData } from 'react-native-calendars';
@@ -13,6 +13,10 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 export default function DatesScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
+  // returnTo='checkout' means this screen was opened from the checkout
+  // edit-dates flow (R19 workaround). On Search press we save the dates
+  // and router.back() instead of pushing to /results.
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string; listingId?: string }>();
   const { checkIn, checkOut, setDates, city, cityName } = useSearchStore();
   const [startDate, setStartDate] = useState<string | null>(checkIn);
   const [endDate, setEndDate] = useState<string | null>(checkOut);
@@ -62,13 +66,16 @@ export default function DatesScreen() {
   };
 
   const handleSearch = () => {
-    if (startDate && endDate) {
-      setDates(startDate, endDate);
-      router.push({
-        pathname: '/results',
-        params: { city, cityName },
-      });
+    if (!startDate || !endDate) return;
+    setDates(startDate, endDate);
+    if (returnTo === 'checkout') {
+      router.back();
+      return;
     }
+    router.push({
+      pathname: '/results',
+      params: { city, cityName },
+    });
   };
 
   return (
