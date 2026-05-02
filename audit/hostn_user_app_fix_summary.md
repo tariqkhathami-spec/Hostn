@@ -145,7 +145,68 @@ After this lands, remove the defensive unwrap at the top of
 rawUser` line) and audit other components that read `useAuthStore.user`
 for the same defensive-unwrap pattern.
 
-### FU3 — DD6 fix Notification type to match backend reality (MEDIUM)
+### FU3 — DD6 fix Notification type to match backend reality (MEDIUM) — ✅ closed 2026-05-02 (`db84dc1`)
+
+**Status:** Closed. Same approach as Task 2.5's Booking type rewrite —
+curl the live endpoint, capture the shape, drop wrong fields entirely,
+update every reader.
+
+**Authoritative shape captured via curl `/notifications?limit=3`
+against `+966500000003` (27 unread rows, mixed payment_failed +
+payment_success):**
+  - `_id`, `user`, `userType: 'Guest' | 'Host' | 'Admin'`
+  - `type`: one of 14 compound values — `booking_created`,
+    `booking_confirmed`, `booking_rejected`, `booking_cancelled`,
+    `booking_completed`, `payment_success`, `payment_failed`,
+    `review_received`, `listing_approved`, `listing_rejected`,
+    `new_message`, `support_reply`, `report_update`, `system`
+  - `title`, `message` (not `body`)
+  - `data`: nested refs `{ bookingId?, propertyId?, paymentId?,
+    reviewId?, conversationId?, ticketId?, reportId? }`
+  - `isRead` (not `read`), `readAt?`
+  - `push: { sent, sentAt?, deviceToken?, apnsId? }`
+  - `createdAt`, `updatedAt`
+
+**Changes:**
+  - `user-app/src/types/index.ts`: `Notification` interface rewritten
+    to mirror the model exactly. Wrong fields dropped, not made
+    optional. Exported `NotificationType` so the icon map is keyed by
+    the union and future enum additions fail at compile time.
+  - `user-app/src/app/account/notifications.tsx`: `item.body` →
+    `item.message`, `!item.read` → `!item.isRead` (both call sites:
+    style flag and `markRead.mutate` gate). `ICON_MAP` rewired —
+    `payment_failed` → `alert-circle`, `payment_success` →
+    `checkmark-circle`, `booking_completed` → `checkmark-done-circle`,
+    `review_received` → `star`, `report_update` → `flag`, etc. One
+    entry per compound type.
+
+**Verification (cold boot, simulator):**
+  - `xcrun simctl terminate/launch` →
+    `hostn-app:///account/notifications`. All 27 rows now render full
+    `message` body text ("Simulated payment failure — Card declined by
+    issuer", "Your simulated payment of 306.36 SAR has been
+    recorded"). Pre-fix the body slot was empty.
+  - Unread purple dots show on each row (all 27 are unread).
+    Pre-fix the dot was always-on regardless of state because
+    `!item.read` evaluated `!undefined === true`.
+  - Distinct icons render per type: alert-circle on payment_failed,
+    checkmark-circle on payment_success. Pre-fix every row fell
+    through to the bell.
+  - `tsc --noEmit`: 0 errors.
+
+**Discovered defects (not fixed, out of scope):**
+  - `user-app/src/hooks/useNotifications.ts:32-38` push-tap routing
+    still reads the old non-compound type strings (`'booking'`,
+    `'message'`) from the APNs payload data. Backend has no APNs
+    send-path implemented yet (`// TODO: Send APNs push notification
+    here` in `models/Notification.js:85`), so this is dormant code.
+    When push delivery lands, the routing must be updated to handle
+    compound types, or the backend must inject a normalized
+    `data.category` field. Logged as DD9.
+
+---
+
+### FU3 — original plan (kept for history)
 
 Root cause: `user-app/src/types/index.ts:180-189` declares
 `body: string`, `read: boolean`, and a narrow `type` union
@@ -347,3 +408,52 @@ The four high-priority follow-ups (FU1, FU2, FU3, FU5) should
 schedule before any further App Store rollout — DD3 + DD7 in
 particular are silent data-loss / state-mismatch bugs that the
 fix pass papered over rather than rooted out.
+
+---
+
+## Pass complete (2026-05-02)
+
+After Phase 6 sign-off the three high-priority follow-ups were
+worked through one-per-session per the workflow change agreed
+with the owner (overflow had bitten the chained-task model):
+
+| FU# | Status | Commits |
+|-----|--------|---------|
+| FU1 — DD7 paginated wrapper unwrap (HIGH) | ✅ closed | `979083b` |
+| FU2 — DD3 `getMe()` source fix (HIGH) | ✅ closed | `99f4943` (code) + `0730c45` (docs) |
+| FU3 — DD6 Notification type rewrite (MEDIUM) | ✅ closed | `db84dc1` |
+
+**Branch state at pass close:**
+- `fix/user-app-audit-pass-1` @ `db84dc1`
+- 27 commits ahead of `feat/user-app-feature-parity` (the audit
+  baseline `ad163d5`)
+- Working tree clean (only pre-existing untracked audit docs)
+- `tsc --noEmit`: 0 errors
+- Cold-boot runtime verification passed for both FU2 (Profile
+  Become-Host CTA renders) and FU3 (notification bodies + icons +
+  unread dots all correct)
+
+**Remaining open follow-ups (none HIGH):**
+- FU4 — R19 calendar root cause; workaround in place (LOW).
+- FU5 — DD8 Google Maps iOS SDK key (MEDIUM, schedule before
+  next App Store push).
+- DD5 — Moyasar tokenization sheet for Payment Methods Add Card
+  (MEDIUM, depends on vendor decision).
+- DD9 (new) — `useNotifications.ts` push-tap routing reads
+  pre-rewrite type strings; dormant until backend implements APNs
+  send-path.
+
+**Merge recommendation (re-issued):**
+The branch is ready to merge to `feat/user-app-feature-parity`.
+All audit defects from the original report are addressed (33
+fixed + 3 audit corrections + 2 acknowledged-not-fixed for
+intentional-UX / sim-only reasons). All 4 high-priority
+follow-ups raised during the pass are either closed (FU1, FU2,
+FU3) or have a stable workaround (FU4); the two remaining
+medium-priority items (FU5, DD5) are infrastructure / vendor
+decisions, not regressions in this branch.
+
+User-app fix pass: complete. Host-app fix pass remains queued
+per the original brief — start it on a fresh branch off
+`feat/host-app-feature-parity` (or whichever the host baseline
+is), in its own session.
