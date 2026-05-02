@@ -147,30 +147,58 @@ generic bell icon for everything (compound types miss `ICON_MAP`).
      `markRead.mutate(item._id)` is fine; just gated by the right
      field).
 
-### FU4 — RETRACTED. R19 is actually fixed by Task 5.5
+### FU4 — R19 partially fixed; root cause not yet identified (HIGH)
 
-Initial conclusion: "tap bug persists at a deeper level than the
-Modal restructure can fix." Owner verification corrected this — the
-calendar's day taps DO register inside the Modal sheet introduced
-in Task 5.5. The reason all my own day-tap simulator clicks failed
-is mundane: `mcp__computer-use__left_click` aimed at the visual
-center of each grid cell (e.g. (268, 607) for day 7), but the
-actual TouchableOpacity hit area is the smaller centered "circle"
-around the day number — taps on the cell padding fall outside the
-TouchableOpacity and don't fire onPress. The owner clicked day 31
-on a real cursor and it landed correctly, populating the check-out
-field as expected.
+Status timeline on this fix pass:
+  1. Initial Task 5.5 conclusion: "tap bug persists despite Modal
+     restructure."
+  2. Mid-pass retraction: thought it was fixed because owner clicked
+     day 31 successfully.
+  3. Final verification (this pass): owner reports "all other days
+     are not clickable, only day 31 works." Confirmed in simulator
+     with custom Pressable-based `dayComponent` — onPress fires for
+     day 31 every time, but clicks on every other tested day
+     (5, 10, 12, 17, 26, 30) never reach the Pressable's onPress at
+     all. Replicates with both a fresh app launch and a hot reload.
 
-Net: R19 is closed by Task 5.5 (Modal restructure + lift out of
-ScrollView). Re-categorize the audit's "date taps don't register"
-as a hit-area sensitivity issue rather than a hard bug. If the
-audit author was using a similar mouse-driven test environment,
-they may have hit the same coordinate aim trap.
+What we shipped in Task 5.5:
+  - Calendar moved out of the parent ScrollView into a bottom-sheet
+    Modal (clean UX, matches country-picker pattern).
+  - `keyboardShouldPersistTaps="handled"` on the ScrollView (helps
+    other inputs).
+  - Custom `CalendarDayCell` Pressable as the `dayComponent` —
+    defensive layer that bypasses the package's internal
+    TouchableOpacity/TouchableWithoutFeedback. Rendering looks
+    cleaner and one cell (day 31, the bottom-right cell in the RTL
+    layout) reliably accepts presses.
 
-No follow-up task needed. This entry is kept (rather than deleted)
-as a record of the misdiagnosis, so future readers don't repeat
-the investigation when the simulator looks "broken" under
-mouse-driven testing.
+What's still broken: most day cells silently swallow taps. The
+issue is platform-stack-level — touch reaches the Calendar's
+parent View (verified via `onTouchStart` log on a wrapper) but
+doesn't propagate to the day-cell Pressables / TouchableOpacities,
+except for one specific cell (day 31).
+
+**Next angles to try (in order):**
+  - Upgrade `react-native-calendars` from 1.1314 to the latest 1.x
+    and retest.
+  - Replace the inline calendar with a navigation push to a
+    dedicated date-picker screen mirroring `search/dates.tsx`
+    (which works perfectly). UX-flow change, but
+    guaranteed-working pattern. Simple param contract:
+    `/search/dates?returnTo=checkout&listingId=X` — when set, the
+    dates screen calls `router.back()` after `setDates`, and
+    checkout re-syncs from `searchStore` via `useFocusEffect`.
+  - Test on a real device — rule out a simulator-only quirk in
+    iOS 26 Simulator + RN 0.81 + react-native-calendars
+    interaction.
+  - File an issue on the react-native-calendars GitHub with a
+    minimal repro.
+
+**Mitigation today:** dates carried into checkout from the
+`/search/dates` flow at the start of the booking journey work
+correctly for booking. Only in-checkout edits silently fail. The
+incomplete-listing test data we have can't actually book anyway,
+so this surfaces less than it would on real listings.
 
 ### FU5 (DD8) — Google Maps SDK not configured (MEDIUM)
 

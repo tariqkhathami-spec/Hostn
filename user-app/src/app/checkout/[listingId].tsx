@@ -17,6 +17,52 @@ import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 
+// Custom day component for the checkout calendar. We replace the package's
+// default day so taps reliably reach a Pressable — react-native-calendars'
+// internal TouchableOpacity/TouchableWithoutFeedback wasn't firing onPress
+// for any day except the last visible one when rendered in this Modal +
+// SafeAreaView + RTL stack on iOS 26 (R19). Pressable bypasses the issue.
+function CalendarDayCell(props: any) {
+  const { date, state, marking, onPress, children } = props;
+  const isDisabled = state === 'disabled' || marking?.disabled;
+  const isToday = state === 'today';
+  const isStart = marking?.startingDay;
+  const isEnd = marking?.endingDay;
+  const isInRange = !!marking && !isStart && !isEnd;
+
+  let bg: string = 'transparent';
+  let textColor: string = Colors.textPrimary;
+  if (isStart || isEnd) {
+    bg = Colors.primary;
+    textColor = Colors.white;
+  } else if (isInRange) {
+    bg = Colors.primary + '20';
+    textColor = Colors.primary;
+  }
+  if (isDisabled) textColor = Colors.textTertiary;
+  else if (isToday && !isStart && !isEnd) textColor = Colors.primary;
+
+  return (
+    <Pressable
+      disabled={isDisabled}
+      onPress={() => !isDisabled && onPress?.(date)}
+      style={({ pressed }) => ({
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: bg,
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: pressed && !isDisabled ? 0.6 : 1,
+      })}
+    >
+      <Text style={{ fontSize: 14, color: textColor, fontWeight: isStart || isEnd ? '600' : '400' }}>
+        {children}
+      </Text>
+    </Pressable>
+  );
+}
+
 function calculateDateRangePrice(
   listing: any, checkIn: string, checkOut: string
 ): { subtotal: number; blocked: boolean; nights: number } {
@@ -694,6 +740,7 @@ export default function CheckoutScreen() {
               markingType="period"
               markedDates={getMarkedDates()}
               onDayPress={handleDayPress}
+              dayComponent={CalendarDayCell}
               theme={{
                 todayTextColor: Colors.primary,
                 arrowColor: Colors.primary,
