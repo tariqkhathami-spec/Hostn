@@ -314,7 +314,9 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
             </Text>
           </View>
           <Text style={resStyles.nightsText}>{nights} ليالي</Text>
-          <Text style={resStyles.amountText}>{reservation.totalAmount.toLocaleString()} ر.س</Text>
+          {reservation.totalAmount > 0 && (
+            <Text style={resStyles.amountText}>{reservation.totalAmount.toLocaleString()} ر.س</Text>
+          )}
         </View>
       </View>
     </View>
@@ -364,40 +366,36 @@ export default function UnitDetailScreen() {
     return DEFAULT_PRICING;
   }, [unitFromProps]);
 
-  // Load real bookings from API for this unit (property)
+  // M17: load bookings scoped to *this* unit. Pre-fix this called
+  // hostService.getBookings() (the host-wide list endpoint, which has no
+  // unitId field on its rows) and then filtered with `return true`,
+  // meaning every unit's calendar showed every host booking. The
+  // /bookings/unit/:id/dates endpoint already does the unit-scoping
+  // server-side and is the right primitive here.
   const { data: bookingsData, isLoading: bookingsLoading } = useQuery({
-    queryKey: ['unitBookings', id],
-    queryFn: async () => {
-      // Get all bookings and filter for this unit
-      const result = await hostService.getBookings();
-      return result;
-    },
+    queryKey: ['unitBookedDates', id],
+    queryFn: () => hostService.getUnitBookedDates(id!),
     enabled: !!id,
     retry: false,
   });
 
-  // Transform API bookings into Reservation format
+  // Transform API bookings into Reservation format. Shape from
+  // /bookings/unit/:id/dates: { _id, guest:{_id,name}, checkIn, checkOut,
+  // status }. totalAmount is intentionally absent on this endpoint —
+  // ReservationCard hides the SAR text when it's zero.
   const reservations: Reservation[] = useMemo(() => {
-    const allBookings = bookingsData?.data ?? [];
-    // Filter bookings for this specific unit by checking unitName contains the unit's title
-    // or match by property ID
-    return allBookings
-      .filter((b: any) => {
-        // The booking's unitName from API contains the property title
-        // Match by checking if the unit ID appears in the booking
-        return true; // Show all bookings for now since they're all from the same host
-      })
-      .map((b: any) => ({
-        id: b.id || b._id,
-        guestName: b.guestName || 'ضيف',
-        checkIn: b.checkIn,
-        checkOut: b.checkOut,
-        status: b.status === 'waiting' ? 'pending' as const
-          : b.status === 'completed' ? 'confirmed' as const
-          : b.status as 'confirmed' | 'pending' | 'cancelled',
-        totalAmount: b.totalAmount || 0,
-        platform: 'hostn' as const,
-      }));
+    const items: any[] = (bookingsData as any)?.data ?? [];
+    return items.map((b) => ({
+      id: b._id || b.id,
+      guestName: b.guest?.name || b.guestName || 'ضيف',
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
+      status: b.status === 'waiting' ? 'pending' as const
+        : b.status === 'completed' ? 'confirmed' as const
+        : (b.status as 'confirmed' | 'pending' | 'cancelled'),
+      totalAmount: b.totalAmount || 0,
+      platform: 'hostn' as const,
+    }));
   }, [bookingsData]);
 
   const activeReservations = reservations.filter((r) => r.status !== 'cancelled');
