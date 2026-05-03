@@ -73,7 +73,12 @@ export default function PropertiesScreen() {
           nameEn: '',
           code: u.code || '',
           status: u.status || 'listed',
-          image: u.images?.[0] || u.photos?.[0] || null,
+          image: ((): string | null => {
+            const first = u.images?.[0];
+            if (typeof first === 'string') return first;
+            if (first && typeof first === 'object' && 'url' in first) return first.url;
+            return u.photos?.[0] ?? null;
+          })(),
         })),
       }
     : null;

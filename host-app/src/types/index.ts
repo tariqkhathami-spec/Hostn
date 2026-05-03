@@ -48,27 +48,66 @@ export interface Property {
   createdAt: string;
 }
 
+// Unit = bookable resource. Backend (`GET /units/:id`) returns:
+//   nameEn / nameAr (and a virtual `name` aliasing nameAr)
+//   bedrooms: { count, singleBeds, doubleBeds }   ← top-level structured rooms
+//   bathroomCount: number                          ← top-level scalar
+//   capacity: { maxGuests }                        ← ONLY maxGuests
+//   pricing: { sunday..saturday, cleaningFee, discountPercent, …LOS flags }
+//   livingRooms / kitchen / pools / amenities[] / features[] / images[{url,isPrimary}]
+// Keys NOT on the backend Unit (verified via curl): rooms, rules, type, location, description, perNight.
+// PUT /units/:id silently discards unknown keys, which is why the pre-fix edit
+// screen appeared to save but lost most of the form. See DD-host-4.
 export interface Unit {
   id: string;
-  propertyId: string;
-  name: string;
-  code: string;
-  status: 'listed' | 'unlisted';
-  area: number;
-  capacity: number;
-  occupancyPercent: number;
-  suitability: 'families_and_singles' | 'families_only' | 'singles_only';
-  deposit: number;
-  securityDeposit: number;
-  cancellationPolicy: string;
-  description: string;
-  images: string[];
-  photos: string[];
-  arrivalInstructions: string;
-  amenities: string[];
-  features: string[];
-  rooms: RoomConfig;
-  pricing: UnitPricing;
+  _id?: string;
+  propertyId?: string;
+  property?: string | { _id: string };
+
+  // Names
+  nameEn?: string;
+  nameAr?: string;
+  name?: string;            // virtual; usually aliases nameAr server-side
+
+  code?: string;
+  status?: 'listed' | 'unlisted';
+  isActive?: boolean;
+
+  // Capacity / rooms (real shape)
+  capacity?: { maxGuests?: number };
+  bedrooms?: { count?: number; singleBeds?: number; doubleBeds?: number };
+  bathroomCount?: number;
+  bathroomAmenities?: string[];
+  livingRooms?: { main?: number; additional?: number; outdoor?: number; outdoorRoom?: number };
+  kitchen?: { diningCapacity?: number; amenities?: string[] };
+  hasBedrooms?: boolean;
+  hasKitchen?: boolean;
+  hasLivingRooms?: boolean;
+  hasPool?: boolean;
+  pools?: unknown[];
+
+  // Other unit-level fields
+  area?: number;
+  occupancyPercent?: number;
+  suitability?: 'families_and_singles' | 'families_only' | 'singles_only' | 'singles' | 'families' | string;
+  deposit?: number;
+  depositPercent?: number;
+  securityDeposit?: number;
+  insuranceAmount?: number;
+  insuranceOnArrival?: boolean;
+  cancellationPolicy?: string;
+  description?: string;
+  arrivalInstructions?: string;
+  writtenRules?: string;
+
+  amenities?: string[];
+  features?: string[];
+
+  images?: Array<{ url: string; isPrimary?: boolean; _id?: string; id?: string } | string>;
+  photos?: string[];
+
+  pricing?: UnitPricing;
+
   video?: { url?: string; thumbnail?: string };
   tourismLicense?: {
     licenseNumber?: string;
@@ -79,31 +118,27 @@ export interface Unit {
   };
 }
 
-export interface RoomConfig {
-  mainLounge: number;
-  additionalLounge: number;
-  outdoorSeating: number;
-  bedrooms: number;
-  singleBeds: number;
-  doubleBeds: number;
-  bathrooms: number;
-  bathroomAmenities: string[];
-  hasKitchen: boolean;
-  diningCapacity: number;
-  kitchenAmenities: string[];
-  hasPool: boolean;
-  poolType?: string;
-  poolDimensions?: string;
-}
-
+// Unit pricing per backend: per-DOW rates (no `perNight` or `midWeek`).
+// `midWeek` kept as an optional alias since some legacy callers reference it.
 export interface UnitPricing {
-  midWeek: number;
-  thursday: number;
-  friday: number;
-  saturday: number;
+  sunday?: number;
+  monday?: number;
+  tuesday?: number;
+  wednesday?: number;
+  thursday?: number;
+  friday?: number;
+  saturday?: number;
+  midWeek?: number;             // legacy alias, not on backend
+  cleaningFee?: number;
+  discountPercent?: number;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
   globalEnabled?: boolean;
+  globalStackable?: boolean;
   weeklyEnabled?: boolean;
+  weeklyStackable?: boolean;
   monthlyEnabled?: boolean;
+  monthlyStackable?: boolean;
 }
 
 export interface Booking {
