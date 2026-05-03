@@ -240,7 +240,7 @@ export default function CreatePropertyScreen() {
         <Pressable style={styles.picker} onPress={() => setShowDirectionPicker(true)}>
           <Text style={direction ? styles.pickerValue : styles.pickerPlaceholder}>
             {direction
-              ? l(DIRECTIONS.find((d) => d.value === direction)!)
+              ? l(DIRECTIONS.find((d) => d.value === direction) ?? { en: direction, ar: direction })
               : l({ en: 'Select direction', ar: 'اختر الاتجاه' })}
           </Text>
           <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
@@ -251,7 +251,7 @@ export default function CreatePropertyScreen() {
         <Pressable style={styles.picker} onPress={() => setShowCityPicker(true)}>
           <Text style={city ? styles.pickerValue : styles.pickerPlaceholder}>
             {city
-              ? l(CITIES.find((c) => c.value === city)!)
+              ? l(CITIES.find((c) => c.value === city) ?? { en: city, ar: city })
               : l({ en: 'Select city', ar: 'اختر المدينة' })}
           </Text>
           <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
