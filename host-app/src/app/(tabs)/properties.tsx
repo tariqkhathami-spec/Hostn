@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  SectionList,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
@@ -44,7 +44,6 @@ export default function PropertiesScreen() {
   const {
     data,
     isLoading,
-    isError,
     refetch,
     isRefetching,
   } = useQuery({
@@ -55,33 +54,30 @@ export default function PropertiesScreen() {
 
   const properties: Property[] = data?.data ?? [];
 
-  // Map API property groups to display format
-  const displayProperty: DisplayProperty | null = properties.length > 0
-    ? {
-        id: properties[0].id,
-        nameAr: properties[0].nameAr || properties[0].name || '',
-        nameEn: properties[0].name || '',
-        status: properties[0].status || 'listed',
-        city: properties[0].address?.city || '',
-        area: properties[0].address?.street
-          ? `${properties[0].address.direction || ''}، ${properties[0].address.street}`
-          : '',
-        unitCount: properties[0].unitCount || properties[0].units?.length || 0,
-        units: (properties[0].units || []).map((u) => ({
-          id: u.id,
-          nameAr: u.name || '',
-          nameEn: '',
-          code: u.code || '',
-          status: u.status || 'listed',
-          image: ((): string | null => {
-            const first = u.images?.[0];
-            if (typeof first === 'string') return first;
-            if (first && typeof first === 'object' && 'url' in first) return first.url;
-            return u.photos?.[0] ?? null;
-          })(),
-        })),
-      }
-    : null;
+  // Map API property groups to display format. Pre-fix this only ever
+  // returned properties[0] — hosts with 2+ properties saw only the first.
+  const displayProperties: DisplayProperty[] = properties.map((p) => ({
+    id: p.id,
+    nameAr: p.nameAr || p.name || '',
+    nameEn: p.name || '',
+    status: p.status || 'listed',
+    city: p.address?.city || '',
+    area: p.address?.street ? `${p.address.direction || ''}، ${p.address.street}` : '',
+    unitCount: p.unitCount || p.units?.length || 0,
+    units: (p.units || []).map((u) => ({
+      id: u.id,
+      nameAr: u.name || '',
+      nameEn: '',
+      code: u.code || '',
+      status: u.status || 'listed',
+      image: ((): string | null => {
+        const first = u.images?.[0];
+        if (typeof first === 'string') return first;
+        if (first && typeof first === 'object' && 'url' in first) return first.url;
+        return u.photos?.[0] ?? null;
+      })(),
+    })),
+  }));
 
   const handleUnitPress = useCallback(
     (unitId: string) => {
@@ -91,8 +87,9 @@ export default function PropertiesScreen() {
   );
 
   const renderUnitItem = useCallback(
-    ({ item }: { item: DisplayUnit }) => {
+    ({ item, section }: { item: DisplayUnit; section: { property: DisplayProperty } }) => {
       const isListed = item.status === 'listed';
+      const property = section.property;
       return (
         <TouchableOpacity
           style={styles.unitRow}
@@ -155,7 +152,7 @@ export default function PropertiesScreen() {
                   router.push({
                     pathname: `/property/duplicate/${item.id}` as any,
                     params: {
-                      groupTag: displayProperty?.nameAr || displayProperty?.nameEn || '',
+                      groupTag: property.nameAr || property.nameEn || '',
                     },
                   });
                 }}
@@ -168,75 +165,83 @@ export default function PropertiesScreen() {
         </TouchableOpacity>
       );
     },
-    [handleUnitPress],
+    [handleUnitPress, router],
   );
 
   const keyExtractor = useCallback((item: DisplayUnit) => item.id, []);
 
-  const ListHeader = useMemo(() => {
-    if (!displayProperty) return null;
-    return (
-      <View style={styles.propertyCard}>
-        {/* Property name */}
-        <Text style={styles.propertyName}>
-          {displayProperty.nameAr} {displayProperty.nameEn}
-        </Text>
-
-        {/* Status */}
-        {displayProperty.status === 'listed' ? (
-          <Text style={styles.statusOnline}>معروض (أون لاين)</Text>
-        ) : (
-          <Text style={styles.statusOffline}>غير معروض (أوف لاين)</Text>
-        )}
-
-        {/* Location row */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoText}>
-            {displayProperty.city} و {displayProperty.area}
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: { property: DisplayProperty } }) => {
+      const property = section.property;
+      return (
+        <View style={styles.propertyCard}>
+          {/* Property name */}
+          <Text style={styles.propertyName}>
+            {property.nameAr} {property.nameEn}
           </Text>
-          <Ionicons
-            name="location-outline"
-            size={16}
-            color={Colors.textSecondary}
-            style={styles.infoIcon}
-          />
-        </View>
 
-        {/* Unit count row */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoText}>
-            {displayProperty.unitCount} وحدات
-          </Text>
-          <Ionicons
-            name="bed-outline"
-            size={16}
-            color={Colors.textSecondary}
-            style={styles.infoIcon}
-          />
-        </View>
+          {/* Status */}
+          {property.status === 'listed' ? (
+            <Text style={styles.statusOnline}>معروض (أون لاين)</Text>
+          ) : (
+            <Text style={styles.statusOffline}>غير معروض (أوف لاين)</Text>
+          )}
 
-        {/* Add Unit button */}
-        <TouchableOpacity
-          style={styles.addUnitBtn}
-          activeOpacity={0.7}
-          onPress={() =>
-            router.push({
-              pathname: '/property/add-unit' as any,
-              params: {
-                groupTag: displayProperty.nameAr || displayProperty.nameEn,
-                city: displayProperty.city,
-                district: '',
-                type: '',
-              },
-            })
-          }
-        >
-          <Ionicons name="add-circle-outline" size={18} color={Colors.primary} />
-          <Text style={styles.addUnitText}>إضافة وحدة جديدة</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }, [displayProperty]);
+          {/* Location row */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>
+              {property.city} و {property.area}
+            </Text>
+            <Ionicons
+              name="location-outline"
+              size={16}
+              color={Colors.textSecondary}
+              style={styles.infoIcon}
+            />
+          </View>
+
+          {/* Unit count row */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{property.unitCount} وحدات</Text>
+            <Ionicons
+              name="bed-outline"
+              size={16}
+              color={Colors.textSecondary}
+              style={styles.infoIcon}
+            />
+          </View>
+
+          {/* Add Unit button */}
+          <TouchableOpacity
+            style={styles.addUnitBtn}
+            activeOpacity={0.7}
+            onPress={() =>
+              router.push({
+                pathname: '/property/add-unit' as any,
+                params: {
+                  propertyId: property.id,
+                  groupTag: property.nameAr || property.nameEn,
+                  city: property.city,
+                  district: '',
+                  type: '',
+                },
+              })
+            }
+          >
+            <Ionicons name="add-circle-outline" size={18} color={Colors.primary} />
+            <Text style={styles.addUnitText}>إضافة وحدة جديدة</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [router],
+  );
+
+  const sections = displayProperties.map((p) => ({
+    key: p.id,
+    property: p,
+    data: p.units,
+  }));
 
   return (
     <View style={styles.screen}>
@@ -256,15 +261,17 @@ export default function PropertiesScreen() {
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>{t('common.loading')}</Text>
           </View>
-        ) : displayProperty ? (
-          <FlatList
-            data={displayProperty.units}
+        ) : displayProperties.length > 0 ? (
+          <SectionList
+            sections={sections}
             keyExtractor={keyExtractor}
             renderItem={renderUnitItem}
-            ListHeaderComponent={ListHeader}
+            renderSectionHeader={renderSectionHeader}
+            stickySectionHeadersEnabled={false}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
+            SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
@@ -332,7 +339,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingBottom: Spacing.xxxl + 40,
+    // Clearance for the floating FAB (`bottom: 110` + ~44 px height + buffer).
+    // Pre-fix this was 88; the last unit row was hidden under the button.
+    paddingBottom: 170,
+  },
+  sectionSeparator: {
+    height: Spacing.md,
   },
 
   // Property card
