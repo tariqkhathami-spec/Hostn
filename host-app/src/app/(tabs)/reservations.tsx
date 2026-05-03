@@ -26,13 +26,14 @@ interface StatusFilter {
   color: string;
 }
 
-const statusFilters: StatusFilter[] = [
-  { key: 'confirmed', label: t('reservations.confirmed'), color: '#22c55e' },
-  { key: 'in_payment', label: t('reservations.inPayment'), color: '#3b82f6' },
-  { key: 'waiting', label: t('reservations.waiting'), color: '#eab308' },
-  { key: 'cancelled', label: t('reservations.cancelled'), color: '#ef4444' },
-  { key: 'no_show', label: t('reservations.noShow'), color: '#6b7280' },
-];
+// statusFilters is built inside the component body so each render re-resolves
+// t() against the current locale. Pre-fix, it was a module-scope const that
+// captured t(...) at import time, freezing labels to whatever the bundle's
+// locale was when the module was first loaded (B5).
+//
+// No useMemo: the array is 5 entries, t() is a Map lookup, and there's no
+// dependent identity comparison downstream — just a .map render. Cheaper to
+// rebuild than to memoize.
 
 // No more mock bookings - using real API data only
 
@@ -82,6 +83,14 @@ export default function ReservationsTabScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  const statusFilters: StatusFilter[] = [
+    { key: 'confirmed', label: t('reservations.confirmed'), color: '#22c55e' },
+    { key: 'in_payment', label: t('reservations.inPayment'), color: '#3b82f6' },
+    { key: 'waiting', label: t('reservations.waiting'), color: '#eab308' },
+    { key: 'cancelled', label: t('reservations.cancelled'), color: '#ef4444' },
+    { key: 'no_show', label: t('reservations.noShow'), color: '#6b7280' },
+  ];
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     queryKey: ['bookings', activeTab],
