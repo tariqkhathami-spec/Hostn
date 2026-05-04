@@ -51,6 +51,8 @@ const ar = {
   // Calendar
   'calendar.title': 'التقويم',
   'calendar.listedOnly': 'عرض الوحدات المعروضة فقط',
+  'calendar.empty': 'لا توجد عقارات بعد',
+  'calendar.emptyHint': 'أضف عقاراً ووحدات لتظهر تقويماتها هنا',
 
   // Reservations
   'reservations.title': 'الحجوزات',
@@ -172,6 +174,8 @@ const en: Record<TranslationKey, string> = {
 
   'calendar.title': 'Calendar',
   'calendar.listedOnly': 'Show listed units only',
+  'calendar.empty': 'No properties yet',
+  'calendar.emptyHint': 'Add a property and units — their calendars will appear here',
 
   'reservations.title': 'Reservations',
   'reservations.recent': 'Recent Bookings',

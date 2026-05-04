@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,221 +8,225 @@ import {
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
+import { t } from '../../utils/i18n';
 import type { CalendarProperty, CalendarUnit } from '../../types';
+
+// ---------------------------------------------------------------------------
+// S1 — Multi-property calendar root (Phase 8 MVP, Task 8.2).
+//
+// Per gathern_calendar_feature_spec.md §S1: a sectioned overview of every
+// property the host owns, with each section's bookable units rendered as
+// mini-month tiles for the *current* month. Tapping a tile drills into that
+// unit's full month view (Task 8.3 — S2). No legend, no per-day onPress, no
+// month nav at this level — those belong to S2.
+//
+// Pre-fix this screen was a flat 3-column unit grid that read
+// `calendarGroups[0].propertyName` as the page header (an M16-class
+// single-property assumption) and bound a block-on-tap day handler at the
+// mini-tile level (which belongs in S3, not S1). Rewritten to match the
+// competitor's information architecture.
+// ---------------------------------------------------------------------------
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_COLUMNS = 3;
-const CARD_GAP = Spacing.sm;
-const CARD_PADDING = Spacing.base;
-const CARD_WIDTH =
-  (SCREEN_WIDTH - CARD_PADDING * 2 - CARD_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+const SECTION_PADDING = Spacing.base;
+const TILE_GAP = Spacing.sm;
+const TILE_WIDTH =
+  (SCREEN_WIDTH - SECTION_PADDING * 2 - TILE_GAP * (GRID_COLUMNS - 1)) /
+  GRID_COLUMNS;
+const MINI_CELL_SIZE = Math.floor((TILE_WIDTH - Spacing.sm * 2) / 7) - 1;
 
-// ── Helpers ────────────────────────────────────────────────────────────
-
-/** Return the number of days in a given month (0-indexed). */
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
 
-// ── Mini Calendar (thumbnail per unit) ─────────────────────────────────
+/** Map ISO date strings ("2026-05-13") for the active month to day numbers. */
+function isoToDayNumbersForMonth(
+  isoDates: string[],
+  year: number,
+  month: number,
+): number[] {
+  const out: number[] = [];
+  for (const iso of isoDates) {
+    const d = new Date(iso);
+    if (d.getFullYear() === year && d.getMonth() === month) out.push(d.getDate());
+  }
+  return out;
+}
 
-function MiniCalendar({
+// ---------------------------------------------------------------------------
+// MiniMonth — read-only thumbnail per unit. Cell colour rules:
+//   - today          → solid purple, white text
+//   - past           → pale grey
+//   - booked         → solid purple square
+//   - blocked        → red square
+//   - other future   → light outline
+//
+// No onPress at the cell level (S1 isn't where day-edits happen). The whole
+// tile is wrapped in a Pressable in the parent.
+// ---------------------------------------------------------------------------
+
+function MiniMonth({
   year,
   month,
   bookedDays,
   blockedDays,
-  onDayPress,
 }: {
   year: number;
   month: number;
   bookedDays: number[];
-  blockedDays?: number[];
-  onDayPress?: (day: number, isBlocked: boolean) => void;
+  blockedDays: number[];
 }) {
   const totalDays = daysInMonth(year, month);
-  // 7 columns (Sat-Fri in Arabic calendar)
-  const COLS = 7;
-  // Day of week the month starts on (0=Sun … 6=Sat)
   const startDay = new Date(year, month, 1).getDay();
-  // Shift so Saturday=0 for Arabic week
-  const offset = (startDay + 1) % 7;
+  const offset = (startDay + 1) % 7; // Saturday-first week
+
+  const today = new Date();
+  const isCurrentMonth =
+    today.getFullYear() === year && today.getMonth() === month;
+  const todayDay = isCurrentMonth ? today.getDate() : -1;
+
+  const bookedSet = new Set(bookedDays);
+  const blockedSet = new Set(blockedDays);
 
   const cells: React.ReactNode[] = [];
 
-  // Empty offset cells
   for (let i = 0; i < offset; i++) {
-    cells.push(<View key={`e-${i}`} style={miniStyles.cell} />);
+    cells.push(<View key={`e-${i}`} style={miniStyles.cellEmpty} />);
   }
-
-  const bookedSet = new Set(bookedDays);
-  const blockedSet = new Set(blockedDays ?? []);
 
   for (let d = 1; d <= totalDays; d++) {
+    const isToday = d === todayDay;
+    const isPast = isCurrentMonth && d < todayDay;
     const isBooked = bookedSet.has(d);
     const isBlocked = blockedSet.has(d);
-    const cellStyle = isBooked
-      ? miniStyles.cellBooked
+
+    const style = isToday
+      ? miniStyles.cellToday
       : isBlocked
         ? miniStyles.cellBlocked
-        : miniStyles.cellEmpty;
+        : isBooked
+          ? miniStyles.cellBooked
+          : isPast
+            ? miniStyles.cellPast
+            : miniStyles.cellFuture;
 
-    if (onDayPress && !isBooked) {
-      cells.push(
-        <TouchableOpacity
-          key={d}
-          style={[miniStyles.cell, cellStyle]}
-          onPress={() => onDayPress(d, isBlocked)}
-          activeOpacity={0.6}
-        />,
-      );
-    } else {
-      cells.push(
-        <View key={d} style={[miniStyles.cell, cellStyle]} />,
-      );
-    }
+    cells.push(<View key={d} style={style} />);
   }
 
-  // Pad to fill last row
-  const remainder = cells.length % COLS;
+  // pad to full last row so the grid keeps its 7-col rhythm
+  const remainder = cells.length % 7;
   if (remainder !== 0) {
-    for (let i = 0; i < COLS - remainder; i++) {
-      cells.push(<View key={`p-${i}`} style={miniStyles.cell} />);
+    for (let i = 0; i < 7 - remainder; i++) {
+      cells.push(<View key={`p-${i}`} style={miniStyles.cellEmpty} />);
     }
   }
 
-  return (
-    <View style={miniStyles.grid}>
-      {cells.map((cell, idx) => (
-        <React.Fragment key={idx}>{cell}</React.Fragment>
-      ))}
-    </View>
-  );
+  return <View style={miniStyles.grid}>{cells}</View>;
 }
-
-const MINI_CELL_SIZE = Math.floor((CARD_WIDTH - Spacing.sm * 2) / 7) - 1;
 
 const miniStyles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'flex-start',
   },
-  cell: {
+  cellEmpty: {
+    width: MINI_CELL_SIZE,
+    height: MINI_CELL_SIZE,
+    margin: 0.5,
+  },
+  cellFuture: {
     width: MINI_CELL_SIZE,
     height: MINI_CELL_SIZE,
     margin: 0.5,
     borderRadius: 1,
+    borderWidth: 0.5,
+    borderColor: Colors.borderLight,
+  },
+  cellPast: {
+    width: MINI_CELL_SIZE,
+    height: MINI_CELL_SIZE,
+    margin: 0.5,
+    borderRadius: 1,
+    backgroundColor: Colors.surfaceAlt,
   },
   cellBooked: {
+    width: MINI_CELL_SIZE,
+    height: MINI_CELL_SIZE,
+    margin: 0.5,
+    borderRadius: 1,
     backgroundColor: Colors.primary,
   },
   cellBlocked: {
+    width: MINI_CELL_SIZE,
+    height: MINI_CELL_SIZE,
+    margin: 0.5,
+    borderRadius: 1,
     backgroundColor: Colors.error,
   },
-  cellEmpty: {
-    backgroundColor: Colors.borderLight,
+  cellToday: {
+    width: MINI_CELL_SIZE,
+    height: MINI_CELL_SIZE,
+    margin: 0.5,
+    borderRadius: MINI_CELL_SIZE / 2,
+    backgroundColor: Colors.primary,
   },
 });
 
-// ── Main Screen ────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Main screen
+// ---------------------------------------------------------------------------
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const now = new Date();
-  const [currentMonth] = React.useState(now.getMonth());
-  const [currentYear] = React.useState(now.getFullYear());
-  const [listedOnly, setListedOnly] = React.useState(false);
+  const now = useMemo(() => new Date(), []);
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-  // Fetch real calendar data from API
-  const { data: calendarData, isLoading } = useQuery({
-    queryKey: ['hostCalendar', currentYear, currentMonth],
-    queryFn: () => hostService.getCalendarData(currentYear, currentMonth),
+  const [listedOnly, setListedOnly] = useState(false);
+
+  const { data, isLoading, isRefetching, refetch } = useQuery({
+    queryKey: ['hostCalendar', year, month],
+    queryFn: () => hostService.getCalendarData(year, month),
     retry: false,
   });
 
-  const blockMutation = useMutation({
-    mutationFn: ({ propertyId, date, block }: { propertyId: string; date: string; block: boolean }) => {
-      const dates = { start: date, end: date };
-      return block
-        ? hostService.blockDates(propertyId, dates)
-        : hostService.unblockDates(propertyId, dates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hostCalendar'] });
-    },
-    onError: () => {
-      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث التقويم');
-    },
-  });
+  const properties: CalendarProperty[] = (data as any)?.data ?? [];
 
-  const handleDayPress = React.useCallback(
-    (unitId: string, propertyId: string, day: number, isBlocked: boolean) => {
-      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const actionLabel = isBlocked ? 'إلغاء الحظر' : 'حظر التاريخ';
-      const message = isBlocked
-        ? `هل تريد إلغاء حظر يوم ${day}؟`
-        : `هل تريد حظر يوم ${day}؟`;
-      Alert.alert(actionLabel, message, [
-        { text: 'إلغاء', style: 'cancel' },
-        {
-          text: actionLabel,
-          onPress: () => blockMutation.mutate({ propertyId, date: dateStr, block: !isBlocked }),
-        },
-      ]);
-    },
-    [currentYear, currentMonth, blockMutation],
-  );
+  // Apply listed-only filter at the unit level. Properties whose units all
+  // fail the filter are dropped entirely so the section header doesn't
+  // dangle empty.
+  const visibleProperties: CalendarProperty[] = useMemo(() => {
+    if (!listedOnly) return properties;
+    return properties
+      .map((p) => ({ ...p, units: (p.units || []).filter((u) => u.isListed) }))
+      .filter((p) => p.units.length > 0);
+  }, [properties, listedOnly]);
 
-  // Transform API data into display units
-  const calendarGroups: CalendarProperty[] = calendarData?.data ?? [];
-
-  // Flatten all units from all property groups
-  const allUnits: (CalendarUnit & { propertyName: string })[] = [];
-  calendarGroups.forEach((group) => {
-    (group.units || []).forEach((unit) => {
-      allUnits.push({ ...unit, propertyName: group.propertyName });
-    });
-  });
-
-  // Filter by listed-only toggle
-  const displayUnits = listedOnly ? allUnits.filter((u) => u.isListed) : allUnits;
-
-  // Convert ISO date strings (e.g. "2026-03-19") to day numbers for the mini calendar
-  const getBookedDays = (bookedDates: string[]): number[] => {
-    return (bookedDates || [])
-      .map((d) => {
-        const date = new Date(d);
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-          return date.getDate();
-        }
-        return -1;
-      })
-      .filter((d) => d > 0);
+  const handleUnitPress = (unitId: string) => {
+    router.push(`/property/unit/${unitId}` as any);
   };
 
-  const propertyName = calendarGroups.length > 0
-    ? calendarGroups[0].propertyName
-    : 'جاري التحميل...';
+  // -------------------------------------------------------------------------
+  // Render branches. Order: loading > empty (filter-aware) > sections.
+  // -------------------------------------------------------------------------
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{'التقويم'}</Text>
+        <Text style={styles.headerTitle}>{t('calendar.title')}</Text>
       </View>
 
-      {/* Toggle row */}
       <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>
-          {'عرض الوحدات المعروضة فقط'}
-        </Text>
+        <Text style={styles.toggleLabel}>{t('calendar.listedOnly')}</Text>
         <Switch
           value={listedOnly}
           onValueChange={setListedOnly}
@@ -231,80 +235,144 @@ export default function CalendarScreen() {
         />
       </View>
 
-      {/* Property name */}
-      <View style={styles.propertyRow}>
-        <Text style={styles.propertyName}>{propertyName}</Text>
-      </View>
-
-      {/* Block hint */}
-      <View style={styles.hintRow}>
-        <Ionicons name="information-circle-outline" size={16} color={Colors.textTertiary} />
-        <Text style={styles.hintText}>{'اضغط على التاريخ لحظره'}</Text>
-        <View style={styles.legendRow}>
-          <View style={[styles.legendDot, { backgroundColor: Colors.primary }]} />
-          <Text style={styles.legendText}>{'محجوز'}</Text>
-          <View style={[styles.legendDot, { backgroundColor: Colors.error }]} />
-          <Text style={styles.legendText}>{'محظور'}</Text>
-        </View>
-      </View>
-
-      {/* Unit grid */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>جاري تحميل التقويم...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
+      ) : visibleProperties.length === 0 ? (
+        // Two distinct empty states:
+        //   - filter ON, none listed → blank below the toggle (per spec)
+        //   - filter OFF, no properties at all → empty-state copy
+        listedOnly ? (
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={refetch}
+                tintColor={Colors.primary}
+              />
+            }
+          />
+        ) : (
+          <View style={styles.centered}>
+            <Ionicons
+              name="calendar-outline"
+              size={48}
+              color={Colors.textTertiary}
+            />
+            <Text style={styles.emptyText}>{t('calendar.empty')}</Text>
+            <Text style={styles.emptyHint}>{t('calendar.emptyHint')}</Text>
+          </View>
+        )
       ) : (
         <ScrollView
-          style={styles.scrollView}
+          style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={Colors.primary}
+            />
+          }
         >
-          <View style={styles.unitsGrid}>
-            {displayUnits.map((unit) => {
-              // Find the property this unit belongs to
-              const parentProperty = calendarGroups.find((g) =>
-                (g.units || []).some((u) => u.unitId === unit.unitId),
-              );
-              const propertyId = parentProperty?.propertyId ?? '';
-              const blockedDays = getBookedDays(unit.blockedDates ?? []);
-
-              return (
-                <View key={unit.unitId} style={styles.unitCard}>
-                  <MiniCalendar
-                    year={currentYear}
-                    month={currentMonth}
-                    bookedDays={getBookedDays(unit.bookedDates)}
-                    blockedDays={blockedDays}
-                    onDayPress={(day, isBlocked) =>
-                      handleDayPress(unit.unitId, propertyId, day, isBlocked)
-                    }
-                  />
-                  <Text style={styles.unitName} numberOfLines={2}>
-                    {unit.unitName}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-
-          {displayUnits.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>لا توجد وحدات</Text>
-            </View>
-          )}
+          {visibleProperties.map((property) => (
+            <PropertySection
+              key={property.propertyId}
+              property={property}
+              year={year}
+              month={month}
+              onUnitPress={handleUnitPress}
+            />
+          ))}
         </ScrollView>
       )}
     </View>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// PropertySection — one bold header followed by a 3-col grid of unit tiles.
+// ---------------------------------------------------------------------------
+
+function PropertySection({
+  property,
+  year,
+  month,
+  onUnitPress,
+}: {
+  property: CalendarProperty;
+  year: number;
+  month: number;
+  onUnitPress: (unitId: string) => void;
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>{property.propertyName}</Text>
+      <View style={styles.tileGrid}>
+        {property.units.map((unit) => (
+          <UnitTile
+            key={unit.unitId}
+            unit={unit}
+            year={year}
+            month={month}
+            onPress={() => onUnitPress(unit.unitId)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function UnitTile({
+  unit,
+  year,
+  month,
+  onPress,
+}: {
+  unit: CalendarUnit;
+  year: number;
+  month: number;
+  onPress: () => void;
+}) {
+  const bookedDays = isoToDayNumbersForMonth(unit.bookedDates ?? [], year, month);
+  const blockedDays = isoToDayNumbersForMonth(unit.blockedDates ?? [], year, month);
+  return (
+    <TouchableOpacity
+      style={styles.tile}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <MiniMonth
+        year={year}
+        month={month}
+        bookedDays={bookedDays}
+        blockedDays={blockedDays}
+      />
+      {/* Hostn-specific deviation from Gathern: we show the unit name under
+          the tile. Gathern shows nothing, forcing trial-and-click discovery.
+          A label is strictly better UX. */}
+      <Text style={styles.tileLabel} numberOfLines={2}>
+        {unit.unitName}
+      </Text>
+      {!unit.isListed && (
+        <Text style={styles.tileUnlisted}>{t('properties.unlisted')}</Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
   },
   header: {
     backgroundColor: Colors.white,
@@ -333,93 +401,64 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textSecondary,
   },
-  propertyRow: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.base,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    alignItems: 'center',
-  },
-  propertyName: {
-    ...Typography.bodyBold,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  hintRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.surface,
-    gap: Spacing.xs,
-  },
-  hintText: {
-    ...Typography.caption,
-    color: Colors.textTertiary,
+  scroll: {
     flex: 1,
-    textAlign: 'right',
-  },
-  legendRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: Spacing.xs,
-  },
-  legendText: {
-    ...Typography.tiny,
-    color: Colors.textTertiary,
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: Colors.surface,
   },
   scrollContent: {
-    padding: CARD_PADDING,
-    paddingBottom: 100,
+    padding: SECTION_PADDING,
+    paddingBottom: Spacing.xxxl + 40,
   },
-  unitsGrid: {
+  section: {
+    marginBottom: Spacing.lg,
+  },
+  sectionHeader: {
+    ...Typography.bodyBold,
+    color: Colors.textPrimary,
+    textAlign: 'right',
+    marginBottom: Spacing.sm,
+  },
+  tileGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: TILE_GAP,
   },
-  unitCard: {
-    width: CARD_WIDTH,
+  tile: {
+    width: TILE_WIDTH,
     backgroundColor: Colors.white,
     borderRadius: Radius.sm,
     padding: Spacing.sm,
-    marginBottom: CARD_GAP,
-    ...Shadows.sm,
     alignItems: 'center',
+    ...Shadows.sm,
   },
-  unitName: {
+  tileLabel: {
     ...Typography.caption,
     color: Colors.textPrimary,
     textAlign: 'center',
     marginTop: Spacing.xs,
   },
-  loadingContainer: {
+  tileUnlisted: {
+    ...Typography.tiny,
+    color: Colors.error,
+    marginTop: 2,
+  },
+  centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.md,
+    padding: Spacing.xl,
+    gap: Spacing.sm,
   },
   loadingText: {
     ...Typography.small,
     color: Colors.textSecondary,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xxxl,
-  },
   emptyText: {
-    ...Typography.body,
+    ...Typography.bodyBold,
+    color: Colors.textSecondary,
+  },
+  emptyHint: {
+    ...Typography.small,
     color: Colors.textTertiary,
+    textAlign: 'center',
   },
 });
