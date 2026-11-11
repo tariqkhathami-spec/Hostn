@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, authorizePermission } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const {
   createTicket,
   getMyTickets,
@@ -19,8 +20,8 @@ router.get('/:id', getTicket);
 router.post('/:id/reply', replyToTicket);
 
 // Admin routes
-router.get('/admin/all', authorize('admin'), getAllTickets);
-router.put('/admin/:id/status', authorize('admin'), updateTicketStatus);
-router.put('/admin/:id/assign', authorize('admin'), assignTicket);
+router.get('/admin/all', authorize('admin'), authorizePermission(PERMISSIONS.VIEW_SUPPORT), getAllTickets);
+router.put('/admin/:id/status', authorize('admin'), authorizePermission(PERMISSIONS.MANAGE_SUPPORT), updateTicketStatus);
+router.put('/admin/:id/assign', authorize('admin'), authorizePermission(PERMISSIONS.MANAGE_SUPPORT), assignTicket);
 
 module.exports = router;

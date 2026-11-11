@@ -30,7 +30,7 @@ function initSocket(httpServer) {
   });
 
   // ── Auth middleware — validate JWT on connect ───────────────────────
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token =
       socket.handshake.auth?.token ||
       socket.handshake.headers?.authorization?.replace('Bearer ', '');
@@ -41,6 +41,21 @@ function initSocket(httpServer) {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Mirror the HTTP auth checks: the account must still exist, must not
+      // be suspended, and the token must not have been revoked.
+      const userType = decoded.userType || decoded.role;
+      const Model = { guest: 'Guest', host: 'Host', admin: 'Admin' }[userType];
+      if (!Model) return next(new Error('AUTH_INVALID'));
+      const user = await require(`../models/${Model}`)
+        .findById(decoded.id)
+        .select('isSuspended tokenVersion')
+        .lean();
+      if (!user || user.isSuspended) return next(new Error('AUTH_INVALID'));
+      if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+        return next(new Error('AUTH_INVALID'));
+      }
+
       socket.userId = decoded.id;
       socket.userRole = decoded.role;
       next();

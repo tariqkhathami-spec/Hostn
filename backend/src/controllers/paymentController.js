@@ -62,6 +62,10 @@ exports.initiatePayment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Booking already paid' });
     }
 
+    if (['cancelled', 'rejected', 'expired'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: `Booking is ${booking.status} and cannot be paid` });
+    }
+
     // Idempotency: check for existing pending payment
     const existingPayment = await Payment.findOne({
       booking: bookingId,
