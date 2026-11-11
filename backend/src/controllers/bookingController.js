@@ -562,7 +562,7 @@ exports.createBooking = async (req, res, next) => {
       actor: req.user._id,
       action: 'booking_created',
       target: { type: 'Booking', id: booking._id },
-      details: `Booking created for "${property.title}" — ${total} SAR`,
+      details: `Booking created for "${property.title}" — ${pricing.total} SAR`,
       ip: req.ip,
     }).catch(() => {});
 
