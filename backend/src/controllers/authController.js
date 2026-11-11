@@ -710,6 +710,17 @@ exports.deleteAccount = async (req, res, next) => {
       }
     );
 
+    // Leave a trace for the admin activity log (no personal data in it).
+    require('../models/ActivityLog').create({
+      actor: userId,
+      actorType: { guest: 'Guest', host: 'Host' }[userType] || null,
+      actorRole: userType,
+      action: 'account_deleted',
+      target: { type: 'User', id: userId },
+      details: `${userType} account deleted by its owner`,
+      ip: req.ip,
+    }).catch(() => {});
+
     // Clear auth cookies
     res.cookie('hostn_token', '', { httpOnly: true, expires: new Date(0), path: '/' });
     res.cookie('hostn_refresh', '', { httpOnly: true, expires: new Date(0), path: '/api/v1/auth' });

@@ -55,7 +55,7 @@ export default function ConversationsScreen() {
             const avatarUri = other?.avatar;
             const firstName = other?.firstName ?? '';
             const lastName = other?.lastName ?? '';
-            const fullName = `${firstName} ${lastName}`.trim() || t('chat.deletedUser');
+            const fullName = (other as any)?.name || `${firstName} ${lastName}`.trim() || t('chat.deletedUser');
             return (
               <Pressable
                 style={styles.conversationItem}

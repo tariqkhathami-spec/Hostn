@@ -601,6 +601,7 @@ function permitPayload(unit, property) {
     permitStatus: permitStatus(license),
     permitNumber: license.licenseNumber || undefined,
     permitDocumentUrl: license.documentUrl || undefined,
+    rejectionReason: license.status === 'rejected' ? license.rejectionReason || undefined : undefined,
     expiryDate: hasLicense ? license.expiryDate || undefined : undefined,
     expired: hasLicense && (license.status === 'expired'
       || !!(license.expiryDate && new Date(license.expiryDate) < new Date())),
@@ -678,11 +679,12 @@ router.post('/units/:unitId/permit', handlePermitUpload, wrap(async (req, res) =
   const number = licenseNumber || prev.licenseNumber;
   const expiry = expiryDate !== undefined ? expiryDate : prev.expiryDate;
 
-  // Same status rule as tourismLicenseController.upsertLicense: a permit with
-  // a number is active unless it has expired. A document on its own (no
-  // number yet) stays pending.
+  // Same status rule as tourismLicenseController.upsertLicense: a submitted
+  // permit waits for admin review; it stays active only when the same,
+  // already approved, number is saved again.
   let status = 'pending';
-  if (number) status = expiry && new Date(expiry) < new Date() ? 'expired' : 'active';
+  if (expiry && new Date(expiry) < new Date()) status = 'expired';
+  else if (number && prev.status === 'active' && prev.licenseNumber === number) status = 'active';
 
   unit.tourismLicense = {
     workType: effectiveWorkType,

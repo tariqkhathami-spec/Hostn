@@ -131,7 +131,7 @@ export default function HomeScreen() {
             <Text style={styles.promoTitle}>{t('home.planTrip')}</Text>
             <Text style={styles.promoSub}>{t('home.planTripSub')}</Text>
           </View>
-          <Ionicons name="arrow-forward" size={22} color={Colors.white} />
+          <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={22} color={Colors.white} />
         </Pressable>
 
         <View style={{ height: Spacing.xxl }} />

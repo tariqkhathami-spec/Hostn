@@ -1,5 +1,6 @@
 import { format, parseISO, differenceInDays, isValid } from 'date-fns';
-import { enUS } from 'date-fns/locale';
+import { enUS, arSA } from 'date-fns/locale';
+import { getCurrentLanguage } from '../i18n/current';
 
 /**
  * Convert any Eastern Arabic numerals (٠-٩) or Extended Arabic-Indic (۰-۹)
@@ -29,7 +30,11 @@ export function formatDate(
   if (date == null) return '';
   const d = typeof date === 'string' ? parseISO(date) : date;
   if (!isValid(d)) return '';
-  // Explicitly use English locale to ensure Western numerals in dates
+  // Month names follow the app language; digits stay Western (0-9) in both.
+  if (getCurrentLanguage() === 'ar') {
+    const arPattern = pattern === 'MMM d, yyyy' ? 'd MMMM yyyy' : pattern === 'MMM d' ? 'd MMMM' : pattern;
+    return toWesternNumerals(format(d, arPattern, { locale: arSA }));
+  }
   return format(d, pattern, { locale: enUS });
 }
 

@@ -74,9 +74,9 @@ export default function MoreScreen() {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
-              {user?.firstName ? `${user.firstName} ${user.lastName ?? ''}` : t('account.guest')}
+              {(user as any)?.name || (user?.firstName ? `${user.firstName} ${user.lastName ?? ''}` : t('account.guest'))}
             </Text>
-            <Text style={styles.profilePhone}>{user?.phone ? formatPhone(user.phone, '+966') : ''}</Text>
+            <Text style={styles.profilePhone}>{user?.phone ? `\u2066${formatPhone(user.phone, '+966')}\u2069` : ''}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
         </Pressable>

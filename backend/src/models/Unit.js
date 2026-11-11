@@ -248,6 +248,10 @@ const unitSchema = new mongoose.Schema(
         enum: ['pending', 'active', 'expired', 'rejected'],
         default: 'pending',
       },
+      // Admin review of the submitted permit
+      rejectionReason: { type: String, trim: true, maxlength: 500 },
+      reviewedAt: { type: Date },
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     },
 
     // ── B. Photos ────────────────────────────────────────────────

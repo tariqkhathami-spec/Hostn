@@ -31,11 +31,14 @@ export function formatNumber(num: number): string {
  */
 export function formatPhoneDisplay(phone: string): string {
   if (!phone) return '';
-  if (phone.startsWith('+')) return phone;
-  if (phone.startsWith('966')) return `+${phone}`;
-  if (phone.length === 9 && phone.startsWith('5')) return `+966${phone}`;
-  if (phone.length === 10 && phone.startsWith('05')) return `+966${phone.slice(1)}`;
-  return phone;
+  let value = phone;
+  if (phone.startsWith('+')) value = phone;
+  else if (phone.startsWith('966')) value = `+${phone}`;
+  else if (phone.length === 9 && phone.startsWith('5')) value = `+966${phone}`;
+  else if (phone.length === 10 && phone.startsWith('05')) value = `+966${phone.slice(1)}`;
+  // Isolate as left-to-right so the "+" stays in front inside Arabic text
+  // (it was rendering as 966509876543+).
+  return `\u2066${value}\u2069`;
 }
 
 /**

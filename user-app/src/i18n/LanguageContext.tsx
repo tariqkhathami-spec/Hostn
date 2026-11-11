@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { I18nManager } from 'react-native';
+import { setCurrentLanguage } from './current';
 import * as SecureStore from 'expo-secure-store';
 import { translations, type Language, type TranslationKey } from './translations';
 
@@ -26,15 +27,21 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     SecureStore.getItemAsync(STORAGE_KEY).then((stored) => {
-      if (stored === 'en' || stored === 'ar') {
-        setLang(stored);
-        I18nManager.forceRTL(stored === 'ar');
-      }
+      // Arabic is the default, so the layout must be right-to-left even when
+      // nothing is stored yet (first launch). Previously RTL was only forced
+      // after the user had changed the language once, which left a fresh
+      // install laid out left-to-right with Arabic text.
+      const lang: Language = stored === 'en' ? 'en' : 'ar';
+      setLang(lang);
+      setCurrentLanguage(lang);
+      I18nManager.allowRTL(lang === 'ar');
+      I18nManager.forceRTL(lang === 'ar');
     }).catch(() => {});
   }, []);
 
   const setLanguage = useCallback((lang: Language) => {
     setLang(lang);
+    setCurrentLanguage(lang);
     SecureStore.setItemAsync(STORAGE_KEY, lang).catch(() => {});
     I18nManager.forceRTL(lang === 'ar');
   }, []);

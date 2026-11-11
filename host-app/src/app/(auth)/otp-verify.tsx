@@ -115,7 +115,7 @@ export default function OtpVerifyScreen() {
         <Text style={styles.title}>{t('auth.otp')}</Text>
         <Text style={styles.subtitle}>
           تم إرسال رمز التحقق إلى{'\n'}
-          <Text style={styles.phoneHighlight}>+966{phone}</Text>
+          <Text style={styles.phoneHighlight}>{`\u2066+966${phone}\u2069`}</Text>
         </Text>
 
         <View style={styles.otpContainer}>

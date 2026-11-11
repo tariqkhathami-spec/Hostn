@@ -63,7 +63,7 @@ export default function PermitsScreen() {
     onSuccess: () => {
       setForm(null);
       queryClient.invalidateQueries({ queryKey: ['permits'] });
-      Alert.alert('تم', 'تم حفظ التصريح');
+      Alert.alert('تم', 'تم إرسال التصريح وسيظهر كمعتمد بعد مراجعة الإدارة');
     },
     onError: (error: any) =>
       Alert.alert('خطأ', error?.response?.data?.message || 'تعذّر حفظ التصريح. حاول مرة أخرى.'),
@@ -134,14 +134,17 @@ export default function PermitsScreen() {
           <Text style={styles.unitName}>{unit.unitName}</Text>
           <Text style={styles.unitLocation}>{unit.location}</Text>
           {renderPermitBadge(unit)}
-          {unit.permitStatus === 'approved' && unit.permitNumber && (
+          {(unit.permitStatus === 'approved' || unit.permitStatus === 'pending') && unit.permitNumber && (
             <Text style={styles.permitNumber}>رقم التصريح: {unit.permitNumber}</Text>
           )}
+          {unit.permitStatus === 'rejected' && unit.rejectionReason ? (
+            <Text style={[styles.permitNumber, { color: '#dc2626' }]}>سبب الرفض: {unit.rejectionReason}</Text>
+          ) : null}
         </View>
       </View>
-      {unit.permitStatus === 'none' && (
+      {(unit.permitStatus === 'none' || unit.permitStatus === 'rejected') && (
         <Button
-          title="أضف التصريح"
+          title={unit.permitStatus === 'rejected' ? 'أعد إرسال التصريح' : 'أضف التصريح'}
           onPress={() => handleAddPermit(unit.unitId, unit.unitName)}
           variant="primary"
           size="sm"

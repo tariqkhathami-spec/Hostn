@@ -417,6 +417,7 @@ export interface UnitPermit {
   permitStatus: 'none' | 'pending' | 'approved' | 'rejected';
   permitNumber?: string;
   permitDocumentUrl?: string;
+  rejectionReason?: string;
 }
 
 export interface ProtectionProgram {
