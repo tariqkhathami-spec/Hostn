@@ -50,6 +50,12 @@ const sharedUserFields = () => ({
     type: Number,
     default: 0,
   },
+  // Set when the owner deletes the account: personal data is erased but the
+  // document stays so bookings, payments and invoices keep a valid reference.
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
   deviceTokens: [
     {
       token: String,

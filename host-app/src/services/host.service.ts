@@ -110,7 +110,8 @@ export const hostService = {
   // Profile
   getProfile: () => api.get('/host/profile').then(r => r.data),
   updateProfile: (data: any) => api.patch('/host/profile', data).then(r => r.data),
-  updateEmail: (email: string) => api.put('/host/profile/email', { email }).then(r => r.data),
+  updateEmail: (email: string, currentPassword?: string) =>
+    api.put('/host/profile/email', { email, ...(currentPassword ? { currentPassword } : {}) }).then(r => r.data),
   deleteAccount: () => api.delete('/host/account').then(r => r.data),
   logout: () => api.post('/auth/logout').then(r => r.data),
 

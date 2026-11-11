@@ -208,7 +208,7 @@ export default function ProfileScreen() {
               style={styles.supportOption}
               onPress={() => {
                 setSupportModalVisible(false);
-                Linking.openURL('tel:920007858');
+                Linking.openURL('tel:0500407888');
               }}
             >
               <Ionicons name="call-outline" size={24} color={Colors.primary} />

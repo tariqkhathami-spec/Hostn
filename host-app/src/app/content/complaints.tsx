@@ -8,6 +8,15 @@ import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
 
+const COMPLAINT_STATUS: Record<string, string> = {
+  pending: 'قيد المراجعة',
+  reviewing: 'قيد المراجعة',
+  in_review: 'قيد المراجعة',
+  resolved: 'تم الحل',
+  dismissed: 'مرفوض',
+  action_taken: 'تم اتخاذ إجراء',
+};
+
 export default function ComplaintsScreen() {
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['complaints'],
@@ -46,7 +55,7 @@ export default function ComplaintsScreen() {
                 <Text style={styles.complaintTitle}>{item.title || item.subject || 'بلاغ'}</Text>
                 {item.status && (
                   <View style={styles.statusBadge}>
-                    <Text style={styles.statusText}>{item.status}</Text>
+                    <Text style={styles.statusText}>{COMPLAINT_STATUS[item.status] || item.status}</Text>
                   </View>
                 )}
               </View>
@@ -56,7 +65,7 @@ export default function ComplaintsScreen() {
                 </Text>
               )}
               {(item.createdAt || item.date) && (
-                <Text style={styles.complaintDate}>{item.createdAt || item.date}</Text>
+                <Text style={styles.complaintDate}>{String(item.createdAt || item.date).slice(0, 10)}</Text>
               )}
             </View>
           )}

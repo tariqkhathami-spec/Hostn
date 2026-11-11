@@ -37,9 +37,13 @@ export default function EditProfileScreen() {
   }, [profile?.email]);
 
   const emailChanged = email !== (profile?.email || '');
+  // Accounts that already have an email and password must confirm the
+  // current password before the email can change (server rule).
+  const [needPassword, setNeedPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
 
   const updateEmailMutation = useMutation({
-    mutationFn: (newEmail: string) => hostService.updateEmail(newEmail),
+    mutationFn: (newEmail: string) => hostService.updateEmail(newEmail, currentPassword || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hostProfile'] });
       Alert.alert(
@@ -48,11 +52,13 @@ export default function EditProfileScreen() {
         [{ text: 'حسنا', onPress: () => router.canGoBack() ? router.back() : router.replace('/profile' as any) }],
       );
     },
-    onError: () => {
-      Alert.alert(
-        'خطأ',
-        'فشل تحديث البريد الإلكتروني',
-      );
+    onError: (error: any) => {
+      if (error?.response?.data?.code === 'CURRENT_PASSWORD_REQUIRED') {
+        setNeedPassword(true);
+        Alert.alert('تأكيد', 'أدخل كلمة المرور الحالية لتغيير البريد الإلكتروني');
+        return;
+      }
+      Alert.alert('خطأ', error?.response?.data?.message || 'فشل تحديث البريد الإلكتروني');
     },
   });
 
@@ -134,6 +140,19 @@ export default function EditProfileScreen() {
               editable={false}
             />
           </View>
+
+          {needPassword && (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>{'كلمة المرور الحالية'}</Text>
+              <TextInput
+                style={styles.input}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            </View>
+          )}
 
           {/* Save Button */}
           <TouchableOpacity

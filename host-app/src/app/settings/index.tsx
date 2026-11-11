@@ -39,8 +39,9 @@ export default function SettingsScreen() {
       await logout();
       router.replace('/(auth)/onboarding' as any);
     },
-    onError: () => {
-      Alert.alert('خطأ', 'حدث خطأ أثناء حذف الحساب');
+    onError: (error: any) => {
+      // e.g. the server refuses while bookings are still open
+      Alert.alert('خطأ', error?.response?.data?.message || 'حدث خطأ أثناء حذف الحساب');
     },
   });
 

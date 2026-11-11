@@ -13,7 +13,7 @@ const FALLBACK_SUPPORT: SupportInfo = {
   hoursStart: '10 صباحاً',
   hoursEnd: '12 منتصف الليل',
   days: 'طوال أيام الأسبوع',
-  phone: '920007858',
+  phone: '0500407888',
 };
 
 export default function ContactScreen() {
@@ -28,7 +28,7 @@ export default function ContactScreen() {
   // The server only returns the contact details it actually has (no working
   // hours yet), so fill the gaps from the defaults instead of replacing them.
   const support: SupportInfo = { ...FALLBACK_SUPPORT, ...(data?.data ?? {}) };
-  const formattedPhone = '9200 07858';
+  const formattedPhone = support.phone || '0500407888';
 
   return (
     <ScreenWrapper>
@@ -72,7 +72,7 @@ export default function ContactScreen() {
           {/* Call Card */}
           <TouchableOpacity
             style={[styles.actionCard, styles.callCard]}
-            onPress={() => Linking.openURL('tel:920007858')}
+            onPress={() => Linking.openURL(`tel:${support.phone || '0500407888'}`)}
             activeOpacity={0.7}
           >
             <View style={[styles.cardIconCircle, { backgroundColor: '#dcfce7' }]}>

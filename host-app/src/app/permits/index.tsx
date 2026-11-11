@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,13 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  TextInput,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toWesternDigits } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
@@ -45,12 +49,65 @@ export default function PermitsScreen() {
 
   const properties: PropertyPermitGroup[] = data?.data ?? [];
 
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<{
+    unitId: string;
+    unitName: string;
+    permitNumber: string;
+    expiryDate: string;
+    image: { uri: string; name: string; type: string } | null;
+  } | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: ({ unitId, data }: { unitId: string; data: FormData }) => hostService.uploadPermit(unitId, data),
+    onSuccess: () => {
+      setForm(null);
+      queryClient.invalidateQueries({ queryKey: ['permits'] });
+      Alert.alert('تم', 'تم حفظ التصريح');
+    },
+    onError: (error: any) =>
+      Alert.alert('خطأ', error?.response?.data?.message || 'تعذّر حفظ التصريح. حاول مرة أخرى.'),
+  });
+
   const handleAddPermit = (unitId: string, unitName: string) => {
-    Alert.alert(
-      'إضافة تصريح',
-      `سيتم إضافة تصريح وزارة السياحة للوحدة "${unitName}".\nهذه الميزة قيد التطوير.`,
-      [{ text: 'حسناً', style: 'default' }],
+    setForm({ unitId, unitName, permitNumber: '', expiryDate: '', image: null });
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    setForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            image: {
+              uri: asset.uri,
+              name: asset.fileName || 'permit.jpg',
+              type: asset.mimeType || 'image/jpeg',
+            },
+          }
+        : prev,
     );
+  };
+
+  const submitPermit = () => {
+    if (!form) return;
+    const permitNumber = toWesternDigits(form.permitNumber.trim());
+    const expiryDate = toWesternDigits(form.expiryDate.trim());
+    if (!permitNumber) {
+      Alert.alert('خطأ', 'اكتب رقم التصريح');
+      return;
+    }
+    if (expiryDate && !/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
+      Alert.alert('خطأ', 'اكتب تاريخ الانتهاء بالصيغة 2027-12-31');
+      return;
+    }
+    const data = new FormData();
+    data.append('permitNumber', permitNumber);
+    if (expiryDate) data.append('expiryDate', expiryDate);
+    if (form.image) data.append('document', form.image as any);
+    uploadMutation.mutate({ unitId: form.unitId, data });
   };
 
   const renderPermitBadge = (permit: UnitPermit) => {
@@ -98,6 +155,46 @@ export default function PermitsScreen() {
   return (
     <ScreenWrapper>
       <HeaderBar title="تصريح وزارة السياحة" showBack />
+      <Modal visible={!!form} transparent animationType="fade" onRequestClose={() => setForm(null)}>
+        <View style={permitDialog.backdrop}>
+          <View style={permitDialog.box}>
+            <Text style={permitDialog.title}>{`تصريح الوحدة: ${form?.unitName ?? ''}`}</Text>
+            <TextInput
+              style={permitDialog.input}
+              value={form?.permitNumber ?? ''}
+              onChangeText={(permitNumber) => setForm((prev) => (prev ? { ...prev, permitNumber } : prev))}
+              placeholder="رقم التصريح"
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={60}
+              autoCapitalize="characters"
+            />
+            <TextInput
+              style={permitDialog.input}
+              value={form?.expiryDate ?? ''}
+              onChangeText={(expiryDate) => setForm((prev) => (prev ? { ...prev, expiryDate } : prev))}
+              placeholder={"تاريخ الانتهاء، اختياري \u2066 2027-12-31 \u2069"}
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={10}
+            />
+            <TouchableOpacity style={permitDialog.attach} onPress={pickImage} activeOpacity={0.7}>
+              <Ionicons name="image-outline" size={20} color={Colors.primary} />
+              <Text style={permitDialog.attachText}>
+                {form?.image ? 'تم اختيار صورة التصريح' : 'إرفاق صورة التصريح (اختياري)'}
+              </Text>
+            </TouchableOpacity>
+            <View style={permitDialog.actions}>
+              <TouchableOpacity style={permitDialog.secondary} onPress={() => setForm(null)}>
+                <Text style={permitDialog.secondaryText}>إلغاء</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={permitDialog.primary} onPress={submitPermit} disabled={uploadMutation.isPending}>
+                {uploadMutation.isPending
+                  ? <ActivityIndicator color={Colors.textWhite} />
+                  : <Text style={permitDialog.primaryText}>حفظ</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {isLoading ? (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -147,6 +244,28 @@ export default function PermitsScreen() {
     </ScreenWrapper>
   );
 }
+
+const permitDialog = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: Spacing.lg },
+  box: { backgroundColor: Colors.background, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.md },
+  title: { ...Typography.subtitle, color: Colors.textPrimary, textAlign: 'right' },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    color: Colors.textPrimary,
+    textAlign: 'right',
+  },
+  attach: { flexDirection: 'row-reverse', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
+  attachText: { ...Typography.small, color: Colors.primary },
+  actions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
+  primary: { flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center' },
+  primaryText: { ...Typography.bodyBold, color: Colors.textWhite },
+  secondary: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center' },
+  secondaryText: { ...Typography.bodyBold, color: Colors.textSecondary },
+});
 
 const styles = StyleSheet.create({
   scrollView: {

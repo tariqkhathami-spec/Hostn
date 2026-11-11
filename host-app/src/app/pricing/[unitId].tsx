@@ -11,6 +11,7 @@ import {
   Switch,
   Alert,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, toWesternDigits } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Property, Unit, UnitPricing, UnitDiscount, CustomOffer } from '../../types';
 
@@ -133,6 +134,64 @@ export default function UnitPricingDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['unitOffers', unitId] });
     },
   });
+
+  const serverMessage = (error: any, fallback: string) => error?.response?.data?.message || fallback;
+
+  // Weekly / monthly discount percentage editor
+  const [percentEdit, setPercentEdit] = useState<{ type: string; value: string } | null>(null);
+  const updateDiscountMutation = useMutation({
+    mutationFn: ({ type, percentage }: { type: string; percentage: number }) =>
+      hostService.updateDiscount(unitId!, type, { percentage }),
+    onSuccess: () => {
+      setPercentEdit(null);
+      queryClient.invalidateQueries({ queryKey: ['unitDiscounts', unitId] });
+    },
+    onError: (error: any) => Alert.alert('خطأ', serverMessage(error, 'تعذّر حفظ نسبة الخصم')),
+  });
+  const savePercent = () => {
+    if (!percentEdit) return;
+    const percentage = Number(toWesternDigits(percentEdit.value));
+    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+      Alert.alert('خطأ', 'أدخل نسبة بين 0 و 100');
+      return;
+    }
+    updateDiscountMutation.mutate({ type: percentEdit.type, percentage });
+  };
+
+  // Custom offer: a discount applied to a range of dates
+  const [offerForm, setOfferForm] = useState<{ name: string; percent: string; start: string; end: string } | null>(null);
+  const createOfferMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => hostService.createOffer(unitId!, data),
+    onSuccess: () => {
+      setOfferForm(null);
+      queryClient.invalidateQueries({ queryKey: ['unitOffers', unitId] });
+    },
+    onError: (error: any) => Alert.alert('خطأ', serverMessage(error, 'تعذّر إضافة العرض')),
+  });
+  const saveOffer = () => {
+    if (!offerForm) return;
+    const name = offerForm.name.trim();
+    const discountPercent = Number(toWesternDigits(offerForm.percent));
+    const start = toWesternDigits(offerForm.start.trim());
+    const end = toWesternDigits(offerForm.end.trim()) || start;
+    const isDay = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
+    if (!name) return Alert.alert('خطأ', 'اكتب اسم العرض');
+    if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 100) {
+      return Alert.alert('خطأ', 'أدخل نسبة خصم بين 1 و 100');
+    }
+    if (!isDay(start) || !isDay(end) || end < start) {
+      return Alert.alert('خطأ', 'اكتب التاريخ بالصيغة 2026-12-31، وتاريخ النهاية بعد البداية');
+    }
+    const selectedDates: string[] = [];
+    const cursor = new Date(`${start}T00:00:00Z`);
+    const last = new Date(`${end}T00:00:00Z`);
+    while (cursor <= last && selectedDates.length <= 92) {
+      selectedDates.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    if (selectedDates.length > 92) return Alert.alert('خطأ', 'مدة العرض لا تتجاوز 3 أشهر');
+    createOfferMutation.mutate({ name, discountPercent, selectedDates });
+  };
 
   const handleSaveRate = useCallback(
     (rateKey: string) => {
@@ -331,6 +390,7 @@ export default function UnitPricingDetailScreen() {
             'خصم عند الحجز لمدة أسبوع',
             handleToggleDiscount,
             toggleDiscountMutation.isPending,
+            (type, current) => setPercentEdit({ type, value: String(current || '') }),
           )}
 
           {/* Monthly Discount */}
@@ -341,6 +401,7 @@ export default function UnitPricingDetailScreen() {
             'خصم عند الحجز لمدة شهر',
             handleToggleDiscount,
             toggleDiscountMutation.isPending,
+            (type, current) => setPercentEdit({ type, value: String(current || '') }),
           )}
 
           {/* Custom Offers */}
@@ -378,12 +439,99 @@ export default function UnitPricingDetailScreen() {
           )}
 
           {/* Add Offer Button */}
-          <TouchableOpacity style={styles.addOfferButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.addOfferButton}
+            activeOpacity={0.7}
+            onPress={() => setOfferForm({ name: '', percent: '', start: '', end: '' })}
+          >
             <Ionicons name="add-circle-outline" size={22} color={Colors.textWhite} />
             <Text style={styles.addOfferText}>{'أضف عرض'}</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
+
+      {/* Discount percentage dialog */}
+      <Modal visible={!!percentEdit} transparent animationType="fade" onRequestClose={() => setPercentEdit(null)}>
+        <View style={dialog.backdrop}>
+          <View style={dialog.box}>
+            <Text style={dialog.title}>{'نسبة الخصم (%)'}</Text>
+            <TextInput
+              style={dialog.input}
+              keyboardType="number-pad"
+              value={percentEdit?.value ?? ''}
+              onChangeText={(value) => setPercentEdit((prev) => (prev ? { ...prev, value } : prev))}
+              placeholder="10"
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={3}
+              autoFocus
+            />
+            <View style={dialog.actions}>
+              <TouchableOpacity style={dialog.secondary} onPress={() => setPercentEdit(null)}>
+                <Text style={dialog.secondaryText}>{'إلغاء'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={dialog.primary} onPress={savePercent} disabled={updateDiscountMutation.isPending}>
+                {updateDiscountMutation.isPending
+                  ? <ActivityIndicator color={Colors.textWhite} />
+                  : <Text style={dialog.primaryText}>{'حفظ'}</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* New offer dialog */}
+      <Modal visible={!!offerForm} transparent animationType="fade" onRequestClose={() => setOfferForm(null)}>
+        <View style={dialog.backdrop}>
+          <View style={dialog.box}>
+            <Text style={dialog.title}>{'عرض جديد'}</Text>
+            <TextInput
+              style={dialog.input}
+              value={offerForm?.name ?? ''}
+              onChangeText={(name) => setOfferForm((prev) => (prev ? { ...prev, name } : prev))}
+              placeholder="اسم العرض"
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={100}
+            />
+            <TextInput
+              style={dialog.input}
+              keyboardType="number-pad"
+              value={offerForm?.percent ?? ''}
+              onChangeText={(percent) => setOfferForm((prev) => (prev ? { ...prev, percent } : prev))}
+              placeholder="نسبة الخصم %"
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={3}
+            />
+            <TextInput
+              style={dialog.input}
+              value={offerForm?.start ?? ''}
+              onChangeText={(start) => setOfferForm((prev) => (prev ? { ...prev, start } : prev))}
+              placeholder={"من تاريخ \u2066 2026-12-01 \u2069"}
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={10}
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={dialog.input}
+              value={offerForm?.end ?? ''}
+              onChangeText={(end) => setOfferForm((prev) => (prev ? { ...prev, end } : prev))}
+              placeholder={"إلى تاريخ \u2066 2026-12-05 \u2069"}
+              placeholderTextColor={Colors.textTertiary}
+              maxLength={10}
+              autoCapitalize="none"
+            />
+            <View style={dialog.actions}>
+              <TouchableOpacity style={dialog.secondary} onPress={() => setOfferForm(null)}>
+                <Text style={dialog.secondaryText}>{'إلغاء'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={dialog.primary} onPress={saveOffer} disabled={createOfferMutation.isPending}>
+                {createOfferMutation.isPending
+                  ? <ActivityIndicator color={Colors.textWhite} />
+                  : <Text style={dialog.primaryText}>{'إضافة'}</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 }
@@ -395,6 +543,7 @@ function renderDiscountCard(
   description: string,
   onToggle: (type: string) => void,
   isPending: boolean,
+  onEditPercent: (type: string, current: number) => void,
 ) {
   const percentage = discount?.percentage ?? 0;
   const isActive = discount?.active ?? false;
@@ -414,15 +563,39 @@ function renderDiscountCard(
           <Text style={styles.discountDescription}>{description}</Text>
         </View>
       </View>
-      <View style={styles.discountPercentageContainer}>
-        <Text style={styles.discountPercentageLabel}>{'نسبة الخصم'}</Text>
+      <TouchableOpacity
+        style={styles.discountPercentageContainer}
+        activeOpacity={0.7}
+        onPress={() => onEditPercent(type, percentage)}
+      >
+        <Text style={styles.discountPercentageLabel}>{'نسبة الخصم (اضغط للتعديل)'}</Text>
         <Text style={[styles.discountPercentage, isActive && styles.discountPercentageActive]}>
           {percentage}%
         </Text>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
+
+const dialog = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: Spacing.lg },
+  box: { backgroundColor: Colors.background, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.md },
+  title: { ...Typography.subtitle, color: Colors.textPrimary, textAlign: 'right' },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    color: Colors.textPrimary,
+    textAlign: 'right',
+  },
+  actions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
+  primary: { flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center' },
+  primaryText: { ...Typography.bodyBold, color: Colors.textWhite },
+  secondary: { flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center' },
+  secondaryText: { ...Typography.bodyBold, color: Colors.textSecondary },
+});
 
 const styles = StyleSheet.create({
   centered: {

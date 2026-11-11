@@ -9,7 +9,7 @@ export const API_BASE_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
 export const APP_CONFIG = {
   appName: 'Hostn Host',
   version: '1.0.0',
-  supportPhone: '9200 07858',
+  supportPhone: '0500407888',
   supportHours: '10:00 AM - 12:00 AM',
   defaultLocale: 'ar' as const,
   otpLength: 4,

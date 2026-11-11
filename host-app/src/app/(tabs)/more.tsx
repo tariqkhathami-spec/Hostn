@@ -16,7 +16,7 @@ const menuItems = [
   { label: 'more.financial', icon: 'cash-outline', route: '/financial' },
   { label: 'more.permits', icon: 'document-text-outline', route: '/permits' },
   { label: 'more.pricing', icon: 'pricetag-outline', route: '/pricing' },
-  { label: 'more.protection', icon: 'shield-checkmark-outline', route: '/protection' },
+  // Host protection programme is hidden until its real terms are confirmed.
   { label: 'more.settings', icon: 'settings-outline', route: '/settings' },
   { label: 'more.suggestions', icon: 'bulb-outline', route: '/suggestions' },
   { label: 'more.articles', icon: 'newspaper-outline', route: '/content/articles' },
