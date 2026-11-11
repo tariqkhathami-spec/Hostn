@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentsService } from '../../services/payments.service';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import type { PaymentMethod } from '../../types';
 
@@ -51,7 +51,7 @@ export default function PaymentMethodsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('account.paymentMethods')}</Text>
         <Pressable onPress={handleAddCard} hitSlop={12} accessibilityLabel={t('payment.addCard')}>

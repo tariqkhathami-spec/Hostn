@@ -8,7 +8,7 @@ import { format, addDays } from 'date-fns';
 import { useSearchStore } from '../../store/searchStore';
 import { useLanguage } from '../../i18n';
 import { setCalendarLocale } from '../../i18n/calendarLocale';
-import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, BACK_ICON, FORWARD_ICON } from '../../constants/theme';
 
 export default function DatesScreen() {
   const router = useRouter();
@@ -82,7 +82,7 @@ export default function DatesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('search.selectDates')}</Text>
         <View style={{ width: 24 }} />
@@ -109,7 +109,7 @@ export default function DatesScreen() {
           <Text style={styles.dateLabel}>{t('search.checkIn')}</Text>
           <Text style={styles.dateValue}>{startDate ?? t('search.selectDate')}</Text>
         </View>
-        <Ionicons name="arrow-forward" size={20} color={Colors.textTertiary} />
+        <Ionicons name={FORWARD_ICON} size={20} color={Colors.textTertiary} />
         <View style={styles.dateBox}>
           <Text style={styles.dateLabel}>{t('search.checkOut')}</Text>
           <Text style={styles.dateValue}>{endDate ?? t('search.selectDate')}</Text>

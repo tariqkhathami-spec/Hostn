@@ -13,7 +13,7 @@ import { bookingsService } from '../../services/bookings.service';
 import { couponsService } from '../../services/coupons.service';
 import { useSearchStore } from '../../store/searchStore';
 import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 
 function calculateDateRangePrice(
@@ -355,7 +355,7 @@ export default function CheckoutScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('checkout.title')}</Text>
         <View style={{ width: 24 }} />

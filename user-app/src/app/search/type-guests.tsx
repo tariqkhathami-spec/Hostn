@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSearchStore } from '../../store/searchStore';
 import { useLanguage, type TranslationKey } from '../../i18n';
 import { PROPERTY_TYPES } from '../../constants/config';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 
 export default function TypeGuestsScreen() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function TypeGuestsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('search.propertyGuests')}</Text>
         <View style={{ width: 24 }} />

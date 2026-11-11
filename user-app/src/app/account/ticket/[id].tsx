@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supportService } from '../../../services/support.service';
 import { formatDate } from '../../../utils/format';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../../constants/theme';
 import type { SupportTicket, SupportMessage } from '../../../types';
 
 const STATUS_COLORS: Record<SupportTicket['status'], string> = {
@@ -111,7 +111,7 @@ export default function TicketDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
           </Pressable>
           <Text style={styles.title}>Ticket</Text>
           <View style={{ width: 24 }} />
@@ -130,7 +130,7 @@ export default function TicketDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
           </Pressable>
           <Text style={styles.title}>Ticket</Text>
           <View style={{ width: 24 }} />
@@ -147,7 +147,7 @@ export default function TicketDetailScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>
           Ticket

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { contactService } from '../../services/contact.service';
 import { useLanguage } from '../../i18n';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 
 export default function ContactScreen() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function ContactScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('account.contactUs')}</Text>
         <View style={{ width: 24 }} />

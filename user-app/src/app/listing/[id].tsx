@@ -20,7 +20,7 @@ import { listingsService } from '../../services/listings.service';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency, formatRating } from '../../utils/format';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import { translateDistrict, translateCity } from '../../constants/districts';
 
@@ -251,7 +251,7 @@ export default function ListingDetailScreen() {
           )}
           <View style={styles.imageOverlay}>
             <Pressable style={styles.overlayButton} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+              <Ionicons name={BACK_ICON} size={22} color={Colors.textPrimary} />
             </Pressable>
             <View style={styles.overlayRight}>
               <Pressable style={styles.overlayButton} onPress={handleShare}>

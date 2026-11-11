@@ -8,7 +8,7 @@ import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/authStore';
 import { formatPhone, toWesternDigits } from '../../utils/format';
 import { useLanguage } from '../../i18n';
-import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 
 const HOST_APP_DEEP_LINK = 'hostn-host://';
 const HOST_APP_WEB_URL = 'https://business.hostn.co';
@@ -138,7 +138,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('profile.title')}</Text>
         <View style={{ width: 24 }} />

@@ -83,7 +83,7 @@ export default function PhoneLoginScreen() {
               />
             </View>
             <View style={styles.prefixContainer}>
-              <Text style={styles.prefixText}>966+</Text>
+              <Text style={styles.prefixText}>{'\u2066+966\u2069'}</Text>
             </View>
           </View>
 

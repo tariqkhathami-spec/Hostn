@@ -19,7 +19,7 @@ import { toWesternDigits } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
 import { formatPhone } from '../../utils/format';
 import { useLanguage } from '../../i18n';
-import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 
 const OTP_LENGTH = 4;
 
@@ -99,7 +99,7 @@ export default function OtpScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
 
         <View style={styles.header}>

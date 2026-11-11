@@ -16,7 +16,7 @@ import { Image } from 'expo-image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsService } from '../../services/bookings.service';
 import { formatCurrency, formatDate, formatDateRange, getNights } from '../../utils/format';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON, FORWARD_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import type { Booking } from '../../types';
 
@@ -146,7 +146,7 @@ export default function BookingDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={22} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>{t('booking.title')}</Text>
         <View style={{ width: 38 }} />
@@ -195,7 +195,7 @@ export default function BookingDetailScreen() {
               <Text style={styles.dateValue}>{formatDate(booking.checkIn)}</Text>
             </View>
             <View style={styles.dateDivider}>
-              <Ionicons name="arrow-forward" size={18} color={Colors.textTertiary} />
+              <Ionicons name={FORWARD_ICON} size={18} color={Colors.textTertiary} />
               <Text style={styles.nightsText}>{nights} {nights !== 1 ? t('booking.nights') : t('booking.night')}</Text>
             </View>
             <View style={styles.dateColumn}>

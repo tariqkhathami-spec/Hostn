@@ -16,7 +16,7 @@ import { Image } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
 import { hostsService } from '../../services/hosts.service';
 import { formatCurrency, formatDate, formatRating } from '../../utils/format';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import type { Listing, Review } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -122,7 +122,7 @@ export default function HostProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={22} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>Host Profile</Text>
         <View style={{ width: 38 }} />

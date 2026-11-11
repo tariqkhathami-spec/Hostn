@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { walletService } from '../../services/wallet.service';
 import { formatCurrency, formatDate } from '../../utils/format';
-import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 
 export default function WalletScreen() {
@@ -29,7 +29,7 @@ export default function WalletScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{l({ en: 'Wallet', ar: 'المحفظة' })}</Text>
         <View style={{ width: 24 }} />

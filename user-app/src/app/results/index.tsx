@@ -8,7 +8,7 @@ import { listingsService } from '../../services/listings.service';
 import { useSearchStore } from '../../store/searchStore';
 import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/auth.service';
-import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import ListingCard from '../../components/listing/ListingCard';
 
@@ -104,7 +104,7 @@ export default function ResultsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{cityName}</Text>
         <Pressable onPress={() => router.push('/filters')} hitSlop={12}>

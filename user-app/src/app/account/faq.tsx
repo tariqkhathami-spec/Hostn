@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage, type TranslationKey } from '../../i18n';
-import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 
 const FAQ_KEYS: { qKey: TranslationKey; aKey: TranslationKey }[] = [
   { qKey: 'faq.q1', aKey: 'faq.a1' },
@@ -34,7 +34,7 @@ export default function FaqScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('account.faq')}</Text>
         <View style={{ width: 24 }} />

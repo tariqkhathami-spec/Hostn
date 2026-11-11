@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatService } from '../../services/chat.service';
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/format';
-import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
+import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import type { Message } from '../../types';
 
@@ -196,7 +196,7 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>{displayName}</Text>
         <Pressable onPress={() => setShowMenu(true)} hitSlop={12}>

@@ -113,3 +113,7 @@ export const Shadows = {
 } as const;
 
 export const isRTL = I18nManager.isRTL;
+// "Back" points towards where the previous screen came from: left in
+// left-to-right layouts, right in Arabic.
+export const BACK_ICON = I18nManager.isRTL ? 'arrow-forward' : 'arrow-back';
+export const FORWARD_ICON = I18nManager.isRTL ? 'arrow-back' : 'arrow-forward';
