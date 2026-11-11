@@ -39,7 +39,10 @@ export default function SettingsScreen() {
     onSuccess: async () => {
       setCodeVisible(false);
       await logout();
-      router.replace('/(auth)/onboarding' as any);
+      // Same destination as signing out. '/(auth)/onboarding' is the host
+      // introduction programme, which made a deleted account land on a
+      // screen meant for signed-in hosts.
+      router.replace('/(auth)/phone-entry' as any);
     },
     onError: (error: any) => {
       // First attempt: the server sends a code (or asks for the password).
