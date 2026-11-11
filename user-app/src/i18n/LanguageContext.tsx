@@ -36,7 +36,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       setCurrentLanguage(lang);
       I18nManager.allowRTL(lang === 'ar');
       I18nManager.forceRTL(lang === 'ar');
-    }).catch(() => {});
+    }).catch(() => {
+      // If the saved preference cannot be read, still lay out for the default
+      // language (Arabic) rather than leaving Arabic text left-to-right.
+      I18nManager.allowRTL(true);
+      I18nManager.forceRTL(true);
+    });
   }, []);
 
   const setLanguage = useCallback((lang: Language) => {

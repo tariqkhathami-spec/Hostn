@@ -580,7 +580,8 @@ function renderDiscountCard(
 const dialog = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: Spacing.lg },
   box: { backgroundColor: Colors.background, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.md },
-  title: { ...Typography.subtitle, color: Colors.textPrimary, textAlign: 'right' },
+  // No explicit textAlign: Arabic text aligns itself, and 'right' is mirrored on iOS.
+  title: { ...Typography.subtitle, color: Colors.textPrimary },
   input: {
     borderWidth: 1,
     borderColor: Colors.border,
