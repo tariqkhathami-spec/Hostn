@@ -371,6 +371,10 @@ export const adminApi = {
   getPropertyUnits: (propertyId: string, params?: Record<string, unknown>) =>
     api.get(`/admin/properties/${propertyId}/units`, { params }),
   toggleUnit: (id: string) => api.patch(`/admin/units/${id}/toggle`),
+  // Tourism permits
+  getLicenses: (params?: Record<string, unknown>) => api.get('/admin/licenses', { params }),
+  reviewLicense: (unitId: string, data: { action: 'approve' | 'reject'; reason?: string }) =>
+    api.put(`/admin/licenses/${unitId}`, data),
   // Logs
   getLogs: (params?: Record<string, unknown>) => api.get('/admin/logs', { params }),
   deleteProperty: (id: string) => api.delete(`/properties/${id}`),

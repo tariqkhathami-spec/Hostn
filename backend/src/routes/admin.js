@@ -21,6 +21,7 @@ const {
   getLogs,
 } = require('../controllers/adminController');
 const { mongoIdParam } = require('../middleware/validate');
+const { getLicenses, reviewLicense } = require('../controllers/adminLicenseController');
 
 // All admin routes require auth + admin role
 router.use(protect);
@@ -45,6 +46,10 @@ router.post('/properties/:id/moderate', authorizePermission(PERMISSIONS.MODERATE
 // Units
 router.get('/properties/:propertyId/units', mongoIdParam('propertyId'), authorizePermission(PERMISSIONS.VIEW_PROPERTIES), getPropertyUnits);
 router.patch('/units/:id/toggle', mongoIdParam(), authorizePermission(PERMISSIONS.MODERATE_PROPERTIES), toggleUnitStatus);
+
+// Tourism permits — hosts submit, admins approve or reject
+router.get('/licenses', authorizePermission(PERMISSIONS.VIEW_PROPERTIES), getLicenses);
+router.put('/licenses/:unitId', authorizePermission(PERMISSIONS.MODERATE_PROPERTIES), reviewLicense);
 
 // Bookings — super + support + finance (view), super + support (manage)
 router.get('/bookings', authorizePermission(PERMISSIONS.VIEW_BOOKINGS), getBookings);

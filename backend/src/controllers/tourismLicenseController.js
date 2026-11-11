@@ -101,10 +101,14 @@ exports.upsertLicense = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Determine status based on expiry date
-    let status = 'active';
+    // A submitted permit waits for admin review. It stays active only when
+    // the host re-saves the same, already approved, permit number.
+    const previous = unit.tourismLicense || {};
+    let status = 'pending';
     if (expiryDate && new Date(expiryDate) < new Date()) {
       status = 'expired';
+    } else if (previous.status === 'active' && previous.licenseNumber === licenseNumber) {
+      status = 'active';
     }
 
     // Update the tourism license sub-document

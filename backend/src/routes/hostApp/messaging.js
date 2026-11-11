@@ -166,7 +166,7 @@ router.get('/conversations', async (req, res, next) => {
     const status = typeof req.query.status === 'string' ? req.query.status : '';
     const search = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase().slice(0, 100) : '';
 
-    if (status && status !== 'all' && !CONVERSATION_FILTERS[status]) {
+    if (status && status !== 'all' && !Object.hasOwn(CONVERSATION_FILTERS, status)) {
       return res.status(400).json({ success: false, message: 'Invalid status filter' });
     }
 

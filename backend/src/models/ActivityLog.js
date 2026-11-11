@@ -60,6 +60,23 @@ const activityLogSchema = new mongoose.Schema(
         'webhook_amount_mismatch',
         // Reviews
         'review_created',
+        // Buy-now-pay-later (Tabby / Tamara). These were written by
+        // bnplController but missing here, so the log write failed validation
+        // and took the payment request down with it.
+        'bnpl_tabby_initiated',
+        'bnpl_tabby_completed',
+        'bnpl_tabby_failed',
+        'bnpl_tamara_initiated',
+        'bnpl_tamara_completed',
+        'bnpl_tamara_failed',
+        'bnpl_webhook_tabby',
+        'bnpl_webhook_tamara',
+        // Admin removed a booking; account owner deleted their account
+        'booking_deleted',
+        'account_deleted',
+        // Tourism permit review
+        'license_approved',
+        'license_rejected',
       ],
     },
     target: {

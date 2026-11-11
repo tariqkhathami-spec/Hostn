@@ -24,6 +24,11 @@ const hostClaimSchema = new mongoose.Schema(
 );
 
 hostClaimSchema.index({ host: 1, createdAt: -1 });
-hostClaimSchema.index({ booking: 1 });
+// One open claim per booking, enforced by the database (the handler's own
+// check can be raced by parallel requests).
+hostClaimSchema.index(
+  { booking: 1 },
+  { unique: true, partialFilterExpression: { status: { $in: ['pending', 'under_review'] } } }
+);
 
 module.exports = mongoose.model('HostClaim', hostClaimSchema);

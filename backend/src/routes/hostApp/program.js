@@ -316,11 +316,25 @@ router.post('/claims', async (req, res, next) => {
 
     // The booking must be on one of this host's properties.
     const booking = await Booking.findOne(isId(rawRef) ? { _id: rawRef } : { reference: rawRef.toUpperCase() })
-      .select('_id property reference')
+      .select('_id property reference status checkIn checkOut pricing.total')
       .lean();
     const owned = booking && (await Property.exists({ _id: booking.property, host: req.user._id }));
     if (!owned) {
       return res.status(404).json({ success: false, message: 'الحجز غير موجود' });
+    }
+
+    // A claim is for a stay that actually took place, filed within 14 days of
+    // check-out, and for no more than a sane multiple of what the stay cost.
+    const now = new Date();
+    const stayed = ['confirmed', 'completed'].includes(booking.status) && new Date(booking.checkIn) <= now;
+    if (!stayed) {
+      return res.status(400).json({ success: false, message: 'يمكن تقديم المطالبة بعد بدء إقامة الضيف فقط' });
+    }
+    if (now.getTime() - new Date(booking.checkOut).getTime() > 14 * 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ success: false, message: 'انتهت مهلة تقديم المطالبة (14 يوماً بعد المغادرة)' });
+    }
+    if (amount > Math.max(5000, (booking.pricing?.total || 0) * 3)) {
+      return res.status(400).json({ success: false, message: 'مبلغ المطالبة أكبر من الحد المسموح' });
     }
 
     const open = await HostClaim.exists({
