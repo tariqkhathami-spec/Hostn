@@ -226,7 +226,7 @@ router.get('/transfer-duration', wrap(async (req, res) => {
 
 router.put('/transfer-duration', wrap(async (req, res) => {
   const body = req.body || {};
-  const type = DURATION_FROM_APP[body.type];
+  const type = typeof body.type === 'string' && Object.hasOwn(DURATION_FROM_APP, body.type) ? DURATION_FROM_APP[body.type] : null;
   if (!type) return fail(res, 400, 'type must be one of: direct_48h, threshold, weekly');
 
   const set = { 'transferDuration.type': type };

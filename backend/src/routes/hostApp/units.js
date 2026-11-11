@@ -104,7 +104,8 @@ function parseDate(value) {
 
 function toNumber(value) {
   if (typeof value === 'number') return value;
-  if (typeof value === 'string' && value.trim() !== '') return Number(value);
+  // Plain decimals only: Number() would also accept '0x10', '1e308', ' 5 '.
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value.trim());
   return NaN;
 }
 
@@ -359,7 +360,7 @@ router.get('/units/:unitId/discounts', wrap(async (req, res) => {
 
 // POST /host/units/:unitId/discounts/:type  { percentage, active?, stackable? }
 router.post('/units/:unitId/discounts/:type', wrap(async (req, res) => {
-  const fields = DISCOUNT_FIELDS[req.params.type];
+  const fields = Object.hasOwn(DISCOUNT_FIELDS, req.params.type) ? DISCOUNT_FIELDS[req.params.type] : null;
   if (!fields) return fail(res, 400, "Discount type must be 'weekly' or 'monthly'");
   const body = req.body && typeof req.body === 'object' ? req.body : {};
 
@@ -393,7 +394,7 @@ router.post('/units/:unitId/discounts/:type', wrap(async (req, res) => {
 
 // PATCH /host/units/:unitId/discounts/:type/toggle
 router.patch('/units/:unitId/discounts/:type/toggle', wrap(async (req, res) => {
-  const fields = DISCOUNT_FIELDS[req.params.type];
+  const fields = Object.hasOwn(DISCOUNT_FIELDS, req.params.type) ? DISCOUNT_FIELDS[req.params.type] : null;
   if (!fields) return fail(res, 400, "Discount type must be 'weekly' or 'monthly'");
 
   const found = await unitFromReq(req, res, 'unitId');
@@ -488,18 +489,34 @@ router.post('/units/:unitId/offers', wrap(async (req, res) => {
   if (!Array.isArray(rawDates) || rawDates.length === 0) return fail(res, 400, 'selectedDates is required');
   if (rawDates.length > MAX_OFFER_DATES) return fail(res, 400, `An offer can cover at most ${MAX_OFFER_DATES} dates`);
   const today = dateKey(new Date());
+  // Bound how far ahead and how much a unit can accumulate: offers are stored
+  // on the unit document, which the public unit endpoint returns.
+  const horizon = new Date();
+  horizon.setMonth(horizon.getMonth() + 24);
+  const maxOfferDay = dateKey(horizon);
   const keys = new Set();
   for (const raw of rawDates) {
     const day = parseDay(raw);
     if (!day) return fail(res, 400, 'selectedDates must be valid dates (YYYY-MM-DD)');
     const key = dateKey(day);
     if (key < today) return fail(res, 400, 'Offer dates cannot be in the past');
+    if (key > maxOfferDay) return fail(res, 400, 'Offer dates cannot be more than 24 months ahead');
     keys.add(key);
   }
 
   const found = await unitFromReq(req, res, 'unitId');
   if (!found) return;
   const { unit } = found;
+
+  if ((unit.offers || []).length >= 50) return fail(res, 400, 'This unit already has the maximum number of offers (50)');
+  // Drop dated-price entries that are already in the past and add nothing.
+  if (Array.isArray(unit.datePricing)) {
+    const stale = unit.datePricing.filter((d) => d && d.date && dateKey(new Date(d.date)) < today && !d.isBlocked);
+    stale.forEach((d) => unit.datePricing.pull(d._id));
+    if (unit.datePricing.length + keys.size > 800) {
+      return fail(res, 400, 'This unit has too many dated prices; remove old offers first');
+    }
+  }
 
   // A date belongs to one offer at a time: take these dates out of older offers.
   for (const other of [...unit.offers]) {
@@ -684,7 +701,12 @@ router.post('/units/:unitId/permit', handlePermitUpload, wrap(async (req, res) =
   // already approved, number is saved again.
   let status = 'pending';
   if (expiry && new Date(expiry) < new Date()) status = 'expired';
-  else if (number && prev.status === 'active' && prev.licenseNumber === number) status = 'active';
+  else if (
+    number && prev.status === 'active' && prev.licenseNumber === number && !documentUrl
+    && String(expiry || '') === String(prev.expiryDate || '')
+    && (str(body.nationalId, 30) || prev.nationalId || '') === (prev.nationalId || '')
+    && (str(body.commercialRegister, 30) || prev.commercialRegister || '') === (prev.commercialRegister || '')
+  ) status = 'active'; // nothing about the approved permit changed
 
   unit.tourismLicense = {
     workType: effectiveWorkType,

@@ -83,10 +83,15 @@ router.post('/onboarding/finish', async (req, res, next) => {
 
 // Host mobile app routes: paths the host app calls that map onto existing
 // models. One file per feature area.
-router.use(require('./hostApp/units'));
-router.use(require('./hostApp/finance'));
-router.use(require('./hostApp/messaging'));
-router.use(require('./hostApp/program'));
+// These are for host accounts only. Admins also pass this router's guard, so
+// skip the host app routers for them: they manage hosts through /admin/*,
+// with its per-permission checks and activity log.
+const hostOnly = (sub) => (req, res, next) =>
+  (req.user && req.user.userType === 'host' ? sub(req, res, next) : next());
+router.use(hostOnly(require('./hostApp/units')));
+router.use(hostOnly(require('./hostApp/finance')));
+router.use(hostOnly(require('./hostApp/messaging')));
+router.use(hostOnly(require('./hostApp/program')));
 
 // Dashboard
 router.get('/stats', getDashboardStats);

@@ -328,7 +328,7 @@ const unitSchema = new mongoose.Schema(
 
     // ── Capacity ─────────────────────────────────────────────────
     capacity: {
-      maxGuests: { type: Number, default: 1, min: 1 },
+      maxGuests: { type: Number, default: 1, min: 1, max: 100 },
     },
 
     // ── Ratings (per-unit) ───────────────────────────────────────
