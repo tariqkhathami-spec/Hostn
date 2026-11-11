@@ -1,14 +1,30 @@
-require('dotenv').config({ path: '../.env' });
+const path = require('path');
+// Load backend/.env regardless of the directory the script is run from
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 // Load models
-const User = require('../src/models/User');
+const User = require('../src/models/User'); // legacy collection — cleared only
+const Guest = require('../src/models/Guest');
+const Host = require('../src/models/Host');
+const Admin = require('../src/models/Admin');
+const Unit = require('../src/models/Unit');
 const Property = require('../src/models/Property');
 const Booking = require('../src/models/Booking');
 const Review = require('../src/models/Review');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/hostn';
+
+// This script DELETES all accounts, properties, units, bookings and reviews.
+// Refuse to run against anything but a local database unless --force is passed.
+const isLocalDb = /^mongodb:\/\/(localhost|127\.0\.0\.1|\[::1\]|mongo)(:\d+)?\//.test(MONGODB_URI);
+if (!isLocalDb && !process.argv.includes('--force')) {
+  console.error('❌ Refusing to seed: MONGODB_URI is not a local database.');
+  console.error('   Seeding wipes existing data. Re-run with --force if you really mean it.');
+  process.exit(1);
+}
+
+const MODEL_BY_ROLE = { guest: Guest, host: Host, admin: Admin };
 
 const cities = ['Riyadh', 'Jeddah', 'Abha', 'Khobar', 'Mecca', 'Taif', 'Al Ula', 'Hail'];
 
@@ -284,6 +300,10 @@ async function seed() {
     console.log('🗑️  Clearing existing data...');
     await Promise.all([
       User.deleteMany({}),
+      Guest.deleteMany({}),
+      Host.deleteMany({}),
+      Admin.deleteMany({}),
+      Unit.deleteMany({}),
       Property.deleteMany({}),
       Booking.deleteMany({}),
       Review.deleteMany({}),
@@ -291,14 +311,14 @@ async function seed() {
 
     // Create users
     console.log('👥 Creating users...');
-    const users = await User.insertMany(
-      await Promise.all(
-        seedUsers.map(async (u) => ({
-          ...u,
-          password: await bcrypt.hash(u.password, 12),
-        }))
-      )
-    );
+    // Accounts live in separate Guest / Host / Admin collections. Passwords are
+    // passed in plain text: each model's pre-save hook hashes them exactly once.
+    const users = [];
+    for (const { role, ...fields } of seedUsers) {
+      users.push(
+        await MODEL_BY_ROLE[role].create({ ...fields, isVerified: true, phoneVerified: true })
+      );
+    }
 
     const [admin, host1, host2, guest1, guest2] = users;
     console.log(`   ✅ Created ${users.length} users`);
@@ -306,6 +326,7 @@ async function seed() {
     // Create properties
     console.log('🏠 Creating properties...');
     const properties = [];
+    const units = [];
 
     for (const template of propertyTemplates) {
       const hostUser = Math.random() > 0.5 ? host1 : host2;
@@ -357,9 +378,36 @@ async function seed() {
       });
 
       properties.push(property);
+
+      // Listings only appear when a property has at least one active unit
+      const nightly = template.perNight;
+      const unit = await Unit.create({
+        property: property._id,
+        nameEn: 'Unit 1',
+        nameAr: 'الوحدة 1',
+        description: template.description,
+        isActive: true,
+        images: typeImages.map((url) => ({ url })),
+        pricing: {
+          sunday: nightly,
+          monday: nightly,
+          tuesday: nightly,
+          wednesday: nightly,
+          thursday: nightly,
+          friday: nightly,
+          saturday: nightly,
+          cleaningFee: Math.floor(nightly * 0.1),
+          discountPercent: template.discountPercent,
+        },
+        capacity: { maxGuests: template.maxGuests },
+        hasBedrooms: true,
+        bedrooms: { count: template.bedrooms },
+        bathroomCount: template.bathrooms,
+      });
+      units.push(unit);
     }
 
-    console.log(`   ✅ Created ${properties.length} properties`);
+    console.log(`   ✅ Created ${properties.length} properties with ${units.length} units`);
 
     // Create bookings
     console.log('📅 Creating bookings...');
@@ -384,6 +432,7 @@ async function seed() {
 
       const booking = await Booking.create({
         property: property._id,
+        unit: units[i % units.length]._id,
         guest: guest._id,
         checkIn,
         checkOut,

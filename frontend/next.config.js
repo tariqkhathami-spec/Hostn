@@ -1,3 +1,15 @@
+// When NEXT_PUBLIC_API_URL is an absolute URL (local development against a
+// backend on another port), allow that origin — and its WebSocket twin — in the
+// CSP. In production the API URL is relative ('/api/v1'), so nothing is added.
+const apiConnectSources = (() => {
+  try {
+    const { origin } = new URL(process.env.NEXT_PUBLIC_API_URL);
+    return [origin, origin.replace(/^http/, 'ws')];
+  } catch {
+    return [];
+  }
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -69,7 +81,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.moyasar.com",
               "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://api.dicebear.com https://cdn.moyasar.com https://maps.googleapis.com https://maps.gstatic.com https://*.ggpht.com https://*.amazonaws.com https://*.cloudfront.net",
-              "connect-src 'self' http://localhost:5000 https://api.moyasar.com https://*.mongodb.net https://maps.googleapis.com",
+              `connect-src 'self' http://localhost:5000 ${apiConnectSources.join(' ')} https://api.moyasar.com https://*.mongodb.net https://maps.googleapis.com`.replace(/\s+/g, ' '),
               "frame-src 'self' https://cdn.moyasar.com https://api.moyasar.com",
               "object-src 'none'",
               "base-uri 'self'",
