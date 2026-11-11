@@ -800,19 +800,33 @@ exports.cancelBooking = async (req, res, next) => {
 exports.getUnitBookedDates = async (req, res, next) => {
   try {
     const { unitId } = req.params;
+    if (!/^[a-f\d]{24}$/i.test(String(unitId))) {
+      return res.status(400).json({ success: false, message: 'Invalid unit ID' });
+    }
+
+    // Guests use this endpoint for availability, so dates are visible to any
+    // signed-in user — but guest names only to the unit's host or an admin.
+    const callerType = req.user?.constructor?.modelName;
+    let canSeeGuests = callerType === 'Admin';
+    if (callerType === 'Host') {
+      const unitDoc = await Unit.findById(unitId).select('property').lean();
+      if (unitDoc) {
+        canSeeGuests = Boolean(await Property.exists({ _id: unitDoc.property, host: req.user._id }));
+      }
+    }
 
     // Find all active bookings for this unit (pending, confirmed, or active holds)
-    const bookings = await Booking.find({
+    let bookingsQuery = Booking.find({
       unit: unitId,
       $or: [
         { status: { $in: ['pending', 'confirmed'] } },
         { status: 'held', holdExpiresAt: { $gt: new Date() } },
       ],
     })
-      .select('checkIn checkOut status guest')
-      .populate('guest', 'name')
-      .sort('checkIn')
-      .lean();
+      .select(canSeeGuests ? 'checkIn checkOut status guest' : 'checkIn checkOut status')
+      .sort('checkIn');
+    if (canSeeGuests) bookingsQuery = bookingsQuery.populate('guest', 'name');
+    const bookings = await bookingsQuery.lean();
 
     res.json({ success: true, data: bookings });
   } catch (error) {

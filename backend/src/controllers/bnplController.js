@@ -164,9 +164,23 @@ exports.verifyTabbyPayment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Verify with Tabby API
-    const providerPaymentId = tabbyPaymentId || payment.metadata?.tabbyPaymentId || payment.providerPaymentId;
+    if (!['pending', 'processing', 'failed'].includes(payment.status)) {
+      return res.status(400).json({ success: false, message: `Payment cannot be verified in status "${payment.status}"` });
+    }
+
+    // Verify with Tabby API.
+    // SECURITY: use only the provider id stored when this payment was
+    // initiated. A client-supplied id let one approved Tabby payment settle
+    // any other booking.
+    const providerPaymentId = payment.metadata?.tabbyPaymentId || payment.providerPaymentId;
+    if (!providerPaymentId) {
+      return res.status(400).json({ success: false, message: 'No Tabby payment is attached to this payment' });
+    }
     const tabbyPayment = await bnpl.getTabbyPayment(providerPaymentId);
+    const tabbyAmount = parseFloat(tabbyPayment?.amount);
+    if (Number.isFinite(tabbyAmount) && Math.abs(tabbyAmount - payment.amount) > 0.01) {
+      return res.status(400).json({ success: false, message: 'Payment amount mismatch' });
+    }
 
     const isApproved = tabbyPayment.status === 'AUTHORIZED' || tabbyPayment.status === 'CLOSED';
     const isCaptured = tabbyPayment.status === 'CLOSED';
@@ -392,9 +406,21 @@ exports.verifyTamaraPayment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    // Verify with Tamara API
-    const tamaraOrderId = orderId || payment.metadata?.tamaraOrderId || payment.providerPaymentId;
+    if (!['pending', 'processing', 'failed'].includes(payment.status)) {
+      return res.status(400).json({ success: false, message: `Payment cannot be verified in status "${payment.status}"` });
+    }
+
+    // Verify with Tamara API.
+    // SECURITY: use only the order id stored when this payment was initiated.
+    const tamaraOrderId = payment.metadata?.tamaraOrderId || payment.providerPaymentId;
+    if (!tamaraOrderId) {
+      return res.status(400).json({ success: false, message: 'No Tamara order is attached to this payment' });
+    }
     const tamaraOrder = await bnpl.getTamaraOrder(tamaraOrderId);
+    const tamaraAmount = parseFloat(tamaraOrder?.total_amount?.amount);
+    if (Number.isFinite(tamaraAmount) && Math.abs(tamaraAmount - payment.amount) > 0.01) {
+      return res.status(400).json({ success: false, message: 'Payment amount mismatch' });
+    }
 
     const isApproved = tamaraOrder.status === 'approved' || tamaraOrder.status === 'fully_captured';
 
@@ -487,8 +513,12 @@ exports.tabbyWebhook = async (req, res, next) => {
     const signature = req.headers['x-tabby-signature'] || req.headers['x-signature'];
     const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
 
-    // Verify signature (skip if secret not configured — log warning)
-    if (process.env.TABBY_SECRET_KEY && !bnpl.verifyTabbyWebhook(rawBody, signature)) {
+    // SECURITY: fail closed — an unsigned webhook must never mark a booking paid.
+    if (!process.env.TABBY_SECRET_KEY) {
+      console.error('[WEBHOOK] Tabby webhook rejected: TABBY_SECRET_KEY is not configured');
+      return res.status(503).json({ success: false, message: 'Webhook not configured' });
+    }
+    if (!bnpl.verifyTabbyWebhook(rawBody, signature)) {
       console.error('[WEBHOOK] Tabby signature verification failed');
       return res.status(403).json({ success: false, message: 'Invalid signature' });
     }
@@ -542,7 +572,12 @@ exports.tamaraWebhook = async (req, res, next) => {
   try {
     const notificationToken = req.headers['x-tamara-notification-token'];
 
-    if (process.env.TAMARA_NOTIFICATION_TOKEN && !bnpl.verifyTamaraWebhook(null, notificationToken)) {
+    // SECURITY: fail closed — an unauthenticated webhook must never mark a booking paid.
+    if (!process.env.TAMARA_NOTIFICATION_TOKEN) {
+      console.error('[WEBHOOK] Tamara webhook rejected: TAMARA_NOTIFICATION_TOKEN is not configured');
+      return res.status(503).json({ success: false, message: 'Webhook not configured' });
+    }
+    if (!bnpl.verifyTamaraWebhook(null, notificationToken)) {
       console.error('[WEBHOOK] Tamara notification token verification failed');
       return res.status(403).json({ success: false, message: 'Invalid token' });
     }
