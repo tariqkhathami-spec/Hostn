@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Users, Building, BookOpen, CreditCard, Loader2 } from 'lucide-react';
@@ -40,9 +42,21 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Account managers may not call /admin/*: send them to their own page
+  // without requesting the stats.
+  const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+  const isAccountManager = user?.adminRole === 'account_manager';
+
   useEffect(() => {
+    if (authLoading) return;
+    if (isAccountManager) {
+      router.replace('/admin/my-hosts');
+      return;
+    }
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user?._id, isAccountManager]);
 
   const loadStats = async () => {
     try {
@@ -88,7 +102,7 @@ export default function AdminDashboardPage() {
     },
   ];
 
-  if (loading) {
+  if (loading || isAccountManager) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600" />

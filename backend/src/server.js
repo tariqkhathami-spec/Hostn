@@ -194,6 +194,7 @@ app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/host', hostRoutes);
 app.use('/api/v1/articles', require('./routes/articles'));
+app.use('/api/v1/manager', require('./routes/manager'));
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);

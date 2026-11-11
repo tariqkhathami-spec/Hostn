@@ -10,7 +10,9 @@ const adminSchema = new mongoose.Schema(
     ...sharedUserFields(),
     adminRole: {
       type: String,
-      enum: ['super', 'support', 'finance'],
+      // account_manager: looks after the hosts assigned to them (Host.accountManager)
+      // through /api/v1/manager only; has no access to /admin/*.
+      enum: ['super', 'support', 'finance', 'account_manager'],
       default: 'super',
     },
   },

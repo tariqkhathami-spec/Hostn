@@ -20,7 +20,7 @@ const activityLogSchema = new mongoose.Schema(
     },
     actorAdminRole: {
       type: String,
-      enum: ['super', 'support', 'finance'],
+      enum: ['super', 'support', 'finance', 'account_manager'],
       default: null,
     },
     action: {
@@ -77,6 +77,9 @@ const activityLogSchema = new mongoose.Schema(
         // Tourism permit review
         'license_approved',
         'license_rejected',
+        // Staff and account managers
+        'staff_created',
+        'account_manager_assigned',
       ],
     },
     target: {

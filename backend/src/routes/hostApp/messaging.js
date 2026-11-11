@@ -349,11 +349,16 @@ router.post('/support/chat/messages', sendLimiter, async (req, res, next) => {
       }
       await ticket.save();
     } else {
+      // A host's ticket goes straight to their account manager.
+      const owner = userType === 'Host'
+        ? await require('../../models/Host').findById(req.user._id).select('accountManager').lean()
+        : null;
       ticket = await SupportTicket.create({
         user: req.user._id,
         userType,
         subject: SUPPORT_CHAT_SUBJECT,
         category: 'other',
+        assignedTo: (owner && owner.accountManager) || undefined,
         messages: [entry],
       });
     }
@@ -369,11 +374,23 @@ router.post('/support/chat/messages', sendLimiter, async (req, res, next) => {
 // Only contact details that are already published on the website's contact
 // page (frontend/src/app/contact/page.tsx). Working hours are not defined
 // anywhere in the codebase, so they are returned only if configured.
-router.get('/support/info', (req, res) => {
+router.get('/support/info', async (req, res) => {
   const data = {
     phone: process.env.SUPPORT_PHONE || '0500407888',
     email: process.env.SUPPORT_EMAIL || 'hello@hostn.co',
   };
+  // The host's own account manager, when one is assigned.
+  try {
+    const me = await require('../../models/Host').findById(req.user._id)
+      .select('accountManager')
+      .populate('accountManager', 'name phone isSuspended');
+    const manager = me && me.accountManager;
+    if (manager && !manager.isSuspended) {
+      data.accountManager = { name: manager.name || '', phone: manager.phone ? `0${String(manager.phone).replace(/^\+966/, '').replace(/^0/, '')}` : '' };
+    }
+  } catch (error) {
+    // contact details still work without it
+  }
   if (process.env.SUPPORT_HOURS_START) data.hoursStart = process.env.SUPPORT_HOURS_START;
   if (process.env.SUPPORT_HOURS_END) data.hoursEnd = process.env.SUPPORT_HOURS_END;
   if (process.env.SUPPORT_DAYS) data.days = process.env.SUPPORT_DAYS;
