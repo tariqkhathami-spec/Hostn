@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input';
 import { Mail, Lock, Eye, EyeOff, User, Phone, Smartphone, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/context/LanguageContext';
+import { digitsOnly } from '@/lib/digits';
 
 type Role = 'guest' | 'host' | 'admin';
 
@@ -286,7 +287,7 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                       type="tel"
                       placeholder="5XXXXXXXX"
                       value={otpPhone}
-                      onChange={(e) => setOtpPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                      onChange={(e) => setOtpPhone(digitsOnly(e.target.value).slice(0, 9))}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendOtp(); } }}
                       leftIcon={<Phone className="w-4 h-4" />}
                       error={errors.otpPhone}
@@ -321,7 +322,7 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
                   inputMode="numeric"
                   placeholder="0000"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  onChange={(e) => setOtpCode(digitsOnly(e.target.value).slice(0, 4))}
                   error={errors.otpCode}
                   className="text-center text-2xl tracking-[0.5em] font-mono"
                   dir="ltr"

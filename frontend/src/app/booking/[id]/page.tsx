@@ -24,6 +24,7 @@ import Image from 'next/image';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { getSearchCookies } from '@/lib/searchCookies';
+import { digitsOnly } from '@/lib/digits';
 
 declare global {
   interface Window {
@@ -257,9 +258,9 @@ function BookingContent() {
 
   // PR M: format helpers for the mock card form
   const formatCardNumber = (v: string) =>
-    v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+    digitsOnly(v).slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
   const formatExpiry = (v: string) => {
-    const d = v.replace(/\D/g, '').slice(0, 4);
+    const d = digitsOnly(v).slice(0, 4);
     return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
   };
 
@@ -764,7 +765,7 @@ function BookingContent() {
                               type="password"
                               inputMode="numeric"
                               value={cardCvv}
-                              onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              onChange={(e) => setCardCvv(digitsOnly(e.target.value).slice(0, 4))}
                               placeholder="•••"
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm font-mono"
                               dir="ltr"
