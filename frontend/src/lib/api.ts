@@ -93,7 +93,9 @@ export const authApi = {
     api.post('/auth/send-otp', data),
   verifyOtp: (data: { phone: string; otp: string; countryCode?: string }) =>
     api.post('/auth/verify-otp', data),
-  deleteAccount: () => api.delete('/auth/account'),
+  // The server asks for a one-time code (or the password) before deleting.
+  deleteAccount: (confirm?: { otp?: string; password?: string }) =>
+    api.delete('/auth/account', { data: confirm ?? {} }),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

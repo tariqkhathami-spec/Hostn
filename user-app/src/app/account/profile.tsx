@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, Linking, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/authStore';
-import { formatPhone } from '../../utils/format';
+import { formatPhone, toWesternDigits } from '../../utils/format';
 import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
@@ -49,13 +49,28 @@ export default function ProfileScreen() {
     },
   });
 
+  const [codeVisible, setCodeVisible] = useState(false);
+  const [codeKind, setCodeKind] = useState<'otp' | 'password'>('otp');
+  const [codePrompt, setCodePrompt] = useState('');
+  const [code, setCode] = useState('');
+
   const deleteAccount = useMutation({
-    mutationFn: () => authService.deleteAccount(),
+    mutationFn: (confirm?: { otp?: string; password?: string }) => authService.deleteAccount(confirm),
     onSuccess: async () => {
+      setCodeVisible(false);
       await logout();
       router.replace('/(auth)/phone');
     },
     onError: (error: any) => {
+      // First attempt: the server sends a code (or asks for the password).
+      const reason = error?.response?.data?.code;
+      if (reason === 'OTP_REQUIRED' || reason === 'PASSWORD_REQUIRED') {
+        setCodeKind(reason === 'OTP_REQUIRED' ? 'otp' : 'password');
+        setCodePrompt(error.response.data.message);
+        setCode('');
+        setCodeVisible(true);
+        return;
+      }
       Alert.alert(t('common.error'), error.response?.data?.message || t('common.somethingWrong'));
     },
   });
@@ -97,7 +112,7 @@ export default function ProfileScreen() {
               t('profile.deleteConfirmFinal'),
               [
                 { text: t('common.cancel'), style: 'cancel' },
-                { text: t('profile.deletePermanently'), style: 'destructive', onPress: () => deleteAccount.mutate() },
+                { text: t('profile.deletePermanently'), style: 'destructive', onPress: () => deleteAccount.mutate(undefined) },
               ]
             );
           },
@@ -182,9 +197,49 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <Modal visible={codeVisible} transparent animationType="fade" onRequestClose={() => setCodeVisible(false)}>
+        <View style={codeStyles.backdrop}>
+          <View style={codeStyles.box}>
+            <Text style={codeStyles.title}>{codePrompt}</Text>
+            <TextInput
+              style={codeStyles.input}
+              value={code}
+              onChangeText={setCode}
+              keyboardType={codeKind === 'otp' ? 'number-pad' : 'default'}
+              secureTextEntry={codeKind === 'password'}
+              maxLength={codeKind === 'otp' ? 6 : 100}
+              autoFocus
+            />
+            <View style={codeStyles.actions}>
+              <Pressable style={codeStyles.secondary} onPress={() => setCodeVisible(false)}>
+                <Text style={codeStyles.secondaryText}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={codeStyles.danger}
+                disabled={!code.trim() || deleteAccount.isPending}
+                onPress={() => deleteAccount.mutate(codeKind === 'otp' ? { otp: toWesternDigits(code.trim()) } : { password: code })}
+              >
+                <Text style={codeStyles.dangerText}>{t('profile.deletePermanently')}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const codeStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
+  box: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, gap: 14 },
+  title: { fontSize: 15, color: '#111827', textAlign: 'center', lineHeight: 22 },
+  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 18, textAlign: 'center', color: '#111827' },
+  actions: { flexDirection: 'row', gap: 12 },
+  secondary: { flex: 1, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  secondaryText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
+  danger: { flex: 1, backgroundColor: '#dc2626', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  dangerText: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },

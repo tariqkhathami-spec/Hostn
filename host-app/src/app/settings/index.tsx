@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Modal, TextInput } from 'react-native';
+import { toWesternDigits } from '../../utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
@@ -34,16 +35,31 @@ export default function SettingsScreen() {
   const logout = useAuthStore((s) => s.logout);
 
   const deleteMutation = useMutation({
-    mutationFn: () => hostService.deleteAccount(),
+    mutationFn: (confirm?: { otp?: string; password?: string }) => hostService.deleteAccount(confirm),
     onSuccess: async () => {
+      setCodeVisible(false);
       await logout();
       router.replace('/(auth)/onboarding' as any);
     },
     onError: (error: any) => {
+      // First attempt: the server sends a code (or asks for the password).
+      const reason = error?.response?.data?.code;
+      if (reason === 'OTP_REQUIRED' || reason === 'PASSWORD_REQUIRED') {
+        setCodeKind(reason === 'OTP_REQUIRED' ? 'otp' : 'password');
+        setCodePrompt(error.response.data.message);
+        setCode('');
+        setCodeVisible(true);
+        return;
+      }
       // e.g. the server refuses while bookings are still open
       Alert.alert('خطأ', error?.response?.data?.message || 'حدث خطأ أثناء حذف الحساب');
     },
   });
+
+  const [codeVisible, setCodeVisible] = useState(false);
+  const [codeKind, setCodeKind] = useState<'otp' | 'password'>('otp');
+  const [codePrompt, setCodePrompt] = useState('');
+  const [code, setCode] = useState('');
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -60,7 +76,7 @@ export default function SettingsScreen() {
               'سيتم حذف حسابك وجميع بياناتك بشكل نهائي. هل تريد المتابعة؟',
               [
                 { text: 'إلغاء', style: 'cancel' },
-                { text: 'حذف نهائي', style: 'destructive', onPress: () => deleteMutation.mutate() },
+                { text: 'حذف نهائي', style: 'destructive', onPress: () => deleteMutation.mutate(undefined) },
               ],
             );
           },
@@ -72,6 +88,34 @@ export default function SettingsScreen() {
   return (
     <ScreenWrapper backgroundColor={Colors.surface}>
       <HeaderBar title={'الإعدادات'} showBack />
+      <Modal visible={codeVisible} transparent animationType="fade" onRequestClose={() => setCodeVisible(false)}>
+        <View style={codeStyles.backdrop}>
+          <View style={codeStyles.box}>
+            <Text style={codeStyles.title}>{codePrompt}</Text>
+            <TextInput
+              style={codeStyles.input}
+              value={code}
+              onChangeText={setCode}
+              keyboardType={codeKind === 'otp' ? 'number-pad' : 'default'}
+              secureTextEntry={codeKind === 'password'}
+              maxLength={codeKind === 'otp' ? 6 : 100}
+              autoFocus
+            />
+            <View style={codeStyles.actions}>
+              <TouchableOpacity style={codeStyles.secondary} onPress={() => setCodeVisible(false)}>
+                <Text style={codeStyles.secondaryText}>{'إلغاء'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={codeStyles.danger}
+                disabled={!code.trim() || deleteMutation.isPending}
+                onPress={() => deleteMutation.mutate(codeKind === 'otp' ? { otp: toWesternDigits(code.trim()) } : { password: code })}
+              >
+                <Text style={codeStyles.dangerText}>{'حذف نهائي'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.container}>
           {menuItems.map((item) => (
@@ -110,6 +154,18 @@ export default function SettingsScreen() {
     </ScreenWrapper>
   );
 }
+
+const codeStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
+  box: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, gap: 14 },
+  title: { fontSize: 15, color: '#111827', textAlign: 'right', lineHeight: 22 },
+  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 18, textAlign: 'center', color: '#111827' },
+  actions: { flexDirection: 'row', gap: 12 },
+  secondary: { flex: 1, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  secondaryText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
+  danger: { flex: 1, backgroundColor: '#dc2626', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  dangerText: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+});
 
 const styles = StyleSheet.create({
   scrollView: {

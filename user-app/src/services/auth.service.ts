@@ -50,7 +50,8 @@ export const authService = {
     return api.post<{ wishlist: string[] }>(`/auth/wishlist/${unitId}`).then((r) => r.data);
   },
 
-  deleteAccount() {
-    return api.delete<{ message: string }>('/auth/account').then((r) => r.data);
+  // The server asks for a one-time code (or the password) before deleting.
+  deleteAccount(confirm?: { otp?: string; password?: string }) {
+    return api.delete<{ message: string }>('/auth/account', { data: confirm ?? {} }).then((r) => r.data);
   },
 };

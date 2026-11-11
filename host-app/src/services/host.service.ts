@@ -112,7 +112,9 @@ export const hostService = {
   updateProfile: (data: any) => api.patch('/host/profile', data).then(r => r.data),
   updateEmail: (email: string, currentPassword?: string) =>
     api.put('/host/profile/email', { email, ...(currentPassword ? { currentPassword } : {}) }).then(r => r.data),
-  deleteAccount: () => api.delete('/host/account').then(r => r.data),
+  // The server asks for a one-time code (or the password) before deleting.
+  deleteAccount: (confirm?: { otp?: string; password?: string }) =>
+    api.delete('/host/account', { data: confirm ?? {} }).then(r => r.data),
   logout: () => api.post('/auth/logout').then(r => r.data),
 
   // NPS

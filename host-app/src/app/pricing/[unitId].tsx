@@ -151,8 +151,8 @@ export default function UnitPricingDetailScreen() {
   const savePercent = () => {
     if (!percentEdit) return;
     const percentage = Number(toWesternDigits(percentEdit.value));
-    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
-      Alert.alert('خطأ', 'أدخل نسبة بين 0 و 100');
+    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 90) {
+      Alert.alert('خطأ', 'أدخل نسبة بين 0 و 90');
       return;
     }
     updateDiscountMutation.mutate({ type: percentEdit.type, percentage });
@@ -176,8 +176,8 @@ export default function UnitPricingDetailScreen() {
     const end = toWesternDigits(offerForm.end.trim()) || start;
     const isDay = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
     if (!name) return Alert.alert('خطأ', 'اكتب اسم العرض');
-    if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 100) {
-      return Alert.alert('خطأ', 'أدخل نسبة خصم بين 1 و 100');
+    if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 90) {
+      return Alert.alert('خطأ', 'أدخل نسبة خصم بين 1 و 90');
     }
     if (!isDay(start) || !isDay(end) || end < start) {
       return Alert.alert('خطأ', 'اكتب التاريخ بالصيغة 2026-12-31، وتاريخ النهاية بعد البداية');
