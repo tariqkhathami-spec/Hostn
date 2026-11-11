@@ -1,5 +1,7 @@
 const RAILWAY_API_URL = 'https://hostn-production.up.railway.app/api/v1';
-const DEV_API_URL = RAILWAY_API_URL; // Use Railway backend for dev too
+// Dev builds use the Railway backend unless EXPO_PUBLIC_API_URL points elsewhere
+// (e.g. http://localhost:5050/api/v1 for a local backend).
+const DEV_API_URL = process.env.EXPO_PUBLIC_API_URL ?? RAILWAY_API_URL;
 const PROD_API_URL = RAILWAY_API_URL;
 
 export const API_BASE_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
