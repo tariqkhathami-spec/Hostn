@@ -10,6 +10,7 @@ import {
   User, Crown, Loader2, Save, Mail, Check, ChevronDown, Phone, Shield, Calendar,
 } from 'lucide-react';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { digitsOnly } from '@/lib/digits';
 
 const GCC_COUNTRIES = [
   { code: '+966', flag: '\u{1F1F8}\u{1F1E6}', en: 'Saudi Arabia', ar: '\u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629', digits: 9, startsWith: '5' },
@@ -352,7 +353,7 @@ export default function SettingsPage() {
                   {isAr ? `\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0645\u0632 \u0625\u0644\u0649 ${newEmail}` : `Code sent to ${newEmail}`}
                 </p>
                 <input type="text" inputMode="numeric" value={emailCode}
-                  onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setEmailCode(digitsOnly(e.target.value).slice(0, 6))}
                   className={`${inputClass} text-center tracking-widest font-mono`} placeholder="000000" autoFocus dir="ltr" />
                 <div className="flex gap-2">
                   <button type="button" onClick={handleVerifyEmail} disabled={emailSaving}
@@ -424,7 +425,7 @@ export default function SettingsPage() {
                   <div className="relative flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input type="tel" value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, '').slice(0, newPhoneCountry.digits))}
+                      onChange={(e) => setNewPhone(digitsOnly(e.target.value).slice(0, newPhoneCountry.digits))}
                       className={`${inputClass} pl-9`}
                       placeholder={newPhoneCountry.startsWith ? `${newPhoneCountry.startsWith}XXXXXXXX` : 'XXXXXXXX'}
                       dir="ltr" autoFocus />
@@ -449,7 +450,7 @@ export default function SettingsPage() {
                     : `Code sent to ${newPhoneCountry.code}${newPhone}`}
                 </p>
                 <input type="text" inputMode="numeric" value={phoneCode}
-                  onChange={(e) => setPhoneCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setPhoneCode(digitsOnly(e.target.value).slice(0, 6))}
                   className={`${inputClass} text-center tracking-widest font-mono`} placeholder="000000" autoFocus dir="ltr" />
                 <div className="flex gap-2">
                   <button type="button" onClick={handleVerifyPhone} disabled={phoneSaving}

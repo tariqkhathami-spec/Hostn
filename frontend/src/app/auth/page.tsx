@@ -10,6 +10,7 @@ import { Phone, ArrowLeft, ChevronDown, Globe } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import toast from 'react-hot-toast';
+import { digitsOnly } from '@/lib/digits';
 
 const GCC_COUNTRIES = [
   { code: '+966', flag: '\u{1F1F8}\u{1F1E6}', en: 'Saudi Arabia', ar: '\u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629', digits: 9, startsWith: '5' },
@@ -229,7 +230,7 @@ function AuthContent() {
                     type="tel"
                     placeholder={selectedCountry.startsWith ? `${selectedCountry.startsWith}XXXXXXXX` : 'XXXXXXXX'}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, selectedCountry.digits))}
+                    onChange={(e) => setPhone(digitsOnly(e.target.value).slice(0, selectedCountry.digits))}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendOtp(); } }}
                     leftIcon={<Phone className="w-4 h-4" />}
                     error={errors.phone}
@@ -266,7 +267,7 @@ function AuthContent() {
                 inputMode="numeric"
                 placeholder="0000"
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                onChange={(e) => setOtpCode(digitsOnly(e.target.value).slice(0, 4))}
                 error={errors.otp}
                 className="text-center text-2xl tracking-[0.5em] font-mono"
                 dir="ltr"
