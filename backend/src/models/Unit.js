@@ -248,6 +248,10 @@ const unitSchema = new mongoose.Schema(
         enum: ['pending', 'active', 'expired', 'rejected'],
         default: 'pending',
       },
+      // Admin review of the submitted permit
+      rejectionReason: { type: String, trim: true, maxlength: 500 },
+      reviewedAt: { type: Date },
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     },
 
     // ── B. Photos ────────────────────────────────────────────────
@@ -324,7 +328,7 @@ const unitSchema = new mongoose.Schema(
 
     // ── Capacity ─────────────────────────────────────────────────
     capacity: {
-      maxGuests: { type: Number, default: 1, min: 1 },
+      maxGuests: { type: Number, default: 1, min: 1, max: 100 },
     },
 
     // ── Ratings (per-unit) ───────────────────────────────────────

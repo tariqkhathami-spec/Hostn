@@ -53,6 +53,7 @@ const adminNav: NavItem[] = [
   { href: '/admin', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
   { href: '/admin/users', icon: Users, label: { en: 'Users', ar: 'المستخدمون' }, adminRoles: ['super', 'support'] },
   { href: '/admin/properties', icon: Building, label: { en: 'Properties', ar: 'العقارات' }, adminRoles: ['super', 'support'] },
+  { href: '/admin/licenses', icon: FileText, label: { en: 'Tourism Permits', ar: 'تصاريح السياحة' }, adminRoles: ['super', 'support'] },
   { href: '/admin/bookings', icon: BookOpen, label: { en: 'Bookings', ar: 'الحجوزات' }, adminRoles: ['super', 'support', 'finance'] },
   { href: '/admin/payments', icon: CreditCard, label: { en: 'Payments', ar: 'المدفوعات' }, adminRoles: ['super', 'finance'] },
   { href: '/admin/reports', icon: Shield, label: { en: 'Reports', ar: 'البلاغات' }, adminRoles: ['super', 'support'] },

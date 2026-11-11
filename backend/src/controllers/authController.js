@@ -659,7 +659,14 @@ exports.deleteAccount = async (req, res, next) => {
     }
     const openBookings = await Booking.countDocuments(
       userType === 'host'
-        ? { property: { $in: propertyIds }, status: { $in: ['pending', 'confirmed'] }, checkOut: { $gte: now } }
+        ? {
+            property: { $in: propertyIds },
+            checkOut: { $gte: now },
+            $or: [
+              { status: { $in: ['pending', 'confirmed'] } },
+              { status: 'held', holdExpiresAt: { $gt: now } },
+            ],
+          }
         : {
             guest: userId,
             checkOut: { $gte: now },
@@ -687,6 +694,33 @@ exports.deleteAccount = async (req, res, next) => {
       await Unit.updateMany({ property: { $in: propertyIds } }, { $set: { isActive: false } });
     }
 
+    // Personal data kept outside the account document goes too.
+    const mongooseModels = require('mongoose').models;
+    const wipe = (name, filter) =>
+      (mongooseModels[name] ? mongooseModels[name].deleteMany(filter).catch(() => {}) : Promise.resolve());
+    require('../models/SavedPaymentMethod');
+    require('../models/Wishlist');
+    require('../models/HostBankAccount');
+    require('../models/Notification');
+    await Promise.all([
+      wipe('SavedPaymentMethod', { user: userId }),
+      wipe('Wishlist', { user: userId }),
+      wipe('Notification', { user: userId }),
+      userType === 'host' ? wipe('HostBankAccount', { host: userId }) : null,
+      userType === 'host' && propertyIds.length > 0
+        ? Unit.updateMany(
+            { property: { $in: propertyIds } },
+            {
+              $unset: {
+                'tourismLicense.nationalId': '',
+                'tourismLicense.commercialRegister': '',
+                'tourismLicense.documentUrl': '',
+              },
+            }
+          ).catch(() => {})
+        : null,
+    ]);
+
     // Revoke all refresh tokens
     await RefreshToken.revokeAllForUser(userId);
 
@@ -705,10 +739,32 @@ exports.deleteAccount = async (req, res, next) => {
           phoneVerified: false,
           isVerified: false,
         },
-        $unset: { email: '', phone: '', password: '', nationalId: '', vatEntries: '' },
+        $unset: {
+          email: '',
+          phone: '',
+          password: '',
+          nationalId: '',
+          vatEntries: '',
+          passwordResetToken: '',
+          passwordResetExpires: '',
+          resetPasswordToken: '',
+          resetPasswordExpire: '',
+          wishlist: '',
+        },
         $inc: { tokenVersion: 1 },
       }
     );
+
+    // Leave a trace for the admin activity log (no personal data in it).
+    require('../models/ActivityLog').create({
+      actor: userId,
+      actorType: { guest: 'Guest', host: 'Host' }[userType] || null,
+      actorRole: userType,
+      action: 'account_deleted',
+      target: { type: 'User', id: userId },
+      details: `${userType} account deleted by its owner`,
+      ip: req.ip,
+    }).catch(() => {});
 
     // Clear auth cookies
     res.cookie('hostn_token', '', { httpOnly: true, expires: new Date(0), path: '/' });

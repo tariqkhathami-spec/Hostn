@@ -402,6 +402,19 @@ exports.createBooking = async (req, res, next) => {
     if (holdId) {
       const hold = await Booking.findById(holdId);
       if (hold && hold.guest.toString() === req.user._id.toString() && hold.status === 'held') {
+        // The listing may have left the marketplace while the hold was open
+        // (host unlisted it or deleted their account).
+        const heldProperty = await Property.findById(hold.property).select('isActive isDeleted');
+        if (!heldProperty || heldProperty.isActive === false || heldProperty.isDeleted) {
+          hold.status = 'cancelled';
+          hold.cancelledAt = new Date();
+          await hold.save();
+          return res.status(400).json({
+            success: false,
+            code: 'PROPERTY_UNAVAILABLE',
+            message: 'This property is no longer available',
+          });
+        }
         if (hold.holdExpiresAt > new Date()) {
           // Hold is still valid — convert to pending booking
           hold.status = 'pending';
