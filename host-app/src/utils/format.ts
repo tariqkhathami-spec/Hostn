@@ -13,7 +13,7 @@ export function formatRelativeDate(date: string | Date): string {
 }
 
 export function formatCurrency(amount: number): string {
-  const formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const formatted = (Number(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   return getLocale() === 'ar' ? `${formatted} ريال` : `SAR ${formatted}`;
 }
 

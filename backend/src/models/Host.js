@@ -10,6 +10,9 @@ const hostSchema = new mongoose.Schema(
   {
     ...sharedUserFields(),
     // Placeholder for future business fields (empty for now per migration plan)
+    // Set once the host finishes the in-app introduction programme, so the
+    // host app stops showing it on every launch.
+    onboardingCompleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

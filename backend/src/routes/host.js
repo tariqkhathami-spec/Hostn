@@ -52,6 +52,35 @@ const { uploadSingle } = require('../middleware/upload');
 router.use(protect);
 router.use(authorize('host', 'admin'));
 
+// Host introduction programme (host mobile app). The app has always called
+// these two endpoints; they did not exist, so the programme reappeared on
+// every launch.
+const Host = require('../models/Host');
+router.get('/onboarding/status', async (req, res, next) => {
+  try {
+    if (req.user.userType !== 'host') return res.json({ success: true, data: { onboardingCompleted: true } });
+    const host = await Host.findById(req.user._id).select('-password');
+    const profile = host ? host.toObject() : null;
+    if (profile) { profile.userType = 'host'; profile.role = 'host'; }
+    res.json({
+      success: true,
+      data: { onboardingCompleted: Boolean(host?.onboardingCompleted), host: profile },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+router.post('/onboarding/finish', async (req, res, next) => {
+  try {
+    if (req.user.userType === 'host') {
+      await Host.updateOne({ _id: req.user._id }, { $set: { onboardingCompleted: true } });
+    }
+    res.json({ success: true, data: { onboardingCompleted: true } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Dashboard
 router.get('/stats', getDashboardStats);
 router.get('/dashboard/stats', getHostDashboardStats);

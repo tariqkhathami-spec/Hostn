@@ -40,6 +40,17 @@ const unitRoutes = require('./routes/units');
 // ── App setup ────────────────────────────────────────────────────────────────
 const app = express();
 
+// API responses are per-user JSON and must never be answered with
+// 304 Not Modified: the Android apps (okhttp) pass a 304 straight to the
+// app as an error, which left lists empty until a manual refresh. Turning
+// off ETags stops conditional requests; no-store keeps proxies and browsers
+// from caching account data.
+app.set('etag', false);
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // Bootstrapped flag — health probes check this to avoid false positives
 let bootstrapped = false;
 function isBootstrapped() { return bootstrapped; }

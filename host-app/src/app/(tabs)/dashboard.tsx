@@ -395,8 +395,8 @@ export default function DashboardScreen() {
         {reviewsQuery.isLoading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.base }} />
         ) : recentReviews.length > 0 ? (
-          recentReviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+          recentReviews.map((review, i) => (
+            <ReviewCard key={review.id ?? (review as any)._id ?? i} review={review} />
           ))
         ) : (
           <EmptyState message={l({ en: 'No recent reviews', ar: 'لا توجد تقييمات حديثة' })} icon="star-outline" />

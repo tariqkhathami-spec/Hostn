@@ -42,7 +42,33 @@ export const hostService = {
   getBookings: (params?: { status?: string; page?: number }) => api.get<{ data: Booking[] }>('/host/bookings', { params }).then(r => r.data),
   getUpcomingGuests: () => api.get<{ data: Booking[] }>('/host/bookings/upcoming').then(r => r.data),
   getUnitBookedDates: (unitId: string) => api.get(`/bookings/unit/${unitId}/dates`).then(r => r.data),
-  getBookingDetail: (id: string) => api.get<{ data: Booking }>(`/bookings/${id}`).then(r => r.data),
+  // /bookings/:id returns the raw booking document (nested guest, property,
+  // unit and pricing), not the flat shape the host list endpoints return.
+  // The detail screen reads the flat fields, so map it here; without this
+  // totalAmount was undefined and the screen crashed on open.
+  getBookingDetail: (id: string) => api.get<{ data: any }>(`/bookings/${id}`).then(r => {
+    const raw: any = r.data?.data;
+    if (!raw || raw.totalAmount !== undefined) return r.data as { data: Booking };
+    const day = (d: any) => (d ? String(d).split('T')[0] : '');
+    const total = raw.pricing?.total ?? 0;
+    const mapped: Booking = {
+      id: String(raw._id ?? raw.id ?? id),
+      bookingNumber: String(raw._id ?? raw.id ?? id).slice(-7).toUpperCase(),
+      reference: raw.reference,
+      guestName: raw.guest?.name || '\u0636\u064a\u0641',
+      guestPhone: raw.guest?.phone || '',
+      propertyName: raw.property?.title || '',
+      unitName: raw.unit?.nameAr || raw.unit?.nameEn || raw.property?.title || '',
+      checkIn: day(raw.checkIn),
+      checkOut: day(raw.checkOut),
+      totalAmount: total,
+      hostAmount: Math.round(total * 0.85),
+      status: raw.status,
+      createdAt: day(raw.createdAt),
+      invoice: raw.invoice ?? null,
+    };
+    return { ...r.data, data: mapped };
+  }),
   updateBookingStatus: (id: string, status: string) => api.put(`/bookings/${id}/status`, { status }).then(r => r.data),
 
   // Reviews

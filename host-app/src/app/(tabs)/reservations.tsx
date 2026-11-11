@@ -93,7 +93,10 @@ export default function ReservationsTabScreen() {
   ];
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
-    queryKey: ['bookings', activeTab],
+    // 'list' keeps this cache entry apart from the dashboard's
+    // ['bookings', 'recent'], which stores the wrapped { data } response;
+    // sharing the key made this list render empty until a manual refresh.
+    queryKey: ['bookings', 'list', activeTab],
     queryFn: () =>
       activeTab === 'recent'
         ? hostService.getBookings({ page: 1 }).then(r => r.data ?? [])

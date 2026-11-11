@@ -244,7 +244,7 @@ export default function BookingDetailScreen() {
             </View>
             {discount > 0 && (
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>{t('checkout.couponDiscount')}</Text>
+                <Text style={styles.priceLabel}>{t('checkout.discount')}</Text>
                 <Text style={[styles.priceValue, { color: Colors.success }]}>
                   -{formatCurrency(discount)}
                 </Text>

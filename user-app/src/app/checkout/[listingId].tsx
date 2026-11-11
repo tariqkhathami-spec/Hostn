@@ -156,12 +156,20 @@ export default function CheckoutScreen() {
     : { subtotal: 0, blocked: false, nights: 0 };
   const pricePerNight = listing?.pricing?.perNight ?? 0;
   const cleaningFee = listing?.pricing?.cleaningFee ?? 0;
-  const serviceFee = Math.round(subtotal * 0.1);
+  // Same formula as the server (bookingController) and the web checkout:
+  // service fee is 11% of the post-discount subtotal, VAT is 15% of
+  // (discounted subtotal + cleaning + service fee), rounded to halalas once.
+  // The old 10%-of-gross integer maths showed guests a different total
+  // from the one the booking was created with.
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   const discountPercent = listing?.pricing?.discountPercent ?? 0;
-  const discount = discountPercent > 0 ? Math.round(subtotal * (discountPercent / 100)) : 0;
-  const taxableAmount = subtotal + cleaningFee + serviceFee - discount;
-  const vat = Math.round(taxableAmount * 0.15);
-  const total = taxableAmount + vat - couponDiscount;
+  const discount = discountPercent > 0 ? r2(subtotal * (discountPercent / 100)) : 0;
+  const discountedSubtotal = Math.max(0, subtotal - discount);
+  const serviceFeeRaw = discountedSubtotal * 0.11;
+  const serviceFee = r2(serviceFeeRaw);
+  const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
+  const vat = r2(taxableRaw * 0.15);
+  const total = r2(taxableRaw + taxableRaw * 0.15 - couponDiscount);
 
   const maxGuests = listing?.capacity?.maxGuests ?? 20;
   const minNights = listing?.rules?.minNights ?? 1;
@@ -225,8 +233,12 @@ export default function CheckoutScreen() {
         checkOut,
         guests: { adults, children, infants: 0 },
       });
-      if (res?.data?.holdId) {
-        setHoldId(res.data.holdId);
+      // The API client already unwraps { success, data }, so the hold id is
+      // at the top level; reading res.data.holdId always gave undefined and the
+      // booking then collided with the guest's own hold.
+      const newHoldId = (res as any)?.holdId ?? (res as any)?.data?.holdId;
+      if (newHoldId) {
+        setHoldId(newHoldId);
       }
     } catch (err: any) {
       const code = err?.response?.data?.code;
@@ -262,7 +274,7 @@ export default function CheckoutScreen() {
             checkOut,
             guests: { adults, children, infants: 0 },
           });
-          currentHoldId = holdRes?.data?.holdId ?? null;
+          currentHoldId = (holdRes as any)?.holdId ?? (holdRes as any)?.data?.holdId ?? null;
         } catch (err) {
           if (__DEV__) console.debug('[checkout] createHold failed, proceeding without hold:', err);
         }
