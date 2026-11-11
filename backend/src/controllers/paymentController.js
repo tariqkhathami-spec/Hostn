@@ -141,6 +141,30 @@ exports.verifyPayment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // SECURITY: the gateway id is client-supplied. Validate its shape (it is
+    // interpolated into the gateway URL), make verification idempotent, and
+    // never let one gateway payment settle more than one booking.
+    if (typeof moyasarPaymentId !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(moyasarPaymentId)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment reference' });
+    }
+    if (payment.status === 'completed' && payment.moyasarPaymentId === moyasarPaymentId) {
+      return res.json({ success: true, data: { payment }, message: 'Payment already verified' });
+    }
+    if (!['pending', 'processing', 'failed'].includes(payment.status)) {
+      return res.status(400).json({ success: false, message: `Payment cannot be verified in status "${payment.status}"` });
+    }
+    const reused = await Payment.exists({ moyasarPaymentId, _id: { $ne: payment._id } });
+    if (reused) {
+      await ActivityLog.create({
+        actor: req.user._id,
+        action: 'payment_amount_mismatch',
+        target: { type: 'Payment', id: payment._id },
+        details: `Gateway payment ${moyasarPaymentId} is already attached to another payment`,
+        ip: req.ip,
+      }).catch(() => {});
+      return res.status(400).json({ success: false, message: 'Payment reference already used' });
+    }
+
     // ALWAYS verify with Moyasar API — never trust client-side callback alone
     if (!MOYASAR_SECRET_KEY) {
       return res.status(503).json({
@@ -156,6 +180,10 @@ exports.verifyPayment = async (req, res, next) => {
         success: false,
         message: 'Could not verify payment with payment gateway',
       });
+    }
+
+    if (moyasarPayment.currency && moyasarPayment.currency !== 'SAR') {
+      return res.status(400).json({ success: false, message: 'Payment currency mismatch' });
     }
 
     // Verify amount matches to prevent partial-payment fraud
@@ -350,8 +378,13 @@ exports.simulatePayment = async (req, res, next) => {
     if (!payment) {
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
-    if (payment.user && payment.user.toString() !== req.user._id.toString()) {
+    if (!payment.user || payment.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    // Only an unsettled payment may be simulated — never flip a completed,
+    // refunded or cancelled payment.
+    if (!['pending', 'processing', 'failed'].includes(payment.status)) {
+      return res.status(400).json({ success: false, message: `Payment cannot be simulated in status "${payment.status}"` });
     }
 
     // Mark the payment with the chosen status. Stamp a fake Moyasar ID so
@@ -374,53 +407,68 @@ exports.simulatePayment = async (req, res, next) => {
     await payment.save();
 
     // Mirror the booking-side state so host + downstream endpoints see the
-    // expected paymentStatus. Notifications mirror `verifyPayment`.
+    // expected paymentStatus. Notifications + audit are best-effort: the
+    // critical Payment + Booking saves above must not be undone by a
+    // non-critical side-effect failure.
     const booking = await Booking.findById(payment.booking);
     if (booking) {
       if (spec.bookingPaymentStatus) booking.paymentStatus = spec.bookingPaymentStatus;
       await booking.save();
 
-      const Property = require('../models/Property');
-      const property = await Property.findById(booking.property);
+      try {
+        const Property = require('../models/Property');
+        const property = await Property.findById(booking.property);
 
-      if (spec.paymentStatus === 'completed' && property) {
-        await Notification.createNotification({
-          user: property.host,
-          userType: 'Host',
-          type: 'payment_success',
-          title: 'Payment Received (simulated)',
-          message: `Simulated payment of ${payment.amount} SAR received for booking at ${property.title}`,
-          data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id, simulated: true },
-        });
-        await Notification.createNotification({
-          user: req.user._id,
-          userType: 'Guest',
-          type: 'payment_success',
-          title: 'Payment Successful (simulated)',
-          message: `Your simulated payment of ${payment.amount} SAR has been recorded`,
-          data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
-        });
-      } else if (spec.paymentStatus === 'failed' || spec.paymentStatus === 'cancelled') {
-        await Notification.createNotification({
-          user: req.user._id,
-          userType: 'Guest',
-          type: 'payment_failed',
-          title: 'Payment Failed (simulated)',
-          message: `Simulated payment failure — ${spec.failureReason}`,
-          data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
-        });
+        if (spec.paymentStatus === 'completed' && property) {
+          await Notification.createNotification({
+            user: property.host,
+            userType: 'Host',
+            type: 'payment_success',
+            title: 'Payment Received (simulated)',
+            message: `Simulated payment of ${payment.amount} SAR received for booking at ${property.title}`,
+            data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id, simulated: true },
+          });
+          await Notification.createNotification({
+            user: req.user._id,
+            userType: 'Guest',
+            type: 'payment_success',
+            title: 'Payment Successful (simulated)',
+            message: `Your simulated payment of ${payment.amount} SAR has been recorded`,
+            data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
+          });
+        } else if (spec.paymentStatus === 'failed' || spec.paymentStatus === 'cancelled') {
+          await Notification.createNotification({
+            user: req.user._id,
+            userType: 'Guest',
+            type: 'payment_failed',
+            title: 'Payment Failed (simulated)',
+            message: `Simulated payment failure — ${spec.failureReason}`,
+            data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
+          });
+        }
+      } catch (notifErr) {
+        console.warn('[simulatePayment] notification dispatch failed:', notifErr?.message);
       }
     }
 
-    // Log with an action the ActivityLog enum accepts; never let audit
-    // logging fail a payment that has already been recorded.
-    ActivityLog.create({
-      actor: req.user._id,
-      action: spec.paymentStatus === 'completed' ? 'payment_completed' : 'payment_failed',
-      target: { type: 'Payment', id: payment._id },
-      details: `Simulated payment outcome: ${outcome}`,
-      ip: req.ip,
-    }).catch(() => {});
+    // PR: map the simulated outcome onto the existing enum values in
+    // `ActivityLog.action`. Wrapped in try/catch so any future enum
+    // mismatch can't fail the whole simulator endpoint after Payment
+    // and Booking have already been updated successfully.
+    try {
+      const auditAction = spec.paymentStatus === 'completed'
+        ? 'payment_completed'
+        : 'payment_failed';
+      await ActivityLog.create({
+        actor: req.user._id,
+        action: auditAction,
+        target: { type: 'Payment', id: payment._id },
+        details: `Simulated payment outcome: ${outcome}`,
+        ip: req.ip,
+      });
+    } catch (logErr) {
+      console.warn('[simulatePayment] ActivityLog.create failed:', logErr?.message);
+    }
 
     res.json({
       success: true,

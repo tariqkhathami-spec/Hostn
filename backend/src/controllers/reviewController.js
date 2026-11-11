@@ -69,8 +69,10 @@ exports.createReview = async (req, res, next) => {
     // Sanitize comment (DOMPurify — handles all XSS vectors, not just tags)
     const sanitizedComment = comment ? sanitizeHtml(comment) : '';
 
+    // SECURITY: the reviewed property always comes from the booking, never
+    // from the request body (a guest could otherwise review any property).
     const review = await Review.create({
-      property: propertyId,
+      property: booking.property,
       guest: req.user._id,
       booking: bookingId,
       ratings,
@@ -113,7 +115,12 @@ exports.updateReview = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    review = await Review.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    // SECURITY: whitelist editable fields. Passing req.body straight through
+    // let the author rewrite property, booking, isVerified and hostResponse.
+    const updates = {};
+    if (req.body.ratings !== undefined) updates.ratings = req.body.ratings;
+    if (req.body.comment !== undefined) updates.comment = req.body.comment ? sanitizeHtml(String(req.body.comment)) : '';
+    review = await Review.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true, runValidators: true });
     res.json({ success: true, data: review });
   } catch (error) {
     next(error);
