@@ -18,7 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { formatCurrency, toWesternDigits } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Property, Unit, UnitPricing, UnitDiscount, CustomOffer } from '../../types';
@@ -497,7 +497,7 @@ export default function UnitPricingDetailScreen() {
               keyboardType="number-pad"
               value={offerForm?.percent ?? ''}
               onChangeText={(percent) => setOfferForm((prev) => (prev ? { ...prev, percent } : prev))}
-              placeholder="نسبة الخصم %"
+              placeholder="نسبة الخصم"
               placeholderTextColor={Colors.textTertiary}
               maxLength={3}
             />
@@ -581,7 +581,7 @@ const dialog = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: Spacing.lg },
   box: { backgroundColor: Colors.background, borderRadius: Radius.lg, padding: Spacing.lg, gap: Spacing.md },
   // No explicit textAlign: Arabic text aligns itself, and 'right' is mirrored on iOS.
-  title: { ...Typography.subtitle, color: Colors.textPrimary },
+  title: { ...Typography.subtitle, color: Colors.textPrimary, textAlign: TEXT_START },
   input: {
     borderWidth: 1,
     borderColor: Colors.border,

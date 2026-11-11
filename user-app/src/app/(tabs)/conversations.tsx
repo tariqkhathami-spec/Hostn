@@ -79,7 +79,7 @@ export default function ConversationsScreen() {
                   </View>
                   <View style={styles.convBottom}>
                     <Text style={styles.convPreview} numberOfLines={1}>
-                      {item.lastMessage?.text ?? 'No messages yet'}
+                      {item.lastMessage?.text ?? t('chat.noMessagesYet')}
                     </Text>
                     {item.unreadCount > 0 && (
                       <View style={styles.unreadBadge}>

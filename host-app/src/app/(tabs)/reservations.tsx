@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
@@ -102,6 +102,7 @@ export default function ReservationsTabScreen() {
         ? hostService.getBookings({ page: 1 }).then(r => r.data ?? [])
         : hostService.getUpcomingGuests().then(r => r.data ?? []),
     retry: false,
+    refetchInterval: 30000,
   });
 
   // Use real API data only (no mock fallback)
@@ -114,6 +115,14 @@ export default function ReservationsTabScreen() {
   const onRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  // New bookings should appear without a manual pull: reload whenever the
+  // tab comes into view (tabs stay mounted, so mounting is not enough).
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const renderBookingItem = ({ item }: { item: Booking }) => {
     const statusColor = STATUS_COLOR_MAP[item.status] || '#6b7280';

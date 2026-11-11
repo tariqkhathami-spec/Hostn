@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { bookingsService } from '../../services/bookings.service';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +18,7 @@ export default function DatesScreen() {
   // returnTo='checkout' means this screen was opened from the checkout
   // edit-dates flow (R19 workaround). On Search press we save the dates
   // and router.back() instead of pushing to /results.
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string; listingId?: string }>();
+  const { returnTo, listingId } = useLocalSearchParams<{ returnTo?: string; listingId?: string }>();
   const { checkIn, checkOut, setDates, city, cityName } = useSearchStore();
   const [startDate, setStartDate] = useState<string | null>(checkIn);
   const [endDate, setEndDate] = useState<string | null>(checkOut);
@@ -25,12 +27,58 @@ export default function DatesScreen() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
+  // When picking dates for one listing, show which nights are already taken
+  // so the guest does not choose them and get refused at the last step.
+  const { data: bookedRanges } = useQuery({
+    queryKey: ['bookedDates', listingId],
+    queryFn: () => bookingsService.getUnitBookedDates(listingId!),
+    enabled: !!listingId,
+    staleTime: 0,
+  });
+  const bookedNights = useMemo(() => {
+    const nights = new Set<string>();
+    const ranges: any[] = Array.isArray(bookedRanges) ? bookedRanges : (bookedRanges as any)?.data ?? [];
+    for (const range of ranges) {
+      if (!range?.checkIn || !range?.checkOut) continue;
+      let day = new Date(String(range.checkIn).slice(0, 10));
+      const end = new Date(String(range.checkOut).slice(0, 10));
+      // The check-out day itself is free for the next guest to arrive.
+      for (let i = 0; day < end && i < 400; i += 1) {
+        const key = format(day, 'yyyy-MM-dd');
+        if (key >= today) nights.add(key); // past nights are disabled anyway
+        day = addDays(day, 1);
+      }
+    }
+    return nights;
+  }, [bookedRanges, today]);
+  const isAr = language === 'ar';
+
   const handleDayPress = (day: DateData) => {
+    // A booked night can still be a check-out day, never a check-in day.
+    const choosingStart = !startDate || (startDate && endDate) || day.dateString <= (startDate ?? '');
+    if (choosingStart && bookedNights.has(day.dateString)) return;
     if (!startDate || (startDate && endDate)) {
       setStartDate(day.dateString);
       setEndDate(null);
     } else {
       if (day.dateString > startDate) {
+        // A stay cannot run across nights that are already booked.
+        let cursor = new Date(startDate);
+        const last = new Date(day.dateString);
+        let crossesBooked = false;
+        while (cursor < last) {
+          if (bookedNights.has(format(cursor, 'yyyy-MM-dd'))) { crossesBooked = true; break; }
+          cursor = addDays(cursor, 1);
+        }
+        if (crossesBooked) {
+          Alert.alert(
+            isAr ? 'تواريخ غير متاحة' : 'Dates not available',
+            isAr ? 'بين التاريخين أيام محجوزة. اختر فترة أخرى.' : 'Some nights in this range are already booked. Choose another range.',
+          );
+          setStartDate(null);
+          setEndDate(null);
+          return;
+        }
         setEndDate(day.dateString);
       } else {
         setStartDate(day.dateString);
@@ -41,6 +89,9 @@ export default function DatesScreen() {
 
   const getMarkedDates = () => {
     const marked: Record<string, any> = {};
+    bookedNights.forEach((night) => {
+      marked[night] = { disabled: true, color: '#f1f1f4', textColor: '#b8b8c2' };
+    });
     if (startDate) {
       marked[startDate] = {
         startingDay: true,
@@ -103,6 +154,12 @@ export default function DatesScreen() {
           textDayHeaderFontSize: 12,
         }}
       />
+
+      {bookedNights.size > 0 ? (
+        <Text style={{ textAlign: 'center', color: Colors.textTertiary, fontSize: 12, marginTop: Spacing.sm }}>
+          {isAr ? 'الأيام المظللة بالرمادي محجوزة' : 'Greyed-out days are already booked'}
+        </Text>
+      ) : null}
 
       <View style={styles.dateDisplay}>
         <View style={styles.dateBox}>

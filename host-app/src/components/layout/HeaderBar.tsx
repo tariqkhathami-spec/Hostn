@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useWrapperTopInset } from './ScreenWrapper';
 
 interface Props {
   title: string;
@@ -22,6 +24,8 @@ export default function HeaderBar({
   textColor = Colors.textWhite,
 }: Props) {
   const router = useRouter();
+  // Paint the header colour behind the status bar as well.
+  const topInset = useWrapperTopInset();
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -32,7 +36,8 @@ export default function HeaderBar({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
+    <View style={[styles.container, { backgroundColor, marginTop: -topInset, paddingTop: topInset + Spacing.md }]}>
+      <StatusBar style={textColor === Colors.textWhite ? 'light' : 'dark'} />
       <View style={styles.left}>
         {showBack && (
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>

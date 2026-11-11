@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { I18nManager } from 'react-native';
 
 export const Colors = {
@@ -120,3 +121,8 @@ export const Shadows = {
 } as const;
 
 export const isRTL = I18nManager.isRTL;
+
+// Aligns text to the reading-start side (the right, in this Arabic app).
+// iOS mirrors textAlign on <Text> in a right-to-left layout and Android does
+// not, so a literal 'right' ends up on the left on iPhone.
+export const TEXT_START: 'left' | 'right' = Platform.OS === 'ios' ? 'left' : 'right';
