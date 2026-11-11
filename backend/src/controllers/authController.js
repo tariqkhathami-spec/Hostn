@@ -593,6 +593,19 @@ exports.linkEmail = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
+    // SECURITY: first-time linking (phone-only account) needs no password,
+    // but replacing an existing email + password requires the current one —
+    // otherwise a stolen session could permanently take over the account.
+    if (req.user.email) {
+      const current = await Model.findById(req.user._id).select('+password');
+      if (current?.password) {
+        const { currentPassword } = req.body;
+        if (!currentPassword || !(await current.comparePassword(currentPassword))) {
+          return res.status(401).json({ success: false, message: 'Current password is required to change your email' });
+        }
+      }
+    }
+
     // Check if email already used in SAME collection
     const existingEmailUser = await Model.findOne({ email: email.toLowerCase(), _id: { $ne: req.user._id } });
     if (existingEmailUser) {

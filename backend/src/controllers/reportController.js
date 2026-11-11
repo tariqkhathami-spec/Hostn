@@ -227,6 +227,17 @@ exports.takeAction = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
+    // SECURITY: a report can target any account id, including an admin's.
+    // Only a super admin may suspend or ban an admin account this way.
+    if (
+      report.targetType === 'user' &&
+      ['suspension', 'account_banned'].includes(actionTaken) &&
+      (await findUserType(report.targetId)) === 'Admin' &&
+      req.user.adminRole !== 'super'
+    ) {
+      return res.status(403).json({ success: false, message: 'Only a super admin can suspend or ban an admin account' });
+    }
+
     if (status) report.status = status;
     if (actionTaken) report.actionTaken = actionTaken;
     if (adminNotes) report.adminNotes = adminNotes.replace(/<[^>]*>/g, '').trim();

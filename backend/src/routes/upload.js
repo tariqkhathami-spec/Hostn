@@ -20,6 +20,13 @@ if (useS3) {
 }
 
 // All upload routes require authentication
+// SECURITY: the folder comes from the query string and becomes part of the
+// storage path — allow only a plain name, never slashes or dots.
+function safeFolder(value, fallback) {
+  const cleaned = String(value || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+  return cleaned || fallback;
+}
+
 router.use(protect);
 
 // @desc    Upload a single image
@@ -31,7 +38,7 @@ const handleSingleUpload = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const folder = req.query.folder || 'properties';
+    const folder = safeFolder(req.query.folder, 'properties');
     const result = await uploadImage(req.file.buffer, { folder });
 
     res.json({
@@ -74,7 +81,7 @@ router.post('/multiple', uploadMultiple, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No files uploaded' });
     }
 
-    const folder = req.query.folder || 'properties';
+    const folder = safeFolder(req.query.folder, 'properties');
     const uploadPromises = req.files.map((file) =>
       uploadImage(file.buffer, { folder }).then((result) => ({
         url: result.url,
@@ -108,7 +115,7 @@ router.post('/document', uploadDocument, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const folder = req.query.folder || 'documents';
+    const folder = safeFolder(req.query.folder, 'documents');
     const result = await uploadImage(req.file.buffer, { folder });
 
     res.json({
