@@ -765,4 +765,8 @@ router.put('/profile/email', hostOnly, async (req, res, next) => {
   }
 });
 
+// DELETE /host/account — same safe flow as DELETE /auth/account (refuses while
+// bookings are open, unlists the host's properties, erases personal data).
+router.delete('/account', require('../../controllers/authController').deleteAccount);
+
 module.exports = router;

@@ -639,12 +639,76 @@ exports.deleteAccount = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const Model = getUserModel(req.user);
+    const userType = req.user.userType;
+    const Booking = require('../models/Booking');
+    const Property = require('../models/Property');
+    const Unit = require('../models/Unit');
+
+    // Admin accounts are removed by another admin, never self-service.
+    if (userType === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin accounts cannot be deleted from here' });
+    }
+
+    // Open commitments must be settled first: a guest with a coming stay or a
+    // host with guests arriving cannot simply disappear.
+    const now = new Date();
+    const openStatuses = ['pending', 'confirmed', 'held'];
+    let propertyIds = [];
+    if (userType === 'host') {
+      propertyIds = (await Property.find({ host: userId }).select('_id').lean()).map((p) => p._id);
+    }
+    const openBookings = await Booking.countDocuments(
+      userType === 'host'
+        ? { property: { $in: propertyIds }, status: { $in: ['pending', 'confirmed'] }, checkOut: { $gte: now } }
+        : {
+            guest: userId,
+            checkOut: { $gte: now },
+            $or: [
+              { status: { $in: ['pending', 'confirmed'] } },
+              { status: 'held', holdExpiresAt: { $gt: now } },
+            ],
+          }
+    );
+    if (openBookings > 0) {
+      return res.status(409).json({
+        success: false,
+        code: 'OPEN_BOOKINGS',
+        openBookings,
+        message:
+          userType === 'host'
+            ? 'لا يمكن حذف الحساب وعليه حجوزات قادمة. أكمل أو ألغِ الحجوزات أولاً.'
+            : 'لا يمكن حذف الحساب وعليك حجوزات قادمة. ألغِ الحجوزات أولاً.',
+      });
+    }
+
+    // A host's listings leave the marketplace with the account.
+    if (userType === 'host' && propertyIds.length > 0) {
+      await Property.updateMany({ _id: { $in: propertyIds } }, { $set: { isActive: false } });
+      await Unit.updateMany({ property: { $in: propertyIds } }, { $set: { isActive: false } });
+    }
 
     // Revoke all refresh tokens
     await RefreshToken.revokeAllForUser(userId);
 
-    // Remove the user document from the correct collection
-    await Model.findByIdAndDelete(userId);
+    // Erase personal data but keep the document: bookings, payments and
+    // invoices reference it and must stay intact. Clearing phone and email
+    // also frees them for a fresh registration later.
+    await Model.collection.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          name: 'Deleted account',
+          avatar: null,
+          isSuspended: true,
+          deletedAt: now,
+          deviceTokens: [],
+          phoneVerified: false,
+          isVerified: false,
+        },
+        $unset: { email: '', phone: '', password: '', nationalId: '', vatEntries: '' },
+        $inc: { tokenVersion: 1 },
+      }
+    );
 
     // Clear auth cookies
     res.cookie('hostn_token', '', { httpOnly: true, expires: new Date(0), path: '/' });
