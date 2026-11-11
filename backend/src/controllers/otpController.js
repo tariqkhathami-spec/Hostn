@@ -34,6 +34,20 @@ const TEST_ACCOUNTS = {
   '500000003': 'guest',
 };
 
+// SECURITY: the fixed-code test accounts are a development convenience.
+// In production they are OFF unless ALLOW_TEST_ACCOUNTS=true is set, and the
+// admin test account is never honoured in production under any setting.
+const isProduction = () => process.env.NODE_ENV === 'production';
+function testAccountRole(phone) {
+  const role = TEST_ACCOUNTS[phone];
+  if (!role) return null;
+  if (isProduction()) {
+    if (process.env.ALLOW_TEST_ACCOUNTS !== 'true') return null;
+    if (role === 'admin') return null;
+  }
+  return role;
+}
+
 // In-memory cooldown tracker (phone → last send timestamp)
 const cooldownMap = new Map();
 const RESEND_COOLDOWN_MS = 30 * 1000; // 30 seconds
@@ -110,7 +124,7 @@ exports.sendOTP = async (req, res, next) => {
     }
 
     // Test accounts: always bypass OTP
-    if (TEST_ACCOUNTS[phone]) {
+    if (testAccountRole(phone)) {
       await OTP.deleteMany({ phone, countryCode });
       await OTP.create({
         phone,
@@ -197,14 +211,16 @@ exports.verifyOTP = async (req, res, next) => {
     //   2. Test account role (backward compat for the 500000001/2/3 test phones)
     //   3. Fallback 'guest'
     const originType = inferUserTypeFromOrigin(req.headers.origin || req.headers.referer);
-    const userType = originType || TEST_ACCOUNTS[phone] || resolveUserType(req);
+    const userType = originType || testAccountRole(phone) || resolveUserType(req);
     const Model = MODEL_BY_TYPE[userType];
     if (!Model) {
       return res.status(400).json({ success: false, message: 'Invalid user type' });
     }
 
     // Test accounts: accept 0000
-    const isTestAccount = TEST_ACCOUNTS[phone] && otp === '0000';
+    // Never bypass OTP into the admin collection in production.
+    const isTestAccount = Boolean(testAccountRole(phone)) && otp === '0000'
+      && !(isProduction() && userType === 'admin');
 
     // Dev bypass: accept 0000 as valid OTP for testing
     const isDevBypass = process.env.DEV_OTP_BYPASS === 'true'
@@ -231,13 +247,19 @@ exports.verifyOTP = async (req, res, next) => {
     let isNewUser = false;
 
     if (!user) {
+      // SECURITY: admin accounts are never self-registered through OTP.
+      // They must be created by an existing admin or the create-admin scripts.
+      // (Outside production the admin test phone may still bootstrap one.)
+      if (userType === 'admin' && !(testAccountRole(phone) === 'admin' && !isProduction())) {
+        return res.status(403).json({ success: false, message: 'This phone number is not registered as an admin' });
+      }
       isNewUser = true;
       const createData = {
         phone,
         phoneVerified: true,
         name: `User ${phone.slice(-4)}`,
       };
-      if (userType === 'admin') createData.adminRole = TEST_ACCOUNTS[phone] === 'admin' ? 'super' : 'support';
+      if (userType === 'admin') createData.adminRole = 'super';
       user = await Model.create(createData);
     } else {
       // Normalize phone to the format without leading 0 for consistency

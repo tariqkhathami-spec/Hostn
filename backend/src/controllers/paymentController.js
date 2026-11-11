@@ -412,13 +412,15 @@ exports.simulatePayment = async (req, res, next) => {
       }
     }
 
-    await ActivityLog.create({
+    // Log with an action the ActivityLog enum accepts; never let audit
+    // logging fail a payment that has already been recorded.
+    ActivityLog.create({
       actor: req.user._id,
-      action: `payment_simulated_${outcome}`,
+      action: spec.paymentStatus === 'completed' ? 'payment_completed' : 'payment_failed',
       target: { type: 'Payment', id: payment._id },
       details: `Simulated payment outcome: ${outcome}`,
       ip: req.ip,
-    });
+    }).catch(() => {});
 
     res.json({
       success: true,

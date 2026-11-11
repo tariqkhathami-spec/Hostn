@@ -418,8 +418,9 @@ exports.updateProfile = async (req, res, next) => {
 
         // Test accounts bypass OTP verification
         const TEST_ACCOUNTS = { '500000001': true, '500000002': true, '500000003': true };
-        const isTestAccount = TEST_ACCOUNTS[rawPhone] && phoneVerificationCode === '0000';
-        const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && phoneVerificationCode === '000000';
+        const testAccountsAllowed = process.env.NODE_ENV !== 'production' || process.env.ALLOW_TEST_ACCOUNTS === 'true';
+        const isTestAccount = testAccountsAllowed && TEST_ACCOUNTS[rawPhone] && phoneVerificationCode === '0000';
+        const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && process.env.NODE_ENV !== 'production' && phoneVerificationCode === '000000';
 
         if (!isTestAccount && !isDevBypass) {
           // Verify OTP via Authentica API (same as login flow)
@@ -549,7 +550,7 @@ exports.linkPhone = async (req, res, next) => {
     }
 
     // Verify OTP first
-    const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && otp === '000000';
+    const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && process.env.NODE_ENV !== 'production' && otp === '000000';
     if (!isDevBypass) {
       const OTP = require('../models/OTP');
       const result = await OTP.verifyCode(phone, countryCode, otp);
