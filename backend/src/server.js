@@ -169,7 +169,8 @@ function rateLimit({ windowMs = 15 * 60 * 1000, max = 100, message = 'Too many r
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many login attempts, try again in 15 minutes' });
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: 'Too many accounts created, try again later' });
 const messageLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: 'Too many messages sent, please slow down' });
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+// Local development runs scripted test suites that exceed the production cap.
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === 'production' ? 200 : 20000 });
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 const { requestLogger } = require('./config/logger');
@@ -192,6 +193,7 @@ app.use('/api/v1/properties', propertyRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/host', hostRoutes);
+app.use('/api/v1/articles', require('./routes/articles'));
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/notifications', notificationRoutes);

@@ -308,6 +308,20 @@ const unitSchema = new mongoose.Schema(
       },
     ],
 
+    // ── Named offers (host mobile app) ───────────────────────────────
+    // An offer is a label over a set of dates. The discount itself lives in
+    // `datePricing[n].discountPercent` (which is what booking pricing reads);
+    // this list only remembers which dates were discounted together and
+    // under what name, so the offer can be listed and removed as one item.
+    offers: [
+      {
+        name: { type: String, trim: true, maxlength: 100 },
+        discountPercent: { type: Number, required: true, min: 1, max: 100 },
+        dates: [{ type: Date }],
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
     // ── Capacity ─────────────────────────────────────────────────
     capacity: {
       maxGuests: { type: Number, default: 1, min: 1 },
