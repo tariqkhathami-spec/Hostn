@@ -4,7 +4,7 @@ const Guest = require('../models/Guest');
 const Host = require('../models/Host');
 const Admin = require('../models/Admin');
 const RefreshToken = require('../models/RefreshToken');
-const { sendVerificationCode } = require('../services/email');
+const { sendVerificationCode, sendEmail } = require('../services/email');
 const authentica = require('../services/authentica');
 
 const MODEL_BY_TYPE = { guest: Guest, host: Host, admin: Admin };
@@ -142,32 +142,34 @@ exports.register = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid user type' });
     }
 
+    // SECURITY: the user type comes from client-controlled headers (Origin /
+    // Referer). Admin accounts must never be created through public
+    // registration — only by an existing admin or the create-admin scripts.
+    if (userType === 'admin') {
+      return res.status(403).json({ success: false, message: 'Admin accounts cannot be self-registered' });
+    }
+
     const existingEmail = await Model.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    let user;
-
-    // Check if a phone-only user exists in this collection (registered via OTP on mobile)
+    // SECURITY: never attach an email + password to an existing phone-only
+    // account here — the caller has not proved they own that phone, so this
+    // was an unauthenticated account takeover. Existing phone users add an
+    // email through the authenticated link-email flow instead.
     if (phone) {
-      const phoneUser = await Model.findOne({
-        phone,
-        $or: [{ email: { $exists: false } }, { email: null }],
-      });
+      const phoneVariants = [phone, phone.replace(/^\+966/, ''), phone.replace(/^0+/, ''), `+966${phone.replace(/^(\+966|0+)/, '')}`];
+      const phoneUser = await Model.findOne({ phone: { $in: phoneVariants } });
       if (phoneUser) {
-        // Merge: add email+password to existing phone account
-        phoneUser.name = name;
-        phoneUser.email = email;
-        phoneUser.password = password;
-        await phoneUser.save();
-        user = phoneUser;
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number already registered. Sign in with your phone number instead.',
+        });
       }
     }
 
-    if (!user) {
-      user = await Model.create({ name, email, password, phone });
-    }
+    const user = await Model.create({ name, email, password, phone });
 
     await sendAuthResponse(user, userType, 201, res, req);
   } catch (error) {
@@ -676,14 +678,26 @@ exports.forgotPassword = async (req, res, next) => {
       }
     );
 
-    // In production, this would send an email. For now, return the token in response.
     const resetUrl = `${process.env.CLIENT_URL || 'https://hostn.co'}/auth/reset-password?token=${resetToken}`;
 
-    res.json({
-      success: true,
-      message: 'Password reset link generated',
-      resetUrl,
-    });
+    // SECURITY: the reset link must only ever reach the account's own inbox.
+    // Returning it in the HTTP response let anyone take over any account by
+    // knowing its email address.
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset your Hostn password | إعادة تعيين كلمة المرور',
+        text: `Use this link to reset your Hostn password (valid for 1 hour):\n${resetUrl}\n\nIf you did not request this, ignore this email.`,
+        html: `<p>Use this link to reset your Hostn password (valid for 1 hour):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, ignore this email.</p>`,
+      });
+    } catch (mailErr) {
+      console.error('[forgotPassword] failed to send reset email:', mailErr?.message);
+    }
+
+    const payload = { success: true, message: 'If that email exists, a reset link has been generated' };
+    // Local development convenience only.
+    if (process.env.NODE_ENV !== 'production') payload.resetUrl = resetUrl;
+    res.json(payload);
   } catch (error) {
     next(error);
   }
