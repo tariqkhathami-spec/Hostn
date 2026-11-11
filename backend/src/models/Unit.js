@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 
+// No discount or offer may make a night free: a 100% offer priced stays at
+// 0 SAR, which is open to abuse (fake stays for reviews and loyalty points).
+const MAX_DISCOUNT_PERCENT = 90;
+
 // ── Pool sub-schema ──────────────────────────────────────────────────
 const poolSchema = new mongoose.Schema(
   {
@@ -282,13 +286,13 @@ const unitSchema = new mongoose.Schema(
       // `enabled` on/off toggle (PR F). `enabled` defaults to TRUE so existing
       // units with a non-zero percent still apply their discount; the host
       // can then disable without losing the value.
-      discountPercent: { type: Number, default: 0, min: 0, max: 100 },
+      discountPercent: { type: Number, default: 0, min: 0, max: MAX_DISCOUNT_PERCENT },
       globalStackable: { type: Boolean, default: false },
       globalEnabled: { type: Boolean, default: true },
-      weeklyDiscount: { type: Number, default: 0, min: 0, max: 100 },
+      weeklyDiscount: { type: Number, default: 0, min: 0, max: MAX_DISCOUNT_PERCENT },
       weeklyStackable: { type: Boolean, default: false },
       weeklyEnabled: { type: Boolean, default: true },
-      monthlyDiscount: { type: Number, default: 0, min: 0, max: 100 },
+      monthlyDiscount: { type: Number, default: 0, min: 0, max: MAX_DISCOUNT_PERCENT },
       monthlyStackable: { type: Boolean, default: false },
       monthlyEnabled: { type: Boolean, default: true },
     },
@@ -296,7 +300,7 @@ const unitSchema = new mongoose.Schema(
     // ── Discount rules (weekday/weekend) ────────────────────────────
     discountRules: [{
       type: { type: String, enum: ['weekday', 'weekend'], required: true },
-      percent: { type: Number, required: true, min: 0, max: 100 },
+      percent: { type: Number, required: true, min: 0, max: MAX_DISCOUNT_PERCENT },
       stackable: { type: Boolean, default: false },
       enabled: { type: Boolean, default: true },
     }],
@@ -307,7 +311,7 @@ const unitSchema = new mongoose.Schema(
         date: { type: Date, required: true },
         price: { type: Number, min: 0 },         // override price (null = use day-of-week default)
         isBlocked: { type: Boolean, default: false }, // true = unavailable
-        discountPercent: { type: Number, min: 0, max: 100 },
+        discountPercent: { type: Number, min: 0, max: MAX_DISCOUNT_PERCENT },
         discountStackable: { type: Boolean, default: false },
       },
     ],
@@ -320,7 +324,7 @@ const unitSchema = new mongoose.Schema(
     offers: [
       {
         name: { type: String, trim: true, maxlength: 100 },
-        discountPercent: { type: Number, required: true, min: 1, max: 100 },
+        discountPercent: { type: Number, required: true, min: 1, max: MAX_DISCOUNT_PERCENT },
         dates: [{ type: Date }],
         createdAt: { type: Date, default: Date.now },
       },
@@ -363,3 +367,4 @@ unitSchema.set('toJSON', { virtuals: true });
 unitSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('Unit', unitSchema);
+module.exports.MAX_DISCOUNT_PERCENT = MAX_DISCOUNT_PERCENT;
