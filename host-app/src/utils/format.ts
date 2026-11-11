@@ -37,3 +37,15 @@ export function formatPhoneDisplay(phone: string): string {
   if (phone.length === 10 && phone.startsWith('05')) return `+966${phone.slice(1)}`;
   return phone;
 }
+
+/**
+ * Convert Arabic-Indic (٠-٩) and Persian (۰-۹) digits to Western digits.
+ * iOS number pads emit Arabic-Indic digits when the keyboard language is
+ * Arabic; `\D` treats those as non-digits, so they must be converted before
+ * any digit-only filtering.
+ */
+export function toWesternDigits(value: string): string {
+  return value
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+}

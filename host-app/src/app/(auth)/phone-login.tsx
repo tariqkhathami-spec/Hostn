@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button';
 import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { authService } from '../../services/auth.service';
+import { toWesternDigits } from '../../utils/format';
 
 export default function PhoneLoginScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function PhoneLoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const normalizePhone = (raw: string): string => {
-    let cleaned = raw.replace(/\D/g, '');
+    let cleaned = toWesternDigits(raw).replace(/\D/g, '');
     if (cleaned.startsWith('0')) {
       cleaned = cleaned.substring(1);
     }
@@ -73,7 +74,7 @@ export default function PhoneLoginScreen() {
               <TextInput
                 placeholder="5XXXXXXXX"
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(text) => setPhone(toWesternDigits(text))}
                 keyboardType="phone-pad"
                 maxLength={10}
                 style={styles.phoneInput}

@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/auth.service';
+import { toWesternDigits } from '../../utils/format';
 import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
@@ -50,7 +51,7 @@ export default function PhoneScreen() {
   const [otpMethod, setOtpMethod] = useState<OtpMethod>('sms');
 
   const validatePhone = (phoneNumber: string, country: GCCCountry): boolean => {
-    const digits = phoneNumber.replace(/\D/g, '');
+    const digits = toWesternDigits(phoneNumber).replace(/\D/g, '');
     if (digits.length < country.minDigits || digits.length > country.maxDigits) return false;
     if (country.startsWith && !digits.startsWith(country.startsWith)) return false;
     return true;
@@ -62,7 +63,7 @@ export default function PhoneScreen() {
     if (!isValid) return;
     setLoading(true);
     try {
-      let localPhone = phone.replace(/\D/g, '');
+      let localPhone = toWesternDigits(phone).replace(/\D/g, '');
       // Strip country code prefix if user typed it
       const codeDigits = selectedCountry.code.replace('+', '');
       if (localPhone.startsWith(codeDigits)) localPhone = localPhone.slice(codeDigits.length);
@@ -141,7 +142,7 @@ export default function PhoneScreen() {
             keyboardType="phone-pad"
             maxLength={selectedCountry.maxDigits + 3}
             value={phone}
-            onChangeText={setPhone}
+            onChangeText={(text) => setPhone(toWesternDigits(text))}
             autoFocus
           />
         </View>

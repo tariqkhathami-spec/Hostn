@@ -42,7 +42,7 @@ export function getNights(checkIn: string, checkOut: string): number {
 }
 
 export function formatPhone(phone: string, countryCode?: string): string {
-  let cleaned = phone.replace(/\D/g, '');
+  let cleaned = toWesternDigits(phone).replace(/\D/g, '');
 
   // If a country code is provided, strip it from the front
   if (countryCode) {
@@ -64,7 +64,7 @@ export function formatPhone(phone: string, countryCode?: string): string {
 }
 
 export function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/\D/g, '');
+  let cleaned = toWesternDigits(phone).replace(/\D/g, '');
   if (cleaned.startsWith('0')) {
     cleaned = '966' + cleaned.slice(1);
   }
@@ -81,4 +81,16 @@ export function formatRating(rating: number): string {
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength - 3) + '...';
+}
+
+/**
+ * Convert Arabic-Indic (٠-٩) and Persian (۰-۹) digits to Western digits.
+ * iOS number pads emit Arabic-Indic digits when the keyboard language is
+ * Arabic; `\D` treats those as non-digits, so they must be converted before
+ * any digit-only filtering.
+ */
+export function toWesternDigits(value: string): string {
+  return value
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 }

@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Button from '../../components/ui/Button';
+import { toWesternDigits } from '../../utils/format';
 import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { APP_CONFIG } from '../../constants/config';
@@ -122,7 +123,7 @@ export default function OtpVerifyScreen() {
             ref={inputRef}
             style={styles.otpInput}
             value={code}
-            onChangeText={(text) => setCode(text.replace(/\D/g, ''))}
+            onChangeText={(text) => setCode(toWesternDigits(text).replace(/\D/g, ''))}
             keyboardType="number-pad"
             maxLength={APP_CONFIG.otpLength}
             autoFocus

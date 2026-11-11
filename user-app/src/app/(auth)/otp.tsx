@@ -15,6 +15,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/auth.service';
+import { toWesternDigits } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
 import { formatPhone } from '../../utils/format';
 import { useLanguage } from '../../i18n';
@@ -48,7 +49,7 @@ export default function OtpScreen() {
 
   const handleCodeChange = (next: string) => {
     if (errorMsg) setErrorMsg(null);
-    setCode(next);
+    setCode(toWesternDigits(next).replace(/\D/g, ''));
   };
 
   useEffect(() => {
