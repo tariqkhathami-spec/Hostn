@@ -50,6 +50,30 @@ export default function ContactScreen() {
           </Text>
         </View>
 
+        {/* The host's own account manager, when one is assigned */}
+        {(support as any).accountManager?.name ? (
+          <TouchableOpacity
+            style={managerStyles.card}
+            activeOpacity={0.7}
+            disabled={!(support as any).accountManager.phone}
+            onPress={() => Linking.openURL(`tel:${(support as any).accountManager.phone}`)}
+          >
+            <View style={managerStyles.icon}>
+              <Ionicons name="person-circle-outline" size={34} color={Colors.primary} />
+            </View>
+            <View style={managerStyles.text}>
+              <Text style={managerStyles.label}>{'مدير حسابك'}</Text>
+              <Text style={managerStyles.name}>{(support as any).accountManager.name}</Text>
+              {(support as any).accountManager.phone ? (
+                <Text style={managerStyles.phone}>{`\u2066${(support as any).accountManager.phone}\u2069`}</Text>
+              ) : null}
+            </View>
+            {(support as any).accountManager.phone ? (
+              <Ionicons name="call-outline" size={22} color={Colors.primary} />
+            ) : null}
+          </TouchableOpacity>
+        ) : null}
+
         {/* Action Cards */}
         <View style={styles.cardsContainer}>
           {/* Chat Card */}
@@ -90,6 +114,24 @@ export default function ContactScreen() {
     </ScreenWrapper>
   );
 }
+
+const managerStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginHorizontal: Spacing.base,
+    marginBottom: Spacing.base,
+    padding: Spacing.base,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.primary100,
+  },
+  icon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' },
+  text: { flex: 1, alignItems: 'flex-start' },
+  label: { ...Typography.caption, color: Colors.textSecondary },
+  name: { ...Typography.bodyBold, color: Colors.textPrimary },
+  phone: { ...Typography.small, color: Colors.textSecondary },
+});
 
 const styles = StyleSheet.create({
   scrollView: {

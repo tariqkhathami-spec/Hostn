@@ -62,6 +62,10 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_LOGS,
   ],
 
+  // Account managers get nothing under /admin/*. Their whole surface is
+  // /api/v1/manager, where every query is limited to their own hosts.
+  account_manager: [],
+
   finance: [
     PERMISSIONS.VIEW_DASHBOARD,
     PERMISSIONS.VIEW_PAYMENTS,

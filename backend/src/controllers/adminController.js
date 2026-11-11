@@ -302,7 +302,7 @@ exports.updateUser = async (req, res, next) => {
         });
       case 'set_admin_role': {
         const { adminRole } = req.body;
-        if (!['super', 'support', 'finance'].includes(adminRole)) {
+        if (!['super', 'support', 'finance', 'account_manager'].includes(adminRole)) {
           return res.status(400).json({ success: false, message: 'Invalid admin role. Must be: super, support, or finance' });
         }
         // Only super admins can change admin roles

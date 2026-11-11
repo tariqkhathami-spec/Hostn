@@ -8,7 +8,7 @@ export interface User {
   userType?: 'guest' | 'host' | 'admin';
   /** Legacy alias — mirrors `userType`. Kept for backward compat during migration. */
   role: 'guest' | 'host' | 'admin';
-  adminRole?: 'super' | 'support' | 'finance' | null;
+  adminRole?: 'super' | 'support' | 'finance' | 'account_manager' | null;
   isVerified: boolean;
   /** Legacy: user-level wishlist. New code should use the Wishlist collection. */
   wishlist?: string[];

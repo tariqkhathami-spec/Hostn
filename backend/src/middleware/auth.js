@@ -56,6 +56,18 @@ exports.protect = async (req, res, next) => {
       });
     }
 
+    // SECURITY: account managers are staff with a deliberately narrow reach.
+    // Many routes treat any admin as trusted (view any booking, edit any
+    // unit), so rather than auditing each one, an account manager may only
+    // call their own API and the session endpoints. Default deny.
+    if (userType === 'admin' && user.adminRole === 'account_manager') {
+      const path = (req.originalUrl || '').split('?')[0];
+      const allowed = ['/api/v1/manager', '/api/v1/auth', '/api/v1/notifications'];
+      if (!allowed.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) {
+        return res.status(403).json({ success: false, message: 'Not available for account managers' });
+      }
+    }
+
     req.user = user;
     // Attach userType for downstream authorization + polymorphic writes
     req.user.userType = userType;
