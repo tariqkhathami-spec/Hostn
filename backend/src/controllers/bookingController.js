@@ -896,8 +896,11 @@ exports.getUnitBookedDates = async (req, res, next) => {
     }
 
     // Find all active bookings for this unit (pending, confirmed, or active holds)
+    // The apps sometimes hold a property id here (a listing with a single
+    // unit is addressed by its property): match on whichever the id is.
+    const idIsUnit = Boolean(await Unit.exists({ _id: unitId }));
     let bookingsQuery = Booking.find({
-      unit: unitId,
+      ...(idIsUnit ? { unit: unitId } : { property: unitId }),
       $or: [
         { status: { $in: ['pending', 'confirmed'] } },
         { status: 'held', holdExpiresAt: { $gt: new Date() } },
