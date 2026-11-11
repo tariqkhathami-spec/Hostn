@@ -377,6 +377,27 @@ export const adminApi = {
   getLicenses: (params?: Record<string, unknown>) => api.get('/admin/licenses', { params }),
   reviewLicense: (unitId: string, data: { action: 'approve' | 'reject'; reason?: string }) =>
     api.put(`/admin/licenses/${unitId}`, data),
+  // Staff and account managers (super admin only)
+  getStaff: () => api.get('/admin/staff'),
+  createStaff: (data: { name: string; phone: string; adminRole: 'super' | 'support' | 'finance' | 'account_manager' }) =>
+    api.post('/admin/staff', data),
+  getHostAssignments: (params?: { manager?: string; search?: string; page?: number }) =>
+    api.get('/admin/host-assignments', { params }),
+  assignAccountManager: (hostId: string, managerId: string | null) =>
+    api.put(`/admin/hosts/${hostId}/account-manager`, { managerId }),
+  distributeHosts: () => api.post('/admin/host-assignments/distribute'),
+  // Account manager's own hosts. These are the only calls that role may make.
+  managerOverview: () => api.get('/manager/overview'),
+  managerHosts: () => api.get('/manager/hosts'),
+  managerHost: (id: string) => api.get(`/manager/hosts/${id}`),
+  managerModerateProperty: (id: string, data: { action: 'approve' | 'reject'; reason?: string }) =>
+    api.post(`/manager/properties/${id}/moderate`, data),
+  managerReviewLicense: (unitId: string, data: { action: 'approve' | 'reject'; reason?: string }) =>
+    api.put(`/manager/licenses/${unitId}`, data),
+  managerTicket: (id: string) => api.get(`/manager/tickets/${id}`),
+  managerReplyTicket: (id: string, message: string) => api.post(`/manager/tickets/${id}/reply`, { message }),
+  managerSetTicketStatus: (id: string, status: 'open' | 'in_progress' | 'resolved' | 'closed') =>
+    api.put(`/manager/tickets/${id}/status`, { status }),
   // Logs
   getLogs: (params?: Record<string, unknown>) => api.get('/admin/logs', { params }),
   deleteProperty: (id: string) => api.delete(`/properties/${id}`),

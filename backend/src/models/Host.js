@@ -10,6 +10,9 @@ const hostSchema = new mongoose.Schema(
   {
     ...sharedUserFields(),
     // Placeholder for future business fields (empty for now per migration plan)
+    // The staff member (Admin with adminRole 'account_manager') who looks
+    // after this host. Set automatically on signup, changed by super admins.
+    accountManager: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null, index: true },
     // Set once the host finishes the in-app introduction programme, so the
     // host app stops showing it on every launch.
     onboardingCompleted: { type: Boolean, default: false },
@@ -33,6 +36,29 @@ const hostSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// A new host goes to the account manager with the fewest hosts.
+hostSchema.pre('save', async function (next) {
+  if (!this.isNew || this.accountManager) return next();
+  try {
+    const Admin = mongoose.model('Admin');
+    const managers = await Admin.find({ adminRole: 'account_manager', isSuspended: { $ne: true }, deletedAt: null })
+      .select('_id')
+      .lean();
+    if (managers.length > 0) {
+      const counts = await this.constructor.aggregate([
+        { $match: { accountManager: { $in: managers.map((m) => m._id) }, deletedAt: null } },
+        { $group: { _id: '$accountManager', n: { $sum: 1 } } },
+      ]);
+      const load = Object.fromEntries(counts.map((c) => [String(c._id), c.n]));
+      managers.sort((a, b) => (load[String(a._id)] || 0) - (load[String(b._id)] || 0));
+      this.accountManager = managers[0]._id;
+    }
+  } catch (error) {
+    // Assignment is a convenience; never block a signup on it.
+  }
+  next();
+});
 
 attachSharedIndexes(hostSchema);
 attachSharedHooks(hostSchema);

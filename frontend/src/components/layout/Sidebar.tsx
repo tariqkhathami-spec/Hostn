@@ -14,12 +14,13 @@ import { useAuth } from '@/context/AuthContext';
 import { notificationsApi, messagesApi } from '@/lib/api';
 
 type BadgeKey = 'bookings' | 'messages' | 'support';
+type AdminRole = 'super' | 'support' | 'finance' | 'account_manager';
 
 type NavItem = {
   href: string;
   icon: React.ElementType;
   label: { en: string; ar: string };
-  adminRoles?: ('super' | 'support' | 'finance')[];
+  adminRoles?: AdminRole[];
   badgeKey?: BadgeKey;
 };
 
@@ -50,7 +51,9 @@ const hostNav: NavItem[] = [
 ];
 
 const adminNav: NavItem[] = [
-  { href: '/admin', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' } },
+  // The dashboard reads /admin/stats, which an account manager may not call.
+  { href: '/admin', icon: LayoutDashboard, label: { en: 'Dashboard', ar: 'لوحة التحكم' }, adminRoles: ['super', 'support', 'finance'] },
+  { href: '/admin/my-hosts', icon: Users, label: { en: 'My Hosts', ar: 'مضيفيّ' }, adminRoles: ['account_manager'] },
   { href: '/admin/users', icon: Users, label: { en: 'Users', ar: 'المستخدمون' }, adminRoles: ['super', 'support'] },
   { href: '/admin/properties', icon: Building, label: { en: 'Properties', ar: 'العقارات' }, adminRoles: ['super', 'support'] },
   { href: '/admin/licenses', icon: FileText, label: { en: 'Tourism Permits', ar: 'تصاريح السياحة' }, adminRoles: ['super', 'support'] },
@@ -60,6 +63,7 @@ const adminNav: NavItem[] = [
   { href: '/admin/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' }, adminRoles: ['super', 'support'] },
   { href: '/admin/blog', icon: Newspaper, label: { en: 'Blog', ar: 'المدونة' }, adminRoles: ['super'] },
   { href: '/admin/logs', icon: BarChart3, label: { en: 'Activity Logs', ar: 'سجل النشاط' }, adminRoles: ['super', 'support', 'finance'] },
+  { href: '/admin/account-managers', icon: ShieldCheck, label: { en: 'Account Managers', ar: 'مدراء الحسابات' }, adminRoles: ['super'] },
 ];
 
 const NAV_MAP: Record<string, NavItem[]> = {
@@ -78,6 +82,7 @@ const ADMIN_ROLE_LABELS: Record<string, { en: string; ar: string }> = {
   super: { en: 'Super Admin', ar: 'مشرف عام' },
   support: { en: 'Support Admin', ar: 'مشرف دعم' },
   finance: { en: 'Finance Admin', ar: 'مشرف مالي' },
+  account_manager: { en: 'Account Manager', ar: 'مدير حساب' },
 };
 
 interface SidebarProps {
@@ -92,9 +97,9 @@ export default function Sidebar({ role }: SidebarProps) {
   const rawNav = NAV_MAP[role] || guestNav;
 
   // Filter admin nav items by admin sub-role
-  const adminRole = (user?.adminRole || 'super') as 'super' | 'support' | 'finance';
+  const adminRole = (user?.adminRole || 'super') as AdminRole;
   const nav = role === 'admin'
-    ? rawNav.filter(item => !item.adminRoles || item.adminRoles.includes(adminRole))
+    ? rawNav.filter(item => (item.adminRoles ? item.adminRoles.includes(adminRole) : adminRole !== 'account_manager'))
     : rawNav;
 
   // ── Unread badge counts ──

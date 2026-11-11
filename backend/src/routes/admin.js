@@ -60,6 +60,14 @@ router.delete('/bookings/:id', authorizePermission(PERMISSIONS.MANAGE_BOOKINGS),
 router.get('/payments', authorizePermission(PERMISSIONS.VIEW_PAYMENTS), getPayments);
 router.post('/payments/:id/refund', authorizePermission(PERMISSIONS.MANAGE_PAYMENTS), refundPayment);
 
+// Staff and account managers — super admins only
+const staff = require('../controllers/adminStaffController');
+router.get('/staff', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.getStaff);
+router.post('/staff', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.createStaff);
+router.get('/host-assignments', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.getAssignments);
+router.post('/host-assignments/distribute', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.distributeUnassigned);
+router.put('/hosts/:id/account-manager', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.assignManager);
+
 // Activity Logs — super + support + finance
 router.get('/logs', authorizePermission(PERMISSIONS.VIEW_LOGS), getLogs);
 

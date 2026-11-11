@@ -22,9 +22,14 @@ exports.createTicket = async (req, res) => {
     // userType / senderType are required by the model (accounts live in three
     // collections); omitting them made every new ticket fail with a 500.
     const accountType = { guest: 'Guest', host: 'Host', admin: 'Admin' }[req.user.userType] || 'Guest';
+    // A host's ticket goes straight to their account manager.
+    const owner = accountType === 'Host'
+      ? await require('../models/Host').findById(req.user._id).select('accountManager').lean()
+      : null;
     const ticket = await SupportTicket.create({
       user: req.user._id,
       userType: accountType,
+      assignedTo: (owner && owner.accountManager) || undefined,
       subject: sanitizedSubject,
       category,
       priority: priority || 'medium',
