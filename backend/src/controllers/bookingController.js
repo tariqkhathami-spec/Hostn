@@ -239,12 +239,59 @@ async function fallbackBooking(bookingData, checkInDate, checkOutDate) {
   return booking;
 }
 
+// When a property has active units, a booking must be for one of them: unit
+// rates and unit-level availability are the source of truth, and a
+// property-level booking would be priced from the legacy property rate and
+// be invisible to unit overlap checks. If the caller omitted unitId and the
+// property has exactly one active unit, use it; if it has several, refuse.
+async function resolveUnitId(propertyId, unitId) {
+  if (unitId) return { unitId };
+  const units = await Unit.find({ property: propertyId, isActive: true, isDeleted: { $ne: true } })
+    .select('_id')
+    .limit(2)
+    .lean();
+  if (units.length === 1) return { unitId: units[0]._id.toString() };
+  if (units.length > 1) return { error: { code: 'UNIT_REQUIRED', message: 'Please choose a unit for this property' } };
+  return { unitId: null };
+}
+
+// Rules every reservation must satisfy, whether it is created directly or as
+// a hold that is later converted. Returns null when OK, else { code, message }.
+function checkStayRules({ property, unit, checkInDate, checkOutDate, guests }) {
+  if (checkInDate < new Date(new Date().toDateString())) {
+    return { code: 'CHECKIN_IN_PAST', message: 'Check-in date cannot be in the past' };
+  }
+  const overlaps = (range) => new Date(range.start) < checkOutDate && new Date(range.end) > checkInDate;
+  if (property.unavailableDates?.some(overlaps)) {
+    return { code: 'DATES_BLOCKED', message: 'Property is blocked for selected dates' };
+  }
+  if (unit?.unavailableDates?.some(overlaps)) {
+    return { code: 'DATES_BLOCKED', message: 'Unit is blocked for selected dates' };
+  }
+  const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+  if (property.rules?.minNights && nights < property.rules.minNights) {
+    return { code: 'MIN_STAY', message: `Minimum stay is ${property.rules.minNights} nights`, params: { min: property.rules.minNights } };
+  }
+  if (property.rules?.maxNights && nights > property.rules.maxNights) {
+    return { code: 'MAX_STAY', message: `Maximum stay is ${property.rules.maxNights} nights`, params: { max: property.rules.maxNights } };
+  }
+  if (guests && (guests.adults || guests.children)) {
+    const totalGuests = (Number(guests.adults) || 0) + (Number(guests.children) || 0);
+    const maxGuests = unit?.capacity?.maxGuests || property.capacity?.maxGuests;
+    if (maxGuests && totalGuests > maxGuests) {
+      return { code: 'MAX_CAPACITY', message: `Exceeds max capacity of ${maxGuests} guests`, params: { max: maxGuests } };
+    }
+  }
+  return null;
+}
+
 // @desc    Create a reservation hold (15 min silent hold)
 // @route   POST /api/bookings/hold
 // @access  Private
 exports.createHold = async (req, res, next) => {
   try {
-    const { propertyId, unitId, checkIn, checkOut, guests } = req.body;
+    const { propertyId, checkIn, checkOut, guests } = req.body;
+    let { unitId } = req.body;
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
@@ -261,6 +308,12 @@ exports.createHold = async (req, res, next) => {
       return res.status(404).json({ success: false, code: 'PROPERTY_NOT_FOUND', message: 'Property not found' });
     }
 
+    const resolvedUnit = await resolveUnitId(propertyId, unitId);
+    if (resolvedUnit.error) {
+      return res.status(400).json({ success: false, ...resolvedUnit.error });
+    }
+    unitId = resolvedUnit.unitId;
+
     // Validate unit if provided
     let unit = null;
     if (unitId) {
@@ -272,6 +325,13 @@ exports.createHold = async (req, res, next) => {
 
     if (property.host.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, code: 'OWN_PROPERTY', message: 'Cannot hold your own property' });
+    }
+
+    // A hold is converted to a booking without re-validation, so it must
+    // satisfy the same stay rules as a direct booking.
+    const holdRuleError = checkStayRules({ property, unit, checkInDate, checkOutDate, guests });
+    if (holdRuleError) {
+      return res.status(400).json({ success: false, ...holdRuleError });
     }
 
     // Cancel any existing holds by this user (one hold per user)
@@ -335,7 +395,8 @@ exports.createHold = async (req, res, next) => {
 // @access  Private
 exports.createBooking = async (req, res, next) => {
   try {
-    const { propertyId, unitId, checkIn, checkOut, guests, specialRequests, holdId } = req.body;
+    const { propertyId, checkIn, checkOut, guests, specialRequests, holdId } = req.body;
+    let { unitId } = req.body;
 
     // ── Convert hold → booking (if holdId provided) ─────────────────
     if (holdId) {
@@ -408,6 +469,12 @@ exports.createBooking = async (req, res, next) => {
     if (!property || !property.isActive) {
       return res.status(404).json({ success: false, code: 'PROPERTY_NOT_FOUND', message: 'Property not found' });
     }
+
+    const resolvedUnit = await resolveUnitId(propertyId, unitId);
+    if (resolvedUnit.error) {
+      return res.status(400).json({ success: false, ...resolvedUnit.error });
+    }
+    unitId = resolvedUnit.unitId;
 
     // Validate unit if provided
     let unit = null;
