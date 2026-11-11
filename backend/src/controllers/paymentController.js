@@ -141,6 +141,30 @@ exports.verifyPayment = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // SECURITY: the gateway id is client-supplied. Validate its shape (it is
+    // interpolated into the gateway URL), make verification idempotent, and
+    // never let one gateway payment settle more than one booking.
+    if (typeof moyasarPaymentId !== 'string' || !/^[A-Za-z0-9-]{8,64}$/.test(moyasarPaymentId)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment reference' });
+    }
+    if (payment.status === 'completed' && payment.moyasarPaymentId === moyasarPaymentId) {
+      return res.json({ success: true, data: { payment }, message: 'Payment already verified' });
+    }
+    if (!['pending', 'processing', 'failed'].includes(payment.status)) {
+      return res.status(400).json({ success: false, message: `Payment cannot be verified in status "${payment.status}"` });
+    }
+    const reused = await Payment.exists({ moyasarPaymentId, _id: { $ne: payment._id } });
+    if (reused) {
+      await ActivityLog.create({
+        actor: req.user._id,
+        action: 'payment_amount_mismatch',
+        target: { type: 'Payment', id: payment._id },
+        details: `Gateway payment ${moyasarPaymentId} is already attached to another payment`,
+        ip: req.ip,
+      }).catch(() => {});
+      return res.status(400).json({ success: false, message: 'Payment reference already used' });
+    }
+
     // ALWAYS verify with Moyasar API — never trust client-side callback alone
     if (!MOYASAR_SECRET_KEY) {
       return res.status(503).json({
@@ -156,6 +180,10 @@ exports.verifyPayment = async (req, res, next) => {
         success: false,
         message: 'Could not verify payment with payment gateway',
       });
+    }
+
+    if (moyasarPayment.currency && moyasarPayment.currency !== 'SAR') {
+      return res.status(400).json({ success: false, message: 'Payment currency mismatch' });
     }
 
     // Verify amount matches to prevent partial-payment fraud
@@ -350,8 +378,13 @@ exports.simulatePayment = async (req, res, next) => {
     if (!payment) {
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
-    if (payment.user && payment.user.toString() !== req.user._id.toString()) {
+    if (!payment.user || payment.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    // Only an unsettled payment may be simulated — never flip a completed,
+    // refunded or cancelled payment.
+    if (!['pending', 'processing', 'failed'].includes(payment.status)) {
+      return res.status(400).json({ success: false, message: `Payment cannot be simulated in status "${payment.status}"` });
     }
 
     // Mark the payment with the chosen status. Stamp a fake Moyasar ID so

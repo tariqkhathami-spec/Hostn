@@ -446,9 +446,12 @@ exports.getHostReviews = async (req, res, next) => {
     const safeLimit = Math.min(Math.max(1, parseInt(limit) || 10), MAX_LIMIT);
 
     const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title');
+    // SECURITY: a propertyId filter may only narrow to the host's own
+    // properties — it must never widen the query to someone else's.
+    const ownIds = properties.map((p) => p._id);
     const propertyIds = propertyId
-      ? [propertyId]
-      : properties.map((p) => p._id);
+      ? ownIds.filter((id) => id.toString() === String(propertyId))
+      : ownIds;
 
     const query = { property: { $in: propertyIds } };
     if (rating) {
@@ -460,7 +463,7 @@ exports.getHostReviews = async (req, res, next) => {
 
     const reviews = await Review.find(query)
       .populate('property', 'title titleAr images type location')
-      .populate('guest', 'name avatar email')
+      .populate('guest', 'name avatar')
       .sort('-createdAt')
       .skip(skip)
       .limit(safeLimit);
