@@ -15,18 +15,23 @@ function PaymentCallbackContent() {
   const { id: bookingId } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
+    // This page is reached by a full-page redirect back from the payment
+    // gateway, so the session is still being restored on first render.
+    // Redirecting before it finishes sent paying guests to their dashboard
+    // without verifying the payment.
+    if (authLoading) return;
     if (!isAuthenticated) {
       router.push('/auth/login');
       return;
     }
     verifyPayment();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, authLoading]);
 
   const verifyPayment = async () => {
     // PR K: when the simulator drove this callback (?simulated=1), read the

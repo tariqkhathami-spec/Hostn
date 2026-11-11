@@ -37,7 +37,7 @@ declare global {
 function BookingContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { language } = useLanguage();
 
   const [property, setProperty] = useState<Property | null>(null);
@@ -82,12 +82,16 @@ function BookingContent() {
   }, []);
 
   useEffect(() => {
+    // Wait for the session check: on a direct load or refresh the user is
+    // "not authenticated" for a moment, and redirecting then bounced
+    // signed-in guests to their dashboard.
+    if (authLoading) return;
     if (!isAuthenticated) {
       router.push(`/auth?redirect=/booking/${id}`);
       return;
     }
     fetchProperty();
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, authLoading]);
 
   // Load Moyasar form when moving to step 2
   useEffect(() => {
@@ -189,11 +193,14 @@ function BookingContent() {
     try {
       // Use holdId and unitId if available from BookingWidget
       const holdId = typeof window !== 'undefined' ? localStorage.getItem(`hostn_hold_${id}`) : null;
-      const unitId = typeof window !== 'undefined' ? localStorage.getItem(`hostn_unit_${id}`) : null;
+      const savedUnitId = typeof window !== 'undefined' ? localStorage.getItem(`hostn_unit_${id}`) : null;
+      // The URL id may be a unit id (the page loads either). Always send the
+      // real property id and the unit that is shown on screen.
+      const unitId = savedUnitId || unit?._id || null;
 
       // Step 1: Create booking (converts hold if valid, otherwise creates fresh)
       const bookingRes = await bookingsApi.create({
-        propertyId: id,
+        propertyId: property?._id || id,
         checkIn,
         checkOut,
         guests: { adults: adultsCount, children: childrenCount, infants: 0 },
@@ -204,7 +211,7 @@ function BookingContent() {
 
       // Clean up holdId and unitId from localStorage
       if (holdId) localStorage.removeItem(`hostn_hold_${id}`);
-      if (unitId) localStorage.removeItem(`hostn_unit_${id}`);
+      if (savedUnitId) localStorage.removeItem(`hostn_unit_${id}`);
 
       const newBookingId = bookingRes.data.data._id;
       setBookingId(newBookingId);
