@@ -269,7 +269,9 @@ exports.sendMessage = async (req, res) => {
         userType: otherParticipant.userType,
         type: 'new_message',
         title: 'New Message',
-        message: `${req.user.name}: ${sanitizedContent.substring(0, 100)}`,
+        // Use the filtered text: the raw text leaked masked phone numbers /
+        // links into the notification preview.
+        message: `${req.user.name}: ${(filterResult.hasViolation ? filterResult.filtered : sanitizedContent).substring(0, 100)}`,
         data: { conversationId: conversation._id },
       });
     }

@@ -561,9 +561,25 @@ exports.getHostProperties = async (req, res, next) => {
   try {
     const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).sort('title');
 
+    // Real per-unit values (area, deposit, day prices) come from the Unit
+    // documents. This list used to invent them (area 120, deposit 500,
+    // weekend prices as a multiple of the weekday price).
+    const unitDocs = await Unit.find({
+      property: { $in: properties.map((p) => p._id) },
+      isDeleted: { $ne: true },
+    }).select('property area capacity pricing insuranceOnArrival insuranceAmount depositPercent isActive').sort('createdAt').lean();
+    const firstUnitByProperty = {};
+    unitDocs.forEach((u) => {
+      const key = String(u.property);
+      if (!firstUnitByProperty[key]) firstUnitByProperty[key] = u;
+    });
+
     // Group properties by their tag (e.g., "شاليهات ميفارا") to form property groups
     const groups = {};
     properties.forEach((p) => {
+      const unit = firstUnitByProperty[String(p._id)] || null;
+      const up = (unit && unit.pricing) || {};
+      const dayPrice = (day) => (up[day] > 0 ? up[day] : p.pricing.perNight);
       const groupTag = (p.tags && p.tags[0]) || p.title;
       if (!groups[groupTag]) {
         groups[groupTag] = {
@@ -591,22 +607,22 @@ exports.getHostProperties = async (req, res, next) => {
           ? `4493${groups[groupTag].units.length + 1}`
           : p._id.toString().slice(-5),
         status: p.isActive ? 'listed' : 'unlisted',
-        area: 120,
-        capacity: p.capacity.maxGuests,
+        area: unit && unit.area ? unit.area : null,
+        capacity: (unit && unit.capacity && unit.capacity.maxGuests) || p.capacity.maxGuests,
         occupancyPercent: 0,
         suitability: 'families_and_singles',
-        deposit: 0,
-        securityDeposit: 500,
+        deposit: (unit && unit.depositPercent) || 0,
+        securityDeposit: unit && unit.insuranceOnArrival ? unit.insuranceAmount || 0 : 0,
         description: p.description,
         images: p.images.map(img => img.url),
         photos: p.images.map(img => img.url),
         amenities: p.amenities,
         features: p.amenities,
         pricing: {
-          midWeek: p.pricing.perNight,
-          thursday: Math.round(p.pricing.perNight * 1.15),
-          friday: Math.round(p.pricing.perNight * 1.3),
-          saturday: Math.round(p.pricing.perNight * 1.15),
+          midWeek: dayPrice('sunday'),
+          thursday: dayPrice('thursday'),
+          friday: dayPrice('friday'),
+          saturday: dayPrice('saturday'),
         },
       });
     });

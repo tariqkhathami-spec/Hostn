@@ -1,6 +1,16 @@
 const Unit = require('../models/Unit');
 const Property = require('../models/Property');
 
+// SECURITY: the licence holder's national ID, commercial register and the
+// uploaded licence document are private to the host and admins. Public unit
+// responses keep only the licence number and status.
+const PRIVATE_LICENSE_FIELDS = [
+  'tourismLicense.nationalId',
+  'tourismLicense.commercialRegister',
+  'tourismLicense.documentUrl',
+];
+const PUBLIC_UNIT_SELECT = PRIVATE_LICENSE_FIELDS.map((f) => `-${f}`).join(' ');
+
 // Fields a host is allowed to set / update on a unit.
 const ALLOWED_UNIT_FIELDS = [
   'nameEn',
@@ -278,6 +288,7 @@ exports.searchUnits = async (req, res, next) => {
     });
     pipeline.push({ $addFields: { 'property.host': { $arrayElemAt: ['$hostData', 0] } } });
     pipeline.push({ $project: { hostData: 0 } });
+    pipeline.push({ $unset: PRIVATE_LICENSE_FIELDS });
 
     const units = await Unit.aggregate(pipeline);
 
@@ -343,7 +354,7 @@ exports.getUnits = async (req, res, next) => {
     const skip = (safePage - 1) * safeLimit;
 
     const [units, total] = await Promise.all([
-      Unit.find(query).sort('-createdAt').skip(skip).limit(safeLimit),
+      Unit.find(query).select(PUBLIC_UNIT_SELECT).sort('-createdAt').skip(skip).limit(safeLimit),
       Unit.countDocuments(query),
     ]);
 
@@ -411,7 +422,7 @@ exports.getMyPropertyUnits = async (req, res, next) => {
 // @access  Public
 exports.getUnit = async (req, res, next) => {
   try {
-    const unit = await Unit.findById(req.params.id).populate({
+    const unit = await Unit.findById(req.params.id).select(PUBLIC_UNIT_SELECT).populate({
       path: 'property',
       select: 'title titleAr location host type images ratings direction rules pricing capacity isDeleted',
       populate: { path: 'host', select: 'name avatar isVerified _id createdAt' },
