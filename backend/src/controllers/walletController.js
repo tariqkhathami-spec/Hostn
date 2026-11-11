@@ -1,12 +1,17 @@
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 
+// Wallet and WalletTransaction require a userType ('Guest' | 'Host' | 'Admin').
+// The auth middleware loads req.user from the matching collection, so the
+// Mongoose model name is the account type.
+const userTypeOf = (user) => user?.constructor?.modelName || 'Guest';
+
 // @desc    Get wallet balance
 // @route   GET /api/wallet/balance
 // @access  Private
 exports.getBalance = async (req, res, next) => {
   try {
-    const wallet = await Wallet.getOrCreate(req.user._id);
+    const wallet = await Wallet.getOrCreate(req.user._id, userTypeOf(req.user));
     res.json({
       success: true,
       data: {
@@ -52,8 +57,8 @@ exports.getTransactions = async (req, res, next) => {
 };
 
 // Internal: Credit wallet (called from refund flows)
-exports.creditWallet = async (userId, amount, category, description, referenceId) => {
-  const wallet = await Wallet.getOrCreate(userId);
+exports.creditWallet = async (userId, amount, category, description, referenceId, userType = 'Guest') => {
+  const wallet = await Wallet.getOrCreate(userId, userType);
   const balanceBefore = wallet.balance;
   wallet.balance += amount;
   await wallet.save();
@@ -61,6 +66,7 @@ exports.creditWallet = async (userId, amount, category, description, referenceId
   await WalletTransaction.create({
     wallet: wallet._id,
     user: userId,
+    userType: wallet.userType,
     type: 'credit',
     category,
     amount,
@@ -74,8 +80,8 @@ exports.creditWallet = async (userId, amount, category, description, referenceId
 };
 
 // Internal: Debit wallet (called from booking flows)
-exports.debitWallet = async (userId, amount, category, description, referenceId) => {
-  const wallet = await Wallet.getOrCreate(userId);
+exports.debitWallet = async (userId, amount, category, description, referenceId, userType = 'Guest') => {
+  const wallet = await Wallet.getOrCreate(userId, userType);
 
   if (wallet.balance < amount) {
     throw new Error('Insufficient wallet balance');
@@ -88,6 +94,7 @@ exports.debitWallet = async (userId, amount, category, description, referenceId)
   await WalletTransaction.create({
     wallet: wallet._id,
     user: userId,
+    userType: wallet.userType,
     type: 'debit',
     category,
     amount,

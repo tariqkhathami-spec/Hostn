@@ -57,6 +57,20 @@ const nextConfig = {
     // turbopack: true,
   },
 
+  // ── Local API proxy (development only) ──
+  // Production serves the API same-origin through vercel.json rewrites. Set
+  // API_PROXY_TARGET (e.g. http://localhost:5050) with NEXT_PUBLIC_API_URL=/api/v1
+  // to get the same behaviour locally, so auth cookies work on the
+  // business.localhost / admin.localhost subdomains too.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET;
+    if (!target) return [];
+    return [
+      { source: '/api/v1/:path*', destination: `${target}/api/v1/:path*` },
+      { source: '/health', destination: `${target}/health` },
+    ];
+  },
+
   // ── Redirects for clean URLs ──
   async redirects() {
     return [
