@@ -89,7 +89,8 @@ export const hostService = {
   getCalendarData: (year: number, month: number) =>
     api.get(`/host/calendar`, { params: { year, month: month + 1 } }).then(r => r.data),
   blockDates: (propertyId: string, dates: { start: string; end: string }) =>
-    api.put(`/host/calendar/${propertyId}/block`, dates).then(r => r.data),
+    // The block route expects { startDate, endDate, action }.
+    api.put(`/host/calendar/${propertyId}/block`, { startDate: dates.start, endDate: dates.end, action: 'block' }).then(r => r.data),
   unblockDates: (propertyId: string, dates: { start: string; end: string }) =>
     api.put(`/host/calendar/${propertyId}/unblock`, dates).then(r => r.data),
 
@@ -129,7 +130,13 @@ export const hostService = {
   blockConversation: (conversationId: string) =>
     api.put(`/messages/conversations/${conversationId}/block`).then(r => r.data),
   reportUser: (data: { reportedUser: string; reason: string; details?: string }) =>
-    api.post('/reports', data).then(r => r.data),
+    // /reports expects { targetType, targetId, reason, description }.
+    api.post('/reports', {
+      targetType: 'user',
+      targetId: data.reportedUser,
+      reason: data.reason,
+      description: data.details,
+    }).then(r => r.data),
   getSupportChat: () =>
     api.get<{ data: Message[] }>('/host/support/chat').then(r => r.data),
   sendSupportMessage: (text: string) =>

@@ -82,7 +82,7 @@ exports.createReview = async (req, res, next) => {
     await review.populate('guest', 'name avatar');
 
     // Notify the host about the new review
-    const property = await Property.findById(propertyId);
+    const property = await Property.findById(booking.property);
     if (property && property.host) {
       await Notification.createNotification({
         user: property.host,

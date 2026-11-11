@@ -57,8 +57,9 @@ export default function VatScreen() {
       queryClient.invalidateQueries({ queryKey: ['vatEntries'] });
       closeModal();
     },
-    onError: () => {
-      Alert.alert('خطأ', 'فشل إضافة الرقم الضريبي. حاول مرة أخرى.');
+    onError: (error: any) => {
+      // Show the server's reason (e.g. invalid IBAN/VAT format) when it sends one.
+      Alert.alert('خطأ', error?.response?.data?.message || 'فشل إضافة الرقم الضريبي. حاول مرة أخرى.');
     },
   });
 

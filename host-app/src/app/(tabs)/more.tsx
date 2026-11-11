@@ -21,12 +21,13 @@ const menuItems = [
   { label: 'more.suggestions', icon: 'bulb-outline', route: '/suggestions' },
   { label: 'more.articles', icon: 'newspaper-outline', route: '/content/articles' },
   { label: 'more.complaints', icon: 'warning-outline', route: '/content/complaints' },
-  { label: 'more.changeRequests', icon: 'create-outline', route: '/content/change-requests' },
-  { label: 'more.referrals', icon: 'link-outline', route: '/content/referrals' },
-  { label: 'more.discountCodes', icon: 'pricetags-outline', route: '/content/discount-codes' },
+  // Change requests and referral links are hidden until the server has a
+  // real implementation (their endpoints return empty / 501).
+  // Host discount codes are hidden: coupons are not tied to a host and are
+  // not applied at booking yet.
   { label: 'more.onboarding', icon: 'school-outline', route: '/(auth)/onboarding' },
   { label: 'more.invoices', icon: 'receipt-outline', route: '/invoices' },
-  { label: 'more.terms', icon: 'checkmark-circle-outline', route: '/legal/terms', badge: 'تم التوقيع' },
+  { label: 'more.terms', icon: 'checkmark-circle-outline', route: '/legal/terms' },
   { label: 'more.contact', icon: 'call-outline', route: '/legal/contact' },
 ] as const;
 
@@ -41,6 +42,14 @@ export default function MoreScreen() {
     queryFn: () => hostService.getStats(),
     retry: false,
   });
+
+  // The 'signed' badge on the terms row follows the server, not a fixed label.
+  const { data: termsData } = useQuery({
+    queryKey: ['host-terms'],
+    queryFn: () => hostService.getTerms(),
+    retry: false,
+  });
+  const termsSigned = Boolean((termsData as any)?.data?.signed);
 
   const { data: propertiesData } = useQuery({
     queryKey: ['host-properties-count'],
@@ -123,8 +132,8 @@ export default function MoreScreen() {
               activeOpacity={0.6}
             >
               <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
-              {'badge' in item && item.badge ? (
-                <Text style={styles.badgeText}>{item.badge}</Text>
+              {item.route === '/legal/terms' && termsSigned ? (
+                <Text style={styles.badgeText}>تم التوقيع</Text>
               ) : null}
               <Text style={styles.menuLabel}>{t(item.label as any)}</Text>
               <Ionicons name={item.icon as any} size={22} color={Colors.textSecondary} />

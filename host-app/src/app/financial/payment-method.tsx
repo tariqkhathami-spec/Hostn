@@ -33,8 +33,9 @@ export default function PaymentMethodScreen() {
       setIsEditing(false);
       Alert.alert('تم', 'تم تحديث بيانات الحساب البنكي بنجاح');
     },
-    onError: () => {
-      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث البيانات');
+    onError: (error: any) => {
+      // Show the server's reason (e.g. invalid IBAN/VAT format) when it sends one.
+      Alert.alert('خطأ', error?.response?.data?.message || 'حدث خطأ أثناء تحديث البيانات');
     },
   });
 
@@ -152,29 +153,6 @@ export default function PaymentMethodScreen() {
           )}
         </Card>
 
-        {/* STC Pay Card */}
-        <Card style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardHeaderRight}>
-              <View style={[styles.iconBg, { backgroundColor: Colors.primary100 }]}>
-                <Ionicons name="phone-portrait-outline" size={20} color={Colors.primary} />
-              </View>
-              <Text style={styles.cardTitle}>STC Pay</Text>
-            </View>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailValue}>{paymentMethod?.stcPayNumber || '---'}</Text>
-            <Text style={styles.detailLabel}>رقم الجوال</Text>
-          </View>
-          <View style={styles.separator} />
-          <View style={styles.detailRow}>
-            <View style={styles.feeContainer}>
-              <Text style={styles.feeText}>رسوم 0.5%</Text>
-            </View>
-            <Text style={styles.detailLabel}>الرسوم</Text>
-          </View>
-        </Card>
       </ScrollView>
     </ScreenWrapper>
   );

@@ -16,11 +16,7 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  {
-    label: 'مدراء الحجوزات',
-    icon: 'people-outline',
-    route: '/settings/managers',
-  },
+  // Booking managers (sub-accounts) are hidden until the server supports them.
   {
     label: 'إعدادات الحجز',
     icon: 'calendar-outline',

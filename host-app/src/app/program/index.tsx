@@ -26,6 +26,10 @@ type TabKey = 'performance' | 'tiers' | 'faq' | 'terms';
 interface IndicatorData {
   value: number;
   thresholds: number[];
+  /** Tier this indicator currently earns, as computed by the server. */
+  tier?: string;
+  /** True when lower is better (cancelled bookings). */
+  reverse?: boolean;
 }
 
 interface FaqItem {
@@ -166,12 +170,16 @@ function IndicatorCard({
   data: IndicatorData;
 }) {
   const { value, thresholds } = data;
-  const maxThreshold = thresholds[thresholds.length - 1] || 100;
+  // Largest threshold, not the last one: for a "lower is better" indicator
+  // the thresholds run downwards (e.g. 6, 5, 2, 0).
+  const maxThreshold = Math.max(0, ...thresholds) || 100;
   const progress = Math.min(value / maxThreshold, 1);
 
-  // Determine current tier zone color
+  // Determine current tier zone color (the server's tier wins when present)
   let zoneColor = TIER_COLORS.basic;
-  if (thresholds.length >= 4) {
+  if (data.tier && TIER_COLORS[data.tier]) {
+    zoneColor = TIER_COLORS[data.tier];
+  } else if (thresholds.length >= 4) {
     if (value >= thresholds[3]) zoneColor = TIER_COLORS.peak;
     else if (value >= thresholds[2]) zoneColor = TIER_COLORS.gold;
     else if (value >= thresholds[1]) zoneColor = TIER_COLORS.silver;

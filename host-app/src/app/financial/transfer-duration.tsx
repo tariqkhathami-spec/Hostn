@@ -64,8 +64,9 @@ export default function TransferDurationScreen() {
       queryClient.invalidateQueries({ queryKey: ['transferDuration'] });
       Alert.alert('تم', 'تم تحديث مدة التحويل بنجاح');
     },
-    onError: () => {
-      Alert.alert('خطأ', 'حدث خطأ أثناء تحديث البيانات');
+    onError: (error: any) => {
+      // Show the server's reason (e.g. invalid IBAN/VAT format) when it sends one.
+      Alert.alert('خطأ', error?.response?.data?.message || 'حدث خطأ أثناء تحديث البيانات');
     },
   });
 

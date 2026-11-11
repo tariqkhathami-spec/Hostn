@@ -81,6 +81,13 @@ router.post('/onboarding/finish', async (req, res, next) => {
   }
 });
 
+// Host mobile app routes: paths the host app calls that map onto existing
+// models. One file per feature area.
+router.use(require('./hostApp/units'));
+router.use(require('./hostApp/finance'));
+router.use(require('./hostApp/messaging'));
+router.use(require('./hostApp/program'));
+
 // Dashboard
 router.get('/stats', getDashboardStats);
 router.get('/dashboard/stats', getHostDashboardStats);

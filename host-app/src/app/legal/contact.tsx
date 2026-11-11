@@ -25,7 +25,9 @@ export default function ContactScreen() {
     retry: false,
   });
 
-  const support = data?.data ?? FALLBACK_SUPPORT;
+  // The server only returns the contact details it actually has (no working
+  // hours yet), so fill the gaps from the defaults instead of replacing them.
+  const support: SupportInfo = { ...FALLBACK_SUPPORT, ...(data?.data ?? {}) };
   const formattedPhone = '9200 07858';
 
   return (

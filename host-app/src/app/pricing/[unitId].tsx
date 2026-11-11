@@ -141,7 +141,15 @@ export default function UnitPricingDetailScreen() {
         Alert.alert('خطأ', 'يرجى إدخال سعر صحيح');
         return;
       }
-      updatePricingMutation.mutate({ [rateKey]: Number(value) });
+      // PUT /units/:id/pricing only reads day rates nested under `pricing`
+      // (a flat { thursday: 500 } is accepted and silently ignored), and it
+      // has no "midWeek" day: mid-week is Sunday–Wednesday.
+      const price = Number(value);
+      const days =
+        rateKey === 'midWeek' ? ['sunday', 'monday', 'tuesday', 'wednesday'] : [rateKey];
+      updatePricingMutation.mutate({
+        pricing: Object.fromEntries(days.map((day) => [day, price])),
+      });
     },
     [editValues, updatePricingMutation],
   );

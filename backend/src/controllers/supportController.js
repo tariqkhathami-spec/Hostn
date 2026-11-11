@@ -19,8 +19,12 @@ exports.createTicket = async (req, res) => {
     const sanitizedMessage = sanitizeHtml(message);
     const sanitizedSubject = sanitizeHtml(subject);
 
+    // userType / senderType are required by the model (accounts live in three
+    // collections); omitting them made every new ticket fail with a 500.
+    const accountType = { guest: 'Guest', host: 'Host', admin: 'Admin' }[req.user.userType] || 'Guest';
     const ticket = await SupportTicket.create({
       user: req.user._id,
+      userType: accountType,
       subject: sanitizedSubject,
       category,
       priority: priority || 'medium',
@@ -29,6 +33,7 @@ exports.createTicket = async (req, res) => {
       messages: [
         {
           sender: req.user._id,
+          senderType: accountType,
           senderRole: 'user',
           content: sanitizedMessage,
         },
@@ -140,6 +145,7 @@ exports.replyToTicket = async (req, res) => {
 
     ticket.messages.push({
       sender: req.user._id,
+      senderType: { guest: 'Guest', host: 'Host', admin: 'Admin' }[req.user.userType] || 'Guest',
       senderRole: isAdmin ? 'admin' : 'user',
       content: sanitizedMessage,
     });
