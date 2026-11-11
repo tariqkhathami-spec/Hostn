@@ -42,17 +42,28 @@ export default function HostSettingsPage() {
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  // The server replies to the first attempt by sending a code to the
+  // account's phone (or asking for the password); the second attempt carries it.
+  const [needCode, setNeedCode] = useState<'otp' | 'password' | null>(null);
+  const [code, setCode] = useState('');
 
   const handleDelete = async () => {
     if (confirmText !== 'DELETE') return;
     setDeleting(true);
     setError('');
     try {
-      await authApi.deleteAccount();
+      await authApi.deleteAccount(needCode ? { [needCode]: code.trim() } : undefined);
       localStorage.removeItem('hostn_user');
       window.location.href = '/';
-    } catch {
-      setError(labels.errorGeneric[lang]);
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { code?: string; message?: string } } })?.response?.data;
+      if (data?.code === 'OTP_REQUIRED' || data?.code === 'PASSWORD_REQUIRED') {
+        setNeedCode(data.code === 'OTP_REQUIRED' ? 'otp' : 'password');
+        setCode('');
+        setError(data.message || '');
+      } else {
+        setError(data?.message || labels.errorGeneric[lang]);
+      }
       setDeleting(false);
     }
   };
@@ -123,6 +134,17 @@ export default function HostSettingsPage() {
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 mb-4"
               autoFocus
             />
+
+            {needCode && (
+              <input
+                type={needCode === 'password' ? 'password' : 'text'}
+                inputMode={needCode === 'otp' ? 'numeric' : undefined}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={needCode === 'otp' ? (lang === 'ar' ? 'رمز التحقق' : 'Verification code') : (lang === 'ar' ? 'كلمة المرور' : 'Password')}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 mb-4"
+              />
+            )}
 
             <div className="flex gap-3">
               <button

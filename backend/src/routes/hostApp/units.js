@@ -278,7 +278,7 @@ router.put('/units/:unitId/pricing', wrap(async (req, res) => {
   };
   const percent = (label, raw) => {
     const n = toNumber(raw);
-    if (!Number.isFinite(n) || n < 0 || n > 100) throw Object.assign(new Error(`${label} must be a number between 0 and 100`), { statusCode: 400 });
+    if (!Number.isFinite(n) || n < 0 || n > 90) throw Object.assign(new Error('نسبة الخصم يجب أن تكون بين 0 و 90'), { statusCode: 400 });
     return n;
   };
 
@@ -373,8 +373,8 @@ router.post('/units/:unitId/discounts/:type', wrap(async (req, res) => {
   let percentage;
   if (rawPercent !== undefined) {
     percentage = toNumber(rawPercent);
-    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
-      return fail(res, 400, 'percentage must be a number between 0 and 100');
+    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 90) {
+      return fail(res, 400, 'نسبة الخصم يجب أن تكون بين 0 و 90');
     }
   }
 
@@ -481,8 +481,8 @@ router.post('/units/:unitId/offers', wrap(async (req, res) => {
   if (name.length > 100) return fail(res, 400, 'Offer name cannot exceed 100 characters');
 
   const discountPercent = toNumber(body.discountPercent ?? body.percentage);
-  if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 100) {
-    return fail(res, 400, 'discountPercent must be a number between 1 and 100');
+  if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 90) {
+    return fail(res, 400, 'نسبة خصم العرض يجب أن تكون بين 1 و 90');
   }
 
   const rawDates = Array.isArray(body.selectedDates) ? body.selectedDates : body.dates;

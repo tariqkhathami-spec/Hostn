@@ -688,6 +688,53 @@ exports.deleteAccount = async (req, res, next) => {
       });
     }
 
+    // Deleting is irreversible, so a signed-in session is not enough: confirm
+    // with a one-time code sent to the account's phone, or the password for
+    // accounts that have no phone.
+    const account = await Model.findById(userId).select('+password phone');
+    const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
+    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    if (account?.phone) {
+      const localPhone = String(account.phone).replace(/^\+966/, '').replace(/^0+/, '');
+      const devBypass = process.env.DEV_OTP_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+      if (!otp) {
+        if (!devBypass) {
+          try {
+            await authentica.sendOTP(localPhone, '+966', { method: 'sms', lang: 'ar' });
+          } catch (sendError) {
+            return res.status(503).json({
+              success: false,
+              message: sendError.userMessage || 'تعذّر إرسال رمز التحقق. حاول لاحقاً.',
+            });
+          }
+        }
+        return res.status(428).json({
+          success: false,
+          code: 'OTP_REQUIRED',
+          message: 'أرسلنا رمز تحقق إلى جوالك. أدخله لتأكيد حذف الحساب.',
+        });
+      }
+      let valid = devBypass && otp === '0000';
+      if (!valid) {
+        const result = await authentica.verifyOTP(localPhone, '+966', otp).catch(() => ({ valid: false }));
+        valid = Boolean(result && result.valid);
+      }
+      if (!valid) {
+        return res.status(400).json({ success: false, code: 'INVALID_OTP', message: 'رمز التحقق غير صحيح' });
+      }
+    } else if (account?.password) {
+      if (!password) {
+        return res.status(428).json({
+          success: false,
+          code: 'PASSWORD_REQUIRED',
+          message: 'أدخل كلمة المرور لتأكيد حذف الحساب.',
+        });
+      }
+      if (!(await account.comparePassword(password))) {
+        return res.status(400).json({ success: false, code: 'INVALID_PASSWORD', message: 'كلمة المرور غير صحيحة' });
+      }
+    }
+
     // A host's listings leave the marketplace with the account.
     if (userType === 'host' && propertyIds.length > 0) {
       await Property.updateMany({ _id: { $in: propertyIds } }, { $set: { isActive: false } });
