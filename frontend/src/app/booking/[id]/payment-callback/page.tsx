@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { paymentsApi } from '@/lib/api';
 import { clearSearchCookies } from '@/lib/searchCookies';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -16,6 +17,8 @@ function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
   const [message, setMessage] = useState('');
@@ -47,7 +50,7 @@ function PaymentCallbackContent() {
       const paymentId = simulatedPaymentId || storedPaymentId;
       if (!paymentId) {
         setStatus('failed');
-        setMessage('Simulated payment ID missing.');
+        setMessage(isAr ? 'رقم عملية الدفع مفقود.' : 'Simulated payment ID missing.');
         return;
       }
       try {
@@ -55,16 +58,16 @@ function PaymentCallbackContent() {
         const data = res.data.data;
         if (data.status === 'completed') {
           setStatus('success');
-          setMessage('Your booking has been confirmed! (simulated)');
+          setMessage(isAr ? 'تم تأكيد حجزك! (دفع تجريبي)' : 'Your booking has been confirmed! (simulated)');
           localStorage.removeItem(`hostn_payment_${bookingId}`);
           clearSearchCookies();
         } else {
           setStatus('failed');
-          setMessage(data.failureReason || `Simulated outcome: ${data.status}`);
+          setMessage(isAr ? 'لم تكتمل عملية الدفع.' : (data.failureReason || `Simulated outcome: ${data.status}`));
         }
       } catch (error: any) {
         setStatus('failed');
-        setMessage(error?.response?.data?.message || 'Could not load simulated payment status.');
+        setMessage(isAr ? 'تعذّر تحميل حالة الدفع.' : (error?.response?.data?.message || 'Could not load simulated payment status.'));
       }
       return;
     }
@@ -73,7 +76,7 @@ function PaymentCallbackContent() {
     // ships and ?simulated=1 is no longer set).
     if (!moyasarPaymentId || !storedPaymentId) {
       setStatus('failed');
-      setMessage('Payment information is missing. Please contact support.');
+      setMessage(isAr ? 'بيانات الدفع مفقودة. يرجى التواصل مع الدعم.' : 'Payment information is missing. Please contact support.');
       return;
     }
 
@@ -85,16 +88,16 @@ function PaymentCallbackContent() {
 
       if (res.data.success && res.data.payment?.status === 'paid') {
         setStatus('success');
-        setMessage('Your booking has been confirmed!');
+        setMessage(isAr ? 'تم تأكيد حجزك!' : 'Your booking has been confirmed!');
         localStorage.removeItem(`hostn_payment_${bookingId}`);
         clearSearchCookies();
       } else {
         setStatus('failed');
-        setMessage(res.data.message || 'Payment could not be verified. Please try again.');
+        setMessage(isAr ? 'تعذّر التحقق من الدفع. يرجى المحاولة مرة أخرى.' : (res.data.message || 'Payment could not be verified. Please try again.'));
       }
     } catch (error: any) {
       setStatus('failed');
-      setMessage(error?.response?.data?.message || 'Payment verification failed. Please contact support.');
+      setMessage(isAr ? 'فشل التحقق من الدفع. يرجى التواصل مع الدعم.' : (error?.response?.data?.message || 'Payment verification failed. Please contact support.'));
     }
   };
 
@@ -107,21 +110,21 @@ function PaymentCallbackContent() {
             {status === 'verifying' && (
               <>
                 <Loader2 className="w-16 h-16 text-primary-500 mx-auto mb-4 animate-spin" />
-                <h1 className="text-xl font-bold text-gray-900 mb-2">Verifying Payment</h1>
-                <p className="text-gray-500">Please wait while we confirm your payment...</p>
+                <h1 className="text-xl font-bold text-gray-900 mb-2">{isAr ? 'جارٍ التحقق من الدفع' : 'Verifying Payment'}</h1>
+                <p className="text-gray-500">{isAr ? 'يرجى الانتظار حتى نؤكد عملية الدفع...' : 'Please wait while we confirm your payment...'}</p>
               </>
             )}
             {status === 'success' && (
               <>
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h1 className="text-xl font-bold text-gray-900 mb-2">Booking Confirmed!</h1>
+                <h1 className="text-xl font-bold text-gray-900 mb-2">{isAr ? 'تم تأكيد الحجز!' : 'Booking Confirmed!'}</h1>
                 <p className="text-gray-500 mb-6">{message}</p>
                 <div className="space-y-3">
                   <Link href="/dashboard">
-                    <Button size="lg" className="w-full">View My Bookings</Button>
+                    <Button size="lg" className="w-full">{isAr ? 'عرض حجوزاتي' : 'View My Bookings'}</Button>
                   </Link>
                   <Link href="/search">
-                    <Button variant="outline" size="lg" className="w-full">Browse More Properties</Button>
+                    <Button variant="outline" size="lg" className="w-full">{isAr ? 'تصفح عقارات أخرى' : 'Browse More Properties'}</Button>
                   </Link>
                 </div>
               </>
@@ -129,12 +132,12 @@ function PaymentCallbackContent() {
             {status === 'failed' && (
               <>
                 <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                <h1 className="text-xl font-bold text-gray-900 mb-2">Payment Failed</h1>
+                <h1 className="text-xl font-bold text-gray-900 mb-2">{isAr ? 'فشل الدفع' : 'Payment Failed'}</h1>
                 <p className="text-gray-500 mb-6">{message}</p>
                 <div className="space-y-3">
-                  <Button onClick={() => router.back()} size="lg" className="w-full">Try Again</Button>
+                  <Button onClick={() => router.back()} size="lg" className="w-full">{isAr ? 'حاول مرة أخرى' : 'Try Again'}</Button>
                   <Link href="/dashboard">
-                    <Button variant="outline" size="lg" className="w-full">Go to Dashboard</Button>
+                    <Button variant="outline" size="lg" className="w-full">{isAr ? 'الذهاب إلى لوحتي' : 'Go to Dashboard'}</Button>
                   </Link>
                 </div>
               </>
