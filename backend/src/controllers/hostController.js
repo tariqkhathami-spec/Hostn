@@ -142,8 +142,8 @@ exports.getNotifications = async (req, res, next) => {
       notifications.push({
         id: b._id,
         type: 'booking_pending',
-        title: 'New Booking Request',
-        message: `${b.guest?.name || 'A guest'} wants to book ${propertyMap[b.property.toString()] || 'your property'}`,
+        title: 'طلب حجز جديد',
+        message: `${b.guest?.name || 'ضيف'} يطلب حجز ${propertyMap[b.property.toString()] || 'عقارك'}`,
         time: b.createdAt,
         read: false,
         action: `/host/bookings?id=${b._id}`,
@@ -154,8 +154,8 @@ exports.getNotifications = async (req, res, next) => {
       notifications.push({
         id: r._id,
         type: 'review_new',
-        title: 'New Review',
-        message: `${r.guest?.name || 'A guest'} left a ${r.ratings.overall}/10 review on ${propertyMap[r.property.toString()] || 'your property'}`,
+        title: 'تقييم جديد',
+        message: `${r.guest?.name || 'ضيف'} قيّم ${propertyMap[r.property.toString()] || 'عقارك'} بدرجة ${r.ratings.overall} من 10`,
         time: r.createdAt,
         read: false,
         action: '/host/reviews',
