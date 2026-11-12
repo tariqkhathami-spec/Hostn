@@ -1,0 +1,21 @@
+name: QA
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  contract:
+    name: API contract (website and apps vs server routes)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install server dependencies
+        working-directory: backend
+        run: npm ci --omit=dev
+      - name: Every client API call must hit a real route
+        run: python3 qa/coverage.py
