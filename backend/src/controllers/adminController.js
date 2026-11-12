@@ -463,8 +463,8 @@ exports.moderateProperty = async (req, res, next) => {
         user: property.host._id,
         userType: 'Host',
         type: 'listing_approved',
-        title: 'Listing Approved',
-        message: `Your listing "${property.title}" has been approved and is now live!`,
+        title: 'تم اعتماد عقارك',
+        message: `اعتمدنا عقارك "${property.titleAr || property.title}" وصار معروضاً للضيوف.`,
         data: { propertyId: property._id },
       });
 
@@ -487,8 +487,8 @@ exports.moderateProperty = async (req, res, next) => {
         user: property.host._id,
         userType: 'Host',
         type: 'listing_rejected',
-        title: 'Listing Rejected',
-        message: `Your listing "${property.title}" was not approved. ${reason || ''}`,
+        title: 'لم يُعتمد عقارك',
+        message: `لم نتمكن من اعتماد عقارك "${property.titleAr || property.title}".${reason ? ` السبب: ${reason}` : ''}`,
         data: { propertyId: property._id },
       });
 
