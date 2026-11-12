@@ -136,14 +136,39 @@ exports.registerDeviceToken = async (req, res, next) => {
     const { getUserModel } = require('./authController');
     const Model = getUserModel(req.user);
     if (Model) {
-      await Model.findByIdAndUpdate(req.user._id, {
-        $addToSet: {
-          deviceTokens: { token, platform: platform || 'ios', updatedAt: new Date() },
-        },
-      });
+      const safePlatform = ['ios', 'android', 'web'].includes(platform) ? platform : 'ios';
+      // A phone belongs to whoever signed in on it last: drop this token from
+      // every account of this kind, then store it once on the current one.
+      // ($addToSet never matched because of the changing updatedAt, so the
+      // same token piled up on every app start.)
+      await Model.updateMany({ 'deviceTokens.token': token }, { $pull: { deviceTokens: { token } } });
+      await Model.updateOne(
+        { _id: req.user._id },
+        { $push: { deviceTokens: { $each: [{ token, platform: safePlatform, updatedAt: new Date() }], $slice: -10 } } }
+      );
     }
 
     res.json({ success: true, message: 'Device token registered' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Remove a device token (called by the apps on sign-out)
+// @route   DELETE /api/notifications/device-token
+// @access  Private
+exports.removeDeviceToken = async (req, res, next) => {
+  try {
+    const token = req.body.token || req.query.token;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Device token is required' });
+    }
+    const { getUserModel } = require('./authController');
+    const Model = getUserModel(req.user);
+    if (Model) {
+      await Model.updateOne({ _id: req.user._id }, { $pull: { deviceTokens: { token: String(token) } } });
+    }
+    res.json({ success: true, message: 'Device token removed' });
   } catch (error) {
     next(error);
   }

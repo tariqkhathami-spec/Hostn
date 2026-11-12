@@ -147,14 +147,14 @@ exports.getPropertiesWithUnits = async (req, res, next) => {
   try {
     const hostId = req.user._id;
 
-    const properties = await Property.find({ host: hostId })
+    const properties = await Property.find({ host: hostId, isDeleted: { $ne: true } })
       .select('_id title titleAr')
       .sort({ createdAt: -1 })
       .lean();
 
     const result = await Promise.all(
       properties.map(async (prop) => {
-        const units = await Unit.find({ property: prop._id, isActive: true })
+        const units = await Unit.find({ property: prop._id, isActive: true, isDeleted: { $ne: true } })
           .select('_id nameEn nameAr')
           .sort({ createdAt: 1 })
           .lean();

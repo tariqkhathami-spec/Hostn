@@ -785,7 +785,7 @@ exports.getHostCalendarAll = async (req, res, next) => {
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 0, 23, 59, 59);
 
-    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title tags isActive');
+    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title tags isActive unavailableDates');
     const propertyIds = properties.map(p => p._id);
 
     // Fetch units for all properties
@@ -868,7 +868,8 @@ exports.getHostCalendarAll = async (req, res, next) => {
             unitCode: u._id.toString().slice(-5),
             isListed: u.isActive,
             bookedDates: computeBookedDates(unitBookings),
-            blockedDates: computeBlockedDates(u.unavailableDates),
+            // A block set on the whole property closes every unit in it.
+            blockedDates: computeBlockedDates([...(u.unavailableDates || []), ...(p.unavailableDates || [])]),
           });
         });
       } else {
