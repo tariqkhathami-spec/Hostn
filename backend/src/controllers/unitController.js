@@ -129,7 +129,13 @@ exports.searchUnits = async (req, res, next) => {
     if (suitability && suitability !== 'both') unitFilter.suitability = { $in: [suitability, 'both'] };
     if (amenities) {
       const list = String(amenities).split(',').map(a => a.trim()).filter(Boolean);
-      if (list.length) unitFilter.amenities = { $all: list };
+      // A value may live in the unit's amenities or in its features
+      // (internet, parking, sea view…): every requested value must be in one.
+      if (list.length) {
+        unitFilter.$and = (unitFilter.$and || []).concat(
+          list.map((v) => ({ $or: [{ amenities: v }, { features: v }] }))
+        );
+      }
     }
     if (minArea || maxArea) {
       unitFilter.area = {};
