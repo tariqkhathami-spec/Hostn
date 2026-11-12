@@ -370,6 +370,11 @@ exports.createHold = async (req, res, next) => {
       pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
     }
 
+    // Never take a booking for a unit that is not ready (no price set).
+    if (!pricing || !(pricing.subtotal > 0) || !(pricing.total > 0)) {
+      return res.status(400).json({ success: false, code: 'UNIT_NOT_BOOKABLE', message: 'This place is not available for booking yet' });
+    }
+
     const holdExpiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
     const hold = await Booking.create({
@@ -582,6 +587,11 @@ exports.createBooking = async (req, res, next) => {
       const vat = r2(taxableRaw * 0.15);
       const total = r2(taxableRaw * 1.15);
       pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
+    }
+
+    // Never take a booking for a unit that is not ready (no price set).
+    if (!pricing || !(pricing.subtotal > 0) || !(pricing.total > 0)) {
+      return res.status(400).json({ success: false, code: 'UNIT_NOT_BOOKABLE', message: 'This place is not available for booking yet' });
     }
 
     // ── Create booking (atomic transaction or fallback) ──────────────

@@ -45,7 +45,7 @@ export default function AboutPage() {
             {[
               { icon: Shield, label: language === 'ar' ? 'عقارات موثقة' : 'Verified Properties', desc: language === 'ar' ? 'كل عقار يتم التحقق منه قبل النشر' : 'Every property is verified before listing' },
               { icon: Star, label: language === 'ar' ? 'تقييمات حقيقية' : 'Real Reviews', desc: language === 'ar' ? 'تقييمات من ضيوف حقيقيين' : 'Reviews from real guests' },
-              { icon: Users, label: language === 'ar' ? 'دعم متواصل' : '24/7 Support', desc: language === 'ar' ? 'فريق دعم متاح على مدار الساعة' : 'Support team available around the clock' },
+              { icon: Users, label: language === 'ar' ? 'دعم متواصل' : 'Helpful Support', desc: language === 'ar' ? 'فريق دعم جاهز لمساعدتك' : 'A support team ready to help' },
               { icon: Globe, label: language === 'ar' ? 'منصة سعودية' : 'Saudi-First', desc: language === 'ar' ? 'مصممة لاحتياجات السوق المحلي' : 'Designed for the local market' },
             ].map((item) => (
               <div key={item.label} className="bg-white rounded-2xl shadow-card p-5 text-center">

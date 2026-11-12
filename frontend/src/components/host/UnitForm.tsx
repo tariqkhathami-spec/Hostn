@@ -361,6 +361,7 @@ export default function UnitForm({
   const NAV_SECTIONS = useMemo(() => {
     const sections = [
       { id: 'section-basic', label: t.basicInfo[lang] },
+      { id: 'section-pricing', label: isAr ? 'سعر الليلة' : 'Nightly price' },
       { id: 'section-amenities', label: isAr ? 'المرافق' : 'Amenities' },
     ];
     if (form.hasBedrooms) sections.push({ id: 'section-bedrooms', label: isAr ? 'غرف النوم' : 'Bedrooms' });
@@ -424,25 +425,49 @@ export default function UnitForm({
 
   /* ── Image upload ── */
   const MAX_IMAGES = 30;
-  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png'];
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const remaining = MAX_IMAGES - images.length;
-    if (remaining <= 0) { toast.error(isAr ? `الحد الأقصى ${MAX_IMAGES} صور` : `Maximum ${MAX_IMAGES} images`); return; }
-    const toUpload = Array.from(files).slice(0, remaining);
-    const invalid = toUpload.filter(f => !ALLOWED_IMAGE_TYPES.includes(f.type));
-    if (invalid.length > 0) { toast.error(isAr ? 'يُقبل فقط صور JPG و PNG' : 'Only JPG and PNG accepted'); if (fileInputRef.current) fileInputRef.current.value = ''; return; }
+    if (remaining <= 0) { toast.error(isAr ? `الحد الأقصى ${MAX_IMAGES} صورة` : `Maximum ${MAX_IMAGES} images`); return; }
+    const picked = Array.from(files).slice(0, remaining);
+    // Check each file on its own so one bad photo does not cancel the rest.
+    const wrongType = picked.filter((f) => !ALLOWED_IMAGE_TYPES.includes(f.type));
+    const tooBig = picked.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type) && f.size > MAX_IMAGE_BYTES);
+    const toUpload = picked.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type) && f.size <= MAX_IMAGE_BYTES);
+    if (wrongType.length > 0) {
+      toast.error(isAr
+        ? `${wrongType.length} ملف غير مدعوم. الصيغ المقبولة: JPG و PNG و WebP (صور الآيفون بصيغة HEIC حوّلها أولاً).`
+        : `${wrongType.length} file(s) not supported. Use JPG, PNG or WebP.`);
+    }
+    if (tooBig.length > 0) {
+      toast.error(isAr
+        ? `${tooBig.length} صورة أكبر من 5 ميجابايت ولم تُرفع.`
+        : `${tooBig.length} image(s) over 5 MB were skipped.`);
+    }
+    if (toUpload.length === 0) { if (fileInputRef.current) fileInputRef.current.value = ''; return; }
     setUploading(true);
-    try {
-      for (const file of toUpload) {
+    let failed = 0;
+    for (const file of toUpload) {
+      try {
         const fd = new FormData(); fd.append('image', file);
         const res = await uploadApi.single(fd);
         const url = res.data?.data?.url || res.data?.url;
         if (url) setImages((prev) => [...prev, { url, isPrimary: prev.length === 0 }]);
+        else failed += 1;
+      } catch {
+        failed += 1;
       }
-    } catch { toast.error(isAr ? 'فشل رفع الصورة' : 'Failed to upload image'); }
-    finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+    }
+    if (failed > 0) {
+      toast.error(isAr
+        ? `تعذّر رفع ${failed} من ${toUpload.length} صورة. حاول مرة أخرى.`
+        : `${failed} of ${toUpload.length} image(s) failed to upload. Try again.`);
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
   const removeImage = (idx: number) => {
     setImages((prev) => { const next = prev.filter((_, i) => i !== idx); if (next.length > 0 && !next.some(i => i.isPrimary)) next[0].isPrimary = true; return next; });
@@ -463,11 +488,32 @@ export default function UnitForm({
   /* ── Submit ── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // A unit needs a name and a nightly price before it can be saved;
+    // without them guests would be offered a nameless place for 0 SAR.
+    const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!form.nameAr.trim() && !form.nameEn.trim()) {
+      toast.error(isAr ? 'اكتب اسم الوحدة.' : 'Enter the unit name.');
+      goTo('section-basic');
+      return;
+    }
+    const dayPrices = [form.priceSun, form.priceMon, form.priceTue, form.priceWed, form.priceThu, form.priceFri, form.priceSat].map((v) => Number(v) || 0);
+    if (dayPrices.some((v) => v <= 0)) {
+      toast.error(isAr ? 'حدّد سعر الليلة لكل الأيام (أكبر من صفر).' : 'Set a nightly price above zero for every day.');
+      goTo('section-pricing');
+      return;
+    }
+    if (Number(form.discountPercent) > 90) {
+      toast.error(isAr ? 'أقصى خصم مسموح 90%.' : 'The maximum discount is 90%.');
+      goTo('section-pricing');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
-        nameEn: form.nameEn || undefined,
-        nameAr: form.nameAr || undefined,
+        nameEn: form.nameEn.trim(),
+        nameAr: form.nameAr.trim(),
         description: form.description || undefined,
         area: form.area ? Number(form.area) : undefined,
         suitability: form.suitability,
@@ -526,7 +572,14 @@ export default function UnitForm({
   const btnLabel = submitLabel || (initialData ? t.save : t.create);
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
+    <form
+      onSubmit={handleSubmit}
+      className="relative"
+      onKeyDown={(e) => {
+        // Enter inside a text field must not submit the whole unit by accident.
+        if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault();
+      }}
+    >
       <div className="flex gap-8">
         {/* ── Desktop sidebar nav (hidden below lg) ── */}
         <nav className="sticky top-24 self-start w-48 flex-shrink-0 hidden lg:block">
@@ -540,7 +593,7 @@ export default function UnitForm({
                   }}
                   className={`w-full text-start px-3 py-2 rounded-md text-sm transition-all ${
                     activeSection === section.id
-                      ? 'bg-primary-50 text-primary-700 font-semibold border-l-2 border-primary-500'
+                      ? 'bg-primary-50 text-primary-700 font-semibold border-s-2 border-primary-500'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -580,12 +633,14 @@ export default function UnitForm({
         <h2 className={sectionTitle}>{t.basicInfo[lang]}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.nameEn[lang]}</label>
-            <input name="nameEn" value={form.nameEn} onChange={handleChange} className={inputClass} placeholder="e.g. Deluxe Suite" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.nameAr[lang]} *</label>
+            <input name="nameAr" value={form.nameAr} onChange={handleChange} className={inputClass} dir="rtl" placeholder="مثال: الشاليه العائلي" maxLength={120} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t.nameAr[lang]}</label>
-            <input name="nameAr" value={form.nameAr} onChange={handleChange} className={inputClass} dir="rtl" placeholder="مثال: جناح فاخر" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t.nameEn[lang]} <span className="text-gray-400 font-normal">({isAr ? 'اختياري' : 'optional'})</span>
+            </label>
+            <input name="nameEn" value={form.nameEn} onChange={handleChange} className={inputClass} dir="ltr" placeholder="e.g. Family Chalet" maxLength={120} />
           </div>
         </div>
         <div>
@@ -650,6 +705,55 @@ export default function UnitForm({
       </div>
 
       {/* ══ 3. Main Amenities toggle grid ═════════════════ */}
+      {/* ══ Pricing ═══════════════════════════════════════ */}
+      <div id="section-pricing" className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <div>
+          <h2 className={sectionTitle}>{isAr ? 'سعر الليلة' : 'Nightly price'} *</h2>
+          <p className="text-xs text-gray-500 -mt-2">
+            {isAr
+              ? 'بالريال، قبل الضريبة ورسوم الخدمة. تقدر تخصّص سعر تاريخ معيّن أو تضيف عروضاً لاحقاً من صفحة التقويم.'
+              : 'In SAR, before VAT and the service fee. You can set a price for specific dates or add offers later from the calendar page.'}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{isAr ? 'الأحد – الأربعاء' : 'Sun – Wed'}</label>
+            <input
+              type="number" min="1" inputMode="decimal" dir="ltr" className={inputClass}
+              value={form.priceSun === '0' ? '' : form.priceSun}
+              onChange={(e) => setForm({ ...form, priceSun: e.target.value, priceMon: e.target.value, priceTue: e.target.value, priceWed: e.target.value })}
+              placeholder="0"
+            />
+          </div>
+          {([
+            ['priceThu', isAr ? 'الخميس' : 'Thursday'],
+            ['priceFri', isAr ? 'الجمعة' : 'Friday'],
+            ['priceSat', isAr ? 'السبت' : 'Saturday'],
+          ] as const).map(([key, label]) => (
+            <div key={key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+              <input
+                type="number" min="1" inputMode="decimal" dir="ltr" className={inputClass}
+                value={form[key] === '0' ? '' : form[key]}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{isAr ? 'رسوم النظافة' : 'Cleaning fee'}</label>
+            <input
+              type="number" min="0" inputMode="decimal" dir="ltr" className={inputClass}
+              value={form.cleaningFee === '0' ? '' : form.cleaningFee}
+              onChange={(e) => setForm({ ...form, cleaningFee: e.target.value })}
+              placeholder="0"
+            />
+          </div>
+        </div>
+      </div>
+
       <div id="section-amenities" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.mainAmenities[lang]}</h2>
         <p className="text-xs text-gray-500 mb-4">{t.mainAmHint[lang]}</p>
@@ -902,6 +1006,13 @@ export default function UnitForm({
       <div id="section-photos" className="bg-white rounded-xl border border-gray-200 p-6">
         <h2 className={sectionTitle}>{t.photos[lang]}</h2>
         <p className="text-xs text-gray-500 mb-3">{t.uploadHint[lang]}</p>
+        {images.length === 0 && (
+          <p className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+            {isAr
+              ? 'الوحدة لا تظهر للضيوف حتى تضيف صورة واحدة على الأقل. ننصح بخمس صور واضحة أو أكثر.'
+              : 'Guests cannot see this unit until it has at least one photo. Five or more clear photos work best.'}
+          </p>
+        )}
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-3">
           {images.map((img, idx) => (
             <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
@@ -923,7 +1034,7 @@ export default function UnitForm({
             <span className="text-[10px]">{uploading ? t.uploading[lang] : (isAr ? 'إضافة' : 'Add')}</span>
           </button>
         </div>
-        <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png" multiple onChange={handleImageUpload} className="hidden" />
+        <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple onChange={handleImageUpload} className="hidden" />
       </div>
 
       {/* ══ Submit ════════════════════════════════════════ */}

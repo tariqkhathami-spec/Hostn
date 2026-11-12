@@ -30,7 +30,7 @@ function PaymentCallbackContent() {
     // without verifying the payment.
     if (authLoading) return;
     if (!isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/auth');
       return;
     }
     verifyPayment();

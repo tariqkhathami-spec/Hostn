@@ -4,6 +4,8 @@ const { escapeRegex } = require('../middleware/validate');
 const { cacheGet, cacheSet, cacheDel } = require('../config/cache');
 
 // Fields a host is allowed to update on their own property.
+const { requirePublishable } = require('../utils/unitPublish');
+
 const ALLOWED_UPDATE_FIELDS = [
   'title',
   'titleAr',
@@ -186,10 +188,10 @@ exports.getProperties = async (req, res, next) => {
     }
 
     // Only show properties that have at least one active (non-deleted) unit
-    const propertiesWithActiveUnits = await Unit.distinct('property', {
+    const propertiesWithActiveUnits = await Unit.distinct('property', requirePublishable({
       isActive: true,
       isDeleted: { $ne: true },
-    });
+    }));
     query._id = { ...(query._id || {}), $in: propertiesWithActiveUnits };
 
     const MAX_LIMIT = 50;
@@ -249,10 +251,10 @@ exports.getProperties = async (req, res, next) => {
 exports.getHomeFeed = async (req, res, next) => {
   try {
     // Only show properties that have at least one active (non-deleted) unit
-    const withUnits = await Unit.distinct('property', {
+    const withUnits = await Unit.distinct('property', requirePublishable({
       isActive: true,
       isDeleted: { $ne: true },
-    });
+    }));
     const baseFilter = { isActive: true, isDeleted: { $ne: true }, _id: { $in: withUnits } };
 
     const [featured, cities, luxury, families, business, topRated] = await Promise.all([
@@ -449,10 +451,23 @@ exports.updateProperty = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No valid fields to update' });
     }
 
-    property = await Property.findByIdAndUpdate(req.params.id, sanitizedBody, {
-      new: true,
-      runValidators: true,
-    });
+    // Merge the location instead of replacing it. Forms send only the parts
+    // they edit (city, district…); replacing the whole object used to erase
+    // the street address and the map pin. Saving through the document also
+    // re-runs the hook that keeps the geo index in step with the pin.
+    if (sanitizedBody.location && typeof sanitizedBody.location === 'object') {
+      const current = property.location && property.location.toObject ? property.location.toObject() : (property.location || {});
+      const merged = { ...current, ...sanitizedBody.location };
+      delete merged.geoJSON;
+      delete merged.isApproximate;
+      sanitizedBody.location = merged;
+    }
+    // An empty direction means "not set" (the enum has no empty value).
+    if (sanitizedBody.direction === '' || sanitizedBody.direction === null) {
+      sanitizedBody.direction = undefined;
+    }
+    property.set(sanitizedBody);
+    await property.save();
 
     // Invalidate caches if location or active status changed
     if (sanitizedBody.location || sanitizedBody.isActive !== undefined) {

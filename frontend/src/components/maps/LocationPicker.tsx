@@ -62,7 +62,7 @@ export default function LocationPicker({ value, onChange, onAddressResolved, cla
         position: center,
         map,
         draggable: true,
-        title: 'Drag to set location',
+        title: 'اسحب العلامة لتحديد الموقع',
       });
       markerRef.current = marker;
 
@@ -129,7 +129,7 @@ export default function LocationPicker({ value, onChange, onAddressResolved, cla
     return (
       <div className={`bg-gray-100 rounded-xl p-6 text-center ${className}`}>
         <MapPin className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">Map unavailable — enter coordinates manually</p>
+        <p className="text-sm text-gray-500">الخريطة غير متاحة حالياً. اكتب المدينة والحي والعنوان، وتقدر تحدّد الموقع لاحقاً.</p>
       </div>
     );
   }
@@ -153,7 +153,7 @@ export default function LocationPicker({ value, onChange, onAddressResolved, cla
         ) : (
           <LocateFixed className="w-4 h-4" />
         )}
-        Use my location
+        موقعي الحالي
       </button>
     </div>
   );

@@ -12,7 +12,7 @@ const {
   updateUnitPricing,
   toggleUnitStatus,
 } = require('../controllers/unitController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 const { mongoIdParam } = require('../middleware/validate');
 
 // ── Nested routes: /api/v1/properties/:propertyId/units ─────────────────────
@@ -22,7 +22,7 @@ router.post('/', protect, authorize('host', 'admin'), createUnit);
 
 // ── Direct routes: /api/v1/units ────────────────────────────────────────────
 router.get('/search', searchUnits); // Public — no auth needed
-router.get('/:id', mongoIdParam(), getUnit);
+router.get('/:id', mongoIdParam(), optionalAuth, getUnit);
 router.put('/:id', protect, mongoIdParam(), updateUnit);
 router.delete('/:id', protect, mongoIdParam(), deleteUnit);
 router.post('/:id/duplicate', protect, mongoIdParam(), duplicateUnit);

@@ -36,6 +36,7 @@ import { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { propertiesApi } from '@/lib/api';
 import { saveSearchCookies } from '@/lib/searchCookies';
+import { hostPortalUrl } from '@/lib/hostPortal';
 
 const PROPERTY_TYPES = [
   { key: 'chalet', icon: Home, label: { en: 'Chalets', ar: 'شاليهات' } },
@@ -279,13 +280,13 @@ export default function HomePage() {
                 ))}
               </ul>
               <div className="mt-8">
-                <Link
-                  href="/auth"
+                <a
+                  href={hostPortalUrl('/auth')}
                   className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gold-500 to-gold-400 px-8 py-4 text-base font-bold text-primary-950 shadow-gold transition-all duration-300 hover:-translate-y-0.5 hover:from-gold-400 hover:to-gold-300"
                 >
                   {t('cta.button')}
                   <Arrow className="h-5 w-5" />
-                </Link>
+                </a>
               </div>
             </div>
             <div

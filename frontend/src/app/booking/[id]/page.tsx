@@ -49,6 +49,12 @@ function BookingContent() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'tabby' | 'tamara'>('card');
+  // The outcome picker of the payment simulator is a tester's tool, never
+  // something a customer should see. Testers open the page with ?sim=1.
+  const [showSimulatorPicker, setShowSimulatorPicker] = useState(false);
+  useEffect(() => {
+    setShowSimulatorPicker(new URLSearchParams(window.location.search).get('sim') === '1');
+  }, []);
   // PR K: payment simulator state — picks the outcome the back-end applies
   // when the Pay button is clicked at step 2.
   const [simulatedOutcome, setSimulatedOutcome] = useState<SimulatedOutcome>('approved');
@@ -511,7 +517,7 @@ function BookingContent() {
                               // PR G: policy-specific labels AND descriptions.
                               // Previously the fallback description always said
                               // "full refund" which is wrong for normal/restricted.
-                              const policy = (unit?.cancellationPolicy as 'free' | 'flexible' | 'normal' | 'restricted' | undefined) || 'free';
+                              const policy = (unit?.cancellationPolicy as 'free' | 'flexible' | 'normal' | 'restricted' | undefined) || 'flexible';
                               const labels: Record<string, { en: string; ar: string }> = {
                                 free: { en: 'Free cancellation', ar: 'إلغاء مجاني' },
                                 flexible: { en: 'Flexible cancellation', ar: 'إلغاء مرن' },
@@ -519,9 +525,9 @@ function BookingContent() {
                                 restricted: { en: 'Restricted cancellation', ar: 'إلغاء مقيد' },
                               };
                               const fallbackDescriptions: Record<string, { en: string; ar: string }> = {
-                                free:       { en: 'Cancel anytime for a full refund',              ar: 'إلغاء في أي وقت مع استرداد كامل' },
-                                flexible:   { en: 'Cancel before check-in for a full refund',      ar: 'ألغِ قبل الوصول واسترد المبلغ كاملاً' },
-                                normal:     { en: 'Partial refund if you cancel before check-in',  ar: 'استرداد جزئي عند الإلغاء قبل الوصول' },
+                                free:       { en: 'The deposit is refunded if you cancel before 12 noon on the check-in day', ar: 'يُسترد العربون عند الإلغاء قبل الساعة 12 ظهراً يوم الدخول' },
+                                flexible:   { en: 'The deposit is refunded if you cancel at least 2 days before check-in', ar: 'يُسترد العربون عند الإلغاء قبل الدخول بيومين' },
+                                normal:     { en: 'The deposit is refunded if you cancel at least 4 days before check-in', ar: 'يُسترد العربون عند الإلغاء قبل الدخول بأربعة أيام' },
                                 restricted: { en: 'Non-refundable after booking',                   ar: 'لا يمكن استرداد المبلغ بعد الحجز' },
                               };
                               const labelText = isAr ? labels[policy]?.ar : labels[policy]?.en;
@@ -612,7 +618,7 @@ function BookingContent() {
                         </button>
 
                         {/* Tabby — 4 installments */}
-                        {total > 0 && total <= 5000 && (
+                        {BNPL_ENABLED && total > 0 && total <= 5000 && (
                           <button
                             type="button"
                             onClick={() => setPaymentMethod('tabby')}
@@ -643,7 +649,7 @@ function BookingContent() {
                         )}
 
                         {/* Tamara — 4 installments */}
-                        {total > 0 && total <= 5000 && (
+                        {BNPL_ENABLED && total > 0 && total <= 5000 && (
                           <button
                             type="button"
                             onClick={() => setPaymentMethod('tamara')}
@@ -706,12 +712,12 @@ function BookingContent() {
 
                     {/* Method tabs */}
                     <div className="px-6 pt-5">
-                      <div className="grid grid-cols-3 gap-2 bg-gray-50 rounded-xl p-1">
+                      <div className={`grid ${BNPL_ENABLED ? 'grid-cols-3' : 'grid-cols-1'} gap-2 bg-gray-50 rounded-xl p-1`}>
                         {([
                           { id: 'card', label: isAr ? 'بطاقة' : 'Card', brands: 'VISA · MC · mada' },
                           { id: 'tamara', label: 'Tamara', brands: isAr ? 'قسّم على 4' : 'Split in 4' },
                           { id: 'tabby', label: 'Tabby', brands: isAr ? 'قسّم على 4' : 'Split in 4' },
-                        ] as const).map((m) => (
+                        ] as const).filter((m) => BNPL_ENABLED || m.id === 'card').map((m) => (
                           <button
                             key={m.id}
                             onClick={() => setPaymentMethod(m.id as 'card' | 'tabby' | 'tamara')}
@@ -879,7 +885,8 @@ function BookingContent() {
                       </div>
                     )}
 
-                    {/* Demo simulator section (clearly marked) */}
+                    {/* Outcome picker for testers only: add ?sim=1 to the address. */}
+                    {showSimulatorPicker && (
                     <div className="mx-6 mb-5 p-4 border border-dashed border-amber-300 bg-amber-50/50 rounded-xl">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
@@ -903,6 +910,7 @@ function BookingContent() {
                         <option value="timeout">{isAr ? '⏳ مهلة 3DS' : '⏳ 3DS timeout'}</option>
                       </select>
                     </div>
+                    )}
 
                     {/* Pay button */}
                     <div className="px-6 pb-6">
@@ -919,8 +927,8 @@ function BookingContent() {
                       </Button>
                       <p className="text-[11px] text-gray-400 text-center mt-3">
                         {isAr
-                          ? 'بالدفع فإنك توافق على شروط الحجز. المبلغ لن يُخصم فعلياً — وضع تجريبي.'
-                          : 'By paying you agree to the booking terms. No real charge — demo mode.'}
+                          ? 'بالدفع فإنك توافق على شروط الحجز. الدفع الإلكتروني في مرحلة التشغيل التجريبي ولن يُخصم أي مبلغ من بطاقتك الآن.'
+                          : 'By paying you agree to the booking terms. Online payment is in a trial phase — your card will not be charged now.'}
                       </p>
                     </div>
                   </div>
@@ -1081,6 +1089,9 @@ function BookingContent() {
     </>
   );
 }
+
+// Tabby / Tamara stay hidden until the contracts are live.
+const BNPL_ENABLED = process.env.NEXT_PUBLIC_BNPL_ENABLED === 'true';
 
 export default function BookingPage() {
   return (

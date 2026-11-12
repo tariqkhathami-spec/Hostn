@@ -167,6 +167,8 @@ export const bookingsApi = {
   updateStatus: (id: string, status: string) =>
     api.put(`/bookings/${id}/status`, { status }),
   cancel: (id: string) => api.put(`/bookings/${id}/status`, { status: 'cancelled' }),
+  /** Guest cancels their own booking. */
+  cancelAsGuest: (id: string, reason?: string) => api.put(`/bookings/${id}/cancel`, { reason }),
   getUnitBookedDates: (unitId: string) => api.get(`/bookings/unit/${unitId}/dates`),
 };
 

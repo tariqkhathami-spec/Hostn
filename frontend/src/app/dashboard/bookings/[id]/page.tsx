@@ -54,6 +54,24 @@ export default function BookingDetailPage() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!booking) return;
+    setCancelling(true);
+    try {
+      const res = await bookingsApi.cancelAsGuest(booking._id);
+      const updated = res.data?.data;
+      setBooking({ ...booking, ...(updated || {}), status: 'cancelled', property: booking.property, unit: booking.unit, guest: booking.guest } as Booking);
+      setConfirmCancel(false);
+      toast.success(isAr ? 'تم إلغاء الحجز' : 'Booking cancelled');
+    } catch {
+      toast.error(isAr ? 'تعذّر إلغاء الحجز. حاول مرة أخرى أو تواصل مع الدعم.' : 'Could not cancel the booking. Try again or contact support.');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.push('/auth');
@@ -361,6 +379,47 @@ export default function BookingDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Cancel — only before the stay starts */}
+          {['pending', 'confirmed'].includes(booking.status) && new Date(booking.checkIn) > new Date() && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              {!confirmCancel ? (
+                <button
+                  onClick={() => setConfirmCancel(true)}
+                  className="w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  {isAr ? 'إلغاء الحجز' : 'Cancel booking'}
+                </button>
+              ) : (
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 mb-1">
+                    {isAr ? 'متأكد من إلغاء الحجز؟' : 'Cancel this booking?'}
+                  </p>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-4">
+                    {isAr
+                      ? 'لا يمكن التراجع بعد الإلغاء. أي مبلغ مدفوع يُعامل حسب سياسة الإلغاء الخاصة بهذا المكان، وفريق الدعم يتواصل معك بخصوصه.'
+                      : 'This cannot be undone. Any amount paid is handled under this place\'s cancellation policy, and our support team will contact you about it.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCancel}
+                      disabled={cancelling}
+                      className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                    >
+                      {cancelling ? (isAr ? 'جارٍ الإلغاء…' : 'Cancelling…') : (isAr ? 'نعم، ألغِ الحجز' : 'Yes, cancel')}
+                    </button>
+                    <button
+                      onClick={() => setConfirmCancel(false)}
+                      disabled={cancelling}
+                      className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      {isAr ? 'تراجع' : 'Keep it'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Need Help */}
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 text-center">

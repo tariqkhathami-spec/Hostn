@@ -17,12 +17,14 @@ interface BnplWidgetProps {
  * Compact by default, click to expand full details.
  */
 export default function BnplWidget({ total }: BnplWidgetProps) {
+  // Instalment offers are advertised only once Tabby / Tamara are live.
+  const enabled = process.env.NEXT_PUBLIC_BNPL_ENABLED === 'true';
   const { language } = useLanguage();
   const isAr = language === 'ar';
   const [expanded, setExpanded] = useState(false);
 
   // BNPL available for any positive amount
-  if (total <= 0) return null;
+  if (!enabled || total <= 0) return null;
 
   const installment = Math.ceil((total / 4) * 100) / 100;
 

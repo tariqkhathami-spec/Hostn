@@ -98,7 +98,7 @@ function TabbyCallbackContent() {
                   <span>tabby</span>
                   <span>{isAr ? '4 أقساط بدون فوائد' : '4 interest-free installments'}</span>
                 </div>
-                <Button onClick={() => router.push(`/bookings`)} size="lg" className="w-full">
+                <Button onClick={() => router.push('/dashboard/bookings')} size="lg" className="w-full">
                   {isAr ? 'عرض حجوزاتي' : 'View My Bookings'}
                 </Button>
               </>
