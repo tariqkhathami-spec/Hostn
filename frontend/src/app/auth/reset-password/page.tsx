@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import { LogoMark } from '@/components/ui/Logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
@@ -103,9 +104,7 @@ function ResetPasswordContent() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 max-w-md w-full">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 mb-8 justify-center">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-lg">H</span>
-          </div>
+          <span className="flex-shrink-0"><LogoMark size={36} /></span>
           <span className="text-xl font-bold text-gray-900 tracking-tight">Hostn</span>
         </Link>
 

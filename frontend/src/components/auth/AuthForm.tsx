@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Logo from '@/components/ui/Logo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -236,8 +237,8 @@ export default function AuthForm({ mode, role }: AuthFormProps) {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <Link href="/" className="text-2xl font-bold text-gray-900 inline-block mb-6">
-            Hostn
+          <Link href="/" aria-label="Hostn" className="inline-block mb-6">
+            <Logo size={38} />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
           <p className="mt-2 text-gray-500">{subtitle}</p>
