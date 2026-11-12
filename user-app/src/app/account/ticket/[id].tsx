@@ -67,6 +67,8 @@ export default function TicketDetailScreen() {
   const { data: ticket, isLoading } = useQuery({
     queryKey: ['supportTicket', id],
     queryFn: () => supportService.getTicket(id!),
+    // New replies from the support team should appear without leaving the screen.
+    refetchInterval: 15000,
     enabled: !!id,
   });
 

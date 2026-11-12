@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -34,7 +34,7 @@ const PRIORITY_COLORS: Record<SupportTicket['priority'], string> = {
 
 export default function SupportScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all');
 
   const STATUS_TABS: { key: StatusFilter; label: string }[] = [
@@ -60,10 +60,18 @@ export default function SupportScreen() {
     other: t('support.cat.other'),
   };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['supportTickets'],
     queryFn: () => supportService.getTickets(),
+    // Replies and status changes come from the support team, so keep the
+    // list fresh while it is open and whenever the guest returns to it.
+    refetchInterval: 20000,
   });
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const tickets = data ?? [];
   const filtered =
@@ -97,7 +105,28 @@ export default function SupportScreen() {
         </View>
       </View>
 
+      {/* What the ticket is about: the latest message, and who wrote it */}
+      {(() => {
+        const last = item.messages?.[item.messages.length - 1];
+        if (!last?.text) return null;
+        const fromSupport = last.sender === 'admin';
+        return (
+          <View style={styles.previewRow}>
+            {fromSupport && (
+              <View style={styles.replyBadge}>
+                <Text style={styles.replyBadgeText}>{language === 'ar' ? 'رد من الدعم' : 'Support replied'}</Text>
+              </View>
+            )}
+            <Text style={styles.previewText} numberOfLines={2}>
+              {fromSupport ? '' : language === 'ar' ? 'أنت: ' : 'You: '}
+              {last.text}
+            </Text>
+          </View>
+        );
+      })()}
+
       <View style={styles.ticketMeta}>
+        <Text style={styles.ticketNumber}>#{String(item._id).slice(-6).toUpperCase()}</Text>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{CATEGORY_LABELS[item.category]}</Text>
         </View>
@@ -253,6 +282,31 @@ const styles = StyleSheet.create({
   statusText: {
     ...Typography.caption,
     fontWeight: '600',
+  },
+  previewRow: {
+    marginBottom: Spacing.sm,
+    gap: 6,
+  },
+  previewText: {
+    ...Typography.small,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  replyBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primary + '18',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+  },
+  replyBadgeText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  ticketNumber: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
   },
   ticketMeta: {
     flexDirection: 'row',
