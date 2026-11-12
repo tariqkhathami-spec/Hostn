@@ -48,7 +48,8 @@ export default function BookingDetailScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookingDetail', id] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      queryClient.invalidateQueries({ queryKey: ['hostBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['hostCalendar'] });
       queryClient.invalidateQueries({ queryKey: ['upcomingGuests'] });
       setIsUpdating(false);
       Alert.alert('تم بنجاح', 'تم تحديث حالة الحجز بنجاح');

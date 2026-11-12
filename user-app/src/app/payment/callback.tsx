@@ -12,11 +12,20 @@ type PaymentStatus = 'loading' | 'success' | 'failure';
 
 export default function PaymentCallbackScreen() {
   const router = useRouter();
-  const { paymentId, status, provider } = useLocalSearchParams<{
-    paymentId: string;
-    status: string;
-    provider: string;
-  }>();
+  // paymentId = our Payment record. The provider adds its own reference when
+  // it redirects back: Moyasar `id`, Tabby `payment_id`, Tamara `orderId`.
+  const { paymentId, provider, id: providerRef, moyasarPaymentId, payment_id, tabbyPaymentId, orderId, order_id } =
+    useLocalSearchParams<{
+      paymentId: string;
+      status: string;
+      provider: string;
+      id?: string;
+      moyasarPaymentId?: string;
+      payment_id?: string;
+      tabbyPaymentId?: string;
+      orderId?: string;
+      order_id?: string;
+    }>();
 
   const { t } = useLanguage();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('loading');
@@ -33,16 +42,26 @@ export default function PaymentCallbackScreen() {
       return;
     }
 
+    const moyasarRef = moyasarPaymentId ?? providerRef;
+    const tabbyRef = tabbyPaymentId ?? payment_id ?? providerRef;
+    const tamaraRef = orderId ?? order_id ?? providerRef;
+    const reference = provider === 'moyasar' ? moyasarRef : provider === 'tabby' ? tabbyRef : tamaraRef;
+    if (!reference) {
+      setErrorMessage(t('payment.missingInfo'));
+      setPaymentStatus('failure');
+      return;
+    }
+
     try {
       switch (provider) {
         case 'moyasar':
-          await paymentsService.verify(paymentId);
+          await paymentsService.verify(paymentId, reference);
           break;
         case 'tabby':
-          await bnplService.verifyTabby(paymentId);
+          await bnplService.verifyTabby(paymentId, reference);
           break;
         case 'tamara':
-          await bnplService.verifyTamara(paymentId);
+          await bnplService.verifyTamara(paymentId, reference);
           break;
         default:
           throw new Error(`Unknown payment provider: ${provider}`);

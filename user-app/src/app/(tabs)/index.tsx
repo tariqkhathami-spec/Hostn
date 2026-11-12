@@ -34,7 +34,8 @@ export default function HomeScreen() {
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['homeFeed'],
-    queryFn: () => listingsService.search({ limit: 20 }),
+    // Units, not properties: every card opens something that can be booked.
+    queryFn: () => listingsService.searchUnits({ limit: 20 }),
   });
 
   const listings = data?.data ?? [];

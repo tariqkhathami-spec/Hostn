@@ -7,6 +7,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/th
 import { useLanguage } from '../../i18n';
 import { translateDistrict, translateCity } from '../../constants/districts';
 import { useSearchStore } from '../../store/searchStore';
+import { listingTitle, unitAveragePrice } from '../../utils/unit';
 import type { Listing } from '../../types';
 
 interface Props {
@@ -30,19 +31,12 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
   ) ?? listing.images?.[0];
   const imageUri = typeof primaryImage === 'string' ? primaryImage : (primaryImage as any)?.url;
 
-  // Pricing: fallback chain — perNight → per-day average → discountedPrice
+  // Units arrive flattened (utils/unit.ts): pricing.perNight is the average
+  // day price and discountedPrice the price after the unit discount
+  // (effectivePrice / avgPrice from search when the API sent them).
   let originalPrice = listing.pricing?.perNight && listing.pricing.perNight > 0
     ? listing.pricing.perNight
-    : 0;
-
-  // Try per-day rates (sunday..saturday) for units or if perNight is 0
-  if (originalPrice === 0 && item.pricing) {
-    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayPrices = dayKeys.map((k) => parseFloat(item.pricing[k]) || 0).filter((v) => v > 0);
-    if (dayPrices.length > 0) {
-      originalPrice = dayPrices.reduce((a: number, b: number) => a + b, 0) / dayPrices.length;
-    }
-  }
+    : unitAveragePrice(item.pricing);
 
   // Fall back to discountedPrice if still 0
   if (originalPrice === 0 && listing.discountedPrice && listing.discountedPrice > 0) {
@@ -59,10 +53,10 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
   const place = listing.location ?? item.property?.location;
   const city = place?.city ?? '';
   const district = place?.district;
-  const propertyTitle: string =
-    (language === 'ar' ? item.property?.titleAr || item.property?.title : item.property?.title || item.property?.titleAr) || '';
-  const rating = listing.ratings?.average ?? 0;
-  const reviewCount = listing.ratings?.count ?? 0;
+  // A unit's rating is its property's rating (scale 0–10).
+  const ratings = item.property?.ratings ?? listing.ratings;
+  const rating = ratings?.average ?? 0;
+  const reviewCount = ratings?.count ?? 0;
   const guests = listing.capacity?.maxGuests;
   const bedrooms = isUnit ? (item.bedrooms?.count ?? item.rooms?.bedrooms ?? listing.capacity?.bedrooms) : listing.capacity?.bedrooms;
   const bathrooms = isUnit ? (item.bathroomCount ?? item.rooms?.bathrooms ?? listing.capacity?.bathrooms) : listing.capacity?.bathrooms;
@@ -133,11 +127,7 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
 
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>
-          {isUnit
-            ? [propertyTitle, (language === 'ar' ? item.nameAr : item.nameEn) || item.nameAr || item.nameEn || listing.title]
-                .filter(Boolean)
-                .join(' · ')
-            : (language === 'ar' ? item.titleAr || listing.title : listing.title)}
+          {listingTitle(item, language)}
         </Text>
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />

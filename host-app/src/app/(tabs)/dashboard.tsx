@@ -215,7 +215,10 @@ export default function DashboardScreen() {
               },
               {
                 icon: 'star-outline' as const,
-                value: stats.averageRating ?? '-',
+                // Ratings are out of 10; a dash only when there are no reviews yet.
+                value: Number(stats.averageRating) > 0
+                  ? `${Math.round(Number(stats.averageRating) * 10) / 10} / 10`
+                  : '—',
                 label: l({ en: 'Average Rating', ar: 'متوسط التقييم' }),
                 color: Colors.warning,
               },

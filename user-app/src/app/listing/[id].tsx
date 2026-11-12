@@ -18,8 +18,9 @@ import { Image } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { listingsService } from '../../services/listings.service';
-import { authService } from '../../services/auth.service';
-import { useAuthStore } from '../../store/authStore';
+import { useWishlist } from '../../hooks/useWishlist';
+import { watchProperty } from '../../services/socket';
+import { listingTitle } from '../../utils/unit';
 import { formatCurrency, formatRating } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
@@ -31,9 +32,8 @@ export default function ListingDetailScreen() {
   const router = useRouter();
   const { t, language, isRTL } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
   const requireAuth = useRequireAuth();
+  const { isFavorite: isFavoriteUnit, toggle: toggleFavorite } = useWishlist();
   const isAr = language === 'ar';
 
   // Try fetching as unit first, fall back to property
@@ -41,11 +41,10 @@ export default function ListingDetailScreen() {
     queryKey: ['listing', id],
     queryFn: async () => {
       try {
+        // Flattened by the service: location, host, type, rules, ratings and
+        // the property title sit next to the unit's own fields.
         const unit = await listingsService.getUnit(id!);
-        if (unit && (unit.nameEn || unit.nameAr || unit.name)) {
-          // Mark as unit for downstream logic
-          return { ...unit, _isUnit: true };
-        }
+        if (unit && unit._isUnit) return unit as any;
       } catch (err) {
         if (__DEV__) console.debug('[listing] getUnit failed, falling back to getById:', err);
       }
@@ -54,13 +53,19 @@ export default function ListingDetailScreen() {
     enabled: !!id,
   });
 
-  const { data: reviewsData } = useQuery({
-    queryKey: ['reviews', id],
-    queryFn: () => listingsService.getReviews(id!),
-    enabled: !!id,
-  });
+  // Reviews belong to the property, not to the unit.
+  const reviewsPropertyId: string | undefined = listing
+    ? (listing._isUnit ? listing.propertyId : listing._id)
+    : undefined;
 
-  const reviews = reviewsData?.data ?? reviewsData ?? [];
+  // Live availability updates for this property (see services/socket.ts).
+  React.useEffect(() => watchProperty(reviewsPropertyId), [reviewsPropertyId]);
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['reviews', reviewsPropertyId],
+    queryFn: () => listingsService.getReviews(reviewsPropertyId!),
+    enabled: !!reviewsPropertyId,
+  });
 
   // Tab-paging instead of scroll — matches web's 8bc861f
   const [activeTab, setActiveTab] = useState<'specifications' | 'reviews' | 'location' | 'policies'>('specifications');
@@ -72,18 +77,13 @@ export default function ListingDetailScreen() {
     { key: 'policies' as const, label: isAr ? 'الشروط' : 'Terms', icon: 'document-text-outline' as const },
   ];
 
-  const isFavorite = user?.wishlist?.includes(id!) ?? false;
+  // Only units can be saved (the wishlist stores unit ids).
+  const canFavorite = !!listing?._isUnit;
+  const isFavorite = canFavorite && isFavoriteUnit(id);
 
-  const handleFavorite = async () => {
-    if (!id) return;
-    if (!requireAuth()) return;
-    try {
-      await authService.toggleWishlist(id);
-      const updated = await authService.getMe();
-      setUser(updated);
-    } catch (err) {
-      if (__DEV__) console.debug('[listing] toggleWishlist failed:', err);
-    }
+  const handleFavorite = () => {
+    if (!id || !canFavorite) return;
+    toggleFavorite(id);
   };
 
   const handleShare = async () => {
@@ -91,7 +91,7 @@ export default function ListingDetailScreen() {
     try {
       await Share.share({
         message: t('listing.shareMessage', {
-          title: listing.title,
+          title: listingTitle(listing, language),
           city: translateCity(listing.location?.city ?? '', language),
         }),
       });
@@ -115,7 +115,8 @@ export default function ListingDetailScreen() {
     const hostName = listing.host?.name ?? listing.host?.firstName ?? '';
     router.push({
       pathname: `/chat/${listing.host._id}`,
-      params: { propertyId: id, hostName },
+      // The conversation is tied to the property, not to the unit.
+      params: { propertyId: listing.propertyId ?? id, hostName },
     });
   };
 
@@ -150,15 +151,9 @@ export default function ListingDetailScreen() {
   const itemData = listing as any;
   const isUnitDetail = !!(itemData._isUnit);
 
-  // Pricing: units may use per-day rates
-  let originalPrice = listing.pricing?.perNight ?? 0;
-  if (isUnitDetail && itemData.pricing) {
-    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayPrices = dayKeys.map((k: string) => parseFloat(itemData.pricing[k]) || 0).filter((v: number) => v > 0);
-    if (dayPrices.length > 0) {
-      originalPrice = dayPrices.reduce((a: number, b: number) => a + b, 0) / dayPrices.length;
-    }
-  }
+  // For a unit, pricing.perNight is the average of its day prices and
+  // discountedPrice applies pricing.discountPercent (see utils/unit.ts).
+  const originalPrice = listing.pricing?.perNight ?? 0;
 
   const price = listing.discountedPrice ?? originalPrice;
   const discount = listing.pricing?.discountPercent ?? 0;
@@ -169,13 +164,8 @@ export default function ListingDetailScreen() {
   const district = listing.location?.district;
   const hostName = listing.host?.name ?? (`${listing.host?.firstName ?? ''} ${listing.host?.lastName ?? ''}`.trim() || '');
 
-  // Unit-aware title
-  const displayTitle = isUnitDetail
-    ? (isAr ? itemData.nameAr : itemData.nameEn) || itemData.nameAr || itemData.nameEn || listing.title
-    : listing.title;
-  const displaySubtitle = isUnitDetail
-    ? (itemData.propertyName || itemData.property?.name || '')
-    : '';
+  // "Property title · Unit name" in the app language (titleAr / nameAr in Arabic).
+  const displayTitle = listingTitle(listing, language);
 
   // Unit-aware capacity
   const displayBedrooms = isUnitDetail
@@ -253,13 +243,15 @@ export default function ListingDetailScreen() {
               <Pressable style={styles.overlayButton} onPress={handleShare}>
                 <Ionicons name="share-outline" size={22} color={Colors.textPrimary} />
               </Pressable>
-              <Pressable style={styles.overlayButton} onPress={handleFavorite}>
-                <Ionicons
-                  name={isFavorite ? 'heart' : 'heart-outline'}
-                  size={22}
-                  color={isFavorite ? Colors.error : Colors.textPrimary}
-                />
-              </Pressable>
+              {canFavorite && (
+                <Pressable style={styles.overlayButton} onPress={handleFavorite}>
+                  <Ionicons
+                    name={isFavorite ? 'heart' : 'heart-outline'}
+                    size={22}
+                    color={isFavorite ? Colors.error : Colors.textPrimary}
+                  />
+                </Pressable>
+              )}
             </View>
           </View>
           {sortedImages.length > 0 && (
@@ -285,9 +277,6 @@ export default function ListingDetailScreen() {
 
           {/* Title & Location */}
           <Text style={styles.listingTitle}>{displayTitle}</Text>
-          {displaySubtitle ? (
-            <Text style={styles.locationText}>{displaySubtitle}</Text>
-          ) : null}
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
             <Text style={styles.locationText}>
@@ -300,7 +289,7 @@ export default function ListingDetailScreen() {
             {rating > 0 && (
               <View style={styles.stat}>
                 <Ionicons name="star" size={18} color={Colors.accent} />
-                <Text style={styles.statValue}>{formatRating(rating)}</Text>
+                <Text style={styles.statValue}>{formatRating(rating)}/10</Text>
                 <Text style={styles.statLabel}>({reviewCount} {t('listing.reviews')})</Text>
               </View>
             )}
@@ -408,29 +397,26 @@ export default function ListingDetailScreen() {
                   <View key={review._id ?? idx} style={styles.reviewCard}>
                     <View style={styles.reviewHeader}>
                       <View style={styles.reviewerAvatar}>
-                        {review.user?.avatar ? (
-                          <Image source={{ uri: review.user.avatar }} style={styles.reviewerAvatarImage} />
+                        {review.guest?.avatar ? (
+                          <Image source={{ uri: review.guest.avatar }} style={styles.reviewerAvatarImage} />
                         ) : (
                           <Ionicons name="person" size={20} color={Colors.textSecondary} />
                         )}
                       </View>
                       <View style={styles.reviewerInfo}>
                         <Text style={styles.reviewerName}>
-                          {review.user?.name ?? review.user?.firstName ?? t('account.guest' as any)}
+                          {review.guest?.name || t('account.guest' as any)}
                         </Text>
                         <Text style={styles.reviewDate}>
                           {review.createdAt ? new Date(review.createdAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US') : ''}
                         </Text>
                       </View>
+                      {/* Review scores are on a 1–10 scale; shown as x/10. */}
                       <View style={styles.reviewStars}>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Ionicons
-                            key={star}
-                            name={star <= (review.rating ?? 0) ? 'star' : 'star-outline'}
-                            size={14}
-                            color={Colors.accent}
-                          />
-                        ))}
+                        <Ionicons name="star" size={14} color={Colors.accent} />
+                        <Text style={styles.reviewScore}>
+                          {formatRating(Number(review.ratings?.overall) || 0)}/10
+                        </Text>
                       </View>
                     </View>
                     {review.comment ? (
@@ -804,7 +790,8 @@ const styles = StyleSheet.create({
   reviewerInfo: { flex: 1, marginLeft: Spacing.sm },
   reviewerName: { ...Typography.smallBold, color: Colors.textPrimary },
   reviewDate: { ...Typography.caption, color: Colors.textTertiary, marginTop: 1 },
-  reviewStars: { flexDirection: 'row', gap: 1 },
+  reviewStars: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  reviewScore: { ...Typography.smallBold, color: Colors.textPrimary },
   reviewComment: { ...Typography.small, color: Colors.textSecondary, lineHeight: 20 },
   emptyReviews: {
     alignItems: 'center',

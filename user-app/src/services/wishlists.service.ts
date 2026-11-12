@@ -1,5 +1,6 @@
 import api from './api';
 import type { WishlistList } from '../types';
+import { flattenUnit } from '../utils/unit';
 
 export const wishlistsService = {
   getLists() {
@@ -12,7 +13,9 @@ export const wishlistsService = {
   getList(id: string) {
     return api.get(`/wishlists/${id}`).then((r) => {
       const d = r.data as any;
-      return (d.data ?? d) as WishlistList;
+      const list = (d.data ?? d) as WishlistList;
+      // Units arrive populated with their property; flatten them for the cards.
+      return { ...list, units: (list.units ?? []).map((u) => flattenUnit(u)) } as WishlistList;
     });
   },
 
@@ -72,7 +75,8 @@ export const wishlistsService = {
       .get(`/wishlists/unit/${unitId}/membership`)
       .then((r) => {
         const d = r.data as any;
-        return (d.data ?? d) as { _id: string; units: string[] }[];
+        // Ids of the lists that contain this unit.
+        return ((d?.data ?? d ?? []) as unknown[]).map(String);
       });
   },
 };

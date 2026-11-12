@@ -27,6 +27,8 @@ export default function ChatScreen() {
   const [text, setText] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // User id of the person on the other side (needed to report them).
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
@@ -45,6 +47,9 @@ export default function ChatScreen() {
           // conv could be the full conversation object or unwrapped
           const convId = conv?._id ?? (conv as any)?.id ?? id;
           setConversationId(convId);
+          const other = (conv?.participants ?? []).find((p) => p?._id && String(p._id) !== String(userId));
+          // Opened from a listing, `id` is the host's user id.
+          setOtherUserId(other?._id ? String(other._id) : id);
         }
       })
       .catch((err) => {
@@ -55,6 +60,18 @@ export default function ChatScreen() {
         // From a listing (propertyId set), createConversation was required — surface error.
         if (!cancelled) {
           setConversationId(id);
+          if (!propertyId) {
+            // `id` is a conversation id here: find the other participant in it.
+            queryClient
+              .fetchQuery({ queryKey: ['conversations'], queryFn: () => chatService.getConversations() })
+              .then((list) => {
+                if (cancelled) return;
+                const conv = (list ?? []).find((c) => String(c._id) === String(id));
+                const other = (conv?.participants ?? []).find((p) => p?._id && String(p._id) !== String(userId));
+                if (other?._id) setOtherUserId(String(other._id));
+              })
+              .catch(() => {});
+          }
           if (propertyId) {
             Alert.alert(
               t('common.error' as any) || 'Error',
@@ -94,8 +111,8 @@ export default function ChatScreen() {
     sendMutation.mutate(trimmed);
   };
 
-  // Determine the other participant for reporting
-  const otherParticipantId = id;
+  // The report targets the other participant's USER id, never the conversation id.
+  const otherParticipantId = otherUserId;
 
   const handleBlock = useCallback(() => {
     setShowMenu(false);
@@ -130,7 +147,10 @@ export default function ChatScreen() {
 
   const handleReport = useCallback(() => {
     setShowMenu(false);
-    if (!otherParticipantId) return;
+    if (!otherParticipantId) {
+      Alert.alert(t('common.error'), t('chat.reportFailed'));
+      return;
+    }
     Alert.alert(
       t('chat.reportTitle' as any) || 'Report User',
       t('chat.reportConfirm' as any) || 'The report will be reviewed by our support team.',
@@ -142,9 +162,9 @@ export default function ChatScreen() {
           onPress: async () => {
             try {
               await chatService.reportUser({
-                reportedUser: otherParticipantId,
+                userId: otherParticipantId,
                 reason: 'inappropriate_behavior',
-                details: `Reported from conversation ${conversationId}`,
+                description: `Reported from a chat conversation (conversation ${conversationId ?? 'unknown'}).`,
               });
               Alert.alert(
                 t('common.success' as any) || 'Done',

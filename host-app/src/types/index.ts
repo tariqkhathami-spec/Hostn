@@ -273,6 +273,7 @@ export interface Conversation {
   lastMessage: string;
   lastMessageDate: string;
   isUnread: boolean;
+  isBlocked?: boolean;
   bookingStatus?: string;
   reservationId?: string;
 }

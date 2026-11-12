@@ -18,9 +18,38 @@ const MIME_BY_EXT: Record<string, string> = {
   jpeg: 'image/jpeg',
   png: 'image/png',
   webp: 'image/webp',
+  avif: 'image/avif',
   heic: 'image/heic',
   heif: 'image/heif',
 };
+
+// What POST /upload/single accepts (backend/src/middleware/upload.js).
+const ACCEPTED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+
+/**
+ * Picker options that make iOS hand over a JPEG instead of the original
+ * HEIC: "compatible" asks the system to transcode to the most compatible
+ * format, and a quality below 1 makes the picker re-encode the photo.
+ */
+export const JPEG_PICKER_OPTIONS = {
+  mediaTypes: ['images'],
+  quality: 0.8,
+  preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+} satisfies ImagePicker.ImagePickerOptions;
+
+/** MIME type of a picked photo, from the picker or the file extension. */
+export function assetMimeType(asset: { mimeType?: string | null; fileName?: string | null; uri: string }): string {
+  const fileName = asset.fileName || asset.uri.split('/').pop() || '';
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  return (asset.mimeType || MIME_BY_EXT[ext] || 'image/jpeg').toLowerCase();
+}
+
+/** Arabic reason when the server would refuse this photo's format (e.g. HEIC), else null. */
+export function unsupportedImageMessage(asset: { mimeType?: string | null; fileName?: string | null; uri: string }): string | null {
+  return ACCEPTED_MIME.includes(assetMimeType(asset))
+    ? null
+    : 'صيغة الصورة غير مدعومة (مثل HEIC). اختر صورة بصيغة JPG أو PNG، أو التقط لقطة شاشة للصورة ثم ارفعها.';
+}
 
 /**
  * Let the host pick photos and upload them one by one.
@@ -31,9 +60,8 @@ const MIME_BY_EXT: Record<string, string> = {
  */
 export async function pickAndUploadImages(onUploaded?: (url: string) => void): Promise<UploadBatchResult> {
   const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
+    ...JPEG_PICKER_OPTIONS,
     allowsMultipleSelection: true,
-    quality: 0.8,
   });
   if (result.canceled || !result.assets?.length) return { canceled: true, urls: [], failed: 0 };
 
@@ -42,14 +70,20 @@ export async function pickAndUploadImages(onUploaded?: (url: string) => void): P
   let error: string | undefined;
 
   for (const asset of result.assets) {
+    // Never send a format the server refuses: say why instead.
+    const unsupported = unsupportedImageMessage(asset);
+    if (unsupported) {
+      failed += 1;
+      error = unsupported;
+      continue;
+    }
     try {
       const fileName = asset.fileName || asset.uri.split('/').pop() || 'image.jpg';
-      const ext = (fileName.split('.').pop() || 'jpg').toLowerCase();
       const formData = new FormData();
       formData.append('image', {
         uri: asset.uri,
         name: fileName,
-        type: asset.mimeType || MIME_BY_EXT[ext] || 'image/jpeg',
+        type: assetMimeType(asset),
       } as any);
 
       const res = await hostService.uploadImage(formData);

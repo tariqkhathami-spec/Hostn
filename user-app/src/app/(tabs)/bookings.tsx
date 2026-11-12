@@ -12,6 +12,7 @@ import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/th
 import { useLanguage } from '../../i18n';
 import { useAuthStore } from '../../store/authStore';
 import LoginPrompt from '../../components/ui/LoginPrompt';
+import { stayTitle } from '../../utils/unit';
 import type { Booking } from '../../types';
 
 const TABS = ['upcoming', 'previous'] as const;
@@ -26,7 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function BookingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'previous'>('upcoming');
 
@@ -64,12 +65,12 @@ export default function BookingsScreen() {
         onPress={() => router.push(`/booking/${item._id}`)}
       >
         <Image
-          source={{ uri: (item.property?.images?.length ?? 0) > 0 ? (typeof item.property.images[0] === 'string' ? item.property.images[0] : item.property.images[0]?.url) : undefined }}
+          source={{ uri: item.unit?.images?.[0]?.url ?? ((item.property?.images?.length ?? 0) > 0 ? (typeof item.property.images[0] === 'string' ? item.property.images[0] : item.property.images[0]?.url) : undefined) }}
           style={styles.bookingImage}
           contentFit="cover"
         />
         <View style={styles.bookingInfo}>
-          <Text style={styles.bookingTitle} numberOfLines={1}>{item.property?.title ?? ''}</Text>
+          <Text style={styles.bookingTitle} numberOfLines={1}>{stayTitle(item.property, item.unit, language)}</Text>
           <Text style={styles.bookingDates}>{formatDateRange(item.checkIn, item.checkOut)}</Text>
           <View style={styles.bookingBottom}>
             <Text style={styles.bookingPrice}>

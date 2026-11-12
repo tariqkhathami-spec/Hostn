@@ -11,21 +11,33 @@ export function setQueryClient(qc: QueryClient) {
   queryClientRef = qc;
 }
 
-/** Connect to the Socket.IO server. Safe to call multiple times — reconnects if needed. */
+/**
+ * Connect to the Socket.IO server. Called at app start and again right after
+ * login (at app start there may be no token yet). Safe to call repeatedly:
+ * an existing socket is reused, never duplicated.
+ */
 export async function connectSocket() {
-  if (socket?.connected) return socket;
+  if (socket) {
+    if (!socket.connected) socket.connect();
+    return socket;
+  }
 
   const token = await secureStorage.getToken();
   if (!token) {
     console.log('[SOCKET] No token — skipping connection');
     return null;
   }
+  // Another call may have created the socket while the token was being read.
+  if (socket) return socket;
 
   // Derive WS URL from API base (strip /api/v1 suffix)
   const baseUrl = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
   socket = io(baseUrl, {
-    auth: { token },
+    // Read the token on every (re)connection so a refreshed token is used.
+    auth: (cb) => {
+      secureStorage.getToken().then((t) => cb({ token: t ?? '' })).catch(() => cb({ token: '' }));
+    },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionAttempts: 10,
@@ -47,34 +59,24 @@ export async function connectSocket() {
   });
 
   // ── Booking events → invalidate React Query caches ──────────────
-  socket.on('booking:created', (booking) => {
-    console.log('[SOCKET] booking:created', booking._id);
-    invalidateBookingCaches();
-  });
-
-  socket.on('booking:updated', (booking) => {
-    console.log('[SOCKET] booking:updated', booking._id, booking.status);
-    invalidateBookingCaches();
-  });
-
-  socket.on('booking:cancelled', (booking) => {
-    console.log('[SOCKET] booking:cancelled', booking._id);
-    invalidateBookingCaches();
-  });
+  for (const event of ['booking:created', 'booking:updated', 'booking:cancelled']) {
+    socket.on(event, (booking) => {
+      console.log(`[SOCKET] ${event}`, booking?._id, booking?.status);
+      invalidateBookingCaches();
+    });
+  }
 
   // ── Availability changes → invalidate calendar ──────────────────
   socket.on('availability:changed', (data) => {
-    console.log('[SOCKET] availability:changed', data.propertyId);
-    if (queryClientRef) {
-      queryClientRef.invalidateQueries({ queryKey: ['calendar'] });
-      queryClientRef.invalidateQueries({ queryKey: ['properties'] });
-    }
+    console.log('[SOCKET] availability:changed', data?.propertyId);
+    invalidate(['hostCalendar'], ['unitBookedDates'], ['properties']);
   });
 
   // ── Message events → invalidate conversation caches ────────────
+  // message:new carries { conversationId, message }.
   socket.on('message:new', (data) => {
     console.log('[SOCKET] message:new', data?.conversationId);
-    invalidateMessageCaches(data?.conversationId);
+    invalidateMessageCaches(data?.conversationId ?? data?.message?.conversation);
   });
 
   socket.on('message:read', (data) => {
@@ -82,11 +84,8 @@ export async function connectSocket() {
     invalidateMessageCaches(data?.conversationId);
   });
 
-  socket.on('conversation:updated', (data) => {
-    console.log('[SOCKET] conversation:updated', data?.conversationId);
-    if (queryClientRef) {
-      queryClientRef.invalidateQueries({ queryKey: ['conversations'] });
-    }
+  socket.on('conversation:updated', () => {
+    invalidate(['conversations']);
   });
 
   return socket;
@@ -116,21 +115,32 @@ export function leavePropertyRoom(propertyId: string) {
 }
 
 // ── Internal helpers ─────────────────────────────────────────────────
+// The keys below are the ones the screens really use. React Query matches by
+// prefix, so ['bookings'] also covers ['bookings', 'recent'] and the like.
+
+function invalidate(...keys: unknown[][]) {
+  if (!queryClientRef) return;
+  for (const queryKey of keys) queryClientRef.invalidateQueries({ queryKey });
+}
 
 function invalidateMessageCaches(conversationId?: string) {
-  if (!queryClientRef) return;
-  queryClientRef.invalidateQueries({ queryKey: ['conversations'] });
-  if (conversationId) {
-    queryClientRef.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
-  }
+  invalidate(
+    ['conversations'], // messages list (['conversations', filters]) and the open chat's header
+    // The open thread: only that conversation when the event names it.
+    conversationId ? ['conversation-messages', String(conversationId)] : ['conversation-messages'],
+    ['notifications'], // notifications list and the unread badge (['notifications', 'unreadCount'])
+  );
 }
 
 function invalidateBookingCaches() {
-  if (!queryClientRef) return;
-  // Invalidate all booking-related queries so screens auto-refresh
-  queryClientRef.invalidateQueries({ queryKey: ['bookings'] });
-  queryClientRef.invalidateQueries({ queryKey: ['hostBookings'] });
-  queryClientRef.invalidateQueries({ queryKey: ['upcomingGuests'] });
-  queryClientRef.invalidateQueries({ queryKey: ['dashboard'] });
-  queryClientRef.invalidateQueries({ queryKey: ['calendar'] });
+  invalidate(
+    ['bookings'], // reservations tab, dashboard recent and upcoming lists
+    ['upcomingGuests'],
+    ['bookingDetail'],
+    ['dashboard'], // ['dashboard', 'stats']
+    ['host-stats'], // stats row on the "more" tab
+    ['hostCalendar'], // calendar tab: ['hostCalendar', year, month]
+    ['unitBookedDates'], // unit screen calendar
+    ['notifications'],
+  );
 }

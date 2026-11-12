@@ -12,6 +12,7 @@ import {
   TextInput,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { JPEG_PICKER_OPTIONS, assetMimeType, unsupportedImageMessage } from '../../utils/uploadImages';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toWesternDigits } from '../../utils/format';
@@ -74,9 +75,15 @@ export default function PermitsScreen() {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync(JPEG_PICKER_OPTIONS);
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
+    // The server refuses HEIC and similar formats: say so before uploading.
+    const unsupported = unsupportedImageMessage(asset);
+    if (unsupported) {
+      Alert.alert('خطأ', unsupported);
+      return;
+    }
     setForm((prev) =>
       prev
         ? {
@@ -84,7 +91,7 @@ export default function PermitsScreen() {
             image: {
               uri: asset.uri,
               name: asset.fileName || 'permit.jpg',
-              type: asset.mimeType || 'image/jpeg',
+              type: assetMimeType(asset),
             },
           }
         : prev,

@@ -9,8 +9,6 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  Modal,
-  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,27 +16,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/auth.service';
 import { toWesternDigits } from '../../utils/format';
 import { apiErrorMessage } from '../../utils/apiError';
-import { useLanguage, type TranslationKey } from '../../i18n';
+import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
-interface GCCCountry {
-  nameKey: TranslationKey;
-  code: string;
-  flag: string;
-  maxDigits: number;
-  minDigits: number;
-  startsWith?: string;
-  placeholder: string;
-}
+// Sign-in is by Saudi mobile number only: the API accepts /^5\d{8}$/ with +966.
+const SAUDI = {
+  code: '+966',
+  flag: '\u{1F1F8}\u{1F1E6}',
+  digits: 9,
+  placeholder: '5X XXX XXXX',
+};
 
-const GCC_COUNTRIES: GCCCountry[] = [
-  { nameKey: 'auth.country.sa', code: '+966', flag: '\u{1F1F8}\u{1F1E6}', maxDigits: 9, minDigits: 9, startsWith: '5', placeholder: '5X XXX XXXX' },
-  { nameKey: 'auth.country.ae', code: '+971', flag: '\u{1F1E6}\u{1F1EA}', maxDigits: 9, minDigits: 8, placeholder: 'XX XXX XXXX' },
-  { nameKey: 'auth.country.bh', code: '+973', flag: '\u{1F1E7}\u{1F1ED}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-  { nameKey: 'auth.country.kw', code: '+965', flag: '\u{1F1F0}\u{1F1FC}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-  { nameKey: 'auth.country.om', code: '+968', flag: '\u{1F1F4}\u{1F1F2}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-  { nameKey: 'auth.country.qa', code: '+974', flag: '\u{1F1F6}\u{1F1E6}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-];
+/** National number without the country code or a leading 0. */
+function toLocalSaudi(input: string): string {
+  let digits = toWesternDigits(input).replace(/\D/g, '');
+  if (digits.startsWith('966')) digits = digits.slice(3);
+  if (digits.startsWith('0')) digits = digits.slice(1);
+  return digits;
+}
 
 type OtpMethod = 'sms' | 'whatsapp';
 
@@ -47,36 +42,23 @@ export default function PhoneScreen() {
   const { t } = useLanguage();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState<GCCCountry>(GCC_COUNTRIES[0]);
-  const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [otpMethod, setOtpMethod] = useState<OtpMethod>('sms');
 
-  const validatePhone = (phoneNumber: string, country: GCCCountry): boolean => {
-    const digits = toWesternDigits(phoneNumber).replace(/\D/g, '');
-    if (digits.length < country.minDigits || digits.length > country.maxDigits) return false;
-    if (country.startsWith && !digits.startsWith(country.startsWith)) return false;
-    return true;
-  };
-
-  const isValid = validatePhone(phone, selectedCountry);
+  const isValid = /^5\d{8}$/.test(toLocalSaudi(phone));
 
   const handleSendOtp = async () => {
     if (!isValid) return;
     setLoading(true);
     try {
-      let localPhone = toWesternDigits(phone).replace(/\D/g, '');
-      // Strip country code prefix if user typed it
-      const codeDigits = selectedCountry.code.replace('+', '');
-      if (localPhone.startsWith(codeDigits)) localPhone = localPhone.slice(codeDigits.length);
-      if (localPhone.startsWith('0')) localPhone = localPhone.slice(1);
+      const localPhone = toLocalSaudi(phone);
 
       await authService.sendOtp(localPhone, {
-        countryCode: selectedCountry.code,
+        countryCode: SAUDI.code,
         method: otpMethod,
       });
       router.push({
         pathname: '/(auth)/otp',
-        params: { phone: localPhone, countryCode: selectedCountry.code },
+        params: { phone: localPhone, countryCode: SAUDI.code },
       });
     } catch (error: any) {
       Alert.alert(t('common.error'), apiErrorMessage(error, t('auth.sendFailed')));
@@ -93,29 +75,6 @@ export default function PhoneScreen() {
       router.replace('/(tabs)');
     }
   };
-
-  const handleSelectCountry = (country: GCCCountry) => {
-    setSelectedCountry(country);
-    setCountryModalVisible(false);
-    setPhone('');
-  };
-
-  const renderCountryItem = ({ item }: { item: GCCCountry }) => (
-    <Pressable
-      style={[
-        styles.countryItem,
-        item.code === selectedCountry.code && styles.countryItemSelected,
-      ]}
-      onPress={() => handleSelectCountry(item)}
-    >
-      <Text style={styles.countryFlag}>{item.flag}</Text>
-      <Text style={styles.countryName}>{t(item.nameKey)}</Text>
-      <Text style={styles.countryCodeText}>{item.code}</Text>
-      {item.code === selectedCountry.code && (
-        <Ionicons name="checkmark" size={20} color={Colors.primary} />
-      )}
-    </Pressable>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -134,20 +93,17 @@ export default function PhoneScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Pressable
-            style={styles.countryCode}
-            onPress={() => setCountryModalVisible(true)}
-          >
-            <Text style={styles.flag}>{selectedCountry.flag}</Text>
-            <Text style={styles.codeText}>{selectedCountry.code}</Text>
-            <Ionicons name="chevron-down" size={16} color={Colors.textSecondary} />
-          </Pressable>
+          {/* Fixed prefix: only Saudi numbers can sign in. */}
+          <View style={styles.countryCode}>
+            <Text style={styles.flag}>{SAUDI.flag}</Text>
+            <Text style={styles.codeText}>{SAUDI.code}</Text>
+          </View>
           <TextInput
             style={styles.input}
-            placeholder={selectedCountry.placeholder}
+            placeholder={SAUDI.placeholder}
             placeholderTextColor={Colors.textTertiary}
             keyboardType="phone-pad"
-            maxLength={selectedCountry.maxDigits + 3}
+            maxLength={SAUDI.digits + 4}
             value={phone}
             onChangeText={(text) => setPhone(toWesternDigits(text))}
             autoFocus
@@ -220,34 +176,6 @@ export default function PhoneScreen() {
         </Pressable>
       </KeyboardAvoidingView>
 
-      {/* Country Selector Modal */}
-      <Modal
-        visible={countryModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCountryModalVisible(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setCountryModalVisible(false)}>
-          {/* Inner Pressable swallows taps so they don't bubble to the backdrop. */}
-          <Pressable style={styles.modalSheet} onPress={() => {}}>
-            <SafeAreaView edges={['bottom']} style={styles.modalSheetSafe}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{t('auth.selectCountry')}</Text>
-                <Pressable onPress={() => setCountryModalVisible(false)} hitSlop={12}>
-                  <Ionicons name="close" size={24} color={Colors.textPrimary} />
-                </Pressable>
-              </View>
-              <FlatList
-                data={GCC_COUNTRIES}
-                keyExtractor={(item) => item.code}
-                renderItem={renderCountryItem}
-                contentContainerStyle={styles.countryList}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-              />
-            </SafeAreaView>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }

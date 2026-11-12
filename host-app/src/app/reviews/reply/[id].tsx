@@ -30,6 +30,7 @@ const QUICK_REPLIES = [
 
 interface ReviewsResponse {
   data: Review[];
+  meta?: { currentPage: number; totalPages: number };
 }
 
 export default function ReplyToReviewScreen() {
@@ -41,16 +42,24 @@ export default function ReplyToReviewScreen() {
   const [selectedChips, setSelectedChips] = useState<Set<number>>(new Set());
 
   // Fetch all reviews and find the one matching id
-  const reviewsQuery = useQuery<ReviewsResponse>({
-    queryKey: ['reviews', 1],
-    queryFn: () => hostService.getReviews({ page: 1 }),
+  // There is no single-review endpoint: walk the pages (50 per page, the
+  // API's maximum) until the review is found, so older reviews open too.
+  const reviewsQuery = useQuery<Review | null>({
+    queryKey: ['reviews', 'one', id],
+    queryFn: async () => {
+      for (let page = 1; page <= 40; page++) {
+        const res = (await hostService.getReviews({ page, limit: 50 })) as ReviewsResponse;
+        const found = (res.data ?? []).find((r) => r.id === id);
+        if (found) return found;
+        if (page >= Number(res.meta?.totalPages ?? 1)) break;
+      }
+      return null;
+    },
+    enabled: !!id,
     retry: false,
   });
 
-  const review = useMemo(
-    () => reviewsQuery.data?.data?.find((r) => r.id === id),
-    [reviewsQuery.data, id],
-  );
+  const review = reviewsQuery.data ?? undefined;
 
   const replyMutation = useMutation({
     mutationFn: (text: string) => hostService.replyToReview(id!, text),

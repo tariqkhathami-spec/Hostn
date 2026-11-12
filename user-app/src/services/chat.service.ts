@@ -25,6 +25,20 @@ const toConversation = (c: any): Conversation => ({
   unreadCount: c?.unreadCount ?? 0,
 });
 
+// Values of the `reason` enum in backend/src/models/Report.js.
+export type ReportReason =
+  | 'inappropriate_behavior'
+  | 'inappropriate_content'
+  | 'spam'
+  | 'harassment'
+  | 'fraud'
+  | 'safety_concern'
+  | 'misleading_listing'
+  | 'discrimination'
+  | 'property_damage'
+  | 'policy_violation'
+  | 'other';
+
 export const chatService = {
   getConversations() {
     return api.get('/messages/conversations').then((r) => {
@@ -70,7 +84,16 @@ export const chatService = {
       .then((r) => r.data);
   },
 
-  reportUser(data: { reportedUser: string; reason: string; details?: string }) {
-    return api.post('/reports', data).then((r) => r.data);
+  // POST /reports needs { targetType, targetId, reason, description }.
+  // `userId` is the reported person's user id (never a conversation id).
+  reportUser(data: { userId: string; reason: ReportReason; description: string }) {
+    return api
+      .post('/reports', {
+        targetType: 'user',
+        targetId: data.userId,
+        reason: data.reason,
+        description: data.description,
+      })
+      .then((r) => r.data);
   },
 };

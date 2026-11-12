@@ -19,6 +19,7 @@ import { formatCurrency, formatDate, formatDateRange, getNights } from '../../ut
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON, FORWARD_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import { cityLabel } from '../../constants/cities';
+import { stayTitle } from '../../utils/unit';
 import type { Booking } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -78,23 +79,28 @@ export default function BookingDetailScreen() {
     );
   };
 
+  // The host is on the booking's property (booking.property.host).
+  const rawHost = booking?.property?.host;
+  const host = rawHost && typeof rawHost === 'object' ? rawHost : undefined;
+
   const handleContactHost = () => {
-    if (!booking) return;
-    const hostName = booking.host?.name ?? booking.host?.firstName ?? '';
+    if (!booking || !host?._id) return;
+    const hostName = host.name ?? '';
     router.push({
-      pathname: `/chat/${booking.host._id}`,
+      pathname: `/chat/${host._id}`,
       params: { propertyId: booking.property._id, hostName },
     });
   };
 
   const handleViewProperty = () => {
     if (!booking) return;
-    router.push(`/listing/${booking.property._id}`);
+    // Open the unit that was booked; older bookings without one open the property.
+    router.push(`/listing/${booking.unit?._id ?? booking.property._id}`);
   };
 
   const handleViewHost = () => {
-    if (!booking) return;
-    router.push(`/host/${booking.host._id}`);
+    if (!booking || !host?._id) return;
+    router.push(`/host/${host._id}`);
   };
 
   if (isLoading || !booking) {
@@ -135,12 +141,12 @@ export default function BookingDetailScreen() {
   const subtotal = pricing.subtotal ?? 0;
   const nights = getNights(booking.checkIn, booking.checkOut);
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
-  const imageUri = typeof booking.property?.images?.[0] === 'string'
+  const unitImage = booking.unit?.images?.find((i) => i.isPrimary) ?? booking.unit?.images?.[0];
+  const imageUri = unitImage?.url ?? (typeof booking.property?.images?.[0] === 'string'
     ? booking.property.images[0]
-    : booking.property?.images?.[0]?.url;
+    : booking.property?.images?.[0]?.url);
 
-  const hostName = booking.host?.name
-    ?? (`${booking.host?.firstName ?? ''} ${booking.host?.lastName ?? ''}`.trim() || 'Host');
+  const hostName = host?.name || t('booking.host');
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -160,7 +166,7 @@ export default function BookingDetailScreen() {
             <Image source={{ uri: imageUri }} style={styles.propertyImage} contentFit="cover" />
           )}
           <View style={styles.propertyInfo}>
-            <Text style={styles.propertyTitle} numberOfLines={2}>{booking.property.title}</Text>
+            <Text style={styles.propertyTitle} numberOfLines={2}>{stayTitle(booking.property, booking.unit, language)}</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
               <Text style={styles.locationText} numberOfLines={1}>
@@ -263,15 +269,15 @@ export default function BookingDetailScreen() {
           <Text style={styles.sectionTitle}>{t('booking.host')}</Text>
           <Pressable style={styles.hostCard} onPress={handleViewHost}>
             <View style={styles.hostAvatar}>
-              {booking.host?.avatar ? (
-                <Image source={{ uri: booking.host.avatar }} style={styles.hostAvatarImage} />
+              {host?.avatar ? (
+                <Image source={{ uri: host.avatar }} style={styles.hostAvatarImage} />
               ) : (
                 <Ionicons name="person" size={28} color={Colors.textSecondary} />
               )}
             </View>
             <View style={styles.hostInfo}>
               <Text style={styles.hostName}>{hostName}</Text>
-              {booking.host?.isVerified && (
+              {host?.isVerified && (
                 <View style={styles.verifiedRow}>
                   <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
                   <Text style={styles.verifiedText}>{t('detail.verifiedHost')}</Text>

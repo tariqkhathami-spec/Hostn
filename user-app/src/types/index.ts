@@ -10,8 +10,6 @@ export interface User {
   nationalId?: string;
   dateOfBirth?: string;
   gender?: 'male' | 'female';
-  // Wishlist stores unit IDs (converted from property-based to unit-based).
-  wishlist: string[];
   isVerified?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -27,6 +25,16 @@ export interface PropertyImage {
 export interface Listing {
   _id: string;
   title: string;
+  titleAr?: string;
+  // Set when the listing is a Unit flattened by utils/unit.ts.
+  _isUnit?: boolean;
+  nameEn?: string;
+  nameAr?: string;
+  /** Parent property of a unit (populated), or its id. */
+  property?: { _id: string; title?: string; titleAr?: string } | string;
+  propertyId?: string;
+  propertyTitle?: string;
+  propertyTitleAr?: string;
   description: string;
   type:
     | 'chalet' | 'apartment' | 'villa' | 'studio' | 'farm' | 'camp' | 'hotel'
@@ -126,9 +134,10 @@ export interface BookingPricing {
 export interface Booking {
   _id: string;
   reference?: string; // e.g., "HB-ABC12345" — human-readable booking reference
+  // The host is on the property (populated on GET /bookings/:id only).
   property: Listing;
+  unit?: { _id: string; nameEn?: string; nameAr?: string; images?: PropertyImage[] } | null;
   guest: User;
-  host: HostInfo;
   checkIn: string;
   checkOut: string;
   guests: number;
@@ -136,7 +145,7 @@ export interface Booking {
   // 'unpaid' is the real backend value emitted while a hold is awaiting
   // payment — it was missing from the union and caused the i18n bundle
   // miss that surfaced as "status.unpaid" rendering raw.
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'rejected';
   paymentStatus: 'pending' | 'unpaid' | 'paid' | 'refunded' | 'failed';
   paymentMethod?: string;
   couponCode?: string;
@@ -147,15 +156,21 @@ export interface Booking {
 export interface Review {
   _id: string;
   booking: string;
-  property: string;
-  reviewer: {
+  property: string | { _id: string; title?: string; titleAr?: string };
+  guest?: {
     _id: string;
-    firstName?: string;
-    lastName?: string;
     name?: string;
     avatar?: string;
+  } | null;
+  /** Each score is on a 1–10 scale. */
+  ratings: {
+    overall: number;
+    cleanliness?: number;
+    accuracy?: number;
+    communication?: number;
+    location?: number;
+    value?: number;
   };
-  rating: number;
   comment: string;
   createdAt: string;
 }
@@ -240,9 +255,10 @@ export interface WalletTransaction {
 
 export interface PaymentMethod {
   _id: string;
-  type: 'card';
-  brand: string;
-  last4: string;
+  provider?: string;
+  cardBrand: string;
+  cardLast4: string;
+  nickname?: string;
   expiryMonth: number;
   expiryYear: number;
   isDefault: boolean;
@@ -274,8 +290,8 @@ export interface SearchParams {
   bedrooms?: number;
   bathrooms?: number;
   amenities?: string[];
-  ratingMin?: number;
-  hasDiscount?: boolean;
+  rating?: number;
+  discount?: string;
   district?: string;
   direction?: string;
   minArea?: number;
@@ -318,9 +334,13 @@ export interface SupportMessage {
 export interface WishlistList {
   _id: string;
   name: string;
-  user: string;
-  units: string[];
+  user?: string;
+  // GET /wishlists: no `units`, only unitCount + coverImage.
+  // GET /wishlists/:id: populated units (flattened by the service).
+  // Create / rename / toggle: unit ids.
+  units?: (string | Listing)[];
   unitCount?: number;
+  coverImage?: string | null;
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;

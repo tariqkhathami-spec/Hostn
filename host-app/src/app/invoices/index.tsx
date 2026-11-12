@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -24,13 +24,18 @@ export default function InvoicesScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: () => hostService.getInvoices(),
+  // The API returns 20 invoices per page: older ones load on demand.
+  const { data, isLoading, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['invoices', 'list'],
+    queryFn: ({ pageParam }) => hostService.getInvoices({ page: pageParam }),
+    initialPageParam: 1,
+    // The API answers with pagination.pages; stop when the last page is loaded.
+    getNextPageParam: (last: any, _all: unknown[], lastPage: number) =>
+      lastPage < Number(last?.pagination?.pages ?? 1) ? lastPage + 1 : undefined,
     retry: false,
   });
 
-  const invoices: Invoice[] = data?.data ?? [];
+  const invoices: Invoice[] = (data?.pages ?? []).flatMap((p: any) => p?.data ?? []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -90,6 +95,22 @@ export default function InvoicesScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
+            ListFooterComponent={
+              hasNextPage ? (
+                <TouchableOpacity
+                  style={styles.loadMoreBtn}
+                  onPress={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  activeOpacity={0.7}
+                >
+                  {isFetchingNextPage ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Text style={styles.loadMoreText}>عرض المزيد</Text>
+                  )}
+                </TouchableOpacity>
+              ) : null
+            }
           />
         )}
       </View>
@@ -98,6 +119,23 @@ export default function InvoicesScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadMoreBtn: {
+    alignSelf: 'center',
+    marginTop: Spacing.base,
+    marginBottom: Spacing.base,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    minWidth: 140,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    ...Typography.smallBold,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
   listContainer: {
     flex: 1,
     backgroundColor: Colors.surface,

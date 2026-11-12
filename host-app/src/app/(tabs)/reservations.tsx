@@ -37,31 +37,36 @@ interface StatusFilter {
 
 // No more mock bookings - using real API data only
 
+// Statuses the API really has. The bookings list reports a pending request
+// as 'waiting', the booking detail as 'pending': both mean the same thing.
 const STATUS_LABEL_MAP: Record<string, string> = {
+  pending: 'بانتظار موافقتك',
+  waiting: 'بانتظار موافقتك',
   confirmed: 'مؤكد',
-  in_payment: 'جاري السداد',
-  waiting: 'منتظر',
-  cancelled: 'ملغي',
-  no_show: 'عدم حضور',
+  held: 'محجوز مؤقتاً',
   completed: 'مكتمل',
+  cancelled: 'ملغي',
+  rejected: 'مرفوض',
 };
 
 const STATUS_COLOR_MAP: Record<string, string> = {
-  confirmed: '#22c55e',
-  in_payment: '#3b82f6',
+  pending: '#eab308',
   waiting: '#eab308',
-  cancelled: '#ef4444',
-  no_show: '#6b7280',
+  confirmed: '#22c55e',
+  held: '#177d5c',
   completed: '#22c55e',
+  cancelled: '#ef4444',
+  rejected: '#ef4444',
 };
 
 const STATUS_BG_MAP: Record<string, string> = {
-  confirmed: '#dcfce7',
-  in_payment: '#dbeafe',
+  pending: '#fef9c3',
   waiting: '#fef9c3',
-  cancelled: '#fee2e2',
-  no_show: '#f3f4f6',
+  confirmed: '#dcfce7',
+  held: '#e6f4ef',
   completed: '#dcfce7',
+  cancelled: '#fee2e2',
+  rejected: '#fee2e2',
 };
 
 // Helpers for Arabic date formatting
@@ -84,33 +89,31 @@ export default function ReservationsTabScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  const statusFilters: StatusFilter[] = [
-    { key: 'confirmed', label: t('reservations.confirmed'), color: '#22c55e' },
-    { key: 'in_payment', label: t('reservations.inPayment'), color: '#3b82f6' },
-    { key: 'waiting', label: t('reservations.waiting'), color: '#eab308' },
-    { key: 'cancelled', label: t('reservations.cancelled'), color: '#ef4444' },
-    { key: 'no_show', label: t('reservations.noShow'), color: '#6b7280' },
-  ];
+  const statusFilters: StatusFilter[] = ['pending', 'confirmed', 'held', 'completed', 'cancelled', 'rejected'].map(
+    (key) => ({ key, label: STATUS_LABEL_MAP[key], color: STATUS_COLOR_MAP[key] }),
+  );
 
   const { data: bookings = [], isLoading, refetch } = useQuery({
     // 'list' keeps this cache entry apart from the dashboard's
     // ['bookings', 'recent'], which stores the wrapped { data } response;
     // sharing the key made this list render empty until a manual refresh.
-    queryKey: ['bookings', 'list', activeTab],
+    queryKey: ['bookings', 'list', activeTab, selectedStatus],
     queryFn: () =>
       activeTab === 'recent'
-        ? hostService.getBookings({ page: 1 }).then(r => r.data ?? [])
+        ? // The server filters by status, so the chip covers every booking and
+          // not only the newest page.
+          hostService.getBookings({ page: 1, ...(selectedStatus ? { status: selectedStatus } : {}) }).then(r => r.data ?? [])
         : hostService.getUpcomingGuests().then(r => r.data ?? []),
     retry: false,
     refetchInterval: 30000,
   });
 
-  // Use real API data only (no mock fallback)
-  const displayBookings = bookings;
-
-  const filteredBookings = selectedStatus
-    ? displayBookings.filter((b: Booking) => b.status === selectedStatus)
-    : displayBookings;
+  // The upcoming-guests list has no status parameter: filter it here.
+  const sameStatus = (status: string, wanted: string) =>
+    (status === 'waiting' ? 'pending' : status) === wanted;
+  const filteredBookings = selectedStatus && activeTab === 'upcoming'
+    ? bookings.filter((b: Booking) => sameStatus(b.status, selectedStatus))
+    : bookings;
 
   const onRefresh = useCallback(() => {
     refetch();

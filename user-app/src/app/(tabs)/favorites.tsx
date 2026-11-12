@@ -17,7 +17,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { wishlistsService } from '../../services/wishlists.service';
-import { listingsService } from '../../services/listings.service';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import { useAuthStore } from '../../store/authStore';
@@ -48,32 +47,6 @@ export default function FavoritesScreen() {
   });
 
   const lists = Array.isArray(listsRaw) ? listsRaw : [];
-
-  // Fetch cover images for all lists that have units
-  const allUnitIds = Array.from(
-    new Set(lists.flatMap((l: WishlistList) => (l.units?.length > 0 ? [l.units[0]] : [])))
-  );
-
-  const { data: coverImages = {} } = useQuery({
-    queryKey: ['wishlist-covers', allUnitIds],
-    queryFn: async () => {
-      const entries = await Promise.all(
-        allUnitIds.map(async (id) => {
-          try {
-            const listing = await listingsService.getById(id);
-            const img =
-              listing.images?.find((i: any) => i.isPrimary) ?? listing.images?.[0];
-            const uri = typeof img === 'string' ? img : img?.url;
-            return [id, uri ?? null] as const;
-          } catch {
-            return [id, null] as const;
-          }
-        })
-      );
-      return Object.fromEntries(entries) as Record<string, string | null>;
-    },
-    enabled: allUnitIds.length > 0,
-  });
 
   const createList = useMutation({
     mutationFn: (name: string) => wishlistsService.createList(name),
@@ -161,10 +134,9 @@ export default function FavoritesScreen() {
     }
   };
 
-  const getCoverUri = (list: WishlistList): string | null => {
-    if (!list.units || list.units.length === 0) return null;
-    return coverImages[list.units[0]] ?? null;
-  };
+  // GET /wishlists already carries the cover image and the unit count.
+  const getCoverUri = (list: WishlistList): string | null => list.coverImage ?? null;
+  const getCount = (list: WishlistList): number => list.unitCount ?? list.units?.length ?? 0;
 
   const renderListCard = ({ item }: { item: WishlistList }) => {
     const coverUri = getCoverUri(item);
@@ -199,7 +171,7 @@ export default function FavoritesScreen() {
             {item.name}
           </Text>
           <Text style={styles.cardCount}>
-            {item.units?.length ?? 0} {(item.units?.length ?? 0) === 1 ? t('favorites.property') : t('favorites.properties')}
+            {getCount(item)} {getCount(item) === 1 ? t('favorites.property') : t('favorites.properties')}
           </Text>
         </View>
       </Pressable>

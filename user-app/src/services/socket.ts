@@ -30,22 +30,25 @@ export async function connectSocket() {
     console.log('[Socket] Connected');
   });
 
-  socket.on('message:new', () => {
-    queryClient?.invalidateQueries({ queryKey: ['conversations'] });
-    queryClient?.invalidateQueries({ queryKey: ['messages'] });
-  });
+  // Events the server emits (backend/src/controllers/*): each one refreshes
+  // the react-query keys the screens read.
+  const invalidate = (...keys: string[]) =>
+    keys.forEach((key) => queryClient?.invalidateQueries({ queryKey: [key] }));
 
-  socket.on('notification:new', () => {
-    queryClient?.invalidateQueries({ queryKey: ['notifications'] });
-  });
+  // { conversationId, message } — pushed to the recipient of a chat message.
+  socket.on('message:new', () => invalidate('conversations', 'messages'));
 
-  socket.on('booking:confirmed', () => {
-    queryClient?.invalidateQueries({ queryKey: ['bookings'] });
-  });
+  socket.on('notification:new', () => invalidate('notifications'));
 
-  socket.on('booking:cancelled', () => {
-    queryClient?.invalidateQueries({ queryKey: ['bookings'] });
-  });
+  // ['bookings', tab] is the list, ['booking', id] the detail screen.
+  const onBookingChange = () => invalidate('bookings', 'booking', 'notifications');
+  socket.on('booking:created', onBookingChange);
+  socket.on('booking:updated', onBookingChange);
+  socket.on('booking:cancelled', onBookingChange);
+
+  // Dates of a property changed: search results, the home feed and any open
+  // listing may now show stale availability.
+  socket.on('availability:changed', () => invalidate('search', 'homeFeed', 'listing', 'wishlist', 'bookedDates'));
 
   socket.on('disconnect', (reason) => {
     console.log('[Socket] Disconnected:', reason);
@@ -55,6 +58,23 @@ export async function connectSocket() {
 export function disconnectSocket() {
   socket?.disconnect();
   socket = null;
+}
+
+/**
+ * `availability:changed` is only sent to sockets in the property's room.
+ * Call while a listing of that property is on screen; returns the cleanup.
+ */
+export function watchProperty(propertyId?: string | null): () => void {
+  if (!propertyId || !socket) return () => {};
+  const current = socket;
+  const join = () => current.emit('join:property', propertyId);
+  join();
+  // Rooms are lost on reconnect; join again.
+  current.on('connect', join);
+  return () => {
+    current.off('connect', join);
+    current.emit('leave:property', propertyId);
+  };
 }
 
 export function getSocket(): Socket | null {

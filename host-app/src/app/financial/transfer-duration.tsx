@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { apiErrorMessage } from '../../utils/apiError';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
@@ -38,6 +40,7 @@ const durationOptions: DurationOption[] = [
 
 export default function TransferDurationScreen() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [selectedType, setSelectedType] = useState<DurationType>('direct_48h');
   const [thresholdAmount, setThresholdAmount] = useState('');
 
@@ -65,10 +68,22 @@ export default function TransferDurationScreen() {
       Alert.alert('تم', 'تم تحديث مدة التحويل بنجاح');
     },
     onError: (error: any) => {
-      // Show the server's reason (e.g. invalid IBAN/VAT format) when it sends one.
-      Alert.alert('خطأ', error?.response?.data?.message || 'حدث خطأ أثناء تحديث البيانات');
+      // 404 here means the host has no bank account to attach the setting to.
+      if (error?.response?.status === 404) return askForBankAccount();
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر تحديث مدة التحويل. حاول مرة أخرى.'));
     },
   });
+
+  // The transfer schedule is stored on the bank account, so one must exist.
+  const askForBankAccount = () =>
+    Alert.alert(
+      'أضف حسابك البنكي أولاً',
+      'لا يمكن حفظ مدة التحويل قبل إضافة حساب بنكي تُحوَّل إليه أرباحك.',
+      [
+        { text: 'لاحقاً', style: 'cancel' },
+        { text: 'إضافة حساب بنكي', onPress: () => router.push('/financial/payment-method' as any) },
+      ],
+    );
 
   const handleSave = () => {
     const payload: Record<string, unknown> = { type: selectedType };
@@ -79,6 +94,10 @@ export default function TransferDurationScreen() {
         return;
       }
       payload.thresholdAmount = amount;
+    }
+    if ((transferDuration as { hasBankAccount?: boolean } | undefined)?.hasBankAccount === false) {
+      askForBankAccount();
+      return;
     }
     mutation.mutate(payload);
   };

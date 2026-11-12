@@ -5,23 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSearchStore } from '../../store/searchStore';
 import { PROPERTY_TYPES } from '../../constants/config';
+import { FILTER_AMENITIES } from '../../constants/amenities';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { useLanguage, type TranslationKey } from '../../i18n';
 
 // `value` is what the search API receives; `labelKey` is what the guest reads.
-const AMENITY_OPTIONS: { value: string; labelKey: TranslationKey }[] = [
-  { value: 'Pool', labelKey: 'amenity.pool' },
-  { value: 'WiFi', labelKey: 'amenity.wifi' },
-  { value: 'Playground', labelKey: 'amenity.playground' },
-  { value: 'BBQ', labelKey: 'amenity.bbq' },
-  { value: 'Parking', labelKey: 'amenity.parking' },
-  { value: 'Kitchen', labelKey: 'amenity.kitchen' },
-  { value: 'Air Conditioning', labelKey: 'amenity.ac' },
-  { value: 'Garden', labelKey: 'amenity.garden' },
-  { value: 'Gym', labelKey: 'amenity.gym' },
-  { value: 'Jacuzzi', labelKey: 'amenity.jacuzzi' },
-  { value: 'Sauna', labelKey: 'amenity.sauna' },
-];
+// Real values of the Unit amenities / features enums (plus the pool flag).
+const AMENITY_OPTIONS: { value: string; labelKey: TranslationKey }[] = FILTER_AMENITIES.map((value) => ({
+  value,
+  labelKey: `amenity.${value}` as TranslationKey,
+}));
 
 const RATING_OPTIONS: { label: string | null; value: number | null }[] = [
   { label: null, value: null },

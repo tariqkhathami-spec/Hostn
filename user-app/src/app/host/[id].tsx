@@ -19,6 +19,7 @@ import { formatCurrency, formatDate, formatRating } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import { cityLabel } from '../../constants/cities';
+import { propertyTitle } from '../../utils/unit';
 import type { Listing, Review } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -48,8 +49,7 @@ export default function HostProfileScreen() {
   }
 
   const { host, stats, properties, reviews } = data;
-  const hostName = host.name
-    ?? (`${host.firstName ?? ''} ${host.lastName ?? ''}`.trim() || t('detail.host'));
+  const hostName = host.name || t('detail.host');
   const memberSince = host.createdAt ? formatDate(host.createdAt, 'MMM yyyy') : null;
 
   const renderPropertyCard = ({ item }: { item: Listing }) => {
@@ -71,7 +71,7 @@ export default function HostProfileScreen() {
           </View>
         )}
         <View style={styles.propertyInfo}>
-          <Text style={styles.propertyTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.propertyTitle} numberOfLines={1}>{propertyTitle(item, language)}</Text>
           <View style={styles.propertyLocationRow}>
             <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
             <Text style={styles.propertyLocation} numberOfLines={1}>
@@ -93,26 +93,29 @@ export default function HostProfileScreen() {
   };
 
   const renderReviewCard = ({ item }: { item: Review }) => {
-    const reviewerName = item.reviewer?.name
-      ?? (`${item.reviewer?.firstName ?? ''} ${item.reviewer?.lastName ?? ''}`.trim() || t('account.guest'));
+    const reviewerName = item.guest?.name || t('account.guest');
+    const reviewedProperty = typeof item.property === 'object' ? propertyTitle(item.property, language) : '';
 
     return (
       <View style={styles.reviewCard}>
         <View style={styles.reviewHeader}>
           <View style={styles.reviewerAvatar}>
-            {item.reviewer?.avatar ? (
-              <Image source={{ uri: item.reviewer.avatar }} style={styles.reviewerAvatarImage} />
+            {item.guest?.avatar ? (
+              <Image source={{ uri: item.guest.avatar }} style={styles.reviewerAvatarImage} />
             ) : (
               <Ionicons name="person" size={18} color={Colors.textSecondary} />
             )}
           </View>
           <View style={styles.reviewerInfo}>
             <Text style={styles.reviewerName}>{reviewerName}</Text>
-            <Text style={styles.reviewDate}>{formatDate(item.createdAt)}</Text>
+            <Text style={styles.reviewDate}>
+              {[reviewedProperty, formatDate(item.createdAt)].filter(Boolean).join(' · ')}
+            </Text>
           </View>
           <View style={styles.ratingBadge}>
             <Ionicons name="star" size={12} color={Colors.accent} />
-            <Text style={styles.ratingBadgeText}>{item.rating}</Text>
+            {/* Review scores are on a 1–10 scale; shown as x/10. */}
+            <Text style={styles.ratingBadgeText}>{formatRating(Number(item.ratings?.overall) || 0)}/10</Text>
           </View>
         </View>
         <Text style={styles.reviewComment} numberOfLines={4}>{item.comment}</Text>
@@ -163,13 +166,13 @@ export default function HostProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{stats.totalProperties}</Text>
+            <Text style={styles.statValue}>{stats.propertyCount ?? 0}</Text>
             <Text style={styles.statLabel}>{t('host.properties')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>
-              {stats.averageRating > 0 ? formatRating(stats.averageRating) : '-'}
+              {stats.averageRating > 0 ? `${formatRating(stats.averageRating)}/10` : '-'}
             </Text>
             <Text style={styles.statLabel}>{t('host.rating')}</Text>
           </View>
@@ -184,7 +187,7 @@ export default function HostProfileScreen() {
         {properties.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {t('host.properties')} ({properties.length})
+              {t('host.properties')} ({stats.propertyCount ?? properties.length})
             </Text>
             <FlatList
               data={properties}
@@ -201,7 +204,7 @@ export default function HostProfileScreen() {
         {reviews.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {t('host.totalReviews')} ({reviews.length})
+              {t('host.totalReviews')} ({stats.totalReviews ?? reviews.length})
             </Text>
             {reviews.map((review) => (
               <View key={review._id}>

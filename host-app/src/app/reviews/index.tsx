@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
@@ -135,7 +135,6 @@ function ReviewCard({ review }: { review: Review }) {
 }
 
 export default function ReviewsScreen() {
-  const [page, setPage] = useState(1);
 
   const summaryQuery = useQuery<ReviewsSummary>({
     queryKey: ['reviews-summary'],
@@ -143,14 +142,20 @@ export default function ReviewsScreen() {
     retry: false,
   });
 
-  const reviewsQuery = useQuery<ReviewsResponse>({
-    queryKey: ['reviews', page],
-    queryFn: () => hostService.getReviews({ page }),
+  // 20 reviews per page; older ones load with "عرض المزيد".
+  const reviewsQuery = useInfiniteQuery({
+    queryKey: ['reviews', 'list'],
+    queryFn: ({ pageParam }) =>
+      hostService.getReviews({ page: pageParam, limit: 20 }) as Promise<ReviewsResponse>,
+    initialPageParam: 1,
+    getNextPageParam: (last: ReviewsResponse, _all: unknown[], lastPage: number) =>
+      lastPage < Number(last?.meta?.totalPages ?? 1) ? lastPage + 1 : undefined,
     retry: false,
   });
+  const { hasNextPage, fetchNextPage, isFetchingNextPage } = reviewsQuery;
 
   const isLoading = summaryQuery.isLoading || reviewsQuery.isLoading;
-  const isRefreshing = summaryQuery.isRefetching || reviewsQuery.isRefetching;
+  const isRefreshing = summaryQuery.isRefetching || (reviewsQuery.isRefetching && !isFetchingNextPage);
 
   const onRefresh = useCallback(() => {
     summaryQuery.refetch();
@@ -158,7 +163,7 @@ export default function ReviewsScreen() {
   }, [summaryQuery, reviewsQuery]);
 
   const summary = summaryQuery.data?.data;
-  const reviews = reviewsQuery.data?.data ?? [];
+  const reviews: Review[] = (reviewsQuery.data?.pages ?? []).flatMap((p) => p?.data ?? []);
 
   const renderSummary = () => {
     if (!summary) return null;
@@ -212,6 +217,22 @@ export default function ReviewsScreen() {
             <EmptyState icon="star-outline" message="لا توجد تقييمات" />
           }
           contentContainerStyle={styles.listContent}
+          ListFooterComponent={
+            hasNextPage ? (
+              <TouchableOpacity
+                style={styles.loadMoreBtn}
+                onPress={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                activeOpacity={0.7}
+              >
+                {isFetchingNextPage ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <Text style={styles.loadMoreText}>عرض المزيد</Text>
+                )}
+              </TouchableOpacity>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -228,6 +249,23 @@ export default function ReviewsScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadMoreBtn: {
+    alignSelf: 'center',
+    marginTop: Spacing.base,
+    marginBottom: Spacing.base,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    minWidth: 140,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    ...Typography.smallBold,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

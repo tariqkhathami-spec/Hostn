@@ -8,6 +8,7 @@ import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/authStore';
 import { formatPhone, toWesternDigits } from '../../utils/format';
 import { useLanguage } from '../../i18n';
+import { apiErrorMessage } from '../../utils/apiError';
 import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 
 const HOST_APP_DEEP_LINK = 'hostn-host://';
@@ -39,13 +40,34 @@ export default function ProfileScreen() {
   }, [user]);
 
   const updateProfile = useMutation({
-    mutationFn: () => authService.updateProfile({ firstName, lastName, email }),
-    onSuccess: (updatedUser) => {
-      setUser(updatedUser);
-      Alert.alert(t('common.success'), t('common.success'));
+    // The API stores one `name`. The name is saved first, on its own: a
+    // request that carries `email` only starts the email-change flow (a code
+    // is emailed) and saves nothing else.
+    mutationFn: async () => {
+      const name = `${firstName.trim()} ${lastName.trim()}`.trim();
+      const newEmail = email.trim().toLowerCase();
+      const emailChanged = !!newEmail && newEmail !== (user?.email ?? '').trim().toLowerCase();
+
+      const saved = await authService.updateProfile({ name });
+      // Never replace the stored user with anything but a real user object.
+      if (saved.user) setUser(saved.user);
+
+      if (!emailChanged) return { emailPending: false };
+      const emailResult = await authService.updateProfile({ email: newEmail });
+      if (emailResult.user) setUser(emailResult.user);
+      return { emailPending: emailResult.verificationRequired };
+    },
+    onSuccess: ({ emailPending }) => {
+      if (emailPending) {
+        // The email is not changed until the code sent to it is confirmed.
+        setEmail(user?.email ?? '');
+        Alert.alert(t('profile.emailPendingTitle'), t('profile.emailPendingBody'));
+        return;
+      }
+      Alert.alert(t('common.success'), t('profile.saved'));
     },
     onError: (error: any) => {
-      Alert.alert(t('common.error'), error.response?.data?.message || t('common.somethingWrong'));
+      Alert.alert(t('common.error'), apiErrorMessage(error, t('common.somethingWrong')));
     },
   });
 

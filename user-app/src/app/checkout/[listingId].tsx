@@ -9,13 +9,15 @@ import { Image } from 'expo-image';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { listingsService } from '../../services/listings.service';
+import { listingTitle } from '../../utils/unit';
+import type { BookingPricing } from '../../types';
 import { bookingsService } from '../../services/bookings.service';
 import { useSearchStore } from '../../store/searchStore';
 import { useAuthStore } from '../../store/authStore';
 import { cityLabel } from '../../constants/cities';
 import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
-import { useLanguage } from '../../i18n';
+import { useLanguage, type TranslationKey } from '../../i18n';
 
 function calculateDateRangePrice(
   listing: any, checkIn: string, checkOut: string
@@ -116,6 +118,15 @@ export default function CheckoutScreen() {
   const [specialRequests, setSpecialRequests] = useState('');
   const [holdId, setHoldId] = useState<string | null>(null);
   const [holdLoading, setHoldLoading] = useState(false);
+  // Price returned by POST /bookings/hold — the amount the booking is made with.
+  const [holdPricing, setHoldPricing] = useState<BookingPricing | null>(null);
+
+  // A hold belongs to one set of dates and guests; changing them drops it
+  // and the screen goes back to the local estimate.
+  React.useEffect(() => {
+    setHoldId(null);
+    setHoldPricing(null);
+  }, [checkIn, checkOut, adults, children]);
 
   const { data: listing, isLoading, isError, refetch } = useQuery({
     queryKey: ['listing', listingId],
@@ -132,13 +143,9 @@ export default function CheckoutScreen() {
     enabled: !!listingId,
   });
 
-  // Detect if the listing is a unit (has a parent property reference)
-  const isUnit = !!(listing as any)?.property;
-  const parentPropertyId = isUnit
-    ? (typeof (listing as any).property === 'string'
-        ? (listing as any).property
-        : (listing as any).property?._id || (listing as any).property?.id)
-    : undefined;
+  // Units arrive flattened (utils/unit.ts) with their parent property id.
+  const isUnit = !!(listing as any)?._isUnit;
+  const parentPropertyId: string | undefined = isUnit ? (listing as any).propertyId : undefined;
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -163,6 +170,20 @@ export default function CheckoutScreen() {
   const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
   const vat = r2(taxableRaw * 0.15);
   const total = r2(taxableRaw + taxableRaw * 0.15);
+
+  // Everything above is an estimate. Once the hold exists, the server's
+  // pricing is what the guest is shown.
+  const shown = {
+    isFinal: !!holdPricing,
+    perNight: holdPricing?.perNight ?? pricePerNight,
+    nights: holdPricing?.nights ?? nights,
+    subtotal: holdPricing?.subtotal ?? subtotal,
+    cleaningFee: holdPricing?.cleaningFee ?? cleaningFee,
+    serviceFee: holdPricing?.serviceFee ?? serviceFee,
+    discount: holdPricing?.discount ?? discount,
+    vat: holdPricing?.vat ?? vat,
+    total: holdPricing?.total ?? total,
+  };
 
   const maxGuests = listing?.capacity?.maxGuests ?? 20;
   const minNights = listing?.rules?.minNights ?? 1;
@@ -208,40 +229,44 @@ export default function CheckoutScreen() {
       },
     };
     const code = errData?.code;
+    const unitErrors: Record<string, TranslationKey> = {
+      UNIT_REQUIRED: 'checkout.error.unitRequired',
+      UNIT_NOT_FOUND: 'checkout.error.unitNotFound',
+      UNIT_NOT_BOOKABLE: 'checkout.error.unitNotBookable',
+      PROPERTY_UNAVAILABLE: 'checkout.error.propertyUnavailable',
+    };
+    if (code && unitErrors[code]) return t(unitErrors[code]);
     const mapped = code ? errorMessages[code] : null;
     if (mapped) return isAr ? mapped.ar : mapped.en;
-    if (errData?.message) return errData.message;
+    // The server's own text is shown only when it is in the app's language.
+    if (typeof errData?.message === 'string' && /[\u0600-\u06FF]/.test(errData.message) === isAr) return errData.message;
     return isAr ? 'فشل إنشاء الحجز. حاول مرة أخرى.' : 'Failed to create booking. Please try again.';
   };
 
-  // Create hold (matches web BookingWidget behavior)
-  const createHold = async () => {
+  const requestHold = async () => {
+    const hold = await bookingsService.createHold({
+      propertyId: isUnit ? (parentPropertyId || listingId!) : listingId!,
+      ...(isUnit ? { unitId: listingId! } : {}),
+      checkIn,
+      checkOut,
+      guests: { adults, children, infants: 0 },
+    });
+    if (hold?.holdId) setHoldId(hold.holdId);
+    if (hold?.pricing && typeof hold.pricing.total === 'number') setHoldPricing(hold.pricing);
+    return hold;
+  };
+
+  // Step 1: hold the dates and show the server's price. Step 2 (same button,
+  // second tap) sends the booking request for exactly that price.
+  const reviewPrice = async () => {
     if (!hasValidDates || holdLoading) return;
     setHoldLoading(true);
     try {
-      const res = await bookingsService.createHold({
-        propertyId: isUnit ? (parentPropertyId || listingId!) : listingId!,
-        ...(isUnit ? { unitId: listingId! } : {}),
-        checkIn,
-        checkOut,
-        guests: { adults, children, infants: 0 },
-      });
-      // The API client already unwraps { success, data }, so the hold id is
-      // at the top level; reading res.data.holdId always gave undefined and the
-      // booking then collided with the guest's own hold.
-      const newHoldId = (res as any)?.holdId ?? (res as any)?.data?.holdId;
-      if (newHoldId) {
-        setHoldId(newHoldId);
-      }
+      await requestHold();
     } catch (err: any) {
-      const code = err?.response?.data?.code;
-      if (code === 'DATES_UNAVAILABLE') {
-        Alert.alert(
-          t('common.error'),
-          isAr
-            ? 'هذه التواريخ محجوزة حالياً. يرجى اختيار تواريخ أخرى.'
-            : 'These dates are currently taken. Please choose different dates.'
-        );
+      const errData = err?.response?.data;
+      Alert.alert(t('common.error'), getBookingErrorMessage(errData));
+      if (errData?.code === 'DATES_UNAVAILABLE') {
         setCheckIn('');
         setCheckOut('');
         router.push({
@@ -256,18 +281,12 @@ export default function CheckoutScreen() {
 
   const bookMutation = useMutation({
     mutationFn: async () => {
-      // Create hold first if we don't have one
+      // Normally the hold already exists (see reviewPrice); create it if not.
       let currentHoldId = holdId;
       if (!currentHoldId) {
         try {
-          const holdRes = await bookingsService.createHold({
-            propertyId: isUnit ? (parentPropertyId || listingId!) : listingId!,
-            ...(isUnit ? { unitId: listingId! } : {}),
-            checkIn,
-            checkOut,
-            guests: { adults, children, infants: 0 },
-          });
-          currentHoldId = (holdRes as any)?.holdId ?? (holdRes as any)?.data?.holdId ?? null;
+          const hold = await requestHold();
+          currentHoldId = hold?.holdId ?? null;
         } catch (err) {
           if (__DEV__) console.debug('[checkout] createHold failed, proceeding without hold:', err);
         }
@@ -305,6 +324,11 @@ export default function CheckoutScreen() {
       router.push('/(auth)/phone');
       return;
     }
+    // First tap: hold the dates and show the final price. Second tap: send.
+    if (!holdId || !holdPricing) {
+      reviewPrice();
+      return;
+    }
     bookMutation.mutate();
   };
 
@@ -336,10 +360,6 @@ export default function CheckoutScreen() {
     );
   }
 
-  const displayPrice = discountPercent > 0
-    ? Math.round(pricePerNight * (1 - discountPercent / 100))
-    : pricePerNight;
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.headerRow}>
@@ -358,7 +378,7 @@ export default function CheckoutScreen() {
         <View style={styles.propertyCard}>
           <Image source={{ uri: typeof listing.images?.[0] === 'string' ? listing.images[0] : listing.images?.[0]?.url }} style={styles.propertyImage} contentFit="cover" />
           <View style={styles.propertyInfo}>
-            <Text style={styles.propertyTitle} numberOfLines={2}>{listing.title}</Text>
+            <Text style={styles.propertyTitle} numberOfLines={2}>{listingTitle(listing, language)}</Text>
             <Text style={styles.propertyLocation}>{cityLabel(listing.location?.city, language)}</Text>
             {hasValidDates && (
               <Text style={styles.propertyDates}>{formatDateRange(checkIn, checkOut)}</Text>
@@ -480,39 +500,40 @@ export default function CheckoutScreen() {
           )}
         </View>
 
-        {/* Price Breakdown */}
-        {nights > 0 && (
+        {/* Price Breakdown — local estimate until the hold returns the server's price */}
+        {shown.nights > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('checkout.priceBreakdown')}</Text>
+            <Text style={styles.priceNote}>
+              {shown.isFinal ? t('checkout.priceFinal') : t('checkout.priceEstimate')}
+            </Text>
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>{formatCurrency(pricePerNight)} x {nights} {nights > 1 ? t('booking.nights') : t('booking.night')}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(subtotal)}</Text>
+              <Text style={styles.priceLabel}>{formatCurrency(shown.perNight)} x {shown.nights} {shown.nights > 1 ? t('booking.nights') : t('booking.night')}</Text>
+              <Text style={styles.priceValue}>{formatCurrency(shown.subtotal)}</Text>
             </View>
-            {cleaningFee > 0 && (
+            {shown.discount > 0 && (
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>{isAr ? 'رسوم التنظيف' : 'Cleaning fee'}</Text>
-                <Text style={styles.priceValue}>{formatCurrency(cleaningFee)}</Text>
+                <Text style={[styles.priceLabel, { color: Colors.success }]}>{t('checkout.discount')}</Text>
+                <Text style={[styles.priceValue, { color: Colors.success }]}>-{formatCurrency(shown.discount)}</Text>
+              </View>
+            )}
+            {shown.cleaningFee > 0 && (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>{t('checkout.cleaningFee')}</Text>
+                <Text style={styles.priceValue}>{formatCurrency(shown.cleaningFee)}</Text>
               </View>
             )}
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>{t('checkout.serviceFee')}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(serviceFee)}</Text>
+              <Text style={styles.priceValue}>{formatCurrency(shown.serviceFee)}</Text>
             </View>
-            {discount > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={[styles.priceLabel, { color: Colors.success }]}>
-                  {isAr ? `خصم (${discountPercent}%)` : `Discount (${discountPercent}%)`}
-                </Text>
-                <Text style={[styles.priceValue, { color: Colors.success }]}>-{formatCurrency(discount)}</Text>
-              </View>
-            )}
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>{t('checkout.vat')}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(vat)}</Text>
+              <Text style={styles.priceValue}>{formatCurrency(shown.vat)}</Text>
             </View>
             <View style={[styles.priceRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>{t('checkout.total')}</Text>
-              <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
+              <Text style={styles.totalLabel}>{shown.isFinal ? t('checkout.total') : t('checkout.totalEstimate')}</Text>
+              <Text style={styles.totalValue}>{formatCurrency(shown.total)}</Text>
             </View>
           </View>
         )}
@@ -558,7 +579,9 @@ export default function CheckoutScreen() {
                 ? (isAr ? 'اختر التواريخ أولًا' : 'Select dates first')
                 : nights < minNights
                   ? (isAr ? `الحد الأدنى ${minNights} ليالٍ` : `Minimum ${minNights} nights`)
-                  : t('checkout.sendRequest')}
+                  : shown.isFinal
+                    ? t('checkout.sendRequest')
+                    : t('checkout.reviewPrice')}
             </Text>
           )}
         </Pressable>
@@ -661,6 +684,7 @@ const styles = StyleSheet.create({
   capacityNote: { ...Typography.caption, color: Colors.textTertiary, marginTop: Spacing.xs },
 
   // Price breakdown
+  priceNote: { ...Typography.caption, color: Colors.textSecondary, marginBottom: Spacing.sm },
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm },
   priceLabel: { ...Typography.small, color: Colors.textSecondary },
   priceValue: { ...Typography.small, color: Colors.textPrimary },

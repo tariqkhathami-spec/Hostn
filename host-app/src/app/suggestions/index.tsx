@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +23,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import type { Suggestion } from '../../types';
+import { apiErrorMessage } from '../../utils/apiError';
 
 const voteOptions = [
   { key: 'important' as const, label: 'مهم', color: '#22c55e' },
@@ -48,6 +50,9 @@ export default function SuggestionsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['suggestions'] });
     },
+    onError: (error) => {
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر تسجيل تصويتك. حاول مرة أخرى.'));
+    },
   });
 
   const addMutation = useMutation({
@@ -56,6 +61,17 @@ export default function SuggestionsScreen() {
       queryClient.invalidateQueries({ queryKey: ['suggestions'] });
       setModalVisible(false);
       setNewSuggestion('');
+    },
+    onError: (error: any) => {
+      const status = error?.response?.status;
+      Alert.alert(
+        'خطأ',
+        status === 429
+          ? 'وصلت إلى الحد الأقصى من المقترحات لهذا اليوم. حاول غداً.'
+          : status === 400
+            ? 'نص المقترح قصير جداً. اكتب 3 أحرف على الأقل.'
+            : apiErrorMessage(error, 'تعذّر إرسال المقترح. حاول مرة أخرى.'),
+      );
     },
   });
 

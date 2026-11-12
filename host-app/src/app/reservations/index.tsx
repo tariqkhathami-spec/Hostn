@@ -16,8 +16,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../services/host.service';
 import { Booking } from '../../types';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
-import { t, getLocale } from '../../utils/i18n';
+import { t } from '../../utils/i18n';
 import { formatCurrency, formatDate } from '../../utils/format';
+import { apiErrorMessage } from '../../utils/apiError';
 import StatusBadge from '../../components/ui/StatusBadge';
 import EmptyState from '../../components/ui/EmptyState';
 import HeaderBar from '../../components/layout/HeaderBar';
@@ -31,13 +32,15 @@ interface StatusFilter {
   color: string;
 }
 
+// Only statuses the API really has; several chips are sent as one
+// comma-separated `status` parameter.
 const statusFilters: StatusFilter[] = [
+  { key: 'pending', label: 'بانتظار موافقتك', color: '#eab308' },
   { key: 'confirmed', label: 'مؤكد', color: '#22c55e' },
-  { key: 'in_payment', label: 'جاري السداد', color: '#3b82f6' },
-  { key: 'waiting', label: 'منتظر', color: '#eab308' },
   { key: 'held', label: 'محجوز مؤقتاً', color: '#177d5c' },
+  { key: 'completed', label: 'مكتمل', color: '#22c55e' },
   { key: 'cancelled', label: 'ملغي', color: '#ef4444' },
-  { key: 'no_show', label: 'عدم حضور', color: '#6b7280' },
+  { key: 'rejected', label: 'مرفوض', color: '#ef4444' },
 ];
 
 export default function ReservationsScreen() {
@@ -46,7 +49,6 @@ export default function ReservationsScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [page] = useState(1);
-  const isAr = getLocale() === 'ar';
 
   const statusParam = selectedStatuses.length > 0 ? selectedStatuses.join(',') : undefined;
 
@@ -69,10 +71,7 @@ export default function ReservationsScreen() {
       if (context?.prev) {
         queryClient.setQueryData(['bookings', statusParam, page], context.prev);
       }
-      Alert.alert(
-        isAr ? 'خطأ' : 'Error',
-        isAr ? 'فشل تحديث الحالة' : 'Failed to update status',
-      );
+      Alert.alert('خطأ', apiErrorMessage(_err, 'تعذّر تحديث حالة الحجز. حاول مرة أخرى.'));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -97,7 +96,7 @@ export default function ReservationsScreen() {
       'هل أنت متأكد من رفض هذا الحجز؟',
       [
         { text: 'إلغاء', style: 'cancel' },
-        { text: 'رفض', style: 'destructive', onPress: () => statusMutation.mutate({ id, status: 'cancelled' }) },
+        { text: 'رفض', style: 'destructive', onPress: () => statusMutation.mutate({ id, status: 'rejected' }) },
       ],
     );
   }, [statusMutation]);
@@ -177,7 +176,7 @@ export default function ReservationsScreen() {
         </View>
 
         {/* Accept / Decline actions for pending bookings */}
-        {(item.status === 'waiting' || item.status === 'pending' || item.status === 'in_payment') && (
+        {(item.status === 'waiting' || item.status === 'pending') && (
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.acceptBtn, statusMutation.isPending && { opacity: 0.5 }]}

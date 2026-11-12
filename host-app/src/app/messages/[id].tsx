@@ -23,6 +23,19 @@ import type { Message } from '../../types';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import { getLocale } from '../../utils/i18n';
+import { apiErrorMessage } from '../../utils/apiError';
+
+// Arabic labels for the report reasons the API accepts
+// (backend/src/models/Report.js).
+const REPORT_REASONS: { value: string; label: string }[] = [
+  { value: 'inappropriate_behavior', label: 'سلوك غير لائق' },
+  { value: 'harassment', label: 'إساءة أو مضايقة' },
+  { value: 'fraud', label: 'احتيال أو محاولة دفع خارج المنصة' },
+  { value: 'property_damage', label: 'إتلاف في العقار' },
+  { value: 'policy_violation', label: 'مخالفة شروط الحجز' },
+  { value: 'spam', label: 'رسائل مزعجة' },
+  { value: 'other', label: 'سبب آخر' },
+];
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -124,75 +137,90 @@ export default function ChatScreen() {
     sendMutation.mutate(trimmed);
   }, [inputText, sendMutation]);
 
-  // Block conversation
+  // Block is a toggle on the server: the same call blocks and unblocks, and
+  // answers with the new state in data.isBlocked.
+  const [blockedOverride, setBlockedOverride] = useState<boolean | null>(null);
+  const isBlocked = blockedOverride ?? Boolean(conversation?.isBlocked);
+
   const handleBlock = useCallback(() => {
     setShowMenu(false);
+    if (!conversationId) return;
     Alert.alert(
-      isAr ? 'حظر المحادثة' : 'Block Conversation',
-      isAr ? 'هل أنت متأكد من حظر هذه المحادثة؟ لن تتمكن من إرسال أو استقبال رسائل.' : 'Are you sure you want to block this conversation?',
+      isBlocked ? 'إلغاء حظر المحادثة' : 'حظر المحادثة',
+      isBlocked
+        ? 'هل تريد إلغاء حظر هذه المحادثة؟ سيتمكن الضيف من مراسلتك مجدداً.'
+        : 'هل أنت متأكد من حظر هذه المحادثة؟ لن تتمكن من إرسال أو استقبال الرسائل فيها.',
       [
-        { text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel' },
+        { text: 'تراجع', style: 'cancel' },
         {
-          text: isAr ? 'حظر' : 'Block',
-          style: 'destructive',
+          text: isBlocked ? 'إلغاء الحظر' : 'حظر',
+          style: isBlocked ? 'default' : 'destructive',
           onPress: async () => {
-            if (!conversationId) return;
             try {
-              await hostService.blockConversation(conversationId);
-              Alert.alert(
-                isAr ? 'تم' : 'Done',
-                isAr ? 'تم حظر المحادثة' : 'Conversation blocked',
-              );
+              const res: any = await hostService.blockConversation(conversationId);
+              const nowBlocked = Boolean(res?.data?.isBlocked);
+              setBlockedOverride(nowBlocked);
               queryClient.invalidateQueries({ queryKey: ['conversations'] });
-            } catch {
+              Alert.alert('تم', nowBlocked ? 'تم حظر المحادثة.' : 'تم إلغاء حظر المحادثة.');
+            } catch (err: any) {
+              // The server refuses to lift a block the other side placed.
+              const blockedByOther = err?.response?.status === 403;
               Alert.alert(
-                isAr ? 'خطأ' : 'Error',
-                isAr ? 'فشل حظر المحادثة' : 'Failed to block conversation',
+                'خطأ',
+                blockedByOther
+                  ? 'هذه المحادثة محظورة من الطرف الآخر ولا يمكنك إلغاء الحظر.'
+                  : apiErrorMessage(err, isBlocked ? 'تعذّر إلغاء حظر المحادثة.' : 'تعذّر حظر المحادثة.'),
               );
             }
           },
         },
       ],
     );
-  }, [conversationId, isAr, queryClient]);
+  }, [conversationId, isBlocked, queryClient]);
 
-  // Report user
+  // Report guest: the host picks a reason, then the report is sent as
+  // { targetType: 'user', targetId, reason, description }.
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState<string>(REPORT_REASONS[0].value);
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportSending, setReportSending] = useState(false);
+
   const handleReport = useCallback(() => {
     setShowMenu(false);
     if (!guestId) {
-      Alert.alert(isAr ? 'خطأ' : 'Error', isAr ? 'لا يمكن الإبلاغ' : 'Cannot report');
+      Alert.alert('خطأ', 'تعذّر تحديد الضيف في هذه المحادثة، لذا لا يمكن إرسال البلاغ.');
       return;
     }
-    Alert.alert(
-      isAr ? 'الإبلاغ عن المستخدم' : 'Report User',
-      isAr ? 'سيتم مراجعة البلاغ من قبل فريق الدعم.' : 'The report will be reviewed by our support team.',
-      [
-        { text: isAr ? 'إلغاء' : 'Cancel', style: 'cancel' },
-        {
-          text: isAr ? 'إبلاغ' : 'Report',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await hostService.reportUser({
-                reportedUser: guestId,
-                reason: 'inappropriate_behavior',
-                details: `Reported from conversation ${conversationId}`,
-              });
-              Alert.alert(
-                isAr ? 'تم' : 'Done',
-                isAr ? 'تم إرسال البلاغ بنجاح' : 'Report submitted successfully',
-              );
-            } catch {
-              Alert.alert(
-                isAr ? 'خطأ' : 'Error',
-                isAr ? 'فشل إرسال البلاغ' : 'Failed to submit report',
-              );
-            }
-          },
-        },
-      ],
-    );
-  }, [guestId, conversationId, isAr]);
+    setReportReason(REPORT_REASONS[0].value);
+    setReportDetails('');
+    setShowReport(true);
+  }, [guestId]);
+
+  const submitReport = useCallback(async () => {
+    if (!guestId || reportSending) return;
+    const reasonLabel = REPORT_REASONS.find((r) => r.value === reportReason)?.label ?? '';
+    setReportSending(true);
+    try {
+      await hostService.reportUser({
+        targetId: guestId,
+        reason: reportReason,
+        // The description is required by the API.
+        description: reportDetails.trim() || `بلاغ من المضيف عن ضيف في المحادثة (${reasonLabel})`,
+      });
+      setShowReport(false);
+      Alert.alert('تم', 'تم إرسال البلاغ، وسيراجعه فريق الدعم.');
+    } catch (err: any) {
+      const serverMessage = String(err?.response?.data?.message || '').toLowerCase();
+      Alert.alert(
+        'خطأ',
+        serverMessage.includes('already')
+          ? 'سبق أن أرسلت بلاغاً عن هذا الضيف وهو قيد المراجعة.'
+          : apiErrorMessage(err, 'تعذّر إرسال البلاغ. حاول مرة أخرى.'),
+      );
+    } finally {
+      setReportSending(false);
+    }
+  }, [guestId, reportReason, reportDetails, reportSending]);
 
   const renderMessage = useCallback(({ item }: { item: Message }) => {
     const isHost = item.sender === 'host';
@@ -304,17 +332,77 @@ export default function ChatScreen() {
           <View style={styles.menuContainer}>
             <TouchableOpacity style={styles.menuItem} onPress={handleReport}>
               <Ionicons name="flag-outline" size={20} color={Colors.warning} />
-              <Text style={styles.menuItemText}>{isAr ? 'الإبلاغ عن المستخدم' : 'Report User'}</Text>
+              <Text style={styles.menuItemText}>الإبلاغ عن الضيف</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
             <TouchableOpacity style={styles.menuItem} onPress={handleBlock}>
-              <Ionicons name="ban-outline" size={20} color={Colors.error} />
+              <Ionicons name={isBlocked ? 'checkmark-circle-outline' : 'ban-outline'} size={20} color={Colors.error} />
               <Text style={[styles.menuItemText, { color: Colors.error }]}>
-                {isAr ? 'حظر المحادثة' : 'Block Conversation'}
+                {isBlocked ? 'إلغاء الحظر' : 'حظر'}
               </Text>
             </TouchableOpacity>
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Report guest — reason picker */}
+      <Modal visible={showReport} transparent animationType="fade" onRequestClose={() => setShowReport(false)}>
+        <KeyboardAvoidingView
+          style={styles.reportOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.reportCard}>
+            <Text style={styles.reportTitle}>الإبلاغ عن الضيف</Text>
+            <Text style={styles.reportHint}>اختر سبب البلاغ، وسيراجعه فريق الدعم.</Text>
+            {REPORT_REASONS.map((r) => {
+              const selected = r.value === reportReason;
+              return (
+                <TouchableOpacity
+                  key={r.value}
+                  style={styles.reportReasonRow}
+                  onPress={() => setReportReason(r.value)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={selected ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={selected ? Colors.primary : Colors.textTertiary}
+                  />
+                  <Text style={styles.reportReasonText}>{r.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TextInput
+              style={styles.reportInput}
+              value={reportDetails}
+              onChangeText={setReportDetails}
+              placeholder="تفاصيل إضافية (اختياري)"
+              placeholderTextColor={Colors.textTertiary}
+              multiline
+              maxLength={1000}
+            />
+            <View style={styles.reportActions}>
+              <TouchableOpacity
+                style={[styles.reportBtn, styles.reportBtnPrimary, reportSending && { opacity: 0.6 }]}
+                onPress={submitReport}
+                disabled={reportSending}
+              >
+                {reportSending ? (
+                  <ActivityIndicator size="small" color={Colors.textWhite} />
+                ) : (
+                  <Text style={styles.reportBtnPrimaryText}>إرسال البلاغ</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.reportBtn, styles.reportBtnGhost]}
+                onPress={() => setShowReport(false)}
+                disabled={reportSending}
+              >
+                <Text style={styles.reportBtnGhostText}>تراجع</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenWrapper>
   );
@@ -469,5 +557,81 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: 1,
     backgroundColor: Colors.border,
+  },
+  // Report modal
+  reportOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  reportCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    ...Shadows.lg,
+  },
+  reportTitle: {
+    ...Typography.bodyBold,
+    color: Colors.textPrimary,
+    textAlign: TEXT_START,
+  },
+  reportHint: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    textAlign: TEXT_START,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  reportReasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+  },
+  reportReasonText: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+    textAlign: TEXT_START,
+    flex: 1,
+  },
+  reportInput: {
+    ...Typography.body,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    minHeight: 72,
+    marginTop: Spacing.sm,
+    textAlign: TEXT_START,
+    textAlignVertical: 'top',
+    writingDirection: 'rtl',
+  },
+  reportActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.base,
+  },
+  reportBtn: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportBtnPrimary: {
+    backgroundColor: Colors.error,
+  },
+  reportBtnPrimaryText: {
+    ...Typography.bodyBold,
+    color: Colors.textWhite,
+  },
+  reportBtnGhost: {
+    backgroundColor: Colors.surface,
+  },
+  reportBtnGhostText: {
+    ...Typography.bodyBold,
+    color: Colors.textPrimary,
   },
 });

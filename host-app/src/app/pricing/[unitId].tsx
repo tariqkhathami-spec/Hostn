@@ -22,6 +22,7 @@ import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../
 import { formatCurrency, toWesternDigits } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Property, Unit, UnitPricing, UnitDiscount, CustomOffer } from '../../types';
+import { apiErrorMessage } from '../../utils/apiError';
 
 type TabKey = 'prices' | 'offers';
 
@@ -125,6 +126,15 @@ export default function UnitPricingDetailScreen() {
     mutationFn: (type: string) => hostService.toggleDiscount(unitId!, type),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unitDiscounts', unitId] });
+    },
+    onError: (error: any, type) => {
+      // The server refuses to turn on a discount that has no percentage:
+      // open the percentage editor so the host can set one.
+      if (error?.response?.data?.code === 'DISCOUNT_PERCENT_REQUIRED') {
+        setPercentEdit({ type, value: '' });
+        return;
+      }
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر تغيير حالة الخصم. حاول مرة أخرى.'));
     },
   });
 
@@ -232,9 +242,16 @@ export default function UnitPricingDetailScreen() {
 
   const handleToggleDiscount = useCallback(
     (type: string) => {
+      const current = discounts.find((d) => d.type === type);
+      // Turning a discount on needs a percentage above zero: ask for it first
+      // (saving a percentage also turns the discount on).
+      if (!current?.active && !(Number(current?.percentage) > 0)) {
+        setPercentEdit({ type, value: '' });
+        return;
+      }
       toggleDiscountMutation.mutate(type);
     },
-    [toggleDiscountMutation],
+    [toggleDiscountMutation, discounts],
   );
 
   const handleDeleteOffer = useCallback(

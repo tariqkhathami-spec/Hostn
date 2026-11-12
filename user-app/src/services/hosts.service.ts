@@ -4,9 +4,11 @@ import type { HostInfo, Listing, Review } from '../types';
 export interface HostProfile {
   host: HostInfo;
   stats: {
-    totalProperties: number;
+    propertyCount: number;
+    /** Average of review `ratings.overall`, on a 1–10 scale. */
     averageRating: number;
     totalReviews: number;
+    memberSince?: number;
   };
   properties: Listing[];
   reviews: Review[];

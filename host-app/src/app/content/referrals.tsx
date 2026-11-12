@@ -8,14 +8,13 @@ import {
   ActivityIndicator,
   Share,
 } from 'react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import type { ReferralLink } from '../../types';
 
 const STEPS = [
@@ -26,19 +25,10 @@ const STEPS = [
 ];
 
 export default function ReferralsScreen() {
-  const queryClient = useQueryClient();
-
   const { data, isLoading, isError } = useQuery({
     queryKey: ['referral-links'],
     queryFn: () => hostService.getReferralLinks(),
     retry: false,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: () => hostService.createReferralLink(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['referral-links'] });
-    },
   });
 
   const links: ReferralLink[] = data?.data || [];
@@ -125,15 +115,14 @@ export default function ReferralsScreen() {
               size={40}
               color={Colors.textTertiary}
             />
+            {/* The server does not create referral links yet (it answers
+                501), so there is no create button. */}
             <Text style={styles.emptyLinkText}>
-              لا يوجد رابط إحالة حالياً
+              روابط الإحالة غير متاحة حالياً
             </Text>
-            <Button
-              title="إنشاء رابط جديد"
-              onPress={() => createMutation.mutate()}
-              loading={createMutation.isPending}
-              style={styles.createButton}
-            />
+            <Text style={styles.emptyLinkHint}>
+              سنخبرك عند تفعيل هذه الخدمة.
+            </Text>
           </Card>
         )}
       </ScrollView>
@@ -250,10 +239,13 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textSecondary,
     marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
+    textAlign: 'center',
   },
-  createButton: {
-    minWidth: 180,
+  emptyLinkHint: {
+    ...Typography.caption,
+    color: Colors.textTertiary,
+    marginTop: Spacing.xs,
+    textAlign: 'center',
   },
   loadingContainer: {
     paddingVertical: Spacing.xxl,

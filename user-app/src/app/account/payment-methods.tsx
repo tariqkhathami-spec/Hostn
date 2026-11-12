@@ -66,7 +66,7 @@ export default function PaymentMethodsScreen() {
             <View style={styles.cardRow}>
               <Ionicons name="card" size={28} color={Colors.primary} />
               <View style={styles.cardInfo}>
-                <Text style={styles.cardBrand}>{item.brand} •••• {item.last4}</Text>
+                <Text style={styles.cardBrand}>{item.cardBrand} •••• {item.cardLast4}</Text>
                 <Text style={styles.cardExpiry}>
                   {t('payment.expires', { month: item.expiryMonth, year: item.expiryYear })}
                 </Text>

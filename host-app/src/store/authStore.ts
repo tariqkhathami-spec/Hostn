@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
+import { connectSocket, disconnectSocket } from '../services/socket';
+
+// The API returns the account with `_id`; the app compares `host.id`
+// (e.g. the ownership check on the edit-property screen).
+const withId = (host: Host): Host => ({
+  ...host,
+  id: String(host.id || (host as { _id?: unknown })._id || ''),
+});
 
 export interface Host {
   id: string;
@@ -34,10 +42,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (token: string, host: Host) => {
     await secureStorage.setToken(token);
-    set({ host, token, isAuthenticated: true, isLoading: false });
+    set({ host: withId(host), token, isAuthenticated: true, isLoading: false });
+    // At app start there was no token yet, so the socket was not connected.
+    connectSocket().catch(() => {});
   },
 
   logout: async () => {
+    disconnectSocket();
     await secureStorage.clearAll();
     set({ host: null, token: null, isAuthenticated: false });
   },
@@ -64,7 +75,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  setHost: (host) => set({ host }),
+  setHost: (host) => set({ host: withId(host) }),
   setToken: (token) => set({ token }),
   setLoading: (isLoading) => set({ isLoading }),
 }));

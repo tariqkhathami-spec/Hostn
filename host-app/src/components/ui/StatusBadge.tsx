@@ -5,10 +5,10 @@ import { Colors, Spacing, Radius, Typography } from '../../constants/theme';
 type Status = 'pending' | 'confirmed' | 'in_payment' | 'waiting' | 'cancelled' | 'no_show' | 'completed' | 'rejected' | 'held';
 
 const statusConfig: Record<Status, { bg: string; text: string; label: string; labelAr: string }> = {
-  pending: { bg: '#fef3c7', text: Colors.statusWaiting, label: 'Pending', labelAr: 'بانتظار القبول' },
+  pending: { bg: '#fef3c7', text: Colors.statusWaiting, label: 'Pending', labelAr: 'بانتظار موافقتك' },
   confirmed: { bg: '#dcfce7', text: Colors.statusConfirmed, label: 'Confirmed', labelAr: 'مؤكد' },
   in_payment: { bg: '#dbeafe', text: Colors.statusPayment, label: 'In Payment', labelAr: 'جاري السداد' },
-  waiting: { bg: '#fef3c7', text: Colors.statusWaiting, label: 'Waiting', labelAr: 'منتظر' },
+  waiting: { bg: '#fef3c7', text: Colors.statusWaiting, label: 'Waiting', labelAr: 'بانتظار موافقتك' },
   cancelled: { bg: '#fecaca', text: Colors.statusCancelled, label: 'Cancelled', labelAr: 'ملغي' },
   rejected: { bg: '#fecaca', text: Colors.statusCancelled, label: 'Rejected', labelAr: 'مرفوض' },
   no_show: { bg: '#f3f4f6', text: Colors.statusNoShow, label: 'No Show', labelAr: 'عدم حضور' },

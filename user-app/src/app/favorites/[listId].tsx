@@ -17,7 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { wishlistsService } from '../../services/wishlists.service';
-import { listingsService } from '../../services/listings.service';
+import { WISHLIST_IDS_KEY } from '../../hooks/useWishlist';
+import { listingTitle } from '../../utils/unit';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { CITIES, cityLabel, normalizeCity } from '../../constants/cities';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -44,35 +45,26 @@ export default function WishlistDetailScreen() {
     data: list,
     isLoading: listLoading,
     refetch: refetchList,
+    isRefetching,
   } = useQuery({
     queryKey: ['wishlist', listId],
     queryFn: () => wishlistsService.getList(listId!),
     enabled: !!listId,
   });
 
-  const {
-    data: properties = [],
-    isLoading: propertiesLoading,
-    refetch: refetchProperties,
-    isRefetching,
-  } = useQuery({
-    queryKey: ['wishlist-units', listId, list?.units],
-    queryFn: async () => {
-      if (!list || list.units.length === 0) return [];
-      const results = await Promise.all(
-        list.units.map((id) => listingsService.getById(id).catch(() => null))
-      );
-      return results.filter(Boolean) as Listing[];
-    },
-    enabled: !!list && list.units.length > 0,
-  });
+  // GET /wishlists/:id returns the units populated with their property
+  // (flattened by the service), so they are rendered as they come.
+  const properties = useMemo(
+    () => (list?.units ?? []).filter((u): u is Listing => !!u && typeof u === 'object'),
+    [list],
+  );
 
   const removeUnit = useMutation({
     mutationFn: (unitId: string) =>
       wishlistsService.removeUnit(listId!, unitId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wishlist', listId] });
-      queryClient.invalidateQueries({ queryKey: ['wishlist-units', listId] });
+      queryClient.invalidateQueries({ queryKey: WISHLIST_IDS_KEY });
       queryClient.invalidateQueries({ queryKey: ['wishlists'] });
     },
   });
@@ -94,7 +86,6 @@ export default function WishlistDetailScreen() {
 
   const handleRefresh = () => {
     refetchList();
-    refetchProperties();
   };
 
   const hasActiveFilters = !!selectedCity || !!checkIn || !!checkOut || guestCount > 0;
@@ -178,7 +169,7 @@ export default function WishlistDetailScreen() {
     return cityLabel(selectedCity, language);
   }, [selectedCity, language, t]);
 
-  const isLoading = listLoading || propertiesLoading;
+  const isLoading = listLoading;
 
   if (isLoading) {
     return (
@@ -417,7 +408,7 @@ export default function WishlistDetailScreen() {
               />
               <Pressable
                 style={styles.removeButton}
-                onPress={() => handleRemove(item.listing._id, item.listing.title)}
+                onPress={() => handleRemove(item.listing._id, listingTitle(item.listing, language))}
                 hitSlop={8}
               >
                 <Ionicons name="close-circle" size={24} color={Colors.error} />

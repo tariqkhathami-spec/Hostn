@@ -6,15 +6,25 @@ export const paymentsService = {
     return api.post('/payments/initiate', data).then((r) => r.data);
   },
 
-  verify(paymentId: string) {
-    return api.post('/payments/verify', { paymentId }).then((r) => r.data);
+  // paymentId = our Payment record, moyasarPaymentId = the id Moyasar
+  // returns to the callback. The server needs both.
+  verify(paymentId: string, moyasarPaymentId: string) {
+    return api.post('/payments/verify', { paymentId, moyasarPaymentId }).then((r) => r.data);
   },
 
   getSavedMethods() {
     return api.get<PaymentMethod[]>('/payment-methods').then((r) => r.data);
   },
 
-  addMethod(data: { token: string; brand: string; last4: string; expiryMonth: number; expiryYear: number }) {
+  addMethod(data: {
+    provider: string;
+    tokenId: string;
+    cardBrand: string;
+    cardLast4: string;
+    expiryMonth: number;
+    expiryYear: number;
+    nickname?: string;
+  }) {
     return api.post<PaymentMethod>('/payment-methods', data).then((r) => r.data);
   },
 
@@ -44,11 +54,11 @@ export const bnplService = {
     return api.post('/bnpl/tamara/create', data).then((r) => r.data);
   },
 
-  verifyTabby(sessionId: string) {
-    return api.post('/bnpl/tabby/verify', { sessionId }).then((r) => r.data);
+  verifyTabby(paymentId: string, tabbyPaymentId: string) {
+    return api.post('/bnpl/tabby/verify', { paymentId, tabbyPaymentId }).then((r) => r.data);
   },
 
-  verifyTamara(orderId: string) {
-    return api.post('/bnpl/tamara/verify', { orderId }).then((r) => r.data);
+  verifyTamara(paymentId: string, orderId: string) {
+    return api.post('/bnpl/tamara/verify', { paymentId, orderId }).then((r) => r.data);
   },
 };

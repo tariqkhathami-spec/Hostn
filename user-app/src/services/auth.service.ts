@@ -1,5 +1,6 @@
 import api from './api';
 import type { User } from '../types';
+import { getCurrentLanguage } from '../i18n/current';
 
 interface SendOtpOptions {
   countryCode?: string;
@@ -13,6 +14,8 @@ export const authService = {
         phone,
         countryCode: options?.countryCode ?? '+966',
         method: options?.method ?? 'sms',
+        // Language of the SMS / WhatsApp text.
+        lang: getCurrentLanguage(),
       })
       .then((r) => r.data);
   },
@@ -41,13 +44,24 @@ export const authService = {
     });
   },
 
-  updateProfile(data: Partial<User>) {
-    return api.put<User>('/auth/profile', data).then((r) => r.data);
+  // PUT /auth/profile reads { name, phone, avatar, email } and answers
+  // { success, user } (no `data` key, so it is not unwrapped). When `email` is
+  // sent the server only starts the email-change flow and answers
+  // { success, message } with NO user: `user` is then undefined.
+  updateProfile(data: { name?: string; avatar?: string; email?: string; emailVerificationCode?: string }) {
+    return api.put('/auth/profile', data).then((r) => {
+      const d = r.data as any;
+      const user = (d?.user ?? (d?._id ? d : undefined)) as User | undefined;
+      return { user, verificationRequired: !user };
+    });
   },
 
   // Route still uses /auth/wishlist/:id but the id is now a unit ID (wishlist is unit-based).
   toggleWishlist(unitId: string) {
-    return api.post<{ wishlist: string[] }>(`/auth/wishlist/${unitId}`).then((r) => r.data);
+    // Answers { success, wishlist } — the unit ids of the default list.
+    return api
+      .post<{ wishlist: string[] }>(`/auth/wishlist/${unitId}`)
+      .then((r) => ({ wishlist: ((r.data as any)?.wishlist ?? []).map(String) as string[] }));
   },
 
   // The server asks for a one-time code (or the password) before deleting.

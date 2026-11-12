@@ -72,7 +72,7 @@ export const hostService = {
   updateBookingStatus: (id: string, status: string) => api.put(`/bookings/${id}/status`, { status }).then(r => r.data),
 
   // Reviews
-  getReviews: (params?: { page?: number }) => api.get<{ data: Review[] }>('/host/reviews', { params }).then(r => r.data),
+  getReviews: (params?: { page?: number; limit?: number }) => api.get<{ data: Review[] }>('/host/reviews', { params }).then(r => r.data),
   getReviewsSummary: () => api.get('/host/reviews/summary').then(r => r.data),
   replyToReview: (reviewId: string, reply: string) => api.post(`/host/reviews/${reviewId}/reply`, { reply }).then(r => r.data),
 
@@ -132,13 +132,13 @@ export const hostService = {
     api.post(`/host/conversations/${id}/read`).then(r => r.data),
   blockConversation: (conversationId: string) =>
     api.put(`/messages/conversations/${conversationId}/block`).then(r => r.data),
-  reportUser: (data: { reportedUser: string; reason: string; details?: string }) =>
-    // /reports expects { targetType, targetId, reason, description }.
+  // POST /reports requires { targetType, targetId, reason, description }.
+  reportUser: (data: { targetId: string; reason: string; description: string }) =>
     api.post('/reports', {
       targetType: 'user',
-      targetId: data.reportedUser,
+      targetId: data.targetId,
       reason: data.reason,
-      description: data.details,
+      description: data.description,
     }).then(r => r.data),
   getSupportChat: () =>
     api.get<{ data: Message[] }>('/host/support/chat').then(r => r.data),

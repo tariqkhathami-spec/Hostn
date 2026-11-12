@@ -42,7 +42,7 @@ export default function TabsLayout() {
 
       setBadges({
         bookings: summary?.bookings ?? 0,
-        messages: messagesData?.count ?? 0,
+        messages: messagesData?.unreadCount ?? 0,
         support: summary?.support ?? 0,
       });
     } catch {

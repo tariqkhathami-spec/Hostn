@@ -18,6 +18,7 @@ import HeaderBar from '../../components/layout/HeaderBar';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { BookingRule, Property } from '../../types';
+import { apiErrorMessage } from '../../utils/apiError';
 
 interface RuleForm {
   applyToAll: boolean;
@@ -54,9 +55,13 @@ export default function BookingRulesScreen() {
   const rules: BookingRule[] = data?.data ?? [];
   const properties: Property[] = propertiesData?.data ?? [];
 
-  const allUnits = properties.flatMap((p) =>
-    p.units.map((u) => ({ id: u.id, name: `${p.nameAr || p.name} - ${u.name}` })),
-  );
+  // The minimum-nights rule is stored on the PROPERTY and covers all its
+  // units, so the picker lists properties. The API's `unitId` field accepts a
+  // property id.
+  const allUnits = properties.map((p) => ({
+    id: String(p.id || p._id || ''),
+    name: p.nameAr || p.name || p.titleAr || p.title || 'عقار بدون اسم',
+  }));
 
   const addMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) => hostService.addBookingRule(payload),
@@ -64,8 +69,16 @@ export default function BookingRulesScreen() {
       queryClient.invalidateQueries({ queryKey: ['bookingRules'] });
       closeModal();
     },
-    onError: () => {
-      Alert.alert('خطأ', 'فشل إضافة القاعدة. حاول مرة أخرى.');
+    onError: (error: any) => {
+      const message = String(error?.response?.data?.message || '').toLowerCase();
+      Alert.alert(
+        'خطأ',
+        message.includes('maximum stay')
+          ? 'الحد الأدنى لليالي لا يمكن أن يتجاوز الحد الأقصى لمدة الإقامة في العقار.'
+          : message.includes('no properties')
+            ? 'لا توجد لديك عقارات لتطبيق القاعدة عليها.'
+            : apiErrorMessage(error, 'تعذّرت إضافة القاعدة. حاول مرة أخرى.'),
+      );
     },
   });
 
@@ -74,8 +87,8 @@ export default function BookingRulesScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookingRules'] });
     },
-    onError: () => {
-      Alert.alert('خطأ', 'فشل حذف القاعدة. حاول مرة أخرى.');
+    onError: (error) => {
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر حذف القاعدة. حاول مرة أخرى.'));
     },
   });
 
@@ -91,7 +104,7 @@ export default function BookingRulesScreen() {
       return;
     }
     if (!form.applyToAll && !form.unitId) {
-      Alert.alert('خطأ', 'يرجى اختيار الوحدة');
+      Alert.alert('خطأ', 'يرجى اختيار العقار');
       return;
     }
     const payload: Record<string, unknown> = {
@@ -123,13 +136,13 @@ export default function BookingRulesScreen() {
         <View style={styles.ruleHeader}>
           <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
           <Text style={styles.ruleName}>
-            {item.applyToAll ? 'جميع الوحدات' : item.unitName || 'وحدة محددة'}
+            {item.applyToAll ? 'جميع العقارات' : item.unitName || 'عقار محدد'}
           </Text>
         </View>
         <View style={styles.nightsRow}>
           <Ionicons name="moon-outline" size={16} color={Colors.textSecondary} />
           <Text style={styles.nightsText}>
-            {'الحد الأدنى: '}{item.minNights}{' ليالي'}
+            {`الحد الأدنى للحجز: ${item.minNights} ${item.minNights === 1 ? 'ليلة' : item.minNights <= 10 ? 'ليالٍ' : 'ليلة'} (لكل وحدات العقار)`}
           </Text>
         </View>
       </View>
@@ -188,7 +201,7 @@ export default function BookingRulesScreen() {
             </View>
 
             <View style={styles.switchRow}>
-              <Text style={styles.formLabel}>{'تطبيق على جميع الوحدات'}</Text>
+              <Text style={styles.formLabel}>{'تطبيق على جميع العقارات'}</Text>
               <Switch
                 value={form.applyToAll}
                 onValueChange={(val) =>
@@ -201,7 +214,7 @@ export default function BookingRulesScreen() {
 
             {!form.applyToAll && (
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>{'اختر الوحدة'}</Text>
+                <Text style={styles.formLabel}>{'اختر العقار (تسري القاعدة على كل وحداته)'}</Text>
                 <TouchableOpacity
                   style={styles.pickerButton}
                   onPress={() => setUnitPickerVisible(true)}
@@ -212,7 +225,7 @@ export default function BookingRulesScreen() {
                       !form.unitId && { color: Colors.textTertiary },
                     ]}
                   >
-                    {form.unitName || 'اختر وحدة'}
+                    {form.unitName || 'اختر عقاراً'}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
                 </TouchableOpacity>
@@ -253,7 +266,7 @@ export default function BookingRulesScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.pickerModal}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{'اختر الوحدة'}</Text>
+              <Text style={styles.modalTitle}>{'اختر العقار'}</Text>
               <TouchableOpacity onPress={() => setUnitPickerVisible(false)}>
                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
@@ -286,7 +299,7 @@ export default function BookingRulesScreen() {
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={styles.pickerEmptyText}>{'لا توجد وحدات'}</Text>
+                <Text style={styles.pickerEmptyText}>{'لا توجد عقارات'}</Text>
               }
             />
           </View>

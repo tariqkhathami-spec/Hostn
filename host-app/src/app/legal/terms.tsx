@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
@@ -7,6 +7,7 @@ import HeaderBar from '../../components/layout/HeaderBar';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { TermsOfUse } from '../../types';
+import { apiErrorMessage } from '../../utils/apiError';
 
 const FALLBACK_ARTICLES: TermsOfUse['articles'] = [
   { number: 1, title: 'التعريفات', content: 'يقصد بالمصطلحات الواردة في هذه الاتفاقية المعاني المبينة أمام كل منها: "المنصة" تعني منصة هوستن الإلكترونية. "المضيف" يعني الشخص الطبيعي أو الاعتباري الذي يعرض وحدته السكنية على المنصة. "الضيف" يعني الشخص الذي يحجز الوحدة السكنية عبر المنصة.' },
@@ -36,6 +37,12 @@ export default function TermsScreen() {
     mutationFn: hostService.signTerms,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['terms'] });
+      // The "more" tab caches the same answer under its own key for the
+      // signed badge: refresh it too.
+      queryClient.invalidateQueries({ queryKey: ['host-terms'] });
+    },
+    onError: (error) => {
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر تسجيل موافقتك على الاتفاقية. حاول مرة أخرى.'));
     },
   });
 

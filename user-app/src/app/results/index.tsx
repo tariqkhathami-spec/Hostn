@@ -6,22 +6,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { listingsService } from '../../services/listings.service';
 import { useSearchStore } from '../../store/searchStore';
-import { useAuthStore } from '../../store/authStore';
-import { authService } from '../../services/auth.service';
 import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import { cityLabel, normalizeCity } from '../../constants/cities';
 import ListingCard from '../../components/listing/ListingCard';
-import { useRequireAuth } from '../../hooks/useRequireAuth';
+import { useWishlist } from '../../hooks/useWishlist';
+import { POOL_FILTER } from '../../constants/amenities';
 
 export default function ResultsScreen() {
   const router = useRouter();
   const { t, language, isRTL } = useLanguage();
   const params = useLocalSearchParams<{ city?: string; cityName?: string }>();
   const searchStore = useSearchStore();
-  const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
-  const requireAuth = useRequireAuth();
+  const { isFavorite, toggle: toggleFavorite } = useWishlist();
 
   // Always search with the stored city value (e.g. "Madinah"), whatever
   // spelling arrived through params or an older saved state.
@@ -34,26 +31,32 @@ export default function ResultsScreen() {
     ratingMin, hasDiscount, district, direction, minArea, maxArea,
   } = searchStore;
 
-  const buildSearchParams = (pageParam: number) => ({
-    city: city ?? undefined,
-    type: searchStore.propertyType ?? undefined,
-    guests: searchStore.guests,
-    checkIn: searchStore.checkIn ?? undefined,
-    checkOut: searchStore.checkOut ?? undefined,
-    minPrice: minPrice ?? undefined,
-    maxPrice: maxPrice ?? undefined,
-    bedrooms: bedrooms || undefined,
-    bathrooms: bathrooms || undefined,
-    amenities: amenities.length > 0 ? amenities : undefined,
-    ratingMin: ratingMin ?? undefined,
-    hasDiscount: hasDiscount || undefined,
-    district: district ?? undefined,
-    direction: direction ?? undefined,
-    minArea: minArea ?? undefined,
-    maxArea: maxArea ?? undefined,
-    page: pageParam,
-    limit: 20,
-  });
+  // Parameter names are the ones GET /units/search reads.
+  const buildSearchParams = (pageParam: number) => {
+    // "pool" is its own flag on the unit, not an amenity value.
+    const amenityValues = amenities.filter((a) => a !== POOL_FILTER);
+    return {
+      city: city ?? undefined,
+      type: searchStore.propertyType ?? undefined,
+      guests: searchStore.guests,
+      checkIn: searchStore.checkIn ?? undefined,
+      checkOut: searchStore.checkOut ?? undefined,
+      minPrice: minPrice ?? undefined,
+      maxPrice: maxPrice ?? undefined,
+      bedrooms: bedrooms || undefined,
+      bathrooms: bathrooms || undefined,
+      amenities: amenityValues.length > 0 ? amenityValues.join(',') : undefined,
+      pool: amenities.includes(POOL_FILTER) ? '1' : undefined,
+      rating: ratingMin ?? undefined,
+      discount: hasDiscount ? '1' : undefined,
+      district: district ?? undefined,
+      direction: direction ?? undefined,
+      minArea: minArea ?? undefined,
+      maxArea: maxArea ?? undefined,
+      page: pageParam,
+      limit: 20,
+    };
+  };
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } = useInfiniteQuery({
     queryKey: [
@@ -62,20 +65,9 @@ export default function ResultsScreen() {
       minPrice, maxPrice, bedrooms, bathrooms, amenities,
       ratingMin, hasDiscount, district, direction, minArea, maxArea,
     ],
-    queryFn: async ({ pageParam = 1 }) => {
-      const params = buildSearchParams(pageParam);
-      // Try unit search first, fall back to property search
-      try {
-        const unitResult = await listingsService.searchUnits(params as any);
-        const unitData = unitResult?.data ?? unitResult;
-        if (Array.isArray(unitData) && unitData.length > 0) {
-          return unitResult;
-        }
-      } catch (err) {
-        if (__DEV__) console.debug('[results] searchUnits failed, falling back to search:', err);
-      }
-      return listingsService.search(params as any);
-    },
+    // Units only: every result is bookable, and an empty result stays empty
+    // (no fallback to /properties, which ignored the filters).
+    queryFn: ({ pageParam = 1 }) => listingsService.searchUnits(buildSearchParams(pageParam)),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       const p = lastPage.pagination ?? (lastPage as any);
@@ -85,17 +77,6 @@ export default function ResultsScreen() {
 
   const listings = data?.pages.flatMap((p) => p.data) ?? [];
   const total = data?.pages[0]?.pagination?.total ?? 0;
-
-  const handleToggleFavorite = async (propertyId: string) => {
-    if (!requireAuth()) return;
-    try {
-      await authService.toggleWishlist(propertyId);
-      const updatedUser = await authService.getMe();
-      setUser(updatedUser);
-    } catch (err) {
-      if (__DEV__) console.debug('[results] toggleWishlist failed:', err);
-    }
-  };
 
   const loadingMore = useRef(false);
 
@@ -141,7 +122,7 @@ export default function ResultsScreen() {
       ) : (
         <FlatList
           data={listings}
-          keyExtractor={(item) => item._id ?? item.id}
+          keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
@@ -151,13 +132,13 @@ export default function ResultsScreen() {
             ) : null
           }
           renderItem={({ item }) => {
-            const itemId = item._id ?? (item as any).id;
+            const itemId = item._id;
             return (
               <ListingCard
                 listing={item}
                 onPress={() => router.push(`/listing/${itemId}`)}
-                onFavoritePress={() => handleToggleFavorite(itemId)}
-                isFavorite={user?.wishlist?.includes(itemId)}
+                onFavoritePress={() => toggleFavorite(itemId)}
+                isFavorite={isFavorite(itemId)}
               />
             );
           }}

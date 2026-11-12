@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
@@ -33,13 +33,18 @@ export default function TransfersScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
 
-  const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['transfers', search],
-    queryFn: () => hostService.getTransfers({ search: search || undefined }),
+  // The API returns 20 transfers per page: older ones load on demand.
+  const { data, isLoading, error, refetch, isRefetching, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['transfers', 'list', search],
+    queryFn: ({ pageParam }) => hostService.getTransfers({ search: search || undefined, page: pageParam }),
+    initialPageParam: 1,
+    // The API answers with pagination.pages; stop when the last page is loaded.
+    getNextPageParam: (last: any, _all: unknown[], lastPage: number) =>
+      lastPage < Number(last?.pagination?.pages ?? 1) ? lastPage + 1 : undefined,
     retry: false,
   });
 
-  const transfers: Transfer[] = data?.data || [];
+  const transfers: Transfer[] = (data?.pages ?? []).flatMap((p: any) => p?.data ?? []);
 
   const handlePress = useCallback((transfer: Transfer) => {
     router.push(`/financial/${transfer.id}` as any);
@@ -107,9 +112,25 @@ export default function TransfersScreen() {
         renderItem={renderTransfer}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        ListFooterComponent={
+          hasNextPage ? (
+            <TouchableOpacity
+              style={styles.loadMoreBtn}
+              onPress={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              activeOpacity={0.7}
+            >
+              {isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Text style={styles.loadMoreText}>عرض المزيد</Text>
+              )}
+            </TouchableOpacity>
+          ) : null
+        }
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
+            refreshing={isRefetching && !isFetchingNextPage}
             onRefresh={refetch}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
@@ -148,6 +169,23 @@ export default function TransfersScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadMoreBtn: {
+    alignSelf: 'center',
+    marginTop: Spacing.base,
+    marginBottom: Spacing.base,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    minWidth: 140,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    ...Typography.smallBold,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
     backgroundColor: Colors.surface,

@@ -31,12 +31,6 @@ const processSteps = [
   { number: 4, title: 'إيداع التعويض', description: 'يتم إيداع المبلغ في حسابك' },
 ];
 
-const compensationTiers = [
-  { amount: '835', unit: 'ريال', label: 'الحد الأقصى لكل مطالبة' },
-  { amount: '5,000', unit: 'ريال', label: 'الحد الأقصى سنوياً' },
-  { amount: '6', unit: 'مطالبات', label: 'الحد الأقصى سنوياً' },
-];
-
 export default function ProtectionScreen() {
   const router = useRouter();
   const { data, isLoading, isError } = useQuery({
@@ -44,6 +38,23 @@ export default function ProtectionScreen() {
     queryFn: hostService.getProtectionProgram,
     retry: false,
   });
+
+  // Only numbers the API returns are shown. The programme limits come back
+  // as null until they are defined on the server, and are then left out.
+  const program: any = (data as any)?.data ?? {};
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const tier = (value: number | null, unit: string, label: string) =>
+    value === null ? null : { amount: value.toLocaleString('en-US'), unit, label };
+  const usageTiers = [
+    tier(num(program.claimsThisYear), 'مطالبة', 'مطالباتك هذا العام'),
+    tier(num(program.openClaims), 'مطالبة', 'قيد المراجعة'),
+    tier(num(program.totalCompensated), 'ريال', 'إجمالي التعويضات'),
+  ].filter((t): t is { amount: string; unit: string; label: string } => t !== null);
+  const limitTiers = [
+    tier(num(program.maxPerClaim), 'ريال', 'الحد الأقصى لكل مطالبة'),
+    tier(num(program.maxCompensationPerYear), 'ريال', 'الحد الأقصى سنوياً'),
+    tier(num(program.maxClaimsPerYear), 'مطالبات', 'عدد المطالبات سنوياً'),
+  ].filter((t): t is { amount: string; unit: string; label: string } => t !== null);
 
   const handleClaims = () => {
     Alert.alert(
@@ -129,17 +140,37 @@ export default function ProtectionScreen() {
             ))}
           </Card>
 
-          {/* Compensation Tiers */}
-          <Text style={styles.sectionTitle}>حدود التعويض</Text>
-          <View style={styles.tiersRow}>
-            {compensationTiers.map((tier, index) => (
-              <Card key={index} style={styles.tierCard}>
-                <Text style={styles.tierAmount}>{tier.amount}</Text>
-                <Text style={styles.tierUnit}>{tier.unit}</Text>
-                <Text style={styles.tierLabel}>{tier.label}</Text>
-              </Card>
-            ))}
-          </View>
+          {/* This host's real claim figures for the year */}
+          {usageTiers.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>مطالباتك هذا العام</Text>
+              <View style={styles.tiersRow}>
+                {usageTiers.map((t) => (
+                  <Card key={t.label} style={styles.tierCard}>
+                    <Text style={styles.tierAmount}>{t.amount}</Text>
+                    <Text style={styles.tierUnit}>{t.unit}</Text>
+                    <Text style={styles.tierLabel}>{t.label}</Text>
+                  </Card>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Compensation limits — only when the API defines them */}
+          {limitTiers.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>حدود التعويض</Text>
+              <View style={styles.tiersRow}>
+                {limitTiers.map((t) => (
+                  <Card key={t.label} style={styles.tierCard}>
+                    <Text style={styles.tierAmount}>{t.amount}</Text>
+                    <Text style={styles.tierUnit}>{t.unit}</Text>
+                    <Text style={styles.tierLabel}>{t.label}</Text>
+                  </Card>
+                ))}
+              </View>
+            </>
+          )}
 
           {/* Action Buttons */}
           <View style={styles.actions}>

@@ -96,7 +96,7 @@ export default function MoreScreen() {
                 <ActivityIndicator size="small" color={Colors.primary} />
               ) : (
                 <Text style={styles.statValue}>
-                  {stats?.totalRevenue?.toLocaleString('en-SA') ?? '0'}
+                  {Number(stats?.totalRevenue ?? stats?.totalEarnings ?? 0).toLocaleString('en-US')}
                 </Text>
               )}
               <Text style={styles.statLabel}>{'المبيعات'}</Text>

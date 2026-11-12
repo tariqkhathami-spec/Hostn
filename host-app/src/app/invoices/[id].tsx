@@ -96,7 +96,7 @@ export default function InvoiceDetailScreen() {
             <Text style={styles.infoLabel}>الاسم:</Text>
             <Text style={styles.infoValue}>{invoice.vendorName}</Text>
           </View>
-          {invoice.vendorTaxNumber && (
+          {!!invoice.vendorTaxNumber && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>الرقم الضريبي:</Text>
               <Text style={styles.infoValue}>{invoice.vendorTaxNumber}</Text>
@@ -188,12 +188,7 @@ export default function InvoiceDetailScreen() {
           </View>
         </Card>
 
-        {/* QR Code Placeholder */}
-        <Card style={styles.qrCard}>
-          <View style={styles.qrPlaceholder}>
-            <Ionicons name="qr-code-outline" size={64} color={Colors.textTertiary} />
-          </View>
-        </Card>
+        {/* No QR card: the API sends no QR data, and an empty box would look broken. */}
 
         {/* Share Button */}
         <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.7}>

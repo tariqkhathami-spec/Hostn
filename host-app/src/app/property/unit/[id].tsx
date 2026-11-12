@@ -54,12 +54,19 @@ const ARABIC_MONTHS = [
 
 const ARABIC_WEEKDAYS = ['سبت', 'أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع'];
 
+// Each day of the week has its own stored price (Date.getDay(): 0 = Sunday).
+const WEEK_DAYS: { key: string; label: string }[] = [
+  { key: 'sunday', label: 'الأحد' },
+  { key: 'monday', label: 'الاثنين' },
+  { key: 'tuesday', label: 'الثلاثاء' },
+  { key: 'wednesday', label: 'الأربعاء' },
+  { key: 'thursday', label: 'الخميس' },
+  { key: 'friday', label: 'الجمعة' },
+  { key: 'saturday', label: 'السبت' },
+];
+
 function getDayOfWeekPrice(date: Date, pricing: Record<string, number>): number | undefined {
-  const day = date.getDay();
-  if (day === 4) return pricing.thursday;
-  if (day === 5) return pricing.friday;
-  if (day === 6) return pricing.saturday;
-  return pricing.weekday;
+  return pricing[WEEK_DAYS[date.getDay()].key];
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -357,12 +364,11 @@ export default function UnitDetailScreen() {
   // Prices as stored on the unit (0 / missing = not set yet).
   const pricing: Record<string, number> = useMemo(() => {
     const p: any = unitFromProps?.pricing ?? {};
-    return {
-      weekday: Number(p.midWeek) || 0,
-      thursday: Number(p.thursday) || 0,
-      friday: Number(p.friday) || 0,
-      saturday: Number(p.saturday) || 0,
-    };
+    // Sunday–Wednesday fall back to the old single mid-week price if the
+    // API did not send that day.
+    return Object.fromEntries(
+      WEEK_DAYS.map(({ key }) => [key, Number(p[key] ?? (WEEK_DAYS.findIndex((d) => d.key === key) < 4 ? p.midWeek : 0)) || 0]),
+    );
   }, [unitFromProps]);
 
   // M17: load bookings scoped to *this* unit. Pre-fix this called
@@ -504,22 +510,12 @@ export default function UnitDetailScreen() {
           <Text style={styles.sectionTitle}>الأسعار لكل ليلة</Text>
 
           <View style={styles.priceGrid}>
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>وسط الأسبوع</Text>
-              <Text style={styles.priceValue}>{priceText(pricing.weekday)}</Text>
-            </View>
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>الخميس</Text>
-              <Text style={styles.priceValue}>{priceText(pricing.thursday)}</Text>
-            </View>
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>الجمعة</Text>
-              <Text style={[styles.priceValue, { color: Colors.primary }]}>{priceText(pricing.friday)}</Text>
-            </View>
-            <View style={styles.priceCard}>
-              <Text style={styles.priceLabel}>السبت</Text>
-              <Text style={styles.priceValue}>{priceText(pricing.saturday)}</Text>
-            </View>
+            {WEEK_DAYS.map((day) => (
+              <View key={day.key} style={styles.priceCard}>
+                <Text style={styles.priceLabel}>{day.label}</Text>
+                <Text style={styles.priceValue}>{priceText(pricing[day.key])}</Text>
+              </View>
+            ))}
           </View>
 
           {selectedDate && !!selectedDayPrice && (

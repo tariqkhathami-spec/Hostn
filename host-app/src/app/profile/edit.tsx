@@ -129,18 +129,6 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          {/* ID Number - Read Only */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>
-              {'رقم الهوية'}
-            </Text>
-            <TextInput
-              style={[styles.input, styles.inputDisabled]}
-              value={profile?.nationalId || ''}
-              editable={false}
-            />
-          </View>
-
           {needPassword && (
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>{'كلمة المرور الحالية'}</Text>

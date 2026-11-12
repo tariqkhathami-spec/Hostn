@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import api from './api';
 import type { Notification } from '../types';
 
@@ -18,6 +19,6 @@ export const notificationsService = {
   },
 
   registerPushToken(token: string) {
-    return api.post('/notifications/device-token', { pushToken: token }).then((r) => r.data);
+    return api.post('/notifications/device-token', { token, platform: Platform.OS }).then((r) => r.data);
   },
 };
