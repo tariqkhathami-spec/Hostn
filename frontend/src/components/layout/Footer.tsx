@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
+import Logo from '@/components/ui/Logo';
 
 export default function Footer() {
   const { language } = useLanguage();
@@ -10,16 +11,16 @@ export default function Footer() {
   const lang = language as 'en' | 'ar';
 
   return (
-    <footer className="bg-gray-900 text-gray-400 py-12">
+    <footer className="bg-primary-950 text-primary-200/80 py-14">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
-            <h3 className="text-white text-xl font-bold mb-3">Hostn</h3>
+            <div className="mb-4"><Logo tone="light" size={34} /></div>
             <p className="text-sm leading-relaxed">
               {lang === 'ar'
-                ? 'منصة حجز الإقامات الفاخرة في المملكة العربية السعودية'
-                : 'Premium vacation rental platform in Saudi Arabia'}
+                ? 'منصة سعودية لحجز الشاليهات والاستراحات والمزارع، بأسعار واضحة وعقارات موثّقة.'
+                : 'A Saudi platform for booking chalets, rest houses and farms — verified stays, clear prices.'}
             </p>
           </div>
 
@@ -65,7 +66,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-6 text-center text-sm">
+        <div className="border-t border-white/10 mt-10 pt-6 text-center text-sm">
           &copy; {new Date().getFullYear()} Hostn. {lang === 'ar' ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
         </div>
       </div>

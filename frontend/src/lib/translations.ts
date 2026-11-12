@@ -21,10 +21,10 @@ export const translations = {
     'nav.adminPanel': 'Admin Panel',
 
     // Hero
-    'hero.badge': 'Curated luxury properties across Saudi Arabia',
-    'hero.title1': 'Book Your Perfect',
-    'hero.title2': 'Getaway in Saudi Arabia',
-    'hero.subtitle': 'Book handpicked chalets, villas, and retreats — with transparent pricing and a seamless, secure booking experience.',
+    'hero.badge': 'Chalets, rest houses and farms across the Kingdom',
+    'hero.title1': 'Your next getaway',
+    'hero.title2': 'starts here',
+    'hero.subtitle': 'Pick the place, see the final price, and book in a minute. Verified stays and clear pricing — no surprises.',
     'hero.destination': 'Destination',
     'hero.selectCity': 'Select city',
     'hero.propertyType': 'Property Type',
@@ -89,8 +89,8 @@ export const translations = {
     'why.paymentsDesc': 'Fully encrypted transactions and flexible payment options you can trust.',
 
     // CTA
-    'cta.title': 'Have a property you\'d like to list?',
-    'cta.subtitle': 'Join hosts earning extra income by listing their space on Hostn.',
+    'cta.title': 'Empty property? Put it to work.',
+    'cta.subtitle': 'List your chalet or rest house on Hostn and run bookings, prices and payouts from one app.',
     'cta.button': 'Start Hosting Now',
 
     // Footer
@@ -347,10 +347,10 @@ export const translations = {
     'nav.adminPanel': 'لوحة الإدارة',
 
     // Hero
-    'hero.badge': 'عقارات فاخرة مختارة بعناية في جميع أنحاء المملكة',
-    'hero.title1': 'استمتع بإقامة مميزة',
-    'hero.title2': 'في أجمل الوجهات داخل السعودية',
-    'hero.subtitle': 'احجز شاليهات، فلل، واستراحات مختارة بعناية — بأسعار واضحة وتجربة حجز سهلة وآمنة.',
+    'hero.badge': 'شاليهات واستراحات ومزارع في كل مدن المملكة',
+    'hero.title1': 'إجازتك الجاية',
+    'hero.title2': 'تبدأ من هنا',
+    'hero.subtitle': 'اختر المكان، شف السعر النهائي، واحجز في دقيقة. عقارات موثّقة وأسعار واضحة بدون مفاجآت.',
     'hero.destination': 'الوجهة',
     'hero.selectCity': 'اختر المدينة',
     'hero.propertyType': 'نوع العقار',
@@ -410,13 +410,13 @@ export const translations = {
     'why.reviews': 'تقييمات موثوقة',
     'why.reviewsDesc': 'تقييمات حقيقية من ضيوف سابقين تساعدك في اختيار الأنسب.',
     'why.support': 'دعم متواصل',
-    'why.supportDesc': 'فريقنا جاهز لمساعدتك قبل وأثناء وبعد إقامتك — على مدار الساعة.',
+    'why.supportDesc': 'فريقنا جاهز لمساعدتك قبل وأثناء وبعد إقامتك.',
     'why.payments': 'دفع آمن',
     'why.paymentsDesc': 'معاملات مشفرة بالكامل وخيارات دفع متعددة تقدر تعتمد عليها.',
 
     // CTA
-    'cta.title': 'عندك عقار وتبغى تعرضه؟',
-    'cta.subtitle': 'انضم للمضيفين اللي يحققون دخل إضافي من خلال عرض عقاراتهم على هوستن.',
+    'cta.title': 'عقارك فاضي؟ خلّه يجيب لك دخل',
+    'cta.subtitle': 'اعرض شاليهك أو استراحتك على هوستن، وأدر حجوزاتك وأسعارك ومستحقاتك من تطبيق واحد.',
     'cta.button': 'ابدأ الاستضافة الآن',
 
     // Footer
