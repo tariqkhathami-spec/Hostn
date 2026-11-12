@@ -406,6 +406,12 @@ exports.upsertBankAccount = async (req, res) => {
       });
     }
 
+    // The transfer timing is the host's preference, not a property of the
+    // IBAN: carry it over to the new record.
+    const previous = await HostBankAccount.findOne({ host: req.user._id, isActive: true })
+      .select('transferDuration')
+      .lean();
+
     // Deactivate any existing active accounts
     await HostBankAccount.updateMany(
       { host: req.user._id, isActive: true },
@@ -420,6 +426,7 @@ exports.upsertBankAccount = async (req, res) => {
       iban,
       accountHolder,
       isActive: true,
+      ...(previous?.transferDuration ? { transferDuration: previous.transferDuration } : {}),
     });
 
     res.json({ success: true, data: account });

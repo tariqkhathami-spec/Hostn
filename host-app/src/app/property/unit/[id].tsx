@@ -11,7 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../../constants/theme';
 import { hostService } from '../../../services/host.service';
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -275,8 +275,8 @@ function CalendarGrid({
 function LegendItem({ color, label }: { color: string; label: string }) {
   return (
     <View style={calStyles.legendItem}>
-      <Text style={calStyles.legendText}>{label}</Text>
       <View style={[calStyles.legendDot, { backgroundColor: color }]} />
+      <Text style={calStyles.legendText}>{label}</Text>
     </View>
   );
 }
@@ -291,36 +291,36 @@ function ReservationCard({ reservation }: { reservation: Reservation }) {
   return (
     <View style={resStyles.card}>
       <View style={resStyles.cardHeader}>
+        <Text style={resStyles.guestName}>{reservation.guestName}</Text>
         <View style={resStyles.platformBadge}>
           <View style={[resStyles.platformDot, { backgroundColor: getPlatformColor(reservation.platform) }]} />
           <Text style={resStyles.platformText}>{getPlatformName(reservation.platform)}</Text>
         </View>
-        <Text style={resStyles.guestName}>{reservation.guestName}</Text>
       </View>
 
       <View style={resStyles.cardBody}>
         <View style={resStyles.dateRow}>
           <View style={resStyles.dateItem}>
-            <Text style={resStyles.dateLabel}>المغادرة</Text>
-            <Text style={resStyles.dateValue}>{checkOut.getDate()}/{checkOut.getMonth() + 1}</Text>
-          </View>
-          <Ionicons name="arrow-back" size={16} color={Colors.textTertiary} />
-          <View style={resStyles.dateItem}>
             <Text style={resStyles.dateLabel}>الوصول</Text>
             <Text style={resStyles.dateValue}>{checkIn.getDate()}/{checkIn.getMonth() + 1}</Text>
+          </View>
+          <Ionicons name={DirectionalIcon.arrowForward} size={16} color={Colors.textTertiary} />
+          <View style={resStyles.dateItem}>
+            <Text style={resStyles.dateLabel}>المغادرة</Text>
+            <Text style={resStyles.dateValue}>{checkOut.getDate()}/{checkOut.getMonth() + 1}</Text>
           </View>
         </View>
 
         <View style={resStyles.infoRow}>
+          {reservation.totalAmount > 0 && (
+            <Text style={resStyles.amountText}>{reservation.totalAmount.toLocaleString()} ر.س</Text>
+          )}
+          <Text style={resStyles.nightsText}>{nights} ليالي</Text>
           <View style={[resStyles.statusBadge, { backgroundColor: getStatusColor(reservation.status) + '20' }]}>
             <Text style={[resStyles.statusText, { color: getStatusColor(reservation.status) }]}>
               {getStatusText(reservation.status)}
             </Text>
           </View>
-          <Text style={resStyles.nightsText}>{nights} ليالي</Text>
-          {reservation.totalAmount > 0 && (
-            <Text style={resStyles.amountText}>{reservation.totalAmount.toLocaleString()} ر.س</Text>
-          )}
         </View>
       </View>
     </View>
@@ -457,7 +457,7 @@ export default function UnitDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/properties' as any)} style={styles.headerBack}>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textWhite} />
+          <Ionicons name={DirectionalIcon.back} size={24} color={Colors.textWhite} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{unitName}</Text>
         <View style={{ width: 40 }} />
@@ -486,13 +486,13 @@ export default function UnitDetailScreen() {
         <View style={styles.calendarSection}>
           <View style={styles.calendarHeader}>
             <TouchableOpacity onPress={handlePrevMonth} style={styles.navBtn}>
-              <Ionicons name="chevron-forward" size={22} color={Colors.primary} />
+              <Ionicons name={DirectionalIcon.back} size={22} color={Colors.primary} />
             </TouchableOpacity>
             <Text style={styles.monthTitle}>
               {ARABIC_MONTHS[currentMonth]} {currentYear}
             </Text>
             <TouchableOpacity onPress={handleNextMonth} style={styles.navBtn}>
-              <Ionicons name="chevron-back" size={22} color={Colors.primary} />
+              <Ionicons name={DirectionalIcon.forward} size={22} color={Colors.primary} />
             </TouchableOpacity>
           </View>
 
@@ -606,7 +606,7 @@ const calStyles = StyleSheet.create({
   checkMark: {
     position: 'absolute',
     top: 2,
-    right: 2,
+    end: 2,
     width: 10,
     height: 10,
     borderRadius: 5,

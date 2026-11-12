@@ -1,7 +1,44 @@
 /**
  * Push Notification Service
- * Uses Firebase Cloud Messaging (FCM) for both Android and iOS
+ *
+ * The mobile apps register Expo push tokens ("ExponentPushToken[...]"), so
+ * those go through the Expo push service. Any other token is treated as a raw
+ * FCM token and sent through Firebase when FIREBASE_SERVICE_ACCOUNT is set.
  */
+
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+const isExpoToken = (t) => /^Expo(nent)?PushToken\[.+\]$/.test(String(t || ''));
+
+/**
+ * Send through the Expo push service.
+ * @returns {{ sent: number, invalidTokens: string[] }}
+ */
+const sendExpoPush = async (tokens, { title, body, data = {} }) => {
+  const invalidTokens = [];
+  let sent = 0;
+  // Expo accepts at most 100 messages per request.
+  for (let i = 0; i < tokens.length; i += 100) {
+    const batch = tokens.slice(i, i + 100);
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
+    const res = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(
+        batch.map((to) => ({ to, title, body, data, sound: 'default', channelId: 'default', priority: 'high' }))
+      ),
+      signal: AbortSignal.timeout(10000),
+    });
+    const json = await res.json().catch(() => ({}));
+    const tickets = Array.isArray(json.data) ? json.data : [];
+    tickets.forEach((ticket, idx) => {
+      if (ticket.status === 'ok') sent += 1;
+      else if (ticket.details && ticket.details.error === 'DeviceNotRegistered') invalidTokens.push(batch[idx]);
+    });
+    if (!res.ok) console.error('[Push] Expo push service responded', res.status);
+  }
+  return { sent, invalidTokens };
+};
 
 let admin = null;
 
@@ -36,14 +73,26 @@ const getFirebaseAdmin = () => {
 const sendPush = async (deviceTokens, { title, body, data = {} }) => {
   if (!deviceTokens || deviceTokens.length === 0) return;
 
-  const firebaseAdmin = getFirebaseAdmin();
-  if (!firebaseAdmin) {
-    console.log(`[Push] Would send: "${title}" - "${body}" to ${deviceTokens.length} device(s)`);
-    return;
+  const allTokens = [...new Set(deviceTokens.map((dt) => dt.token).filter(Boolean))];
+  const expoTokens = allTokens.filter(isExpoToken);
+  const tokens = allTokens.filter((t) => !isExpoToken(t));
+
+  let expoResult = { sent: 0, invalidTokens: [] };
+  if (expoTokens.length > 0) {
+    try {
+      expoResult = await sendExpoPush(expoTokens, { title, body, data });
+    } catch (error) {
+      console.error('[Push] Expo send error:', error.message);
+    }
+  }
+  if (tokens.length === 0) {
+    return { success: true, successCount: expoResult.sent, invalidTokens: expoResult.invalidTokens };
   }
 
-  const tokens = deviceTokens.map((dt) => dt.token).filter(Boolean);
-  if (tokens.length === 0) return;
+  const firebaseAdmin = getFirebaseAdmin();
+  if (!firebaseAdmin) {
+    return { success: true, successCount: expoResult.sent, invalidTokens: expoResult.invalidTokens };
+  }
 
   const message = {
     notification: { title, body },
@@ -72,17 +121,23 @@ const sendPush = async (deviceTokens, { title, body, data = {} }) => {
       });
 
       if (invalidTokens.length > 0) {
-        console.log(`[Push] Removing ${invalidTokens.length} invalid token(s)`);
-        // Caller should handle removing invalid tokens from User.deviceTokens
-        return { success: true, invalidTokens };
+        return {
+          success: true,
+          successCount: expoResult.sent + response.successCount,
+          invalidTokens: [...expoResult.invalidTokens, ...invalidTokens],
+        };
       }
     }
 
-    return { success: true, successCount: response.successCount };
+    return {
+      success: true,
+      successCount: expoResult.sent + response.successCount,
+      invalidTokens: expoResult.invalidTokens,
+    };
   } catch (error) {
     console.error('[Push] Send error:', error.message);
     return { success: false, error: error.message };
   }
 };
 
-module.exports = { sendPush };
+module.exports = { sendPush, isExpoToken };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import { Colors, Spacing, Typography, DirectionalIcon } from '../../constants/theme';
 
 interface SectionHeaderProps {
   title: string;
@@ -11,22 +11,20 @@ interface SectionHeaderProps {
 export default function SectionHeader({ title, onViewAll }: SectionHeaderProps) {
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>{title}</Text>
       {onViewAll ? (
         <TouchableOpacity onPress={onViewAll} style={styles.viewAll} activeOpacity={0.7}>
-          <Ionicons name="chevron-back" size={16} color={Colors.primary} />
           <Text style={styles.viewAllText}>عرض الكل</Text>
+          <Ionicons name={DirectionalIcon.forward} size={16} color={Colors.primary} />
         </TouchableOpacity>
-      ) : (
-        <View />
-      )}
-      <Text style={styles.title}>{title}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: Spacing.lg,

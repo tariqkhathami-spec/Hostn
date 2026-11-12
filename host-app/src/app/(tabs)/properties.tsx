@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { hostService } from '../../services/host.service';
 import { apiErrorMessage } from '../../utils/apiError';
@@ -227,12 +227,15 @@ export default function PropertiesScreen() {
             activeOpacity={0.7}
             onPress={() => router.push(`/property/unit/${item.id}` as any)}
           >
-            {/* Left arrow for navigation */}
-            <View style={styles.unitArrow}>
-              <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
+            {/* Thumbnail first, then the unit info, then the arrow */}
+            <View style={styles.unitThumbnail}>
+              {item.image ? (
+                <Image source={{ uri: item.image }} style={styles.unitThumbnailImage} resizeMode="cover" />
+              ) : (
+                <Ionicons name="image-outline" size={28} color={Colors.textTertiary} />
+              )}
             </View>
 
-            {/* Unit info - center */}
             <View style={styles.unitInfo}>
               <Text style={[styles.unitName, !item.name && styles.unitNameMissing]} numberOfLines={2}>
                 {item.name || 'وحدة بدون اسم'}
@@ -249,13 +252,8 @@ export default function PropertiesScreen() {
               )}
             </View>
 
-            {/* Right: thumbnail */}
-            <View style={styles.unitThumbnail}>
-              {item.image ? (
-                <Image source={{ uri: item.image }} style={styles.unitThumbnailImage} resizeMode="cover" />
-              ) : (
-                <Ionicons name="image-outline" size={28} color={Colors.textTertiary} />
-              )}
+            <View style={styles.unitArrow}>
+              <Ionicons name={DirectionalIcon.forward} size={20} color={Colors.textTertiary} />
             </View>
           </TouchableOpacity>
 
@@ -361,25 +359,25 @@ export default function PropertiesScreen() {
           {/* Location row */}
           {!!property.location && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoText}>{property.location}</Text>
               <Ionicons
                 name="location-outline"
                 size={16}
                 color={Colors.textSecondary}
                 style={styles.infoIcon}
               />
+              <Text style={styles.infoText}>{property.location}</Text>
             </View>
           )}
 
           {/* Unit count row */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{unitsCountLabel(property.units.length)}</Text>
             <Ionicons
               name="bed-outline"
               size={16}
               color={Colors.textSecondary}
               style={styles.infoIcon}
             />
+            <Text style={styles.infoText}>{unitsCountLabel(property.units.length)}</Text>
           </View>
 
           {hasUnits ? (
@@ -423,7 +421,7 @@ export default function PropertiesScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBackBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/dashboard' as any)}>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.back} size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('properties.title')}</Text>
         <View style={styles.headerSpacer} />
@@ -562,16 +560,15 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
     marginBottom: Spacing.xs,
   },
   infoText: {
     ...Typography.small,
     color: Colors.textSecondary,
-    marginRight: Spacing.xs,
+    marginStart: Spacing.xs,
   },
   infoIcon: {
-    // icon sits to the right of text in RTL layout
+    // the icon leads the text
   },
 
   // Unit list
@@ -668,7 +665,7 @@ const styles = StyleSheet.create({
   unitInfo: {
     flex: 1,
     marginHorizontal: Spacing.md,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   unitName: {
     ...Typography.smallBold,
@@ -724,7 +721,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     bottom: 110,
-    right: Spacing.xl,
+    end: Spacing.xl,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,

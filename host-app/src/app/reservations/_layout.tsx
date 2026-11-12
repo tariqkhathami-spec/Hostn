@@ -5,7 +5,7 @@ export default function ReservationsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerBackVisible: true,
         headerTitle: '',
         headerTransparent: true,

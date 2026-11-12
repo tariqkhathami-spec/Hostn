@@ -129,18 +129,18 @@ export default function PaymentMethodScreen() {
           ) : (
             <>
               <View style={styles.detailRow}>
-                <Text style={styles.detailValue}>{paymentMethod?.iban || '---'}</Text>
                 <Text style={styles.detailLabel}>الآيبان</Text>
+                <Text style={styles.detailValue}>{paymentMethod?.iban || '---'}</Text>
               </View>
               <View style={styles.separator} />
               <View style={styles.detailRow}>
-                <Text style={styles.detailValue}>{paymentMethod?.bankName || '---'}</Text>
                 <Text style={styles.detailLabel}>اسم البنك</Text>
+                <Text style={styles.detailValue}>{paymentMethod?.bankName || '---'}</Text>
               </View>
               <View style={styles.separator} />
               <View style={styles.detailRow}>
-                <Text style={styles.detailValue}>{paymentMethod?.accountHolder || '---'}</Text>
                 <Text style={styles.detailLabel}>صاحب الحساب</Text>
+                <Text style={styles.detailValue}>{paymentMethod?.accountHolder || '---'}</Text>
               </View>
               <Button
                 title="تعديل"
@@ -183,7 +183,6 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
     marginBottom: Spacing.base,
   },
   cardHeaderRight: {

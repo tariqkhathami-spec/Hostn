@@ -20,7 +20,7 @@ import { UNIT_AMENITIES, UNIT_FEATURES } from '../../../constants/listings';
 import { apiErrorMessage } from '../../../utils/apiError';
 import { cleanNumericInput, parseWhole } from '../../../utils/format';
 import { pickAndUploadImages, uploadFailureText } from '../../../utils/uploadImages';
-import { Colors, Spacing, Typography, Radius } from '../../../constants/theme';
+import { Colors, Spacing, Typography, Radius, DirectionalIcon } from '../../../constants/theme';
 import type { Unit } from '../../../types';
 
 // ---------------------------------------------------------------------------
@@ -333,7 +333,7 @@ export default function EditUnitScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.arrowBack} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {l({ en: 'Edit Unit', ar: 'تعديل الوحدة' })}
@@ -527,7 +527,7 @@ export default function EditUnitScreen() {
             </Text>
           </View>
           <Ionicons
-            name={isAr ? 'chevron-back' : 'chevron-forward'}
+            name={DirectionalIcon.forward}
             size={20}
             color={Colors.textTertiary}
           />
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
   photoRemove: {
     position: 'absolute',
     top: 4,
-    right: 4,
+    end: 4,
     width: 24,
     height: 24,
     borderRadius: 12,

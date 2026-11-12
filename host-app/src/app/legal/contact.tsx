@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, DirectionalIcon } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { SupportInfo } from '../../types';
 
@@ -89,7 +89,7 @@ export default function ContactScreen() {
             <Text style={styles.cardDescription}>{'تحدث معنا مباشرة'}</Text>
             <View style={[styles.cardButton, { backgroundColor: Colors.primary }]}>
               <Text style={styles.cardButtonText}>{'ابدأ محادثة'}</Text>
-              <Ionicons name="arrow-back" size={16} color={Colors.textWhite} />
+              <Ionicons name={DirectionalIcon.arrowForward} size={16} color={Colors.textWhite} />
             </View>
           </TouchableOpacity>
 
@@ -176,12 +176,12 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   chatCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    borderStartWidth: 4,
+    borderStartColor: Colors.primary,
   },
   callCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.success,
+    borderStartWidth: 4,
+    borderStartColor: Colors.success,
   },
   cardIconCircle: {
     width: 72,

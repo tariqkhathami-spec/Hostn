@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { useAuthStore } from '../../store/authStore';
 
@@ -134,7 +134,7 @@ export default function SettingsScreen() {
                 </View>
                 <Text style={styles.cardLabel}>{item.label}</Text>
               </View>
-              <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
+              <Ionicons name={DirectionalIcon.forward} size={20} color={Colors.textTertiary} />
             </TouchableOpacity>
           ))}
         </View>

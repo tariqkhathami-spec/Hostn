@@ -44,8 +44,8 @@ export default function EarningsScreen() {
     return (
       <View style={styles.monthCard}>
         <View style={styles.monthHeader}>
-          <Text style={styles.monthEarnings}>{formatCurrency(item.earnings)}</Text>
           <Text style={styles.monthName}>{monthName} {item.year}</Text>
+          <Text style={styles.monthEarnings}>{formatCurrency(item.earnings)}</Text>
         </View>
         <View style={styles.monthDetails}>
           <View style={styles.monthStat}>

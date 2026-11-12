@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { formatRelativeDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
@@ -134,7 +134,7 @@ export default function MessagesScreen() {
             <Text style={styles.supportTitle}>هوستن</Text>
             <Text style={styles.supportSubtitle}>مدير الحساب</Text>
           </View>
-          <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
+          <Ionicons name={DirectionalIcon.forward} size={20} color={Colors.textTertiary} />
         </TouchableOpacity>
       </>
     ),
@@ -267,12 +267,12 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: Colors.warning,
     borderRadius: Radius.xs,
-    marginLeft: Spacing.md,
+    marginEnd: Spacing.md,
   },
   supportContent: {
     flex: 1,
-    alignItems: 'flex-end',
-    marginRight: Spacing.sm,
+    alignItems: 'flex-start',
+    marginEnd: Spacing.sm,
   },
   supportTitle: {
     ...Typography.bodyBold,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: TEXT_START,
     flex: 1,
-    marginLeft: Spacing.sm,
+    marginEnd: Spacing.sm,
   },
   dateText: {
     ...Typography.caption,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: Colors.primary,
-    marginLeft: Spacing.sm,
+    marginStart: Spacing.sm,
   },
   loadingContainer: {
     flex: 1,

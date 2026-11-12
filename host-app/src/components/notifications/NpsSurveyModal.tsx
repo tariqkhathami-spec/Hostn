@@ -119,13 +119,13 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
                   })}
                 </View>
 
-                {/* Rating Labels */}
+                {/* Rating Labels: the scale starts at 1 ("never"), ends at 10 ("definitely") */}
                 <View style={styles.ratingLabels}>
                   <Text style={styles.ratingLabel}>
-                    {'طبعاً أوصي'}
+                    {'مستحيل أوصي'}
                   </Text>
                   <Text style={styles.ratingLabel}>
-                    {'مستحيل أوصي'}
+                    {'طبعاً أوصي'}
                   </Text>
                 </View>
 
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     top: Spacing.base,
-    left: Spacing.base,
+    end: Spacing.base,
     zIndex: 1,
   },
   title: {

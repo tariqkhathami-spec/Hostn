@@ -438,7 +438,9 @@ export const walletApi = {
 // COUPONS
 // ═══════════════════════════════════════════════════════════════════════════════
 export const couponsApi = {
-  validate: (code: string) => api.post('/coupons/validate', { code }),
+  // The server needs the amount to check the coupon's minimum and work out the discount.
+  validate: (code: string, bookingAmount: number, propertyId?: string) =>
+    api.post('/coupons/validate', { code, bookingAmount, ...(propertyId ? { propertyId } : {}) }),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

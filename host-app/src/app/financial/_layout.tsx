@@ -5,7 +5,7 @@ export default function FinancialLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerBackVisible: true,
         headerTitle: '',
         headerTransparent: true,

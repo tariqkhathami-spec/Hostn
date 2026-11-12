@@ -147,7 +147,7 @@ export default function DashboardScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.primary}>
-      {/* Purple Header - centered title, bell left, headphones right */}
+      {/* Header: notifications bell first, centered title, support last */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.push('/notifications')}
@@ -241,7 +241,18 @@ export default function DashboardScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.weeklyBannerContent}>
-            {/* Info icon on far left */}
+            {/* Reading order: chart icon, text, then the info icon at the end */}
+            <View style={styles.weeklyBannerIcon}>
+              <Ionicons name="bar-chart-outline" size={28} color={Colors.primary} />
+            </View>
+
+            <View style={styles.weeklyBannerTextContainer}>
+              <Text style={styles.weeklyBannerTitle}>{t('dashboard.reports')}</Text>
+              <Text style={styles.weeklyBannerSubtitle}>
+                {l({ en: 'Weekly performance report', ar: 'تقرير أداء أسبوع' })} {dateStr}
+              </Text>
+            </View>
+
             <TouchableOpacity
               onPress={() => router.push('/program' as any)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -252,28 +263,15 @@ export default function DashboardScreen() {
                 color={Colors.textTertiary}
               />
             </TouchableOpacity>
-
-            {/* Text in the middle-right */}
-            <View style={styles.weeklyBannerTextContainer}>
-              <Text style={styles.weeklyBannerTitle}>{t('dashboard.reports')}</Text>
-              <Text style={styles.weeklyBannerSubtitle}>
-                {l({ en: 'Weekly performance report', ar: 'تقرير أداء أسبوع' })} {dateStr}
-              </Text>
-            </View>
-
-            {/* Chart icon on far right */}
-            <View style={styles.weeklyBannerIcon}>
-              <Ionicons name="bar-chart-outline" size={28} color={Colors.primary} />
-            </View>
           </View>
         </TouchableOpacity>
 
         {/* Ambassador Section */}
         <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>{l({ en: 'Hostn Ambassador', ar: 'سفير هوستن' })}</Text>
           <TouchableOpacity onPress={() => router.push('/program' as any)}>
             <Text style={styles.sectionLink}>{l({ en: 'View All', ar: 'الكل' })}</Text>
           </TouchableOpacity>
-          <Text style={styles.sectionTitle}>{l({ en: 'Hostn Ambassador', ar: 'سفير هوستن' })}</Text>
         </View>
 
         <TouchableOpacity
@@ -304,19 +302,18 @@ export default function DashboardScreen() {
 
         {/* Points Section */}
         <View style={styles.sectionRow}>
-          <View />
           <Text style={styles.sectionTitle}>{l({ en: 'Your Unit Points', ar: 'نقاط وحدتك' })}</Text>
         </View>
         <Card style={styles.pointsCard}>
           <View style={styles.pointsContent}>
+            <View style={styles.pointsIconCircle}>
+              <Ionicons name="trending-up-outline" size={22} color={Colors.primary} />
+            </View>
             <View style={styles.pointsTextContainer}>
               <Text style={styles.pointsMainText}>{l({ en: 'Updated daily', ar: 'تتحدث يومياً' })}</Text>
               <Text style={styles.pointsNote}>
                 {l({ en: 'Points are added within 24 hours of listing the property', ar: 'تضاف النقاط خلال 24 ساعة من تاريخ عرض العقار' })}
               </Text>
-            </View>
-            <View style={styles.pointsIconCircle}>
-              <Ionicons name="trending-up-outline" size={22} color={Colors.primary} />
             </View>
           </View>
         </Card>
@@ -436,7 +433,7 @@ const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: 0,
-    right: -2,
+    end: -2,
     backgroundColor: Colors.error,
     borderRadius: Radius.full,
     minWidth: 18,
@@ -524,7 +521,7 @@ const styles = StyleSheet.create({
   },
   weeklyBannerTextContainer: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     marginHorizontal: Spacing.sm,
   },
   weeklyBannerTitle: {
@@ -583,12 +580,11 @@ const styles = StyleSheet.create({
   },
   ambassadorInner: {
     padding: Spacing.lg,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   ambassadorHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
     marginBottom: Spacing.sm,
     width: '100%',
   },
@@ -616,7 +612,7 @@ const styles = StyleSheet.create({
   },
   pointsTextContainer: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   pointsIconCircle: {
     width: 40,
@@ -625,7 +621,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary100,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: Spacing.sm,
+    marginEnd: Spacing.sm,
   },
   pointsMainText: {
     ...Typography.bodyBold,

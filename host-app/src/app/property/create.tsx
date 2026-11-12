@@ -26,7 +26,7 @@ import {
   districtLabel,
 } from '../../constants/listings';
 import { apiErrorMessage } from '../../utils/apiError';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, DirectionalIcon } from '../../constants/theme';
 
 // ---------------------------------------------------------------------------
 // Simple property creation form — property is now a container (name, type,
@@ -198,7 +198,7 @@ export default function CreatePropertyScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.arrowBack} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {l({ en: 'New Property', ar: 'عقار جديد' })}

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { useAuthStore } from '../../store/authStore';
 import { hostService } from '../../services/host.service';
@@ -77,12 +77,12 @@ export default function MoreScreen() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.profileRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>n</Text>
+            </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{host?.name || ''}</Text>
               <Text style={styles.profileId}>{formatPhoneDisplay(host?.phone || '')}</Text>
-            </View>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>n</Text>
             </View>
           </View>
         </View>
@@ -131,20 +131,20 @@ export default function MoreScreen() {
               onPress={() => router.push(item.route as any)}
               activeOpacity={0.6}
             >
-              <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
+              <Ionicons name={item.icon as any} size={22} color={Colors.textSecondary} />
+              <Text style={styles.menuLabel}>{t(item.label as any)}</Text>
               {item.route === '/legal/terms' && termsSigned ? (
                 <Text style={styles.badgeText}>تم التوقيع</Text>
               ) : null}
-              <Text style={styles.menuLabel}>{t(item.label as any)}</Text>
-              <Ionicons name={item.icon as any} size={22} color={Colors.textSecondary} />
+              <Ionicons name={DirectionalIcon.forward} size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
           ))}
 
           {/* Logout */}
           <TouchableOpacity style={styles.menuItem} onPress={() => setLogoutModalVisible(true)} activeOpacity={0.6}>
-            <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
-            <Text style={[styles.menuLabel, { color: Colors.error }]}>{t('more.logout')}</Text>
             <Ionicons name="log-out-outline" size={22} color={Colors.error} />
+            <Text style={[styles.menuLabel, { color: Colors.error }]}>{t('more.logout')}</Text>
+            <Ionicons name={DirectionalIcon.forward} size={18} color={Colors.textTertiary} />
           </TouchableOpacity>
         </View>
 
@@ -203,11 +203,10 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
     gap: Spacing.md,
   },
   profileInfo: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   avatar: {
     width: 48,
@@ -282,7 +281,7 @@ const styles = StyleSheet.create({
   badgeText: {
     ...Typography.caption,
     color: Colors.success,
-    marginLeft: Spacing.sm,
+    marginEnd: Spacing.sm,
   },
   footer: {
     alignItems: 'center',

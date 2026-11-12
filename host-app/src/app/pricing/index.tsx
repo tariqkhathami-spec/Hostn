@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { Property, Unit } from '../../types';
 
@@ -64,7 +64,7 @@ export default function PricingIndexScreen() {
             <Text style={styles.unitProperty}>{selectedProperty.nameAr || selectedProperty.name}</Text>
           )}
         </View>
-        <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
+        <Ionicons name={DirectionalIcon.forward} size={20} color={Colors.textTertiary} />
       </TouchableOpacity>
     ),
     [handleUnitPress, selectedProperty],
@@ -109,16 +109,16 @@ export default function PricingIndexScreen() {
             onPress={() => setDropdownOpen(!dropdownOpen)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={Colors.textSecondary}
-            />
             <Text style={styles.dropdownButtonText}>
               {selectedProperty
                 ? selectedProperty.nameAr || selectedProperty.name
                 : 'اختر عقاراً'}
             </Text>
+            <Ionicons
+              name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={Colors.textSecondary}
+            />
           </TouchableOpacity>
 
           {dropdownOpen && (
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   },
   unitInfo: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   unitName: {
     ...Typography.bodyBold,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography } from '../../constants/theme';
+import { Colors, Spacing, Typography, DirectionalIcon } from '../../constants/theme';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useWrapperTopInset } from './ScreenWrapper';
@@ -38,15 +38,15 @@ export default function HeaderBar({
   return (
     <View style={[styles.container, { backgroundColor, marginTop: -topInset, paddingTop: topInset + Spacing.md }]}>
       <StatusBar style={textColor === Colors.textWhite ? 'light' : 'dark'} />
-      <View style={styles.left}>
+      <View style={styles.start}>
         {showBack && (
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-forward" size={24} color={textColor} />
+            <Ionicons name={DirectionalIcon.back} size={24} color={textColor} />
           </TouchableOpacity>
         )}
       </View>
       <Text style={[styles.title, { color: textColor }]}>{title}</Text>
-      <View style={styles.right}>{rightActions}</View>
+      <View style={styles.end}>{rightActions}</View>
     </View>
   );
 }
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     minHeight: 56,
   },
-  left: {
+  start: {
     width: 40,
     alignItems: 'flex-start',
   },
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  right: {
+  end: {
     width: 40,
     alignItems: 'flex-end',
     flexDirection: 'row',

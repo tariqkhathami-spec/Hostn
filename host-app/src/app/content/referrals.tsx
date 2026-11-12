@@ -180,7 +180,8 @@ const styles = StyleSheet.create({
   stepConnector: {
     position: 'absolute',
     top: 14,
-    left: -20,
+    // Reaches from this step towards the next one.
+    end: -20,
     width: 40,
     height: 1,
     backgroundColor: Colors.border,

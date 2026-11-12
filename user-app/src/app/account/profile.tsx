@@ -39,34 +39,59 @@ export default function ProfileScreen() {
     setEmail((prev) => prev || user.email || '');
   }, [user]);
 
+  // Show the new address once it has been confirmed on the verification screen.
+  useEffect(() => {
+    if (user?.email) setEmail(user.email);
+  }, [user?.email]);
+
   const updateProfile = useMutation({
     // The API stores one `name`. The name is saved first, on its own: a
     // request that carries `email` only starts the email-change flow (a code
-    // is emailed) and saves nothing else.
+    // is emailed) and saves nothing else. The code is then entered on
+    // /account/verify-email, which applies the change.
     mutationFn: async () => {
       const name = `${firstName.trim()} ${lastName.trim()}`.trim();
       const newEmail = email.trim().toLowerCase();
       const emailChanged = !!newEmail && newEmail !== (user?.email ?? '').trim().toLowerCase();
 
-      const saved = await authService.updateProfile({ name });
-      // Never replace the stored user with anything but a real user object.
-      if (saved.user) setUser(saved.user);
+      if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        throw new Error('EMAIL_INVALID');
+      }
 
-      if (!emailChanged) return { emailPending: false };
-      const emailResult = await authService.updateProfile({ email: newEmail });
-      if (emailResult.user) setUser(emailResult.user);
-      return { emailPending: emailResult.verificationRequired };
+      // The API requires a non-empty name; an account without one yet can
+      // still change its email.
+      if (name) {
+        const saved = await authService.updateProfile({ name });
+        // The answer is the bare account document (no `role`), so it is merged
+        // into the stored user rather than replacing it.
+        const current = useAuthStore.getState().user;
+        if (saved.user) setUser(current ? { ...current, ...saved.user } : saved.user);
+      }
+
+      if (!emailChanged) return { pendingEmail: null };
+      await authService.requestEmailChange(newEmail);
+      return { pendingEmail: newEmail };
     },
-    onSuccess: ({ emailPending }) => {
-      if (emailPending) {
-        // The email is not changed until the code sent to it is confirmed.
+    onSuccess: ({ pendingEmail }) => {
+      if (pendingEmail) {
+        // The email is not changed until the code sent to it is confirmed:
+        // show the current one again and go and ask for the code.
         setEmail(user?.email ?? '');
-        Alert.alert(t('profile.emailPendingTitle'), t('profile.emailPendingBody'));
+        router.push({ pathname: '/account/verify-email', params: { email: pendingEmail } });
         return;
       }
       Alert.alert(t('common.success'), t('profile.saved'));
     },
     onError: (error: any) => {
+      if (error?.message === 'EMAIL_INVALID') {
+        Alert.alert(t('common.error'), t('profile.emailInvalid'));
+        return;
+      }
+      // The server's text for this case is English only.
+      if (/already registered/i.test(String(error?.response?.data?.message ?? ''))) {
+        Alert.alert(t('common.error'), t('profile.emailTaken'));
+        return;
+      }
       Alert.alert(t('common.error'), apiErrorMessage(error, t('common.somethingWrong')));
     },
   });

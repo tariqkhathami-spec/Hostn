@@ -32,7 +32,7 @@ import {
 } from '../../../constants/listings';
 import { apiErrorMessage } from '../../../utils/apiError';
 import { cleanNumericInput, parseWhole } from '../../../utils/format';
-import { Colors, Spacing, Typography, Radius } from '../../../constants/theme';
+import { Colors, Spacing, Typography, Radius, DirectionalIcon } from '../../../constants/theme';
 import type { Property, PropertyRules, Unit } from '../../../types';
 
 // ---------------------------------------------------------------------------
@@ -321,7 +321,7 @@ export default function EditPropertyScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.arrowBack} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {l({ en: 'Edit Property', ar: 'تعديل العقار' })}

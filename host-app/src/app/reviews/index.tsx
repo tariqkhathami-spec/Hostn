@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, TEXT_END } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { formatDate } from '../../utils/format';
 import type { Review } from '../../types';
@@ -295,6 +295,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   overallLeft: {
+    // A score reads left to right (8.5 / 10) in Arabic too.
+    direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'baseline',
   },
@@ -307,6 +309,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textSecondary,
     marginStart: Spacing.xs,
+    writingDirection: 'ltr',
   },
   totalCount: {
     ...Typography.small,
@@ -344,7 +347,7 @@ const styles = StyleSheet.create({
     ...Typography.smallBold,
     color: Colors.textPrimary,
     width: 30,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
 
   // Review card

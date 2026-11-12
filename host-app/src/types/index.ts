@@ -133,7 +133,8 @@ export interface UnitPricing {
   thursday?: number;
   friday?: number;
   saturday?: number;
-  midWeek?: number;             // legacy alias, not on backend
+  midWeek?: number;             // GET /host/units/:id/pricing: Sunday's rate, shown as Sun–Wed
+  midWeekUniform?: boolean;     // false when Sunday–Wednesday differ
   cleaningFee?: number;
   discountPercent?: number;
   weeklyDiscount?: number;

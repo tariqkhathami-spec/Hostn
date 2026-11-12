@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
@@ -60,13 +60,13 @@ export default function FinancialMenuScreen() {
             onPress={() => router.push(item.route as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
             <View style={styles.menuContent}>
-              <Text style={styles.menuLabel}>{item.label}</Text>
               <View style={styles.iconContainer}>
                 <Ionicons name={item.icon} size={24} color={Colors.primary} />
               </View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
             </View>
+            <Ionicons name={DirectionalIcon.forward} size={20} color={Colors.textTertiary} />
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -124,7 +124,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
     gap: Spacing.md,
   },
   menuLabel: {

@@ -16,7 +16,7 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, MIRROR_IN_RTL } from '../../constants/theme';
 import { formatRelativeDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Message } from '../../types';
@@ -300,6 +300,16 @@ export default function ChatScreen() {
 
         {/* Input bar */}
         <View style={styles.inputBar}>
+          <TextInput
+            style={styles.textInput}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder={isAr ? 'اكتب رسالتك...' : 'Type a message...'}
+            placeholderTextColor={Colors.textTertiary}
+            multiline
+            maxLength={2000}
+            textAlign="right"
+          />
           {inputText.length > 1800 && (
             <Text style={[styles.charCounter, inputText.length > 1950 && { color: Colors.error }]}>
               {inputText.length}/2000
@@ -311,18 +321,8 @@ export default function ChatScreen() {
             disabled={!inputText.trim() || sendMutation.isPending}
             activeOpacity={0.7}
           >
-            <Ionicons name="send" size={20} color={Colors.textWhite} />
+            <Ionicons name="send" size={20} color={Colors.textWhite} style={MIRROR_IN_RTL} />
           </TouchableOpacity>
-          <TextInput
-            style={styles.textInput}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder={isAr ? 'اكتب رسالتك...' : 'Type a message...'}
-            placeholderTextColor={Colors.textTertiary}
-            multiline
-            maxLength={2000}
-            textAlign="right"
-          />
         </View>
       </KeyboardAvoidingView>
 
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
   },
   statusIcon: {
-    marginLeft: 2,
+    marginStart: 2,
   },
   // System messages
   systemMessage: {
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
     paddingTop: 100,
-    paddingRight: Spacing.xl,
+    paddingEnd: Spacing.xl,
   },
   menuContainer: {
     backgroundColor: Colors.white,

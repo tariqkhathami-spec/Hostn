@@ -16,6 +16,6 @@ export interface HostProfile {
 
 export const hostsService = {
   getProfile(id: string) {
-    return api.get<HostProfile>(`/hosts/${id}`).then((r) => r.data);
+    return api.get<HostProfile>(`/hosts/${id}`, { params: { propertyLimit: 50, reviewLimit: 50 } }).then((r) => r.data);
   },
 };

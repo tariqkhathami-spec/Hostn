@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon, TEXT_END } from '../../constants/theme';
 import { getLocale } from '../../utils/i18n';
 import {
   CITIES,
@@ -704,31 +704,31 @@ export default function PropertyWizard({
 
       {/* Switches */}
       <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>{l({ en: 'Smoking Allowed', ar: 'التدخين مسموح' })}</Text>
         <Switch
           value={form.smokingAllowed}
           onValueChange={(v) => updateForm('smokingAllowed', v)}
           trackColor={{ false: Colors.border, true: Colors.primary300 }}
           thumbColor={form.smokingAllowed ? Colors.primary : Colors.textTertiary}
         />
-        <Text style={styles.switchLabel}>{l({ en: 'Smoking Allowed', ar: 'التدخين مسموح' })}</Text>
       </View>
       <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>{l({ en: 'Pets Allowed', ar: 'الحيوانات مسموحة' })}</Text>
         <Switch
           value={form.petsAllowed}
           onValueChange={(v) => updateForm('petsAllowed', v)}
           trackColor={{ false: Colors.border, true: Colors.primary300 }}
           thumbColor={form.petsAllowed ? Colors.primary : Colors.textTertiary}
         />
-        <Text style={styles.switchLabel}>{l({ en: 'Pets Allowed', ar: 'الحيوانات مسموحة' })}</Text>
       </View>
       <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>{l({ en: 'Parties Allowed', ar: 'الحفلات مسموحة' })}</Text>
         <Switch
           value={form.partiesAllowed}
           onValueChange={(v) => updateForm('partiesAllowed', v)}
           trackColor={{ false: Colors.border, true: Colors.primary300 }}
           thumbColor={form.partiesAllowed ? Colors.primary : Colors.textTertiary}
         />
-        <Text style={styles.switchLabel}>{l({ en: 'Parties Allowed', ar: 'الحفلات مسموحة' })}</Text>
       </View>
     </View>
   );
@@ -919,7 +919,7 @@ export default function PropertyWizard({
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.headerBackBtn}>
-          <Ionicons name="chevron-forward" size={24} color={Colors.white} />
+          <Ionicons name={DirectionalIcon.back} size={24} color={Colors.white} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {isUnit && step === 7
@@ -1025,8 +1025,8 @@ export default function PropertyWizard({
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.reviewRow}>
-      <Text style={styles.reviewValue}>{value}</Text>
       <Text style={styles.reviewLabel}>{label}</Text>
+      <Text style={styles.reviewValue}>{value}</Text>
     </View>
   );
 }
@@ -1269,7 +1269,7 @@ const styles = StyleSheet.create({
   primaryBadge: {
     position: 'absolute',
     top: 6,
-    left: 6,
+    start: 6,
     backgroundColor: Colors.gold,
     borderRadius: Radius.xs,
     paddingHorizontal: Spacing.sm,
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
   removeImageBtn: {
     position: 'absolute',
     top: 4,
-    right: 4,
+    end: 4,
   },
   setPrimaryBtn: {
     position: 'absolute',
@@ -1345,7 +1345,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
 
   // Bottom bar

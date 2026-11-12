@@ -13,7 +13,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
@@ -73,7 +73,7 @@ export default function ArticlesScreen() {
             style={styles.readMoreButton}
           >
             <Text style={styles.readMoreText}>اقرأ المزيد</Text>
-            <Ionicons name="chevron-back" size={14} color={Colors.primary} />
+            <Ionicons name={DirectionalIcon.forward} size={14} color={Colors.primary} />
           </TouchableOpacity>
         </View>
       </Card>

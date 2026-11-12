@@ -19,17 +19,17 @@ export default function BookingCard({ booking, onPress }: BookingCardProps) {
       disabled={!onPress}
     >
       <View style={styles.topRow}>
-        <StatusBadge status={booking.status} />
         <Text style={styles.bookingNumber}>#{booking.bookingNumber}</Text>
+        <StatusBadge status={booking.status} />
       </View>
 
       <Text style={styles.guestName}>{booking.guestName}</Text>
 
       <View style={styles.datesRow}>
-        <Text style={styles.amount}>{formatCurrency(booking.totalAmount)}</Text>
         <Text style={styles.dates}>
           {formatDate(booking.checkIn, 'dd/MM')} - {formatDate(booking.checkOut, 'dd/MM')}
         </Text>
+        <Text style={styles.amount}>{formatCurrency(booking.totalAmount)}</Text>
       </View>
 
       <Text style={styles.unitName}>{booking.unitName}</Text>
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   topRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   datesRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.xs,

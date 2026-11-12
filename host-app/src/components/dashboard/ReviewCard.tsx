@@ -14,12 +14,12 @@ export default function ReviewCard({ review, onPress }: ReviewCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
+        <Text style={styles.guestName}>{review.guestName}</Text>
         <View style={styles.ratingContainer}>
           <Text style={styles.ratingText}>{review.overallRating}</Text>
           <Text style={styles.ratingMax}>/10</Text>
           <Ionicons name="star" size={14} color={Colors.gold500} />
         </View>
-        <Text style={styles.guestName}>{review.guestName}</Text>
       </View>
 
       {review.comment ? (
@@ -29,8 +29,8 @@ export default function ReviewCard({ review, onPress }: ReviewCardProps) {
       ) : null}
 
       <View style={styles.bottomRow}>
-        <Text style={styles.date}>{formatDate(review.createdAt)}</Text>
         <Text style={styles.unitName}>{review.unitName}</Text>
+        <Text style={styles.date}>{formatDate(review.createdAt)}</Text>
       </View>
     </View>
   );
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   topRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
@@ -55,6 +55,8 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   ratingContainer: {
+    // A score reads left to right (8 /10) in Arabic too.
+    direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
   ratingMax: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    marginRight: 2,
+    marginEnd: 2,
   },
   comment: {
     ...Typography.small,
@@ -76,7 +78,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   bottomRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },

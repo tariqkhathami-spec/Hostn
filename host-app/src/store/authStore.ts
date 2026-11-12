@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
 import { connectSocket, disconnectSocket } from '../services/socket';
+import { unregisterPushToken } from '../services/push';
+import api from '../services/api';
 
 // The API returns the account with `_id`; the app compares `host.id`
 // (e.g. the ownership check on the edit-property screen).
@@ -49,6 +51,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     disconnectSocket();
+    // Needs the auth token, so it runs before the stored session is cleared.
+    await unregisterPushToken();
+    // End the session on the server too, so the refresh token kept on this
+    // phone stops working the moment the host signs out.
+    try {
+      const refreshToken = await secureStorage.getRefreshToken();
+      if (refreshToken) await api.post('/auth/logout', { refreshToken }, { timeout: 5000 });
+    } catch {
+      // Offline or already expired: signing out locally must still work.
+    }
     await secureStorage.clearAll();
     set({ host: null, token: null, isAuthenticated: false });
   },

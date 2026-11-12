@@ -85,6 +85,10 @@ export const Radius = {
 export const TEXT_START: 'left' | 'right' =
   Platform.OS === 'android' && I18nManager.isRTL ? 'right' : 'left';
 
+// The opposite side: where a trailing value ends (the left in Arabic).
+export const TEXT_END: 'left' | 'right' =
+  Platform.OS === 'android' && I18nManager.isRTL ? 'left' : 'right';
+
 export const Typography = {
   h1: { fontSize: 28, fontWeight: '700' as const, textAlign: TEXT_START },
   h2: { fontSize: 24, fontWeight: '700' as const, textAlign: TEXT_START },
@@ -130,4 +134,30 @@ export const Shadows = {
 } as const;
 
 export const isRTL = I18nManager.isRTL;
+
+// Layout rules for a right-to-left app
+// ------------------------------------
+// With isRTL on, React Native mirrors the layout itself: a 'row' starts at the
+// right, 'flex-start' is the right edge, and start/end (marginStart,
+// paddingEnd, start, end …) follow the reading direction. So screens are
+// written in READING order — the first child of a row is the one the eye
+// meets first (the icon or label), the last is the trailing value / chevron —
+// with plain 'row' and 'flex-start'. Do not use 'row-reverse', 'flex-end',
+// left/right or textAlign 'right' to mean "the Arabic side": they are
+// mirrored a second time and end up on the wrong side.
+//
+// Icons that point somewhere are not mirrored by the layout, so pick them
+// here instead of hard-coding a glyph:
+//   back    — the header "go back" control (points to where the screen came from)
+//   forward — a row that opens another screen, "next", "see all"
+// For a glyph that has no mirrored twin (e.g. the "send" paper plane): add this
+// to the icon's style so it points along the reading direction.
+export const MIRROR_IN_RTL = isRTL ? ({ transform: [{ scaleX: -1 }] } as const) : undefined;
+
+export const DirectionalIcon = {
+  back: isRTL ? 'chevron-forward' : 'chevron-back',
+  forward: isRTL ? 'chevron-back' : 'chevron-forward',
+  arrowBack: isRTL ? 'arrow-forward' : 'arrow-back',
+  arrowForward: isRTL ? 'arrow-back' : 'arrow-forward',
+} as const;
 

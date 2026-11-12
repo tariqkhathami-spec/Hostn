@@ -657,45 +657,10 @@ exports.getPayments = async (req, res, next) => {
 // @desc    Refund a payment (admin)
 // @route   POST /api/admin/payments/:id/refund
 // @access  Private (Admin)
-exports.refundPayment = async (req, res, next) => {
-  try {
-    const { reason } = req.body;
-    const payment = await Payment.findById(req.params.id);
-
-    if (!payment) {
-      return res.status(404).json({ success: false, message: 'Payment not found' });
-    }
-
-    if (payment.status === 'refunded') {
-      return res.status(400).json({ success: false, message: 'Payment already refunded' });
-    }
-
-    if (payment.status !== 'paid' && payment.status !== 'completed') {
-      return res.status(400).json({ success: false, message: 'Only paid payments can be refunded' });
-    }
-
-    payment.status = 'refunded';
-    payment.refundedAmount = payment.amount;
-    payment.refundReason = reason || 'Admin refund';
-    payment.refundedAt = new Date();
-    await payment.save();
-
-    await ActivityLog.create({
-      actor: req.user._id,
-      actorType: TYPE_CAPITALIZED[req.user.userType || 'admin'],
-      actorRole: req.user.userType || req.user.role,
-      actorAdminRole: req.user.adminRole || null,
-      action: 'payment_refunded',
-      target: { type: 'Payment', id: payment._id },
-      details: `Refunded payment ${payment._id} (${payment.amount} ${payment.currency}). Reason: ${reason || 'N/A'}`,
-      ip: req.ip,
-    });
-
-    res.json({ success: true, data: payment });
-  } catch (error) {
-    next(error);
-  }
-};
+// One refund path for the whole system: the gateway refund, the booking's
+// payment status and the guest's notification all happen in the payment
+// controller, so the admin screen cannot mark money as returned without them.
+exports.refundPayment = require('./paymentController').refundPayment;
 
 // ─── Unit Management ─────────────────────────────────────────────────────────
 

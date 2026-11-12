@@ -6,6 +6,9 @@ import { Alert, I18nManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { connectSocket, setQueryClient, disconnectSocket } from '../services/socket';
+import { useNotificationSetup } from '../hooks/useNotifications';
+import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/auth.service';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,6 +35,30 @@ Alert.alert = (title, message, buttons, options) =>
   nativeAlert(title, message, buttons && buttons.length ? buttons : [{ text: 'حسناً' }], options);
 
 export default function RootLayout() {
+  // Register for push notifications once signed in; open the right screen on tap
+  useNotificationSetup();
+
+  // A screen opened directly (deep link, notification, reload) skips the start
+  // screen that loads the host's profile; fill it in so names and ids are there.
+  const sessionToken = useAuthStore((s) => s.token);
+  const hasHost = useAuthStore((s) => !!s.host?.name);
+  useEffect(() => {
+    if (!sessionToken || hasHost) return;
+    let cancelled = false;
+    authService
+      .getOnboardingStatus()
+      .then((res) => {
+        const host = res?.host ?? res?.data?.host;
+        if (cancelled || !host) return;
+        const onboardingCompleted = host.onboardingCompleted ?? res?.data?.onboardingCompleted ?? true;
+        useAuthStore.getState().setHost({ ...host, onboardingCompleted });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionToken, hasHost]);
+
   // Connect socket on mount, disconnect on unmount
   useEffect(() => {
     connectSocket();

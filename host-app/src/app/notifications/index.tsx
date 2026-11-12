@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   notificationUnread: {
-    borderRightWidth: 3,
-    borderRightColor: Colors.primary,
+    borderStartWidth: 3,
+    borderStartColor: Colors.primary,
   },
   notificationContent: {
     flex: 1,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: Radius.full,
     backgroundColor: Colors.primary,
-    marginLeft: Spacing.sm,
+    marginStart: Spacing.sm,
   },
   separator: {
     height: 1,

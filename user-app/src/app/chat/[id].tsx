@@ -16,10 +16,13 @@ import type { Message } from '../../types';
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { id, propertyId, hostName } = useLocalSearchParams<{
+  // `c=1` means `id` is a conversation id (conversation list, notification);
+  // otherwise it is a host id and the conversation is opened or created.
+  const { id, propertyId, hostName, c } = useLocalSearchParams<{
     id: string;
     propertyId?: string;
     hostName?: string;
+    c?: string;
   }>();
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.user?._id);
@@ -38,6 +41,23 @@ export default function ChatScreen() {
     if (!id) return;
 
     let cancelled = false;
+
+    if (c === '1') {
+      setConversationId(id);
+      queryClient
+        .fetchQuery({ queryKey: ['conversations'], queryFn: () => chatService.getConversations() })
+        .then((list) => {
+          if (cancelled) return;
+          const conv = (list ?? []).find((item) => String(item._id) === String(id));
+          const other = (conv?.participants ?? []).find((p) => p?._id && String(p._id) !== String(userId));
+          if (other?._id) setOtherUserId(String(other._id));
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setCreating(true);
 
     chatService

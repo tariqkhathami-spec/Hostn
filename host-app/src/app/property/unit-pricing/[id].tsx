@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../../constants/theme';
 import { hostService } from '../../../services/host.service';
 import { getLocale } from '../../../utils/i18n';
 import { apiErrorMessage } from '../../../utils/apiError';
@@ -81,6 +81,8 @@ export default function UnitPricingScreen() {
       hostService.updateUnitPricing(id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unit-pricing', id] });
+      queryClient.invalidateQueries({ queryKey: ['unitPricing', id] });
+      queryClient.invalidateQueries({ queryKey: ['unitDiscounts', id] });
       queryClient.invalidateQueries({ queryKey: ['unit', id] });
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       Alert.alert(
@@ -181,7 +183,7 @@ export default function UnitPricingScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.back} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>
           {l({ en: 'Unit Pricing', ar: 'تسعير الوحدة' })}
@@ -208,6 +210,7 @@ export default function UnitPricingScreen() {
 
           {DAY_KEYS.map((key, idx) => (
             <View key={key} style={styles.priceRow}>
+              <Text style={styles.priceLabel}>{dayLabels[idx]}</Text>
               <TextInput
                 style={styles.priceInput}
                 value={prices[key]}
@@ -216,7 +219,6 @@ export default function UnitPricingScreen() {
                 placeholder="0"
                 placeholderTextColor={Colors.textTertiary}
               />
-              <Text style={styles.priceLabel}>{dayLabels[idx]}</Text>
             </View>
           ))}
         </View>
@@ -228,6 +230,9 @@ export default function UnitPricingScreen() {
           </Text>
 
           <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>
+              {l({ en: 'Cleaning Fee (SAR)', ar: 'رسوم التنظيف (ريال)' })}
+            </Text>
             <TextInput
               style={styles.priceInput}
               value={cleaningFee}
@@ -236,12 +241,12 @@ export default function UnitPricingScreen() {
               placeholder="0"
               placeholderTextColor={Colors.textTertiary}
             />
-            <Text style={styles.priceLabel}>
-              {l({ en: 'Cleaning Fee (SAR)', ar: 'رسوم التنظيف (ريال)' })}
-            </Text>
           </View>
 
           <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>
+              {l({ en: 'Discount % (0–90)', ar: 'نسبة الخصم % (من 0 إلى 90)' })}
+            </Text>
             <TextInput
               style={styles.priceInput}
               value={discountPercent}
@@ -255,9 +260,6 @@ export default function UnitPricingScreen() {
               placeholder="0"
               placeholderTextColor={Colors.textTertiary}
             />
-            <Text style={styles.priceLabel}>
-              {l({ en: 'Discount % (0–90)', ar: 'نسبة الخصم % (من 0 إلى 90)' })}
-            </Text>
           </View>
         </View>
 

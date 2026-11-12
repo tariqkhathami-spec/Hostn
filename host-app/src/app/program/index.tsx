@@ -7,13 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { AmbassadorTier } from '../../types';
 
@@ -94,7 +93,7 @@ function ProgramHeaderBar({ onBack }: { onBack: () => void }) {
     <View style={styles.header}>
       <TouchableOpacity onPress={onBack} style={styles.backButton}>
         <Ionicons
-          name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'}
+          name={DirectionalIcon.back}
           size={24}
           color={Colors.textPrimary}
         />

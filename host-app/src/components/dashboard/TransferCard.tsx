@@ -27,18 +27,18 @@ export default function TransferCard({ transfer, onPress }: TransferCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
+        <Text style={styles.transactionId}>{transfer.transactionId}</Text>
         <View style={styles.statusContainer}>
           <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
           <Text style={[styles.statusText, { color: statusColor }]}>
             {statusLabels[transfer.status]}
           </Text>
         </View>
-        <Text style={styles.transactionId}>{transfer.transactionId}</Text>
       </View>
 
       <View style={styles.bottomRow}>
-        <Text style={styles.date}>{formatDate(transfer.requestDate)}</Text>
         <Text style={styles.amount}>{formatCurrency(transfer.amount)}</Text>
+        <Text style={styles.date}>{formatDate(transfer.requestDate)}</Text>
       </View>
     </View>
   );
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   topRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   bottomRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },

@@ -86,31 +86,31 @@ export default function TransferDetailScreen() {
           <View style={styles.separator} />
 
           <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>الحالة</Text>
             <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
               <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
               <Text style={[styles.statusTextBadge, { color: statusColor }]}>
                 {statusLabels[transfer.status]}
               </Text>
             </View>
-            <Text style={styles.detailLabel}>الحالة</Text>
           </View>
 
           <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>تاريخ التنفيذ</Text>
             <Text style={styles.detailValue}>
               {transfer.completionDate ? formatDate(transfer.completionDate) : formatDate(transfer.requestDate)}
             </Text>
-            <Text style={styles.detailLabel}>تاريخ التنفيذ</Text>
           </View>
 
           <View style={styles.detailRow}>
-            <Text style={styles.detailValue}>{methodLabels[transfer.method] || transfer.method}</Text>
             <Text style={styles.detailLabel}>طريقة التحويل</Text>
+            <Text style={styles.detailValue}>{methodLabels[transfer.method] || transfer.method}</Text>
           </View>
 
           {transfer.accountNumber && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailValue}>{transfer.accountNumber}</Text>
               <Text style={styles.detailLabel}>رقم الحساب</Text>
+              <Text style={styles.detailValue}>{transfer.accountNumber}</Text>
             </View>
           )}
         </Card>
@@ -122,34 +122,34 @@ export default function TransferDetailScreen() {
             {transfer.reservations.map((reservation, index) => (
               <Card key={reservation.reservationId || index} style={styles.reservationCard}>
                 <View style={styles.reservationHeader}>
-                  <Text style={styles.reservationAmount}>{formatCurrency(reservation.amount)}</Text>
                   <Text style={styles.guestName}>{reservation.guestName}</Text>
+                  <Text style={styles.reservationAmount}>{formatCurrency(reservation.amount)}</Text>
                 </View>
 
                 <View style={styles.reservationSeparator} />
 
                 <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailValue}>{reservation.unitName}</Text>
                   <Text style={styles.reservationDetailLabel}>الوحدة</Text>
+                  <Text style={styles.reservationDetailValue}>{reservation.unitName}</Text>
                 </View>
 
                 <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailValue}>{formatDate(reservation.checkIn)}</Text>
                   <Text style={styles.reservationDetailLabel}>تاريخ الدخول</Text>
+                  <Text style={styles.reservationDetailValue}>{formatDate(reservation.checkIn)}</Text>
                 </View>
 
                 <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailValue}>{formatDate(reservation.checkOut)}</Text>
                   <Text style={styles.reservationDetailLabel}>تاريخ الخروج</Text>
+                  <Text style={styles.reservationDetailValue}>{formatDate(reservation.checkOut)}</Text>
                 </View>
 
                 <View style={styles.reservationDetailRow}>
+                  <Text style={styles.reservationDetailLabel}>عدد الليالي</Text>
                   <View style={styles.nightsBadge}>
                     <Text style={styles.nightsText}>
                       {reservation.nights} {reservation.nights === 1 ? 'ليلة' : 'ليالي'}
                     </Text>
                   </View>
-                  <Text style={styles.reservationDetailLabel}>عدد الليالي</Text>
                 </View>
               </Card>
             ))}

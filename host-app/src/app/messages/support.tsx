@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, MIRROR_IN_RTL } from '../../constants/theme';
 import { formatRelativeDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Message } from '../../types';
@@ -140,14 +140,6 @@ export default function SupportChatScreen() {
 
         {/* Input bar */}
         <View style={styles.inputBar}>
-          <TouchableOpacity
-            onPress={handleSend}
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-            disabled={!inputText.trim() || sendMutation.isPending}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="send" size={20} color={Colors.textWhite} />
-          </TouchableOpacity>
           <TextInput
             style={styles.textInput}
             value={inputText}
@@ -158,6 +150,14 @@ export default function SupportChatScreen() {
             maxLength={2000}
             textAlign="right"
           />
+          <TouchableOpacity
+            onPress={handleSend}
+            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            disabled={!inputText.trim() || sendMutation.isPending}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="send" size={20} color={Colors.textWhite} style={MIRROR_IN_RTL} />
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </ScreenWrapper>
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
   },
   statusIcon: {
-    marginLeft: 2,
+    marginStart: 2,
   },
   inputBar: {
     flexDirection: 'row',

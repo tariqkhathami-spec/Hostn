@@ -14,7 +14,7 @@ import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
 import Card from '../../components/ui/Card';
-import { Colors, Spacing, Typography, Radius, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { formatCurrency } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Statement } from '../../types';
@@ -76,7 +76,7 @@ export default function StatementsScreen() {
               <Text style={styles.balanceValue}>{formatCurrency(item.closingBalance)}</Text>
             </View>
           </View>
-          <Ionicons name="chevron-back" size={20} color={Colors.textTertiary} />
+          <Ionicons name={DirectionalIcon.forward} size={20} color={Colors.textTertiary} />
         </View>
       </Card>
     ),
@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
   },
   balanceRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     marginBottom: Spacing.xs,
   },
   balanceLabel: {

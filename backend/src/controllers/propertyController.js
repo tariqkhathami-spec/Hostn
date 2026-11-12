@@ -202,7 +202,8 @@ exports.getProperties = async (req, res, next) => {
 
     const properties = await Property.find(query)
       .populate('host', 'name avatar isVerified')
-      .sort(sort)
+      // _id breaks ties so pages never repeat or skip a property.
+      .sort(`${typeof sort === 'string' ? sort : '-ratings.average'} _id`)
       .skip(skip)
       .limit(safeLimit);
 

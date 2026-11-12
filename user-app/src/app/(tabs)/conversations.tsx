@@ -71,7 +71,7 @@ export default function ConversationsScreen() {
             return (
               <Pressable
                 style={styles.conversationItem}
-                onPress={() => router.push(`/chat/${item._id}`)}
+                onPress={() => router.push(`/chat/${item._id}?c=1`)}
               >
                 <View style={styles.avatar}>
                   {avatarUri ? (

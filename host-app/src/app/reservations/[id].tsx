@@ -12,7 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, TEXT_END } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { formatCurrency, formatDate } from '../../utils/format';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardHeader: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
     paddingHorizontal: Spacing.base,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   infoRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -369,12 +369,12 @@ const styles = StyleSheet.create({
   infoValue: {
     ...Typography.small,
     color: Colors.textPrimary,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   infoValueBold: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   createdAt: {
     ...Typography.caption,
@@ -389,12 +389,12 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
   },
   actionsRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     gap: Spacing.md,
   },
   acceptButton: {
     flex: 1,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     flex: 1,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,

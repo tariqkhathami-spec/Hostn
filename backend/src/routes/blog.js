@@ -15,7 +15,7 @@ const { protect, authorize, optionalAuth } = require('../middleware/auth');
 // Public routes
 // optionalAuth: an admin also sees drafts in this list.
 router.get('/posts', optionalAuth, getPosts);
-router.get('/posts/:slug', getPost);
+router.get('/posts/:slug', optionalAuth, getPost);
 router.get('/categories', getCategories);
 
 // Admin routes

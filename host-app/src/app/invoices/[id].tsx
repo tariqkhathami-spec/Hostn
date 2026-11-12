@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, TEXT_END } from '../../constants/theme';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Invoice } from '../../types';
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   headerValue: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   sectionCard: {
     marginBottom: Spacing.md,
@@ -286,9 +286,9 @@ const styles = StyleSheet.create({
   infoValue: {
     ...Typography.small,
     color: Colors.textPrimary,
-    textAlign: 'left',
+    textAlign: TEXT_END,
     flex: 1,
-    marginLeft: Spacing.sm,
+    marginStart: Spacing.sm,
   },
   tableHeader: {
     flexDirection: 'row',

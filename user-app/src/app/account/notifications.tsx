@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { notificationTarget } from '../../hooks/useNotifications';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,7 +70,11 @@ export default function NotificationsScreen() {
           renderItem={({ item }: { item: Notification }) => (
             <Pressable
               style={[styles.notifRow, !item.isRead && styles.notifUnread]}
-              onPress={() => !item.isRead && markRead.mutate(item._id)}
+              onPress={() => {
+                if (!item.isRead) markRead.mutate(item._id);
+                const target = notificationTarget({ type: item.type, ...(item.data ?? {}) });
+                if (target !== '/account/notifications') router.push(target);
+              }}
             >
               <View style={styles.notifIcon}>
                 <Ionicons name={ICON_MAP[item.type] ?? 'notifications'} size={22} color={Colors.primary} />

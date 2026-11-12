@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   complaintHeader: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radius.full,
-    marginLeft: Spacing.sm,
+    marginStart: Spacing.sm,
   },
   statusText: {
     ...Typography.caption,

@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
-import { formatCurrency, toWesternDigits } from '../../utils/format';
+import { formatCurrency, toWesternDigits, cleanNumericInput, parseNumber } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Property, Unit, UnitPricing, UnitDiscount, CustomOffer } from '../../types';
 import { apiErrorMessage } from '../../utils/apiError';
@@ -63,6 +63,8 @@ export default function UnitPricingDetailScreen() {
   });
 
   const unit: Unit | undefined = unitData?.data;
+  // GET /units/:id returns the stored unit (nameAr / nameEn, no `name`).
+  const unitTitle = unit?.nameAr || unit?.nameEn || unit?.name || 'الأسعار';
 
   // Fetch pricing
   const {
@@ -117,9 +119,16 @@ export default function UnitPricingDetailScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unitPricing', unitId] });
+      // The same prices are shown on the unit page, the properties list and
+      // the per-day pricing screen.
+      queryClient.invalidateQueries({ queryKey: ['unit-pricing', unitId] });
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId] });
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
       setExpandedRate(null);
       setEditValues({});
     },
+    onError: (error: unknown) =>
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر حفظ السعر. حاول مرة أخرى.')),
   });
 
   const toggleDiscountMutation = useMutation({
@@ -143,6 +152,8 @@ export default function UnitPricingDetailScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unitOffers', unitId] });
     },
+    onError: (error: unknown) =>
+      Alert.alert('خطأ', apiErrorMessage(error, 'تعذّر حذف العرض. حاول مرة أخرى.')),
   });
 
   const serverMessage = (error: any, fallback: string) => error?.response?.data?.message || fallback;
@@ -192,6 +203,10 @@ export default function UnitPricingDetailScreen() {
     if (!isDay(start) || !isDay(end) || end < start) {
       return Alert.alert('خطأ', 'اكتب التاريخ بالصيغة 2026-12-31، وتاريخ النهاية بعد البداية');
     }
+    // The server refuses offers that start before today.
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (start < today) return Alert.alert('خطأ', 'تاريخ بداية العرض لا يمكن أن يكون في الماضي');
     const selectedDates: string[] = [];
     const cursor = new Date(`${start}T00:00:00Z`);
     const last = new Date(`${end}T00:00:00Z`);
@@ -205,15 +220,14 @@ export default function UnitPricingDetailScreen() {
 
   const handleSaveRate = useCallback(
     (rateKey: string) => {
-      const value = editValues[rateKey];
-      if (!value || isNaN(Number(value)) || Number(value) <= 0) {
+      const price = Math.round(parseNumber(editValues[rateKey]) * 100) / 100;
+      if (!Number.isFinite(price) || price <= 0) {
         Alert.alert('خطأ', 'يرجى إدخال سعر صحيح');
         return;
       }
       // PUT /units/:id/pricing only reads day rates nested under `pricing`
       // (a flat { thursday: 500 } is accepted and silently ignored), and it
       // has no "midWeek" day: mid-week is Sunday–Wednesday.
-      const price = Number(value);
       const days =
         rateKey === 'midWeek' ? ['sunday', 'monday', 'tuesday', 'wednesday'] : [rateKey];
       updatePricingMutation.mutate({
@@ -300,24 +314,24 @@ export default function UnitPricingDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <HeaderBar title={unit?.name ?? 'الأسعار'} showBack fallbackRoute="/pricing" />
+      <HeaderBar title={unitTitle} showBack fallbackRoute="/pricing" />
 
       {/* Segmented Control */}
       <View style={styles.segmentedContainer}>
-        <TouchableOpacity
-          style={[styles.segmentButton, activeTab === 'offers' && styles.segmentButtonActive]}
-          onPress={() => setActiveTab('offers')}
-        >
-          <Text style={[styles.segmentText, activeTab === 'offers' && styles.segmentTextActive]}>
-            {'العروض والخصومات'}
-          </Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.segmentButton, activeTab === 'prices' && styles.segmentButtonActive]}
           onPress={() => setActiveTab('prices')}
         >
           <Text style={[styles.segmentText, activeTab === 'prices' && styles.segmentTextActive]}>
             {'الأسعار'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segmentButton, activeTab === 'offers' && styles.segmentButtonActive]}
+          onPress={() => setActiveTab('offers')}
+        >
+          <Text style={[styles.segmentText, activeTab === 'offers' && styles.segmentTextActive]}>
+            {'العروض والخصومات'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -341,11 +355,6 @@ export default function UnitPricingDetailScreen() {
                   onPress={() => handleToggleRate(rate.key)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color={Colors.textSecondary}
-                  />
                   <View style={styles.rateHeaderInfo}>
                     <Text style={styles.rateLabel}>{rate.label}</Text>
                     {rate.description ? (
@@ -353,11 +362,27 @@ export default function UnitPricingDetailScreen() {
                     ) : null}
                   </View>
                   <Text style={styles.ratePrice}>{formatCurrency(currentPrice)}</Text>
+                  <Ionicons
+                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={Colors.textSecondary}
+                  />
                 </TouchableOpacity>
 
                 {isExpanded && (
                   <View style={styles.rateEditContainer}>
                     <View style={styles.rateEditRow}>
+                      <TextInput
+                        style={styles.rateInput}
+                        value={editValues[rate.key] ?? ''}
+                        onChangeText={(text) =>
+                          setEditValues((prev) => ({ ...prev, [rate.key]: cleanNumericInput(text) }))
+                        }
+                        keyboardType="numeric"
+                        placeholder={'أدخل السعر'}
+                        placeholderTextColor={Colors.textTertiary}
+                        textAlign="right"
+                      />
                       <TouchableOpacity
                         style={[
                           styles.saveButton,
@@ -372,19 +397,13 @@ export default function UnitPricingDetailScreen() {
                           <Text style={styles.saveButtonText}>{'حفظ'}</Text>
                         )}
                       </TouchableOpacity>
-                      <TextInput
-                        style={styles.rateInput}
-                        value={editValues[rate.key] ?? ''}
-                        onChangeText={(text) =>
-                          setEditValues((prev) => ({ ...prev, [rate.key]: text }))
-                        }
-                        keyboardType="numeric"
-                        placeholder={'أدخل السعر'}
-                        placeholderTextColor={Colors.textTertiary}
-                        textAlign="right"
-                      />
                     </View>
                     <Text style={styles.currencyHint}>{'ريال سعودي'}</Text>
+                    {rate.key === 'midWeek' && pricing?.midWeekUniform === false && (
+                      <Text style={styles.currencyHint}>
+                        {'أسعار الأحد إلى الأربعاء مختلفة حالياً، والمعروض هو سعر الأحد. الحفظ هنا يوحّدها.'}
+                      </Text>
+                    )}
                   </View>
                 )}
               </View>
@@ -430,12 +449,6 @@ export default function UnitPricingDetailScreen() {
             offers.map((offer) => (
               <View key={offer.id} style={styles.offerCard}>
                 <View style={styles.offerHeader}>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteOffer(offer.id)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="trash-outline" size={20} color={Colors.error} />
-                  </TouchableOpacity>
                   <View style={styles.offerInfo}>
                     <Text style={styles.offerName}>{offer.name}</Text>
                     <Text style={styles.offerDiscount}>{offer.discountPercent}% {'خصم'}</Text>
@@ -445,6 +458,12 @@ export default function UnitPricingDetailScreen() {
                       </Text>
                     )}
                   </View>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteOffer(offer.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={Colors.error} />
+                  </TouchableOpacity>
                 </View>
               </View>
             ))
@@ -568,6 +587,10 @@ function renderDiscountCard(
   return (
     <View style={styles.discountCard}>
       <View style={styles.discountHeader}>
+        <View style={styles.discountInfo}>
+          <Text style={styles.discountTitle}>{title}</Text>
+          <Text style={styles.discountDescription}>{description}</Text>
+        </View>
         <Switch
           value={isActive}
           onValueChange={() => onToggle(type)}
@@ -575,10 +598,6 @@ function renderDiscountCard(
           thumbColor={isActive ? Colors.primary : Colors.textTertiary}
           disabled={isPending}
         />
-        <View style={styles.discountInfo}>
-          <Text style={styles.discountTitle}>{title}</Text>
-          <Text style={styles.discountDescription}>{description}</Text>
-        </View>
       </View>
       <TouchableOpacity
         style={styles.discountPercentageContainer}
@@ -674,7 +693,7 @@ const styles = StyleSheet.create({
   },
   rateHeaderInfo: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     marginHorizontal: Spacing.md,
   },
   rateLabel: {
@@ -751,8 +770,8 @@ const styles = StyleSheet.create({
   },
   discountInfo: {
     flex: 1,
-    alignItems: 'flex-end',
-    marginLeft: Spacing.md,
+    alignItems: 'flex-start',
+    marginEnd: Spacing.md,
   },
   discountTitle: {
     ...Typography.bodyBold,
@@ -807,8 +826,8 @@ const styles = StyleSheet.create({
   },
   offerInfo: {
     flex: 1,
-    alignItems: 'flex-end',
-    marginLeft: Spacing.md,
+    alignItems: 'flex-start',
+    marginEnd: Spacing.md,
   },
   offerName: {
     ...Typography.bodyBold,

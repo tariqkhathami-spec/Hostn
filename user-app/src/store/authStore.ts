@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
+import { notificationsService } from '../services/notifications.service';
+import api from '../services/api';
 import type { Href } from 'expo-router';
 import type { User } from '../types';
 
@@ -34,6 +36,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // Remove this phone's push token from the account first: the request
+    // needs the session that is about to be cleared.
+    await notificationsService.unregisterPushToken();
+    // End the session on the server too, so the refresh token kept on this
+    // phone stops working the moment the user signs out.
+    try {
+      const refreshToken = await secureStorage.getRefreshToken();
+      if (refreshToken) await api.post('/auth/logout', { refreshToken }, { timeout: 5000 });
+    } catch {
+      // Offline or already expired: signing out locally must still work.
+    }
     await secureStorage.clearTokens();
     set({ user: null, token: null, isAuthenticated: false });
   },

@@ -36,8 +36,10 @@ export default function HostProfileScreen() {
     enabled: !!id,
   });
 
+  // The cards are properties, and only units can be booked: the property
+  // screen opens the unit (or lists the units when there are several).
   const handlePropertyPress = (propertyId: string) => {
-    router.push(`/listing/${propertyId}`);
+    router.push(`/property/${propertyId}`);
   };
 
   if (isLoading || !data) {

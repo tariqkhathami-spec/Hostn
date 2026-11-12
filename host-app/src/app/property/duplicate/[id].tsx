@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../../services/host.service';
 import { apiErrorMessage } from '../../../utils/apiError';
-import { Colors, Typography, Spacing, Radius } from '../../../constants/theme';
+import { Colors, Typography, Spacing, Radius, DirectionalIcon } from '../../../constants/theme';
 import type { Unit } from '../../../types';
 
 // ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ export default function DuplicateUnitScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.headerRow}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.arrowBack} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle}>نسخ الوحدة</Text>
         <View style={{ width: 24 }} />

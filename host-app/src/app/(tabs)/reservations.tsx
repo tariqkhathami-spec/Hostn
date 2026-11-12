@@ -8,13 +8,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
 import { Booking } from '../../types';
-import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START, DirectionalIcon } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 
@@ -88,6 +89,7 @@ export default function ReservationsTabScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('recent');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
 
   const statusFilters: StatusFilter[] = ['pending', 'confirmed', 'held', 'completed', 'cancelled', 'rejected'].map(
     (key) => ({ key, label: STATUS_LABEL_MAP[key], color: STATUS_COLOR_MAP[key] }),
@@ -111,9 +113,14 @@ export default function ReservationsTabScreen() {
   // The upcoming-guests list has no status parameter: filter it here.
   const sameStatus = (status: string, wanted: string) =>
     (status === 'waiting' ? 'pending' : status) === wanted;
-  const filteredBookings = selectedStatus && activeTab === 'upcoming'
+  const statusFiltered = selectedStatus && activeTab === 'upcoming'
     ? bookings.filter((b: Booking) => sameStatus(b.status, selectedStatus))
     : bookings;
+  const needle = searchText.trim().toLowerCase();
+  const filteredBookings = needle
+    ? statusFiltered.filter((b: Booking) =>
+        [b.guestName, b.bookingNumber, b.unitName].some((v) => String(v ?? '').toLowerCase().includes(needle)))
+    : statusFiltered;
 
   const onRefresh = useCallback(() => {
     refetch();
@@ -138,19 +145,19 @@ export default function ReservationsTabScreen() {
         onPress={() => router.push(`/reservations/${item.id}`)}
         activeOpacity={0.7}
       >
-        {/* Top row: booking ID + guest name (right) | date + amount + status badge (left) */}
+        {/* Top row: booking ID + guest name first, then status badge, amount and date */}
         <View style={styles.cardTopRow}>
+          <View style={styles.cardRightInfo}>
+            <Text style={styles.bookingId}>#{item.bookingNumber} - {item.guestName}</Text>
+          </View>
           <View style={styles.cardLeftInfo}>
-            <Text style={styles.cardDate}>{item.createdAt}</Text>
-            <Text style={styles.cardAmount}>{item.totalAmount} ر.س</Text>
             <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
               <Text style={[styles.statusBadgeText, { color: statusColor }]}>
                 {statusLabel}
               </Text>
             </View>
-          </View>
-          <View style={styles.cardRightInfo}>
-            <Text style={styles.bookingId}>#{item.bookingNumber} - {item.guestName}</Text>
+            <Text style={styles.cardAmount}>{item.totalAmount} ر.س</Text>
+            <Text style={styles.cardDate}>{item.createdAt}</Text>
           </View>
         </View>
 
@@ -170,27 +177,17 @@ export default function ReservationsTabScreen() {
 
   return (
     <ScreenWrapper backgroundColor={Colors.white}>
-      {/* Header: white background, centered title, back arrow on right */}
+      {/* Header: white background, back arrow first, centered title */}
       <View style={styles.header}>
-        <View style={styles.headerSide} />
-        <Text style={styles.headerTitle}>{t('reservations.title')}</Text>
         <TouchableOpacity style={styles.headerSide} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/dashboard' as any)}>
-          <Ionicons name="chevron-forward" size={24} color={Colors.textPrimary} />
+          <Ionicons name={DirectionalIcon.back} size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('reservations.title')}</Text>
+        <View style={styles.headerSide} />
       </View>
 
       {/* Two-tab toggle */}
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
-          onPress={() => setActiveTab('upcoming')}
-        >
-          <Text
-            style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}
-          >
-            {t('reservations.upcoming')}
-          </Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'recent' && styles.activeTab]}
           onPress={() => setActiveTab('recent')}
@@ -201,21 +198,37 @@ export default function ReservationsTabScreen() {
             {t('reservations.recent')}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
+          onPress={() => setActiveTab('upcoming')}
+        >
+          <Text
+            style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}
+          >
+            {t('reservations.upcoming')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Search/filter row */}
+      {/* Search by guest, booking number or unit */}
       <View style={styles.searchRow}>
-        <TouchableOpacity style={styles.searchBackArrow}>
-          <Ionicons name="chevron-back" size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
-        <View style={styles.searchRowRight}>
-          <TouchableOpacity style={styles.infoButton}>
-            <Ionicons name="information-circle-outline" size={20} color={Colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.searchButton}>
-            <Text style={styles.searchButtonText}>{t('common.search')}</Text>
-            <Ionicons name="search" size={16} color={Colors.textSecondary} />
-          </TouchableOpacity>
+        <View style={styles.searchButton}>
+          <Ionicons name="search" size={16} color={Colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="ابحث باسم الضيف أو رقم الحجز"
+            placeholderTextColor={Colors.textTertiary}
+            textAlign="right"
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText('')} hitSlop={10}>
+              <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -345,29 +358,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.sm,
   },
-  searchRowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
   searchButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surfaceAlt,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     borderRadius: Radius.md,
     gap: 6,
   },
-  searchButtonText: {
+  searchInput: {
+    flex: 1,
     ...Typography.small,
-    color: Colors.textSecondary,
-  },
-  infoButton: {
-    padding: Spacing.xs,
-  },
-  searchBackArrow: {
-    padding: Spacing.xs,
+    color: Colors.textPrimary,
+    paddingVertical: Spacing.sm,
   },
 
   // Status filter dots
@@ -454,7 +458,7 @@ const styles = StyleSheet.create({
   },
   cardRightInfo: {
     flexShrink: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   cardLeftInfo: {
     flexDirection: 'row',

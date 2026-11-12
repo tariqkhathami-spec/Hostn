@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
+import { useRouter, useLocalSearchParams, Redirect, type Href } from 'expo-router';
 import { useRequireAuth } from '../../hooks/useRequireAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,6 +146,12 @@ export default function ListingDetailScreen() {
         </View>
       </SafeAreaView>
     );
+  }
+
+  // `id` was a property, not a unit. Only units can be booked, so hand over
+  // to the property screen, which opens its unit or lists its units.
+  if (!(listing as any)._isUnit) {
+    return <Redirect href={`/property/${id}`} />;
   }
 
   const itemData = listing as any;

@@ -44,15 +44,36 @@ export const authService = {
     });
   },
 
-  // PUT /auth/profile reads { name, phone, avatar, email } and answers
-  // { success, user } (no `data` key, so it is not unwrapped). When `email` is
-  // sent the server only starts the email-change flow and answers
-  // { success, message } with NO user: `user` is then undefined.
+  // PUT /auth/profile reads { name, phone, avatar, email, emailVerificationCode }
+  // and answers { success, user } (no `data` key, so it is not unwrapped).
+  // Sent with `email` alone the server only starts the email-change flow: it
+  // emails a 6-digit code (valid 15 minutes) and answers { success, message }
+  // with NO user, so `user` is undefined. See requestEmailChange /
+  // confirmEmailChange below for the two steps.
   updateProfile(data: { name?: string; avatar?: string; email?: string; emailVerificationCode?: string }) {
     return api.put('/auth/profile', data).then((r) => {
       const d = r.data as any;
       const user = (d?.user ?? (d?._id ? d : undefined)) as User | undefined;
       return { user, verificationRequired: !user };
+    });
+  },
+
+  // Email change, step 1: PUT /auth/profile { email }. Emails a new code to
+  // that address; calling it again replaces the code (this is the "resend").
+  requestEmailChange(email: string) {
+    // The server picks the language of the email from Accept-Language.
+    return api
+      .put('/auth/profile', { email }, { headers: { 'Accept-Language': getCurrentLanguage() } })
+      .then(() => undefined);
+  },
+
+  // Email change, step 2: PUT /auth/profile { email, emailVerificationCode }.
+  // Answers { success, user } with the new email; 400 when the code is wrong,
+  // expired or was issued for another address.
+  confirmEmailChange(email: string, code: string): Promise<User | undefined> {
+    return api.put('/auth/profile', { email, emailVerificationCode: code }).then((r) => {
+      const d = r.data as any;
+      return (d?.user ?? (d?._id ? d : undefined)) as User | undefined;
     });
   },
 

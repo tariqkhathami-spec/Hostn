@@ -139,14 +139,14 @@ export default function TransferDurationScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.optionRow}>
+                <View style={[styles.radio, isSelected && styles.radioSelected]}>
+                  {isSelected && <View style={styles.radioInner} />}
+                </View>
                 <View style={styles.optionTextContainer}>
                   <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
                     {option.title}
                   </Text>
                   <Text style={styles.optionDescription}>{option.description}</Text>
-                </View>
-                <View style={[styles.radio, isSelected && styles.radioSelected]}>
-                  {isSelected && <View style={styles.radioInner} />}
                 </View>
               </View>
 
@@ -215,8 +215,8 @@ const styles = StyleSheet.create({
   },
   optionTextContainer: {
     flex: 1,
-    alignItems: 'flex-end',
-    marginLeft: Spacing.md,
+    alignItems: 'flex-start',
+    marginStart: Spacing.md,
   },
   optionTitle: {
     ...Typography.bodyBold,

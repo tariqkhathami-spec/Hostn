@@ -61,18 +61,18 @@ export default function TransfersScreen() {
         activeOpacity={0.7}
       >
         <View style={styles.cardTopRow}>
+          <Text style={styles.transactionId}>{item.transactionId}</Text>
           <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[styles.statusText, { color: statusColor }]}>
               {statusLabels[item.status]}
             </Text>
           </View>
-          <Text style={styles.transactionId}>{item.transactionId}</Text>
         </View>
 
         <View style={styles.cardBottomRow}>
-          <Text style={styles.date}>{formatDate(item.requestDate)}</Text>
           <Text style={styles.amount}>{formatCurrency(item.amount)}</Text>
+          <Text style={styles.date}>{formatDate(item.requestDate)}</Text>
         </View>
       </TouchableOpacity>
     );

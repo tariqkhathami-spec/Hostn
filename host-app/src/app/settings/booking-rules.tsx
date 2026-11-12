@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    paddingRight: Spacing.xxl,
+    paddingEnd: Spacing.xxl,
   },
   nightsText: {
     ...Typography.small,

@@ -48,6 +48,18 @@ export const listingsService = {
     });
   },
 
+  // GET /properties/:propertyId/units — the property's bookable units only
+  // (active, not deleted, with a name, photos and a price for every day).
+  // The rows carry `property` as an id, so the already-loaded property is
+  // attached before flattening to give each unit its title, place and host.
+  getPropertyUnits(propertyId: string, property?: Listing): Promise<Listing[]> {
+    return api.get(`/properties/${propertyId}/units`, { params: { limit: 50 } }).then((r) => {
+      const d = r.data as any;
+      const rows: any[] = Array.isArray(d) ? d : d?.data ?? [];
+      return rows.map((u) => flattenUnit(property ? { ...u, property } : u)) as Listing[];
+    });
+  },
+
   getUnit(id: string): Promise<Listing> {
     return api.get(`/units/${id}`).then((r) => {
       const d = r.data as any;

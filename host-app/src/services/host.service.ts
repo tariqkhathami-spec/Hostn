@@ -115,7 +115,6 @@ export const hostService = {
   // The server asks for a one-time code (or the password) before deleting.
   deleteAccount: (confirm?: { otp?: string; password?: string }) =>
     api.delete('/host/account', { data: confirm ?? {} }).then(r => r.data),
-  logout: () => api.post('/auth/logout').then(r => r.data),
 
   // NPS
   shouldShowNps: () => api.get('/host/nps/should-show').then(r => r.data),

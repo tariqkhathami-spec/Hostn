@@ -343,21 +343,21 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.base,
     marginBottom: Spacing.sm,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
     ...Shadows.sm,
   },
   miniCardCompleted: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.success,
+    borderStartWidth: 3,
+    borderStartColor: Colors.success,
   },
   miniCardIcon: {
     fontSize: 28,
   },
   miniCardContent: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   miniCardTitle: {
     ...Typography.bodyBold,

@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, DirectionalIcon } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { useAuthStore } from '../../store/authStore';
 
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
             style={styles.backButton}
             onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/more' as any)}
           >
-            <Ionicons name="chevron-forward" size={28} color={Colors.textWhite} />
+            <Ionicons name={DirectionalIcon.back} size={28} color={Colors.textWhite} />
           </TouchableOpacity>
           <View style={styles.avatarCircle}>
             {profile?.avatar ? (
@@ -201,7 +201,7 @@ export default function ProfileScreen() {
               <Text style={styles.supportOptionText}>
                 {'المحادثات'}
               </Text>
-              <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
+              <Ionicons name={DirectionalIcon.forward} size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -215,7 +215,7 @@ export default function ProfileScreen() {
               <Text style={styles.supportOptionText}>
                 {'مركز الاتصال'}
               </Text>
-              <Ionicons name="chevron-back" size={18} color={Colors.textTertiary} />
+              <Ionicons name={DirectionalIcon.forward} size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     top: 50,
-    right: Spacing.base,
+    start: Spacing.base,
     zIndex: 10,
     padding: Spacing.xs,
   },

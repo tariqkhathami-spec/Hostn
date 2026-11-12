@@ -268,7 +268,7 @@ const permitDialog = StyleSheet.create({
     color: Colors.textPrimary,
     textAlign: 'right',
   },
-  attach: { flexDirection: 'row-reverse', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
+  attach: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
   attachText: { ...Typography.small, color: Colors.primary },
   actions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
   primary: { flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: Spacing.md, alignItems: 'center' },

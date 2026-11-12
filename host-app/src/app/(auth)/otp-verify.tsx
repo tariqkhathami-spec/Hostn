@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Button from '../../components/ui/Button';
 import { toWesternDigits } from '../../utils/format';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, DirectionalIcon } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { APP_CONFIG } from '../../constants/config';
 import { authService } from '../../services/auth.service';
@@ -107,7 +107,7 @@ export default function OtpVerifyScreen() {
         style={styles.backButton}
         onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/phone-login' as any)}
       >
-        <Ionicons name="chevron-forward" size={24} color={Colors.textPrimary} />
+        <Ionicons name={DirectionalIcon.back} size={24} color={Colors.textPrimary} />
         <Text style={styles.backText}>تغيير الرقم</Text>
       </TouchableOpacity>
 
