@@ -287,7 +287,7 @@ router.post('/conversations/:conversationId/read', idParam('conversationId', 'Co
 // The thread is the host's most recent ticket that is not closed, so the
 // messages show up on the admin support page and admin replies come back.
 
-const SUPPORT_CHAT_SUBJECT = 'Host app support chat';
+const SUPPORT_CHAT_SUBJECT = 'محادثة من تطبيق المضيف';
 
 const findSupportThread = (userId) =>
   SupportTicket.findOne({ user: userId, status: { $ne: 'closed' } }).sort({ updatedAt: -1 });

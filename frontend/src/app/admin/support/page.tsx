@@ -113,12 +113,40 @@ export default function AdminSupportPage() {
               {filtered.map(ticket => {
                 const sc = scfg[ticket.status] || scfg.open;
                 const userName = typeof ticket.user === 'object' ? (ticket.user as { name?: string }).name : (isAr ? 'غير معروف' : 'Unknown');
+                const raw = ticket as unknown as { userType?: string; messages?: Array<{ content?: string; senderRole?: string }> };
+                const last = raw.messages && raw.messages.length ? raw.messages[raw.messages.length - 1] : undefined;
+                const lastText = last?.content || '';
+                const lastFromStaff = last?.senderRole === 'admin';
+                const userKind = raw.userType === 'Host' ? (isAr ? 'مضيف' : 'Host') : raw.userType === 'Guest' ? (isAr ? 'ضيف' : 'Guest') : '';
+                const categoryLabel = ({
+                  payment: isAr ? 'الدفع' : 'Payment',
+                  booking: isAr ? 'الحجز' : 'Booking',
+                  complaint: isAr ? 'شكوى' : 'Complaint',
+                  technical: isAr ? 'مشكلة تقنية' : 'Technical',
+                  account: isAr ? 'الحساب' : 'Account',
+                  other: isAr ? 'أخرى' : 'Other',
+                } as Record<string, string>)[ticket.category] || ticket.category;
                 return (
                   <tr key={ticket._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 500, color: '#1e293b' }}>{ticket.subject}</td>
-                    <td style={{ padding: '12px 16px', color: '#64748b' }}>{userName}</td>
+                    <td style={{ padding: '12px 16px', maxWidth: 360 }}>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{isAr && ticket.subject === 'Host app support chat' ? 'محادثة من تطبيق المضيف' : ticket.subject}</div>
+                      {/* What the ticket says: the latest message and who wrote it */}
+                      {lastText && (
+                        <div style={{ marginTop: 4, color: '#64748b', fontSize: 12, lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          <span style={{ color: lastFromStaff ? '#177d5c' : '#94a3b8', fontWeight: 600 }}>
+                            {lastFromStaff ? (isAr ? 'الدعم: ' : 'Support: ') : (isAr ? 'العميل: ' : 'Customer: ')}
+                          </span>
+                          {lastText}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 11 }} dir="ltr">#{ticket._id.slice(-6).toUpperCase()}</div>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#64748b' }}>
+                      <div>{userName}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{userKind}</div>
+                    </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontSize: 12, textTransform: 'capitalize' }}>{ticket.category}</span>
+                      <span style={{ padding: '2px 8px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontSize: 12, }}>{categoryLabel}</span>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{
