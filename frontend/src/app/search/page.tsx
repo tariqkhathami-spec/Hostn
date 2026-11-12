@@ -111,6 +111,8 @@ function ListingsContent() {
   const isAr = lang === 'ar';
 
   const [units, setUnits] = useState<Unit[]>([]);
+  // How many units match in total (the list shows up to 50 of them).
+  const [totalFound, setTotalFound] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // ── Search state ──
@@ -274,10 +276,14 @@ function ListingsContent() {
       if (hasPool) params.pool = '1';
       if (direction) params.direction = direction;
       if (areaRange < 1500) params.maxArea = String(areaRange);
+      // Ask for the largest page the API serves; the default is only 12.
+      params.limit = '50';
       const res = await unitsApi.search(params);
       setUnits(res.data.data || []);
+      setTotalFound(res.data.pagination?.total ?? (res.data.data || []).length);
     } catch {
       setUnits([]);
+      setTotalFound(0);
     } finally {
       setLoading(false);
     }
@@ -762,8 +768,8 @@ function ListingsContent() {
           {!loading && (
             <p className="text-sm text-gray-500 mb-4">
               {isAr
-                ? `${units.length} وحدة`
-                : `${units.length} ${units.length === 1 ? 'unit' : 'units'} found`}
+                ? `${Math.max(totalFound, units.length)} وحدة`
+                : `${Math.max(totalFound, units.length)} ${Math.max(totalFound, units.length) === 1 ? 'unit' : 'units'} found`}
             </p>
           )}
 

@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
       const res = await adminApi.getUsers({ search: search || undefined, page });
       const data = res.data;
       setUsers(data.data || data.users || []);
-      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+      setTotalPages(data.pagination?.pages || data.totalPages || 1);
     } catch {
       toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u064a\u0646' : 'Failed to load users');
     } finally {
@@ -59,7 +59,7 @@ export default function AdminUsersPage() {
   const toggleSuspend = async (user: UserItem) => {
     setToggling(user._id);
     try {
-      await adminApi.updateUser(user._id, { isSuspended: !user.isSuspended });
+      await adminApi.updateUser(user._id, { action: user.isSuspended ? 'activate' : 'suspend', role: user.role });
       toast.success(
         user.isSuspended
           ? (isAr ? '\u062a\u0645 \u0625\u0644\u063a\u0627\u0621 \u0627\u0644\u062a\u0639\u0644\u064a\u0642' : 'User unsuspended')

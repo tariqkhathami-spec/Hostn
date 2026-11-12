@@ -175,7 +175,7 @@ function GuestMessagesContent() {
     }
     return null;
   };
-  const getUnread = (conv: Conversation): number => user ? (conv.unreadCount?.[user._id] || 0) : 0;
+  const getUnread = (conv: Conversation): number => typeof conv.unreadCount === 'number' ? conv.unreadCount : (user ? ((conv.unreadCount as unknown as Record<string, number>)?.[user._id] || 0) : 0);
 
   const filtered = conversations.filter(c => {
     if (!search) return true;

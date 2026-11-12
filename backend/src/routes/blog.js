@@ -10,10 +10,11 @@ const {
   createCategory,
   deleteCategory,
 } = require('../controllers/blogController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 
 // Public routes
-router.get('/posts', getPosts);
+// optionalAuth: an admin also sees drafts in this list.
+router.get('/posts', optionalAuth, getPosts);
 router.get('/posts/:slug', getPost);
 router.get('/categories', getCategories);
 

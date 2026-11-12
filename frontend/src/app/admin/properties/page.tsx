@@ -102,7 +102,8 @@ export default function AdminPropertiesPage() {
     try {
       const res = await adminApi.getProperties({
         search: search || undefined,
-        status: statusFilter || undefined,
+        // The API's names: active / inactive (hidden) / pending / deleted.
+        status: ({ removed: 'inactive', deleted: 'deleted' } as Record<string, string>)[statusFilter] || statusFilter || undefined,
         page,
       });
       const data = res.data;
@@ -189,8 +190,8 @@ export default function AdminPropertiesPage() {
   };
 
   const statusLabels: Record<string, string> = isAr
-    ? { active: '\u0646\u0634\u0637', flagged: '\u0645\u0628\u0644\u063a \u0639\u0646\u0647', removed: '\u0645\u062d\u0630\u0648\u0641', pending: '\u0642\u064a\u062f \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629' }
-    : { active: 'Active', flagged: 'Flagged', removed: 'Removed', pending: 'Pending' };
+    ? { active: 'نشط', removed: 'متوقف عن العرض', pending: 'قيد المراجعة', deleted: 'محذوف' }
+    : { active: 'Active', removed: 'Hidden', pending: 'Pending', deleted: 'Deleted' };
 
   return (
     <div>

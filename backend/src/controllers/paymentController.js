@@ -73,9 +73,17 @@ exports.initiatePayment = async (req, res, next) => {
     });
 
     if (existingPayment) {
+      // Same shape as a fresh payment, so a retry finds `paymentId`.
       return res.json({
         success: true,
-        data: existingPayment,
+        data: {
+          paymentId: existingPayment._id,
+          amount: existingPayment.amount,
+          currency: existingPayment.currency,
+          bookingId: booking._id,
+          publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY,
+          callbackUrl: `${process.env.CLIENT_URL}/booking/${bookingId}/payment-callback`,
+        },
         message: 'Existing pending payment found',
       });
     }

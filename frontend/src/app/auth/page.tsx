@@ -13,13 +13,9 @@ import Input from '@/components/ui/Input';
 import toast from 'react-hot-toast';
 import { digitsOnly } from '@/lib/digits';
 
+// The API verifies Saudi mobile numbers only, so only +966 is offered.
 const GCC_COUNTRIES = [
   { code: '+966', flag: '\u{1F1F8}\u{1F1E6}', en: 'Saudi Arabia', ar: '\u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629', digits: 9, startsWith: '5' },
-  { code: '+971', flag: '\u{1F1E6}\u{1F1EA}', en: 'UAE', ar: '\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062A', digits: 9, startsWith: '5' },
-  { code: '+973', flag: '\u{1F1E7}\u{1F1ED}', en: 'Bahrain', ar: '\u0627\u0644\u0628\u062D\u0631\u064A\u0646', digits: 8, startsWith: '' },
-  { code: '+965', flag: '\u{1F1F0}\u{1F1FC}', en: 'Kuwait', ar: '\u0627\u0644\u0643\u0648\u064A\u062A', digits: 8, startsWith: '' },
-  { code: '+968', flag: '\u{1F1F4}\u{1F1F2}', en: 'Oman', ar: '\u0639\u064F\u0645\u0627\u0646', digits: 8, startsWith: '' },
-  { code: '+974', flag: '\u{1F1F6}\u{1F1E6}', en: 'Qatar', ar: '\u0642\u0637\u0631', digits: 8, startsWith: '' },
 ];
 
 export default function AuthPage() {

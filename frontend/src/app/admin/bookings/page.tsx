@@ -49,7 +49,7 @@ export default function AdminBookingsPage() {
       const res = await adminApi.getBookings({ page });
       const data = res.data;
       setBookings(data.data || data.bookings || []);
-      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+      setTotalPages(data.pagination?.pages || data.totalPages || 1);
     } catch {
       toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062d\u062c\u0648\u0632\u0627\u062a' : 'Failed to load bookings');
     } finally {

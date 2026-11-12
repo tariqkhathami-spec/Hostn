@@ -91,7 +91,8 @@ exports.getDashboardStats = async (req, res, next) => {
 // @access  Private (Host)
 exports.getRecentBookings = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id');
+    // Bookings of a property the host later deleted still need handling.
+    const properties = await Property.find({ host: req.user._id }).select('_id');
     const propertyIds = properties.map((p) => p._id);
 
     const bookings = await Booking.find({ property: { $in: propertyIds } })
@@ -112,10 +113,10 @@ exports.getRecentBookings = async (req, res, next) => {
 // @access  Private (Host)
 exports.getNotifications = async (req, res, next) => {
   try {
-    const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).select('_id title');
+    const properties = await Property.find({ host: req.user._id }).select('_id title titleAr');
     const propertyIds = properties.map((p) => p._id);
     const propertyMap = {};
-    properties.forEach((p) => { propertyMap[p._id.toString()] = p.title; });
+    properties.forEach((p) => { propertyMap[p._id.toString()] = p.titleAr || p.title; });
 
     // Recent pending bookings (need action)
     const pendingBookings = await Booking.find({
@@ -591,12 +592,16 @@ exports.getHostProperties = async (req, res, next) => {
     // Group properties by their tag (e.g. a resort with several buildings)
     const groups = {};
     properties.forEach((p) => {
-      const groupTag = (p.tags && p.tags[0]) || p.titleAr || p.title;
+      // One entry per property. (Grouping by name or tag merged different
+      // properties, and edit / add-unit / VAT then all hit the first one.)
+      const displayName = p.titleAr || p.title;
+      const groupTag = String(p._id);
       if (!groups[groupTag]) {
         groups[groupTag] = {
           id: p._id, // first property's id doubles as the group id
-          name: groupTag,
-          nameAr: groupTag,
+          name: displayName,
+          nameAr: displayName,
+          nameEn: p.title || '',
           classification: p.type,
           status: p.isActive ? 'listed' : 'unlisted',
           isApproved: p.isApproved !== false,
@@ -639,6 +644,10 @@ exports.getHostProperties = async (req, res, next) => {
           features: unit.features || [],
           pricing: {
             midWeek: up.sunday || 0,
+            sunday: up.sunday || 0,
+            monday: up.monday || 0,
+            tuesday: up.tuesday || 0,
+            wednesday: up.wednesday || 0,
             thursday: up.thursday || 0,
             friday: up.friday || 0,
             saturday: up.saturday || 0,
@@ -664,7 +673,11 @@ exports.getHostBookings = async (req, res, next) => {
 
     const query = { property: { $in: propertyIds } };
     if (status && status !== 'all') {
-      query.status = status;
+      // Accepts one status or a comma-separated list; the app calls a
+      // pending booking "waiting".
+      const wanted = String(status).split(',').map((s) => s.trim()).filter(Boolean)
+        .map((s) => (s === 'waiting' ? 'pending' : s));
+      if (wanted.length) query.status = { $in: wanted };
     }
 
     const bookings = await Booking.find(query)
@@ -888,6 +901,13 @@ exports.getHostDashboardStats = async (req, res, next) => {
     const allBookings = await Booking.find({ property: { $in: propertyIds } });
     const activeBookings = allBookings.filter(b => ['confirmed', 'completed'].includes(b.status));
     const totalEarnings = activeBookings.reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
+    // Confirmed stays that are running now or still to come.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const currentAndUpcoming = allBookings.filter(b => b.status === 'confirmed' && b.checkOut >= startOfToday).length;
+    const hostReviews = await Review.find({ property: { $in: propertyIds } }).select('ratings.overall').lean();
+    const rated = hostReviews.map(r => r.ratings && r.ratings.overall).filter(v => typeof v === 'number');
+    const averageRating = rated.length ? Math.round((rated.reduce((a, b) => a + b, 0) / rated.length) * 10) / 10 : 0;
 
     res.json({
       success: true,
@@ -896,6 +916,10 @@ exports.getHostDashboardStats = async (req, res, next) => {
         activeListings: properties.length,
         totalBookings: allBookings.length,
         totalEarnings,
+        totalRevenue: totalEarnings,
+        activeBookings: currentAndUpcoming,
+        averageRating,
+        reviewCount: rated.length,
         pendingBookings: allBookings.filter(b => b.status === 'pending').length,
         confirmedBookings: allBookings.filter(b => b.status === 'confirmed').length,
       },

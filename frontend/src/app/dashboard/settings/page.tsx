@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { hostPortalUrl } from '@/lib/hostPortal';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -104,16 +105,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpgrade = async () => {
-    setUpgrading(true);
-    try {
-      await upgradeToHost();
-      toast.success(isAr ? '\u062a\u0645 \u0627\u0644\u062a\u0631\u0642\u064a\u0629 \u0628\u0646\u062c\u0627\u062d!' : 'Upgraded to host!');
-      router.push('/host');
-    } catch {
-      toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u0627\u0644\u062a\u0631\u0642\u064a\u0629' : 'Failed to upgrade');
-      setUpgrading(false);
-    }
+  // Hosts have their own accounts on the host portal; a guest account is
+  // not converted. Send the visitor there to sign up.
+  const handleUpgrade = () => {
+    window.location.href = hostPortalUrl('/auth');
   };
 
   const handleSendPhoneCode = async () => {

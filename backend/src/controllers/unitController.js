@@ -86,7 +86,7 @@ exports.searchUnits = async (req, res, next) => {
     const {
       city, type, minPrice, maxPrice, guests, checkIn, checkOut,
       amenities, page = 1, limit = 12, sort = '-ratings.average',
-      search, bedrooms, rating, discount, district, direction,
+      search, bedrooms, bathrooms, rating, discount, district, direction,
       pool, minArea, maxArea, suitability,
     } = req.query;
 
@@ -100,6 +100,9 @@ exports.searchUnits = async (req, res, next) => {
     if (district) propFilter['location.district'] = { $regex: new RegExp(String(district).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') };
     if (direction) propFilter.direction = direction;
     if (search) propFilter.$text = { $search: search };
+    // Reviews are written against the property, so a minimum rating is a
+    // property filter (a unit carries no rating of its own).
+    if (rating && Number(rating) > 0) propFilter['ratings.average'] = { $gte: Number(rating) };
 
     const matchingPropertyIds = await Property.distinct('_id', propFilter);
     if (matchingPropertyIds.length === 0) {
@@ -120,7 +123,7 @@ exports.searchUnits = async (req, res, next) => {
     requirePublishable(unitFilter);
     if (guests) unitFilter['capacity.maxGuests'] = { $gte: Number(guests) };
     if (bedrooms) unitFilter['bedrooms.count'] = { $gte: Number(bedrooms) };
-    if (rating) unitFilter['ratings.average'] = { $gte: Number(rating) };
+    if (bathrooms) unitFilter.bathroomCount = { $gte: Number(bathrooms) };
     if (discount === '1' || discount === 'true') unitFilter['pricing.discountPercent'] = { $gt: 0 };
     if (pool === '1' || pool === 'true') unitFilter.hasPool = true;
     if (suitability && suitability !== 'both') unitFilter.suitability = { $in: [suitability, 'both'] };
@@ -282,7 +285,7 @@ exports.searchUnits = async (req, res, next) => {
     // Lookup host within property
     pipeline.push({
       $lookup: {
-        from: 'users',
+        from: 'hosts',
         localField: 'property.host',
         foreignField: '_id',
         pipeline: [{ $project: { name: 1, avatar: 1, isVerified: 1 } }],
