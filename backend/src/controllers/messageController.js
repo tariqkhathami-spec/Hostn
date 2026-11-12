@@ -276,6 +276,17 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
+    // Push the message to the other side so open chats and unread badges
+    // update without waiting for the next poll.
+    if (otherParticipant) {
+      try {
+        require('../config/socket').emitToUser(otherParticipant.user.toString(), 'message:new', {
+          conversationId: conversation._id,
+          message: message.toObject ? message.toObject() : message,
+        });
+      } catch (e) { /* realtime is best-effort */ }
+    }
+
     res.status(201).json({
       success: true,
       data: message,

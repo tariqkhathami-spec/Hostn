@@ -124,7 +124,9 @@ exports.getUnreadSummary = async (req, res, next) => {
 // @access  Private
 exports.registerDeviceToken = async (req, res, next) => {
   try {
-    const { token, platform } = req.body;
+    // Older app builds send the token as `pushToken`.
+    const token = req.body.token || req.body.pushToken;
+    const { platform } = req.body;
 
     if (!token) {
       return res.status(400).json({ success: false, message: 'Device token is required' });

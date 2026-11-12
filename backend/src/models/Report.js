@@ -28,6 +28,7 @@ const reportSchema = new mongoose.Schema(
         'inappropriate_content',
         'spam',
         'harassment',
+        'inappropriate_behavior',
         'fraud',
         'safety_concern',
         'misleading_listing',

@@ -289,6 +289,73 @@ await step('admin: every list answers with data', async () => {
   }
 });
 
+await step('contract details the screens depend on', async () => {
+  // Guest side
+  const up = await call('guest', 'GET', '/bookings/my-bookings?status=upcoming');
+  const prev = await call('guest', 'GET', '/bookings/my-bookings?status=previous');
+  const upIds = new Set((up.data || []).map((b) => b._id));
+  check('upcoming and previous bookings are different lists', up.status === 200 && prev.status === 200 && (prev.data || []).every((b) => !upIds.has(b._id)) && (up.data || []).every((b) => ['pending', 'confirmed'].includes(b.status)));
+  check('guest bookings carry the host on the property', (up.data || []).concat(prev.data || []).slice(0, 5).every((b) => b.property?.host?.name), 'property.host.name missing');
+  const unread = await call('guest', 'GET', '/messages/unread-count');
+  check('unread messages is a number called unreadCount', typeof (unread.data?.unreadCount ?? unread.json?.unreadCount) === 'number', JSON.stringify(unread.json).slice(0, 100));
+  const convs = await call('guest', 'GET', '/messages/conversations');
+  check('conversation unreadCount is a number', (convs.data || []).every((c) => typeof c.unreadCount === 'number'));
+  const big = await call(null, 'GET', '/units/search?limit=50');
+  check('search reports the total number of matches', typeof big.json?.pagination?.total === 'number' && big.json.pagination.total >= (big.data || []).length);
+  const baths = await call(null, 'GET', '/units/search?bathrooms=3&limit=50');
+  check('bathrooms filter is applied', baths.status === 200 && (baths.data || []).every((u) => u.bathroomCount >= 3));
+  const rated = await call(null, 'GET', '/units/search?rating=9&limit=50');
+  check('rating filter matches the property rating', rated.status === 200 && (rated.data || []).every((u) => (u.property?.ratings?.average ?? 0) >= 9));
+  const tok = await call('guest', 'POST', '/notifications/device-token', { pushToken: 'ExponentPushToken[qa-check]', platform: 'ios' });
+  check('device token registers (pushToken alias)', tok.status === 200, `status ${tok.status}`);
+  const again = await call('guest', 'POST', '/payments/initiate', { bookingId: booking?._id });
+  check('initiating payment again never returns a missing paymentId', again.status >= 400 || !!again.data?.paymentId, JSON.stringify(again.json).slice(0, 120));
+
+  // Host side
+  const stats = await call('host', 'GET', '/host/dashboard/stats');
+  check('host stats carry active bookings, rating and revenue', ['activeBookings', 'averageRating', 'totalRevenue'].every((k) => typeof stats.data?.[k] === 'number'), JSON.stringify(stats.data).slice(0, 160));
+  const waiting = await call('host', 'GET', '/host/bookings?status=waiting,confirmed');
+  check('host bookings filter accepts a list and "waiting"', waiting.status === 200 && Array.isArray(waiting.data));
+  const props = await call('host', 'GET', '/host/properties');
+  const ids = (props.data || []).map((g) => String(g.id));
+  check('host property list has one entry per property', ids.length === new Set(ids).size && ids.length > 0);
+  const anyUnit = (props.data || []).flatMap((g) => g.units || [])[0];
+  check('host unit rows carry all seven day prices', anyUnit && days.every((d) => typeof anyUnit.pricing?.[d] === 'number'));
+  const remit = await call('host', 'GET', '/host/finance/payouts?bookingNumber=abc');
+  check('searching transfers by booking number does not crash', remit.status === 200, `status ${remit.status}`);
+
+  // Admin side
+  for (const path of ['/admin/users', '/admin/bookings', '/admin/payments', '/admin/logs']) {
+    const r = await call('admin', 'GET', path);
+    check(`${path} returns pagination.pages`, typeof r.json?.pagination?.pages === 'number', JSON.stringify(Object.keys(r.json || {})));
+  }
+  const logs = await call('admin', 'GET', '/admin/logs');
+  const logRows = logs.data?.logs || logs.data || [];
+  const nameless = logRows.filter((l) => l.actor && !l.actor.name);
+  check('every activity log row names who did it', logRows.length > 0 && nameless.length === 0, `${nameless.length} of ${logRows.length} rows have no actor name (e.g. ${nameless[0]?.action})`);
+  const pays = await call('admin', 'GET', '/admin/payments');
+  const payRows = pays.data?.payments || pays.data || [];
+  check('paid payments are stored as "completed"', payRows.some((p) => p.status === 'completed'), [...new Set(payRows.map((p) => p.status))].join(','));
+  const usersList = await call('admin', 'GET', '/admin/users?limit=100');
+  const rows = usersList.data?.users || usersList.data || [];
+  const victim = rows.find((u) => u.role === 'guest' && /^User /.test(u.name || '')) || rows.find((u) => u.role === 'guest' && u.phone !== PHONES.guest && String(u._id) !== String(users.guest._id));
+  if (victim) {
+    const sus = await call('admin', 'PATCH', `/admin/users/${victim._id}`, { action: 'suspend', role: victim.role });
+    const act = await call('admin', 'PATCH', `/admin/users/${victim._id}`, { action: 'activate', role: victim.role });
+    check('admin can suspend and reactivate a user', sus.status === 200 && act.status === 200, `suspend ${sus.status} activate ${act.status}`);
+  } else {
+    check('admin can suspend and reactivate a user', false, 'no spare guest account to test with');
+  }
+  const draftTitle = `مسودة اختبار ${Math.random().toString(36).replace(/[0-9.]/g, '')}`;
+  const post = await call('admin', 'POST', '/blog/posts', { title: { ar: draftTitle }, content: { ar: 'نص تجريبي' }, excerpt: { ar: 'ملخص' }, isPublished: false });
+  check('admin creates a post without typing a slug', post.status < 300 && post.data?.slug, `status ${post.status} ${JSON.stringify(post.json).slice(0, 140)}`);
+  const adminPosts = await call('admin', 'GET', '/blog/posts?limit=50');
+  const publicPosts = await call(null, 'GET', '/blog/posts?limit=50');
+  const inList = (r) => JSON.stringify(r.data || r.json).includes(draftTitle);
+  check('drafts show to the admin and not to the public', inList(adminPosts) && !inList(publicPosts));
+  if (post.data?._id) await call('admin', 'DELETE', `/blog/posts/${post.data._id}`);
+});
+
 await step('access control', async () => {
   const a = await call('guest', 'GET', '/admin/users');
   check('guest cannot open admin data', a.status === 401 || a.status === 403, `status ${a.status}`);

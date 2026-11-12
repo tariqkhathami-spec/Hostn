@@ -118,7 +118,7 @@ export default function Sidebar({ role }: SidebarProps) {
       setBadges({
         bookings: s?.bookings ?? 0,
         support: s?.support ?? 0,
-        messages: (m?.count ?? 0) + (s?.messages ?? 0),
+        messages: (m?.unreadCount ?? m?.count ?? 0) + (s?.messages ?? 0),
       });
     } catch { /* silently ignore */ }
   }, [user]);

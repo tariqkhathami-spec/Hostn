@@ -86,7 +86,8 @@ function PaymentCallbackContent() {
         moyasarPaymentId,
       });
 
-      if (res.data.success && res.data.payment?.status === 'paid') {
+      const paid = res.data.data || res.data.payment;
+      if (res.data.success && (paid?.status === 'completed' || paid?.status === 'paid')) {
         setStatus('success');
         setMessage(isAr ? 'تم تأكيد حجزك!' : 'Your booking has been confirmed!');
         localStorage.removeItem(`hostn_payment_${bookingId}`);

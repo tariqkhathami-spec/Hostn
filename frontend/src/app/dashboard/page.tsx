@@ -47,14 +47,10 @@ export default function GuestDashboardPage() {
     fetchBookings();
   }, [isAuthenticated]);
 
-  const handleUpgrade = async () => {
-    setUpgrading(true);
-    try {
-      await upgradeToHost();
-      window.location.href = hostPortalUrl('/');
-    } catch {
-      setUpgrading(false);
-    }
+  // Hosts have their own accounts on the host portal; a guest account is
+  // not converted. Send the visitor there to sign up.
+  const handleUpgrade = () => {
+    window.location.href = hostPortalUrl('/auth');
   };
 
   if (authLoading || !user) {
