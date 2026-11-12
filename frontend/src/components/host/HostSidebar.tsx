@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LogoMark } from '@/components/ui/Logo';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -75,9 +76,7 @@ export default function HostSidebar({ collapsed, onToggle, mobileOpen, onMobileC
       {/* Logo */}
       <div className="flex items-center justify-between p-5 border-b border-gray-100">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-lg">H</span>
-          </div>
+          <span className="flex-shrink-0"><LogoMark size={36} /></span>
           {!collapsed && (
             <div>
               <span className="text-lg font-bold text-gray-900">Hostn</span>

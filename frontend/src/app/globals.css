@@ -2,16 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&family=Noto+Kufi+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap');
 
 :root {
-  --primary: #6d28d9;
-  --primary-light: #7c3aed;
-  --primary-dark: #3b1578;
-  --gold: #d4af37;
-  --gold-light: #f5e08a;
+  --primary: #14644b;
+  --primary-light: #177d5c;
+  --primary-dark: #0f4133;
+  --gold: #f08c0a;
+  --gold-light: #fcc44d;
   --cream: #faf8f5;
-  --dark: #1a0e2e;
+  --dark: #0b1f19;
 }
 
 * {
@@ -26,7 +26,7 @@ html {
 
 body {
   font-family: 'Rubik', system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
-  color: #1a0e2e;
+  color: #0b1f19;
   background-color: #fff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -38,14 +38,14 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #faf8ff;
+  background: #eefaf4;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4c4fc;
+  background: #b0e6cc;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #7c3aed;
+  background: #177d5c;
 }
 
 /* Utility classes */
@@ -113,14 +113,14 @@ body {
 
   /* Text gradient */
   .text-gradient-gold {
-    background: linear-gradient(135deg, #d4af37 0%, #f5e08a 50%, #d4af37 100%);
+    background: linear-gradient(135deg, #f08c0a 0%, #fcc44d 50%, #f08c0a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-purple {
-    background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+    background: linear-gradient(135deg, #177d5c 0%, #48b78c 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -140,10 +140,10 @@ body {
 .hero-gradient {
   background: linear-gradient(
     160deg,
-    rgba(26, 14, 46, 0.94) 0%,
-    rgba(59, 21, 120, 0.88) 35%,
-    rgba(109, 40, 217, 0.72) 70%,
-    rgba(109, 40, 217, 0.6) 100%
+    rgba(6, 35, 27, 0.94) 0%,
+    rgba(15, 65, 51, 0.88) 35%,
+    rgba(20, 100, 75, 0.72) 70%,
+    rgba(20, 100, 75, 0.6) 100%
   );
 }
 
@@ -157,8 +157,8 @@ body {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(26, 14, 46, 0.4) 60%,
-    rgba(26, 14, 46, 0.85) 100%
+    rgba(6, 35, 27, 0.4) 60%,
+    rgba(6, 35, 27, 0.85) 100%
   );
 }
 
@@ -166,11 +166,11 @@ body {
 .gold-shimmer {
   background: linear-gradient(
     110deg,
-    #d4af37 0%,
-    #f5e08a 25%,
-    #d4af37 50%,
-    #f5e08a 75%,
-    #d4af37 100%
+    #f08c0a 0%,
+    #fcc44d 25%,
+    #f08c0a 50%,
+    #fcc44d 75%,
+    #f08c0a 100%
   );
   background-size: 200% auto;
   animation: shimmer 3s linear infinite;
@@ -212,8 +212,8 @@ body {
 
 /* Focus ring â premium subtle purple glow */
 .focus-premium:focus {
-  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.15);
-  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(20, 100, 75, 0.15);
+  border-color: #48b78c;
 }
 
 /* Hover lift effect */
@@ -234,24 +234,24 @@ body {
 .rdrDayStartPreview,
 .rdrDayInPreview,
 .rdrDayEndPreview {
-  border-color: #7c3aed !important;
+  border-color: #177d5c !important;
 }
 
 .rdrSelected,
 .rdrStartEdge,
 .rdrEndEdge {
-  background: #6d28d9 !important;
+  background: #14644b !important;
 }
 
 .rdrInRange {
-  background: #f3edff !important;
-  color: #6d28d9 !important;
+  background: #d6f3e4 !important;
+  color: #14644b !important;
 }
 
 /* Selection color */
 ::selection {
-  background: #e8dffe;
-  color: #3b1578;
+  background: #b0e6cc;
+  color: #0f4133;
 }
 
 /* Hide scrollbar utility */
@@ -265,7 +265,7 @@ body {
 
 /* RTL support */
 [dir="rtl"] {
-  font-family: 'Noto Kufi Arabic', 'Rubik', system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  font-family: 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', 'Rubik', system-ui, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
   direction: rtl;
 }
 
@@ -344,4 +344,11 @@ body {
   footer {
     padding-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* Arabic headings keep the display face */
+[dir="rtl"] h1,
+[dir="rtl"] h2,
+[dir="rtl"] h3 {
+  font-family: 'Noto Kufi Arabic', 'IBM Plex Sans Arabic', system-ui, sans-serif;
 }

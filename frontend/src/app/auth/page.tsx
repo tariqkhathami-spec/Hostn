@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, Suspense } from 'react';
+import Logo from '@/components/ui/Logo';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, getRoleRedirect } from '@/context/AuthContext';
@@ -154,8 +155,8 @@ function AuthContent() {
       <div className="w-full max-w-md">
         {/* Top row: logo + language toggle */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors">
-            Hostn
+          <Link href="/" aria-label="Hostn">
+            <Logo size={34} />
           </Link>
           <button
             type="button"

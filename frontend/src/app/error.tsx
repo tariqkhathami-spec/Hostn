@@ -58,7 +58,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
                 onClick={() => reset()}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#d4af37',
+                  backgroundColor: '#f08c0a',
                   color: '#1e1e2e',
                   border: 'none',
                   borderRadius: '4px',
@@ -71,7 +71,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#c9a227';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#d4af37';
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f08c0a';
                 }}
               >
                 Try again
@@ -104,7 +104,7 @@ export default function Error({ error, reset }: ErrorPageProps) {
 
             <p style={{ fontSize: '12px', color: '#999', marginTop: '24px' }}>
               If the problem persists, please contact{' '}
-              <a href="mailto:support@hostn.com" style={{ color: '#d4af37', textDecoration: 'none' }}>
+              <a href="mailto:support@hostn.com" style={{ color: '#f08c0a', textDecoration: 'none' }}>
                 support@hostn.com
               </a>
             </p>

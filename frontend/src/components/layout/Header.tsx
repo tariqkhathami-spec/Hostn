@@ -5,6 +5,7 @@ import { useAuth, getRoleRedirect } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { User, LogOut, Globe, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import Logo from '@/components/ui/Logo';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -15,12 +16,12 @@ export default function Header() {
   const dashboardLink = isAuthenticated ? getRoleRedirect(user?.role) : '/auth';
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-bold text-primary-700">
-            Hostn
+          <Link href="/" aria-label="Hostn">
+            <Logo size={34} />
           </Link>
 
           {/* Desktop Nav */}
@@ -60,7 +61,7 @@ export default function Header() {
             ) : (
               <Link
                 href="/auth"
-                className="bg-primary-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors"
+                className="bg-primary-700 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-primary-800 transition-colors shadow-sm"
               >
                 {t('nav.signIn')}
               </Link>

@@ -172,34 +172,27 @@ export default function HeroSearch() {
   const currentStepIndex = step === 'idle' ? -1 : steps.findIndex((s) => s.key === step);
 
   return (
-    <div className="relative z-20 min-h-[400px] sm:min-h-[440px] md:min-h-[500px] flex items-center justify-center">
+    <div className="relative z-20 min-h-[560px] sm:min-h-[620px] md:min-h-[700px] flex items-center justify-center bg-primary-950">
       {/* Background image */}
       <div className="absolute inset-0 overflow-hidden">
         <div
-          className="absolute inset-0 bg-cover bg-center scale-105"
-          style={{
-            backgroundImage:
-              'url(https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600)',
-          }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/brand/hero.jpg)' }}
         />
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(160deg, rgba(26,14,46,0.95) 0%, rgba(59,21,120,0.88) 35%, rgba(109,40,217,0.72) 70%, rgba(109,40,217,0.55) 100%)',
+              'linear-gradient(180deg, rgba(6,35,27,0.82) 0%, rgba(6,35,27,0.62) 38%, rgba(6,35,27,0.78) 72%, rgba(6,35,27,0.96) 100%)',
           }}
         />
       </div>
 
-      {/* Decorative orbs */}
-      <div className="hidden sm:block absolute top-20 left-10 w-64 h-64 bg-gold-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" />
-      <div className="hidden sm:block absolute bottom-20 right-10 w-80 h-80 bg-primary-400/10 rounded-full blur-3xl animate-pulse-soft pointer-events-none" style={{ animationDelay: '1.5s' }} />
-
       {/* Content */}
-      <div className="relative z-10 container-custom text-center py-10 sm:py-16 md:py-20 px-4 sm:px-6">
+      <div className="relative z-10 container-custom text-center py-12 sm:py-16 md:py-20 px-4 sm:px-6">
         {/* Badge */}
         <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <span className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-xs sm:text-sm font-medium px-3 sm:px-5 py-1.5 sm:py-2 rounded-full backdrop-blur-md border border-white/10">
+          <span className="inline-flex items-center gap-2 bg-white/10 text-white text-xs sm:text-sm font-medium px-4 sm:px-5 py-2 rounded-full backdrop-blur-md border border-white/15">
             <span className="w-2 h-2 bg-gold-400 rounded-full animate-pulse-soft" />
             {t('hero.badge')}
           </span>
@@ -207,20 +200,20 @@ export default function HeroSearch() {
 
         {/* Headline */}
         <div className="animate-fade-in-up mt-6" style={{ animationDelay: '0.2s' }}>
-          <h1 className={`text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-3 sm:mb-5 tracking-tight ${isAr ? 'leading-[1.3]' : 'leading-[1.1]'}`}>
+          <h1 className={`text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-4 sm:mb-6 tracking-tight ${isAr ? 'leading-[1.25]' : 'leading-[1.05]'}`}>
             {t('hero.title1')}
             <br />
-            <span className={`${isAr ? 'font-display-ar' : 'font-display italic'} text-gradient-gold inline-block mt-1`}>
+            <span className="text-gradient-gold inline-block">
               {t('hero.title2')}
             </span>
           </h1>
-          <p className={`text-sm sm:text-base md:text-lg text-white/70 mb-6 sm:mb-10 mx-auto px-2 sm:px-0 ${isAr ? 'leading-[2.2] max-w-2xl font-normal' : 'leading-relaxed max-w-xl font-light'}`}>
+          <p className={`text-base sm:text-lg md:text-xl text-white/80 mb-8 sm:mb-10 mx-auto px-2 sm:px-0 max-w-2xl ${isAr ? 'leading-[1.9]' : 'leading-relaxed'}`}>
             {t('hero.subtitle')}
           </p>
         </div>
 
         {/* Step indicator */}
-        <div className="animate-fade-in-up flex items-center justify-center gap-2 mb-4" style={{ animationDelay: '0.3s' }} aria-live="polite" role="status">
+        <div className="animate-fade-in-up hidden sm:flex items-center justify-center gap-2 mb-4" style={{ animationDelay: '0.3s' }} aria-live="polite" role="status">
           {steps.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">
               <div className={`
@@ -242,7 +235,7 @@ export default function HeroSearch() {
           className="animate-fade-in-up max-w-5xl mx-auto relative z-50"
           style={{ animationDelay: '0.35s' }}
         >
-          <div className="bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl p-3 sm:p-4 md:p-5 border border-white/40">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               {/* City */}
               <div className="relative" ref={cityDropdownRef}>
@@ -416,12 +409,12 @@ export default function HeroSearch() {
 
               {/* Search button */}
               <div className="flex flex-col justify-end">
-                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1 md:opacity-0">
+                <label className="hidden md:block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ltr:text-left rtl:text-right px-1 md:opacity-0">
                   {t('hero.search')}
                 </label>
                 <button
                   onClick={handleSearch}
-                  className={`w-full bg-gradient-to-r from-primary-600 to-primary-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-300 flex items-center justify-center gap-2 shadow-premium hover:shadow-premium-lg hover:-translate-y-0.5 ${
+                  className={`w-full bg-gradient-to-r from-gold-500 to-gold-400 text-primary-950 py-3 px-4 rounded-xl font-bold hover:from-gold-400 hover:to-gold-300 transition-all duration-300 flex items-center justify-center gap-2 shadow-gold hover:-translate-y-0.5 ${
                     step === 'ready' ? 'ring-2 ring-gold-400/50 animate-pulse-soft' : ''
                   }`}
                 >
@@ -523,7 +516,7 @@ export default function HeroSearch() {
           ].map(({ icon: Icon, label }) => (
             <div
               key={label}
-              className="flex items-center gap-2 text-white/60"
+              className="flex items-center gap-2 text-white/75"
             >
               <Icon className="w-4 h-4 text-gold-400" />
               <span className="text-xs font-medium tracking-wide">{label}</span>

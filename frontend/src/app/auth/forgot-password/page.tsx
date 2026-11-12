@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LogoMark } from '@/components/ui/Logo';
 import Link from 'next/link';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
@@ -38,9 +39,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 mb-8 justify-center">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-lg">H</span>
-          </div>
+          <span className="flex-shrink-0"><LogoMark size={36} /></span>
           <span className="text-xl font-bold text-gray-900 tracking-tight">Hostn</span>
         </Link>
 

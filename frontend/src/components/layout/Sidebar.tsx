@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Logo from '@/components/ui/Logo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
@@ -151,7 +152,7 @@ export default function Sidebar({ role }: SidebarProps) {
     <aside className="w-64 bg-white border-e border-gray-200 h-full min-h-screen lg:min-h-0 flex flex-col overflow-y-auto">
       {/* Logo + Role badge */}
       <div className="p-6 border-b border-gray-100">
-        <Link href="/" className="text-xl font-bold text-gray-900">Hostn</Link>
+        <Link href="/" aria-label="Hostn" className="inline-block align-middle"><Logo size={30} /></Link>
         <span className="ms-2 text-xs font-medium px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">
           {role === 'admin' && user?.adminRole
             ? ADMIN_ROLE_LABELS[user.adminRole]?.[lang] || ROLE_LABELS[role]?.[lang]
