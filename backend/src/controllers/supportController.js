@@ -171,8 +171,8 @@ exports.replyToTicket = async (req, res) => {
         user: notifyUser,
         userType: ticket.userType,
         type: 'support_reply',
-        title: 'Support Reply',
-        message: `Your support ticket "${ticket.subject}" has a new reply`,
+        title: 'رد من الدعم',
+        message: `يوجد رد جديد على طلبك "${ticket.subject}"`,
         data: { ticketId: ticket._id },
       });
     }
@@ -264,8 +264,8 @@ exports.updateTicketStatus = async (req, res) => {
       user: ticket.user,
       userType: ticket.userType,
       type: 'support_reply',
-      title: 'Ticket Updated',
-      message: `Your ticket "${ticket.subject}" status changed to ${status.replace('_', ' ')}`,
+      title: 'تحديث على طلب الدعم',
+      message: `تغيّرت حالة طلبك "${ticket.subject}" إلى: ${({ open: 'مفتوح', in_progress: 'قيد المعالجة', resolved: 'تم الحل', closed: 'مغلق' })[status] || status}`,
       data: { ticketId: ticket._id },
     });
 

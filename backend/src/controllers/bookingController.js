@@ -443,8 +443,8 @@ exports.createBooking = async (req, res, next) => {
               user: property.host,
               userType: 'Host',
               type: 'booking_created',
-              title: 'New Booking Request',
-              message: `${req.user.name} requested to book "${property.title}" for ${hold.pricing.nights} nights`,
+              title: 'طلب حجز جديد',
+              message: `${req.user.name} يطلب حجز "${property.titleAr || property.title}" لمدة ${hold.pricing.nights} ${hold.pricing.nights === 1 ? 'ليلة' : 'ليالٍ'}`,
               data: { bookingId: hold._id, propertyId: property._id },
             }).catch(() => {});
           }
@@ -642,8 +642,8 @@ exports.createBooking = async (req, res, next) => {
       user: property.host,
       userType: 'Host',
       type: 'booking_created',
-      title: 'New Booking Request',
-      message: `${req.user.name} requested to book "${property.title}" for ${nights} nights`,
+      title: 'طلب حجز جديد',
+      message: `${req.user.name} يطلب حجز "${property.titleAr || property.title}" لمدة ${nights} ${nights === 1 ? 'ليلة' : 'ليالٍ'}`,
       data: { bookingId: booking._id, propertyId: property._id },
     }).catch(() => {});
 
@@ -807,16 +807,20 @@ exports.updateBookingStatus = async (req, res, next) => {
       status === 'completed' ? 'booking_completed' : 'booking_cancelled';
 
     const notifTitle =
-      status === 'confirmed' ? 'Booking Confirmed' :
-      status === 'rejected' ? 'Booking Rejected' :
-      status === 'completed' ? 'Booking Completed' : 'Booking Cancelled';
+      status === 'confirmed' ? 'تم تأكيد حجزك' :
+      status === 'rejected' ? 'تعذّر قبول حجزك' :
+      status === 'completed' ? 'اكتمل حجزك' : 'تم إلغاء حجزك';
+    const notifBody =
+      status === 'confirmed' ? 'أكّد المضيف حجزك في' :
+      status === 'rejected' ? 'اعتذر المضيف عن قبول حجزك في' :
+      status === 'completed' ? 'نتمنى أن إقامتك كانت ممتعة في' : 'أُلغي حجزك في';
 
     await Notification.createNotification({
       user: booking.guest,
       userType: 'Guest',
       type: notifType,
       title: notifTitle,
-      message: `Your booking at "${property.title}" has been ${status}`,
+      message: `${notifBody} "${property.titleAr || property.title}"`,
       data: { bookingId: booking._id, propertyId: booking.property },
     });
 
@@ -868,8 +872,17 @@ exports.cancelBooking = async (req, res, next) => {
     await booking.save();
 
     // ── Real-time: notify host about cancellation + update property ──
-    const property = await Property.findById(booking.property).select('host');
+    const property = await Property.findById(booking.property).select('host title titleAr');
     if (property) {
+      // The host must hear about a cancellation even when the app is closed.
+      Notification.createNotification({
+        user: property.host,
+        userType: 'Host',
+        type: 'booking_cancelled',
+        title: 'ألغى الضيف حجزه',
+        message: `أُلغي حجز في "${property.titleAr || property.title}"، والتواريخ صارت متاحة من جديد`,
+        data: { bookingId: booking._id, propertyId: booking.property },
+      }).catch(() => {});
       emitToUser(property.host.toString(), 'booking:cancelled', booking.toObject());
       emitToProperty(booking.property.toString(), 'availability:changed', {
         propertyId: booking.property.toString(),

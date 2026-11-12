@@ -88,8 +88,8 @@ exports.createReview = async (req, res, next) => {
         user: property.host,
         userType: 'Host',
         type: 'review_received',
-        title: 'New Review',
-        message: `A guest has left a review on your property "${property.title}"`,
+        title: 'تقييم جديد',
+        message: `أضاف ضيف تقييماً على عقارك "${property.titleAr || property.title}"`,
         data: { propertyId: property._id, reviewId: review._id },
       });
     }

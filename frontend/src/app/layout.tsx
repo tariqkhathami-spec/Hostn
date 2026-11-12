@@ -6,14 +6,30 @@ import SocketProvider from '@/components/SocketProvider';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: 'Hostn — Vacation Rentals in Saudi Arabia | إيجارات عطلات في السعودية',
+  metadataBase: new URL('https://hostn.co'),
+  title: {
+    default: 'هوستن Hostn — حجز شاليهات واستراحات ومزارع في السعودية',
+    template: '%s | Hostn',
+  },
   description:
-    'Discover premium chalets, villas, and vacation rentals across Saudi Arabia. Book your perfect stay with Hostn. | اكتشف شاليهات، فلل، واستراحات مميزة في السعودية.',
-  keywords: 'hostn, vacation rental, Saudi Arabia, chalet, villa, إيجار عطلات, شاليهات, فلل, استراحات, السعودية, حجز',
+    'احجز شاليهات واستراحات ومزارع وفلل موثّقة في مدن المملكة، بسعر نهائي واضح قبل الدفع. | Book verified chalets, rest houses, farms and villas across Saudi Arabia with clear final prices.',
+  keywords:
+    'هوستن, حجز شاليهات, استراحات, مزارع, فلل, شاليهات الرياض, شاليهات جدة, إيجار يومي, السعودية, hostn, chalet booking, vacation rental, Saudi Arabia',
+  applicationName: 'Hostn',
   openGraph: {
-    title: 'Hostn — Vacation Rentals in Saudi Arabia | إيجارات عطلات في السعودية',
-    description: 'Book premium chalets, villas, and vacation stays in Saudi Arabia | احجز شاليهات، فلل، واستراحات في السعودية',
+    title: 'هوستن Hostn — إجازتك الجاية تبدأ من هنا',
+    description: 'شاليهات واستراحات ومزارع موثّقة في كل مدن المملكة، بأسعار واضحة بدون مفاجآت.',
+    url: 'https://hostn.co',
+    siteName: 'Hostn',
+    locale: 'ar_SA',
     type: 'website',
+    images: [{ url: '/brand/hero.jpg', width: 1920, height: 1280, alt: 'Hostn' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'هوستن Hostn — حجز شاليهات واستراحات في السعودية',
+    description: 'شاليهات واستراحات ومزارع موثّقة بأسعار واضحة.',
+    images: ['/brand/hero.jpg'],
   },
 };
 
