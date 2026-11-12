@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import type { Unit } from '../../types';
 
 interface Props {
@@ -71,12 +71,12 @@ const styles = StyleSheet.create({
   name: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   code: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   statusBadge: {
     flexDirection: 'row',

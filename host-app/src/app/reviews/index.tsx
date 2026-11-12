@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { formatDate } from '../../utils/format';
 import type { Review } from '../../types';
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textPrimary,
     width: 70,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   scoreBarTrack: {
     flex: 1,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textPrimary,
     lineHeight: 22,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   moreButton: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textPrimary,
     lineHeight: 22,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   replyButton: {

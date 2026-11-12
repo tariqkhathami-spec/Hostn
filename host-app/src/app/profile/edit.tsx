@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 
 export default function EditProfileScreen() {
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.smallBold,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   input: {
     backgroundColor: Colors.white,

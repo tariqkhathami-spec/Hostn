@@ -76,17 +76,26 @@ export const Radius = {
   full: 999,
 } as const;
 
+// The side a line of text starts on: the right in Arabic, the left in English.
+// iOS mirrors textAlign on <Text> in a right-to-left layout and Android does
+// not, so the literal differs by platform. iOS also aligns unstyled text by
+// the PHONE's language rather than the app's, so every text style below
+// states its alignment — otherwise Arabic headings hug the left edge on an
+// iPhone that is set to English.
+export const TEXT_START: 'left' | 'right' =
+  Platform.OS === 'android' && I18nManager.isRTL ? 'right' : 'left';
+
 export const Typography = {
-  h1: { fontSize: 28, fontWeight: '700' as const },
-  h2: { fontSize: 24, fontWeight: '700' as const },
-  h3: { fontSize: 20, fontWeight: '600' as const },
-  subtitle: { fontSize: 18, fontWeight: '600' as const },
-  body: { fontSize: 16, fontWeight: '400' as const },
-  bodyBold: { fontSize: 16, fontWeight: '600' as const },
-  small: { fontSize: 14, fontWeight: '400' as const },
-  smallBold: { fontSize: 14, fontWeight: '600' as const },
-  caption: { fontSize: 12, fontWeight: '400' as const },
-  tiny: { fontSize: 10, fontWeight: '400' as const },
+  h1: { fontSize: 28, fontWeight: '700' as const, textAlign: TEXT_START },
+  h2: { fontSize: 24, fontWeight: '700' as const, textAlign: TEXT_START },
+  h3: { fontSize: 20, fontWeight: '600' as const, textAlign: TEXT_START },
+  subtitle: { fontSize: 18, fontWeight: '600' as const, textAlign: TEXT_START },
+  body: { fontSize: 16, fontWeight: '400' as const, textAlign: TEXT_START },
+  bodyBold: { fontSize: 16, fontWeight: '600' as const, textAlign: TEXT_START },
+  small: { fontSize: 14, fontWeight: '400' as const, textAlign: TEXT_START },
+  smallBold: { fontSize: 14, fontWeight: '600' as const, textAlign: TEXT_START },
+  caption: { fontSize: 12, fontWeight: '400' as const, textAlign: TEXT_START },
+  tiny: { fontSize: 10, fontWeight: '400' as const, textAlign: TEXT_START },
 } as const;
 
 export const Shadows = {
@@ -122,7 +131,3 @@ export const Shadows = {
 
 export const isRTL = I18nManager.isRTL;
 
-// Aligns text to the reading-start side (the right, in this Arabic app).
-// iOS mirrors textAlign on <Text> in a right-to-left layout and Android does
-// not, so a literal 'right' ends up on the left on iPhone.
-export const TEXT_START: 'left' | 'right' = Platform.OS === 'ios' ? 'left' : 'right';

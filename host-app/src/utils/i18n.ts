@@ -33,7 +33,7 @@ const ar = {
   'dashboard.financial': 'المعاملات المالية',
 
   // Properties
-  'properties.title': 'الخصائص والوحدات',
+  'properties.title': 'عقاراتي ووحداتي',
   'properties.listed': 'معروض',
   'properties.unlisted': 'غير معروض',
   'properties.edit': 'تعديل',

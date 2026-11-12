@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   requestType: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     flex: 1,
   },
   statusBadge: {
@@ -135,24 +135,24 @@ const styles = StyleSheet.create({
   propertyName: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   unitName: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 2,
   },
   description: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.sm,
     lineHeight: 20,
   },
   date: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

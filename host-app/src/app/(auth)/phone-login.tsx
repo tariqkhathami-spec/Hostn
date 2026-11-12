@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../../components/ui/Button';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { authService } from '../../services/auth.service';
 import { toWesternDigits } from '../../utils/format';
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   phoneRow: {

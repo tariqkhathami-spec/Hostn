@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { AmbassadorTier } from '../../types';
 
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   indicatorLabel: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   indicatorValue: {
     ...Typography.h3,
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
   rewardTierName: {
     ...Typography.subtitle,
     marginBottom: Spacing.md,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   benefitsList: {
     gap: Spacing.sm,
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 
   // Accordion
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
     ...Typography.bodyBold,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginEnd: Spacing.sm,
   },
   accordionContent: {
@@ -739,6 +739,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.md,
     lineHeight: 24,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

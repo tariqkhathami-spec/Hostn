@@ -19,7 +19,7 @@ import TransferCard from '../../components/dashboard/TransferCard';
 import ReviewCard from '../../components/dashboard/ReviewCard';
 import SectionHeader from '../../components/dashboard/SectionHeader';
 import NpsSurveyModal from '../../components/notifications/NpsSurveyModal';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t, getLocale } from '../../utils/i18n';
 import { hostService } from '../../services/host.service';
 import type { Booking, Transfer, Review } from '../../types';
@@ -172,6 +172,7 @@ export default function DashboardScreen() {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={styles.contentInner}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -461,8 +462,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
-    padding: Spacing.base,
     marginTop: -Spacing.md,
+  },
+  // Padding belongs on the scrolled content: on the ScrollView itself it
+  // pushes everything to one side in a right-to-left layout on iPhone.
+  contentInner: {
+    padding: Spacing.base,
   },
 
   /* ---- Stats Grid ---- */
@@ -589,12 +594,12 @@ const styles = StyleSheet.create({
     color: Colors.textWhite,
     fontWeight: '700',
     marginBottom: Spacing.xs,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   ambassadorDesc: {
     ...Typography.small,
     color: 'rgba(255,255,255,0.8)',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 
   /* ---- Points Section ---- */
@@ -622,13 +627,13 @@ const styles = StyleSheet.create({
   pointsMainText: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   pointsNote: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 
   /* ---- Quick Access Cards - Fixed Row ---- */

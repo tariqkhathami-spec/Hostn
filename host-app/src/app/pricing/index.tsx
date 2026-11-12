@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { Property, Unit } from '../../types';
 
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   dropdownLabel: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.sm,
   },
   dropdownButton: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   dropdownList: {
     marginTop: Spacing.sm,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   dropdownItemTextSelected: {
     color: Colors.primary,
@@ -276,19 +276,19 @@ const styles = StyleSheet.create({
   unitName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   unitCode: {
     ...Typography.small,
     color: Colors.textSecondary,
     marginTop: 2,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   unitProperty: {
     ...Typography.caption,
     color: Colors.textTertiary,
     marginTop: 2,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   emptyState: {
     flex: 1,

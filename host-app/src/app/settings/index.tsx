@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import { useAuthStore } from '../../store/authStore';
 
@@ -161,7 +161,7 @@ export default function SettingsScreen() {
 const codeStyles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
   box: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, gap: 14 },
-  title: { fontSize: 15, color: '#111827', textAlign: 'right', lineHeight: 22 },
+  title: { fontSize: 15, color: '#111827', textAlign: TEXT_START, lineHeight: 22 },
   input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 18, textAlign: 'center', color: '#111827' },
   actions: { flexDirection: 'row', gap: 12 },
   secondary: { flex: 1, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },

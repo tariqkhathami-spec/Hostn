@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
 import { Booking } from '../../types';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   bookingId: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   cardDate: {
     ...Typography.caption,
@@ -483,18 +483,18 @@ const styles = StyleSheet.create({
   propertyName: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: 4,
   },
   dateRange: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: 4,
   },
   unitName: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

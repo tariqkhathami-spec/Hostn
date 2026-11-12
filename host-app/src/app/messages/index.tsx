@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { formatRelativeDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
@@ -277,12 +277,12 @@ const styles = StyleSheet.create({
   supportTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   supportSubtitle: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 2,
   },
   listContent: {
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   unitName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     flex: 1,
     marginLeft: Spacing.sm,
   },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   guestName: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: 4,
   },
   lastMessageRow: {
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   lastMessage: {
     ...Typography.small,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     flex: 1,
   },
   unreadDot: {

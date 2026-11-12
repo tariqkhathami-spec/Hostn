@@ -15,7 +15,7 @@ import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
 import Card from '../../components/ui/Card';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, TEXT_START } from '../../constants/theme';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Invoice } from '../../types';
@@ -126,13 +126,13 @@ const styles = StyleSheet.create({
   invoiceNumber: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   invoiceDate: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: Spacing.xs,
   },
   invoiceRight: {

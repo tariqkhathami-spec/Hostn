@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600',
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   propertySection: {
     marginBottom: Spacing.xl,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   propertyName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   unitCount: {
     ...Typography.small,
@@ -341,12 +341,12 @@ const styles = StyleSheet.create({
   unitName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   unitLocation: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   badge: {
     flexDirection: 'row',
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   permitNumber: {
     ...Typography.caption,
     color: Colors.success,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   addButton: {
     marginTop: Spacing.md,

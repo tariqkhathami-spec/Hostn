@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../../constants/theme';
 import { hostService } from '../../../services/host.service';
 import { getLocale } from '../../../utils/i18n';
 import { apiErrorMessage } from '../../../utils/apiError';
@@ -328,13 +328,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   sectionSubtitle: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.md,
   },
   priceRow: {
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   priceInput: {
     ...Typography.body,

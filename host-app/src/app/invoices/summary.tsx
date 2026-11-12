@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { formatCurrency } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { AccountSummary, Property } from '../../types';
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   pickerGrid: {
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   pickerItemText: {
     ...Typography.small,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   pickerItemTextActive: {

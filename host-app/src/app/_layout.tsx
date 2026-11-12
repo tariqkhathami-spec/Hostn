@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { I18nManager } from 'react-native';
+import { Alert, I18nManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { connectSocket, setQueryClient, disconnectSocket } from '../services/socket';
@@ -24,6 +24,12 @@ if (!I18nManager.isRTL) {
   I18nManager.allowRTL(true);
   I18nManager.forceRTL(true);
 }
+
+// An alert raised without buttons gets the system's English "OK".
+// Give every such alert an Arabic button instead.
+const nativeAlert = Alert.alert.bind(Alert);
+Alert.alert = (title, message, buttons, options) =>
+  nativeAlert(title, message, buttons && buttons.length ? buttons : [{ text: 'حسناً' }], options);
 
 export default function RootLayout() {
   // Connect socket on mount, disconnect on unmount

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { getLocale } from '../../utils/i18n';
 import {
   CITIES,
@@ -204,7 +204,9 @@ export default function PropertyWizard({
         return parseNumber(form.price) > 0 && !(discount > MAX_DISCOUNT_PERCENT);
       }
       case 6:
-        return form.images.length > 0;
+        // Photos can be added later; the unit simply stays hidden from
+        // guests until it has one (handleNext asks the host to confirm).
+        return true;
       case 7:
         return isUnit || (parseInt(form.minNights, 10) || 1) <= (parseInt(form.maxNights, 10) || 1);
       default:
@@ -232,6 +234,20 @@ export default function PropertyWizard({
       };
       const msg = msgs[step];
       if (msg) Alert.alert(l({ en: 'Required', ar: 'مطلوب' }), l(msg));
+      return;
+    }
+    if (step === 6 && form.images.length === 0) {
+      Alert.alert(
+        l({ en: 'No photos yet', ar: 'لم تضف صوراً بعد' }),
+        l({
+          en: 'Guests will not see this unit until it has at least one photo. You can add photos later from the edit screen.',
+          ar: 'لن تظهر الوحدة للضيوف حتى تضيف صورة واحدة على الأقل. تقدر تضيف الصور لاحقاً من شاشة التعديل.',
+        }),
+        [
+          { text: l({ en: 'Add photos', ar: 'إضافة صور' }), style: 'cancel' },
+          { text: l({ en: 'Continue without photos', ar: 'متابعة بدون صور' }), onPress: () => setPos(pos + 1) },
+        ],
+      );
       return;
     }
     if (pos < TOTAL_STEPS - 1) setPos(pos + 1);
@@ -1075,7 +1091,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.h3,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.lg,
   },
 
@@ -1083,7 +1099,7 @@ const styles = StyleSheet.create({
   formLabel: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.sm,
   },
   input: {
@@ -1101,7 +1117,7 @@ const styles = StyleSheet.create({
   fieldHint: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: Spacing.xs,
     lineHeight: 18,
   },

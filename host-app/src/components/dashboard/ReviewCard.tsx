@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Review } from '../../types';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { formatDate } from '../../utils/format';
 
 interface ReviewCardProps {
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   comment: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 20,
     marginBottom: Spacing.sm,
   },

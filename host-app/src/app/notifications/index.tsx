@@ -15,7 +15,7 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { formatDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Notification } from '../../types';
@@ -262,14 +262,14 @@ const styles = StyleSheet.create({
   notificationBody: {
     ...Typography.body,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
     marginBottom: Spacing.xs,
   },
   notificationDate: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   unreadDot: {
     width: 10,

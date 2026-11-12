@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Invoice } from '../../types';
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   headerLabel: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   headerValue: {
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.bodyBold,
     color: Colors.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
     marginBottom: Spacing.md,
   },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   infoValue: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   cellDesc: {
     width: 120,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   cellSmall: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   summaryLabel: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   summaryValue: {
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     ...Typography.bodyBold,
     color: Colors.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   totalValue: {

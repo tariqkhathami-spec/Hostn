@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../../constants/theme';
 import { hostService } from '../../../services/host.service';
 import { formatDate } from '../../../utils/format';
 import type { Review } from '../../../types';
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 22,
     marginTop: Spacing.md,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   loadingReview: {

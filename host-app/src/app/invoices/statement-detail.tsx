@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, TEXT_START } from '../../constants/theme';
 import { formatCurrency, formatDate } from '../../utils/format';
 import { hostService } from '../../services/host.service';
 import type { Statement } from '../../types';
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.bodyBold,
     color: Colors.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
     marginBottom: Spacing.md,
   },
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   cellDesc: {
     width: 130,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'rtl',
   },
   cellAmount: {

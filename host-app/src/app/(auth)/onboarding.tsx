@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../../components/ui/Button';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/authStore';
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   miniCardTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   miniCardDone: {
     ...Typography.small,

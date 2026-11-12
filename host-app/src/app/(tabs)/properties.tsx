@@ -14,7 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { hostService } from '../../services/host.service';
 import { apiErrorMessage } from '../../utils/apiError';
@@ -240,10 +240,12 @@ export default function PropertiesScreen() {
               {!!item.code && (
                 <Text style={styles.unitCode}>{'كود الوحدة (' + item.code + ')'}</Text>
               )}
-              {isListed ? (
-                <Text style={styles.statusOnline}>معروض (أون لاين)</Text>
+              {incomplete ? (
+                <Text style={styles.statusOffline}>مخفية عن الضيوف</Text>
+              ) : isListed ? (
+                <Text style={styles.statusOnline}>معروضة للضيوف</Text>
               ) : (
-                <Text style={styles.statusOffline}>غير معروض (أوف لاين)</Text>
+                <Text style={styles.statusOffline}>متوقفة عن العرض</Text>
               )}
             </View>
 
@@ -351,9 +353,9 @@ export default function PropertiesScreen() {
               {`مرفوض من الإدارة${property.moderationNote ? `: ${property.moderationNote}` : ''}`}
             </Text>
           ) : property.status === 'listed' ? (
-            <Text style={styles.statusOnline}>معروض (أون لاين)</Text>
+            <Text style={styles.statusOnline}>معروض للضيوف</Text>
           ) : (
-            <Text style={styles.statusOffline}>غير معروض (أوف لاين)</Text>
+            <Text style={styles.statusOffline}>متوقف عن العرض</Text>
           )}
 
           {/* Location row */}
@@ -542,19 +544,19 @@ const styles = StyleSheet.create({
   propertyName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   statusOffline: {
     ...Typography.small,
     color: Colors.error,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.sm,
   },
   statusOnline: {
     ...Typography.small,
     color: Colors.success,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.sm,
   },
   infoRow: {
@@ -671,13 +673,13 @@ const styles = StyleSheet.create({
   unitName: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: 2,
   },
   unitCode: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: 2,
   },
   unitThumbnail: {

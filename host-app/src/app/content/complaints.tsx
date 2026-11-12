@@ -3,7 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-nativ
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   complaintTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     flex: 1,
   },
   statusBadge: {
@@ -135,12 +135,12 @@ const styles = StyleSheet.create({
   complaintBody: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.sm,
   },
   complaintDate: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

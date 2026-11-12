@@ -12,7 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { formatCurrency, formatDate } from '../../utils/format';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     ...Typography.smallBold,
     color: Colors.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   cardBody: {
     padding: Spacing.base,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   infoValue: {
     ...Typography.small,

@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { getCurrentLanguage } from '../i18n/current';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { connectSocket, setQueryClient, disconnectSocket } from '../services/socket';
 import { useUIStore } from '../store/uiStore';
@@ -21,6 +23,17 @@ const queryClient = new QueryClient({
 });
 
 setQueryClient(queryClient);
+
+// An alert raised without buttons gets the system's English "OK".
+// Give every such alert a button in the app's language instead.
+const nativeAlert = Alert.alert.bind(Alert);
+Alert.alert = (title, message, buttons, options) =>
+  nativeAlert(
+    title,
+    message,
+    buttons && buttons.length ? buttons : [{ text: getCurrentLanguage() === 'ar' ? 'حسناً' : 'OK' }],
+    options,
+  );
 
 export default function RootLayout() {
   const loadPreferences = useUIStore((s) => s.loadPreferences);

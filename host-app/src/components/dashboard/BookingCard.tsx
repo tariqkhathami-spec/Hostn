@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Booking } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { formatCurrency, formatDate } from '../../utils/format';
 
 interface BookingCardProps {
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   guestName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   datesRow: {
@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
   unitName: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

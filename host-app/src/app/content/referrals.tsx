@@ -11,7 +11,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.subtitle,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.base,
     marginTop: Spacing.lg,
   },
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   copyButton: {
     padding: Spacing.sm,

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import { t } from '../../utils/i18n';
 import { useAuthStore } from '../../store/authStore';
 import { hostService } from '../../services/host.service';
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginHorizontal: Spacing.md,
   },
   badgeText: {

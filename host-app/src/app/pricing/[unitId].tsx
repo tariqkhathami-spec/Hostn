@@ -663,12 +663,12 @@ const styles = StyleSheet.create({
   rateLabel: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   rateDescription: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 2,
   },
   ratePrice: {
@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
   currencyHint: {
     ...Typography.caption,
     color: Colors.textTertiary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: Spacing.xs,
   },
   // Offers tab
@@ -740,12 +740,12 @@ const styles = StyleSheet.create({
   discountTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   discountDescription: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 2,
   },
   discountPercentageContainer: {
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.subtitle,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   offerCard: {
     backgroundColor: Colors.white,
@@ -796,19 +796,19 @@ const styles = StyleSheet.create({
   offerName: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   offerDiscount: {
     ...Typography.small,
     color: Colors.primary,
     marginTop: 2,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   offerDates: {
     ...Typography.caption,
     color: Colors.textSecondary,
     marginTop: 2,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   emptyOffers: {
     alignItems: 'center',

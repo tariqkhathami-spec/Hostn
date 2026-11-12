@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
@@ -189,19 +189,19 @@ const styles = StyleSheet.create({
   descriptionTitle: {
     ...Typography.subtitle,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     flex: 1,
   },
   descriptionText: {
     ...Typography.body,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 24,
   },
   sectionTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.md,
     marginTop: Spacing.sm,
   },
@@ -227,12 +227,12 @@ const styles = StyleSheet.create({
   coverageTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   coverageDesc: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 2,
   },
   processCard: {
@@ -272,12 +272,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   stepDesc: {
     ...Typography.small,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 2,
   },
   tiersRow: {

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TextInput, ActivityIndicator, Refresh
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import EmptyState from '../../components/ui/EmptyState';
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   transactionId: {
     ...Typography.smallBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   amount: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   date: {
     ...Typography.caption,

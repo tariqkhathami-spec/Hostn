@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../services/host.service';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Card from '../../components/ui/Card';
@@ -275,13 +275,13 @@ const styles = StyleSheet.create({
   hostName: {
     ...Typography.smallBold,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   suggestionText: {
     ...Typography.body,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 24,
     marginBottom: Spacing.md,
   },
@@ -318,13 +318,13 @@ const styles = StyleSheet.create({
   responseLabel: {
     ...Typography.smallBold,
     color: Colors.textSecondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.xs,
   },
   responseText: {
     ...Typography.small,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 22,
   },
   modalOverlay: {

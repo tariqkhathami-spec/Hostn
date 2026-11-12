@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import UnitCard from '../../components/properties/UnitCard';
-import { Colors, Spacing, Typography, Radius } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, TEXT_START } from '../../constants/theme';
 import { hostService } from '../../services/host.service';
 import type { Unit } from '../../types';
 
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...Typography.subtitle,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: Spacing.md,
   },
   infoRow: {
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '500',
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginLeft: Spacing.md,
   },
   mapPlaceholder: {

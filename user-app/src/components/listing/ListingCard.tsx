@@ -55,8 +55,12 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
   const priceAvailable = price > 0;
   const discount = listing.pricing?.discountPercent ?? 0;
   const hasDiscount = discount > 0 && price < originalPrice;
-  const city = listing.location?.city ?? '';
-  const district = listing.location?.district;
+  // A unit carries its place on the parent property.
+  const place = listing.location ?? item.property?.location;
+  const city = place?.city ?? '';
+  const district = place?.district;
+  const propertyTitle: string =
+    (language === 'ar' ? item.property?.titleAr || item.property?.title : item.property?.title || item.property?.titleAr) || '';
   const rating = listing.ratings?.average ?? 0;
   const reviewCount = listing.ratings?.count ?? 0;
   const guests = listing.capacity?.maxGuests;
@@ -130,8 +134,10 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>
           {isUnit
-            ? (language === 'ar' ? item.nameAr : item.nameEn) || item.nameAr || item.nameEn || listing.title
-            : listing.title}
+            ? [propertyTitle, (language === 'ar' ? item.nameAr : item.nameEn) || item.nameAr || item.nameEn || listing.title]
+                .filter(Boolean)
+                .join(' · ')
+            : (language === 'ar' ? item.titleAr || listing.title : listing.title)}
         </Text>
         <View style={styles.locationRow}>
           <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />

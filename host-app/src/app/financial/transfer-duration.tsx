@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
+import { Colors, Spacing, Typography, Radius, Shadows, TEXT_START } from '../../constants/theme';
 import ScreenWrapper from '../../components/layout/ScreenWrapper';
 import HeaderBar from '../../components/layout/HeaderBar';
 import Button from '../../components/ui/Button';
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   optionTitle: {
     ...Typography.bodyBold,
     color: Colors.textPrimary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   optionTitleSelected: {
     color: Colors.primary,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     ...Typography.small,
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   radio: {
     width: 24,
