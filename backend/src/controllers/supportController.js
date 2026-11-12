@@ -124,7 +124,8 @@ exports.getTicket = async (req, res) => {
 // @access  Private
 exports.replyToTicket = async (req, res) => {
   try {
-    const message = sanitizeHtml(req.body.message);
+    // Older clients send the text as `content`.
+    const message = sanitizeHtml(req.body.message || req.body.content);
 
     if (!message || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Message is required' });

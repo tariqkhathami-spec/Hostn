@@ -331,11 +331,12 @@ export const supportApi = {
     api.post('/support', data),
   getTicket: (id: string) => api.get(`/support/${id}`),
   replyToTicket: (id: string, data: { content: string }) =>
-    api.post(`/support/${id}/reply`, data),
+    // The API reads the reply text from `message`.
+    api.post(`/support/${id}/reply`, { message: data.content }),
   updateTicketStatus: (id: string, status: string) =>
-    api.put(`/support/${id}/status`, { status }),
+    api.put(`/support/admin/${id}/status`, { status }),
   // Admin
-  getAllTickets: () => api.get('/support'),
+  getAllTickets: (params?: Record<string, string>) => api.get('/support/admin/all', { params }),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
