@@ -346,10 +346,10 @@ export const reportsApi = {
   createReport: (data: { targetType: string; targetId: string; reason: string; description: string; relatedBooking?: string }) =>
     api.post('/reports', data),
   // Admin
-  getAllReports: () => api.get('/reports'),
-  getReport: (id: string) => api.get(`/reports/${id}`),
+  getAllReports: () => api.get('/reports/admin/all'),
+  getReport: (id: string) => api.get(`/reports/admin/${id}`),
   takeAction: (id: string, data: { status: string; actionTaken: string; adminNotes?: string }) =>
-    api.put(`/reports/${id}/action`, data),
+    api.put(`/reports/admin/${id}/action`, data),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

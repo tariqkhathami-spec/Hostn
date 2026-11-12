@@ -34,7 +34,7 @@ export const listingsService = {
 
   getReviews(propertyId: string, page = 1) {
     return api
-      .get(`/reviews`, { params: { property: propertyId, page, limit: 10 } })
+      .get(`/reviews/property/${propertyId}`, { params: { page, limit: 10 } })
       .then((r) => r.data);
   },
 
