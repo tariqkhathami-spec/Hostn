@@ -176,7 +176,7 @@ export default function ListingCard({ listing, onPress, onFavoritePress, isFavor
               </>
             ) : (
               <Text style={styles.priceNotSet}>
-                {language === 'ar' ? 'السعر غير محدد' : 'Price not set'}
+                {t('listing.priceNotSet')}
               </Text>
             )}
           </View>

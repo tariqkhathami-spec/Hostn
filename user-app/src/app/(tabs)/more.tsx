@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { formatPhone } from '../../utils/format';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 type MenuIcon = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -16,14 +17,16 @@ interface MenuItem {
   labelKey: string;
   route: string;
   color?: string;
+  /** Only shown to signed-in users. */
+  requiresAuth?: boolean;
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { icon: 'person-outline', labelKey: 'account.profile', route: '/account/profile' },
-  { icon: 'wallet-outline', labelKey: 'account.wallet', route: '/account/wallet' },
-  { icon: 'card-outline', labelKey: 'account.paymentMethods', route: '/account/payment-methods' },
-  { icon: 'notifications-outline', labelKey: 'account.notifications', route: '/account/notifications' },
-  { icon: 'help-circle-outline', labelKey: 'account.support', route: '/account/support' },
+  { icon: 'person-outline', labelKey: 'account.profile', route: '/account/profile', requiresAuth: true },
+  { icon: 'wallet-outline', labelKey: 'account.wallet', route: '/account/wallet', requiresAuth: true },
+  { icon: 'card-outline', labelKey: 'account.paymentMethods', route: '/account/payment-methods', requiresAuth: true },
+  { icon: 'notifications-outline', labelKey: 'account.notifications', route: '/account/notifications', requiresAuth: true },
+  { icon: 'help-circle-outline', labelKey: 'account.support', route: '/account/support', requiresAuth: true },
   { icon: 'information-circle-outline', labelKey: 'account.about', route: '/account/about' },
   { icon: 'mail-outline', labelKey: 'account.contactUs', route: '/account/contact' },
   { icon: 'newspaper-outline', labelKey: 'account.blog', route: '/account/blog' },
@@ -36,6 +39,9 @@ export default function MoreScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const requireAuth = useRequireAuth();
+  const menuItems = MENU_ITEMS.filter((item) => isAuthenticated || !item.requiresAuth);
   const { t, language, toggleLanguage } = useLanguage();
 
   const handleLogout = () => {
@@ -45,8 +51,8 @@ export default function MoreScreen() {
         text: t('account.logout'),
         style: 'destructive',
         onPress: async () => {
+          // Stay in the app as a guest after signing out.
           await logout();
-          router.replace('/(auth)/phone');
         },
       },
     ]);
@@ -63,7 +69,19 @@ export default function MoreScreen() {
           </Pressable>
         </View>
 
-        {/* Profile Card */}
+        {/* Profile Card (guests get a sign-in card instead) */}
+        {!isAuthenticated ? (
+          <Pressable style={styles.profileCard} onPress={() => requireAuth()}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={32} color={Colors.textSecondary} />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{t('auth.login')}</Text>
+              <Text style={styles.profilePhone}>{t('auth.loginAccount')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+          </Pressable>
+        ) : (
         <Pressable style={styles.profileCard} onPress={() => router.push('/account/profile')}>
           <View style={styles.avatar}>
             {user?.avatar ? (
@@ -80,10 +98,11 @@ export default function MoreScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
         </Pressable>
+        )}
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
-          {MENU_ITEMS.map((item) => (
+          {menuItems.map((item) => (
             <Pressable
               key={item.route}
               style={styles.menuItem}
@@ -99,12 +118,14 @@ export default function MoreScreen() {
         </View>
 
         {/* Logout */}
+        {isAuthenticated && (
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={Colors.error} />
           <Text style={styles.logoutText}>{t('account.logout')}</Text>
           <View style={{ flex: 1 }} />
           <Ionicons name="chevron-forward" size={18} color={Colors.error} />
         </Pressable>
+        )}
 
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>

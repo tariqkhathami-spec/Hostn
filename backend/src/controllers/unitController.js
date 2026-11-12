@@ -615,6 +615,9 @@ exports.duplicateUnit = async (req, res, next) => {
     delete doc.ratings;
     delete doc.isDeleted;
     delete doc.deletedAt;
+    // A copy starts unlisted so the host can rename and review it before
+    // guests see "… (نسخة)" next to the original.
+    doc.isActive = false;
 
     // Generate fresh _id values for pool sub-documents
     if (doc.pools && Array.isArray(doc.pools)) {

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../i18n';
 import { Colors, Typography, Shadows } from '../../constants/theme';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import type { TranslationKey } from '../../i18n';
 
 type TabIcon = React.ComponentProps<typeof Ionicons>['name'];
@@ -25,6 +26,7 @@ interface BadgeCounts {
 export default function TabsLayout() {
   const { t } = useLanguage();
   const pathname = usePathname();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [badges, setBadges] = useState<BadgeCounts>({ bookings: 0, messages: 0, support: 0 });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -49,12 +51,17 @@ export default function TabsLayout() {
   }, []);
 
   useEffect(() => {
+    // Guests have no bookings or messages to count.
+    if (!isAuthenticated) {
+      setBadges({ bookings: 0, messages: 0, support: 0 });
+      return;
+    }
     fetchBadges();
     intervalRef.current = setInterval(fetchBadges, 30000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [fetchBadges]);
+  }, [fetchBadges, isAuthenticated]);
 
   // Clear badge when navigating to the corresponding tab
   useEffect(() => {

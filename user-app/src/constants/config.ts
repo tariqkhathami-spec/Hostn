@@ -7,37 +7,47 @@ export const API_URL =
 
 export const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
-export const GOOGLE_MAPS_KEY =
-  process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY ?? 'AIzaSyD9mcyuKK3L2TUkZ7vep6xF_eUV5DzIDUw';
+// Keys are read from the environment only — never commit a default value.
+export const GOOGLE_MAPS_KEY: string =
+  process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY ?? Constants.expoConfig?.extra?.googleMapsKey ?? '';
 
-export const MOYASAR_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_MOYASAR_KEY ?? 'pk_test_UsXhwogyGztDCpTZFVtrzCm2yartokcZ4bM935DJ';
+export const MOYASAR_PUBLISHABLE_KEY: string =
+  process.env.EXPO_PUBLIC_MOYASAR_KEY ?? Constants.expoConfig?.extra?.moyasarKey ?? '';
 
 export const SAUDI_COUNTRY_CODE = '+966';
 
+// Must match the backend property type enum exactly.
 export const PROPERTY_TYPES = [
-  { id: 'apartment', label: 'Apartments', icon: 'business-outline' },
   { id: 'chalet', label: 'Chalets', icon: 'home-outline' },
+  { id: 'apartment', label: 'Apartments', icon: 'business-outline' },
+  { id: 'villa', label: 'Villas', icon: 'home-outline' },
+  { id: 'studio', label: 'Studios', icon: 'cube-outline' },
   { id: 'farm', label: 'Farms', icon: 'leaf-outline' },
   { id: 'camp', label: 'Camps', icon: 'bonfire-outline' },
-  { id: 'resort', label: 'Resorts', icon: 'bed-outline' },
+  { id: 'hotel', label: 'Hotels', icon: 'bed-outline' },
   { id: 'rest_house', label: 'Rest Houses', icon: 'home-outline' },
   { id: 'room', label: 'Rooms', icon: 'bed-outline' },
   { id: 'hotel_resort', label: 'Hotel Resorts', icon: 'business-outline' },
   { id: 'serviced_apartment', label: 'Serviced Apartments', icon: 'albums-outline' },
 ] as const;
 
-export const SAUDI_CITIES = [
-  { id: 'riyadh', name: 'Riyadh', nameAr: 'الرياض' },
-  { id: 'jeddah', name: 'Jeddah', nameAr: 'جدة' },
-  { id: 'mecca', name: 'Mecca', nameAr: 'مكة المكرمة' },
-  { id: 'medina', name: 'Medina', nameAr: 'المدينة المنورة' },
-  { id: 'dammam', name: 'Dammam', nameAr: 'الدمام' },
-  { id: 'khobar', name: 'Al Khobar', nameAr: 'الخبر' },
-  { id: 'abha', name: 'Abha', nameAr: 'أبها' },
-  { id: 'taif', name: 'Taif', nameAr: 'الطائف' },
-  { id: 'tabuk', name: 'Tabuk', nameAr: 'تبوك' },
-  { id: 'alula', name: 'AlUla', nameAr: 'العلا' },
-  { id: 'hail', name: 'Hail', nameAr: 'حائل' },
-  { id: 'jizan', name: 'Jizan', nameAr: 'جازان' },
+// The full city list lives in ./cities (shared with the website and host app).
+// These are the stored `value`s shown first as quick picks.
+export const POPULAR_CITY_VALUES = [
+  'Riyadh',
+  'Jeddah',
+  'Mecca',
+  'Madinah',
+  'Dammam',
+  'Khobar',
+  'Abha',
+  'Taif',
+  'Tabuk',
+  'Al Ula',
+  'Hail',
+  'Jazan',
 ] as const;
+
+export const SUPPORT_PHONE_DISPLAY = '0500407888';
+export const SUPPORT_PHONE_TEL = '+966500407888';
+export const SUPPORT_EMAIL = 'hello@hostn.co';

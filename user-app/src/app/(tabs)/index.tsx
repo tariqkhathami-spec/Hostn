@@ -17,17 +17,20 @@ import { listingsService } from '../../services/listings.service';
 import { useAuthStore } from '../../store/authStore';
 import { useSearchStore } from '../../store/searchStore';
 import { formatCurrency } from '../../utils/format';
-import { SAUDI_CITIES } from '../../constants/config';
+import { POPULAR_CITY_VALUES } from '../../constants/config';
+import { cityLabel } from '../../constants/cities';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import type { Listing } from '../../types';
 import ListingCard from '../../components/listing/ListingCard';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { t, language, isRTL } = useLanguage();
   const user = useAuthStore((s) => s.user);
   const setCity = useSearchStore((s) => s.setCity);
+  const requireAuth = useRequireAuth();
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['homeFeed'],
@@ -40,9 +43,10 @@ export default function HomeScreen() {
     router.push('/search/destination');
   };
 
-  const handleCityPress = (cityId: string, cityName: string) => {
+  const handleCityPress = (cityValue: string) => {
     // Mutate the Zustand store so subsequent filter-sheet edits compose against the chosen city.
-    setCity(cityId, cityName);
+    // The stored city value is what the search API matches against.
+    setCity(cityValue, cityValue);
     router.push('/results');
   };
 
@@ -62,7 +66,7 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.greetingSub}>{t('home.subtitle')}</Text>
           </View>
-          <Pressable onPress={() => router.push('/account/notifications')}>
+          <Pressable onPress={() => requireAuth('/account/notifications') && router.push('/account/notifications')}>
             <Ionicons name="notifications-outline" size={26} color={Colors.textPrimary} />
           </Pressable>
         </View>
@@ -79,18 +83,18 @@ export default function HomeScreen() {
           <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
-            data={SAUDI_CITIES}
-            keyExtractor={(item) => item.id}
+            data={POPULAR_CITY_VALUES}
+            keyExtractor={(item) => item}
             contentContainerStyle={styles.cityList}
             renderItem={({ item }) => (
               <Pressable
                 style={styles.cityCard}
-                onPress={() => handleCityPress(item.id, item.name)}
+                onPress={() => handleCityPress(item)}
               >
                 <View style={styles.cityIcon}>
                   <Ionicons name="location" size={24} color={Colors.white} />
                 </View>
-                <Text style={styles.cityName}>{language === 'ar' ? item.nameAr : item.name}</Text>
+                <Text style={styles.cityName}>{cityLabel(item, language)}</Text>
               </Pressable>
             )}
           />

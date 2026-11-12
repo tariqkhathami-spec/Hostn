@@ -1,4 +1,4 @@
-import { SAUDI_CITIES } from './config';
+import { cityLabel, normalizeCity } from './cities';
 import type { Language } from '../i18n';
 
 export const DISTRICTS: Record<string, { value: string; en: string; ar: string }[]> = {
@@ -41,7 +41,8 @@ export const DISTRICTS: Record<string, { value: string; en: string; ar: string }
 
 export function translateDistrict(district: string, city: string, language: Language): string {
   if (language !== 'ar') return district;
-  const cityDistricts = DISTRICTS[city] || [];
+  // District lists are keyed by the stored city value; accept any spelling.
+  const cityDistricts = DISTRICTS[normalizeCity(city) || city] || [];
   const found = cityDistricts.find(d =>
     d.value.toLowerCase() === district.toLowerCase() ||
     d.en.toLowerCase() === district.toLowerCase()
@@ -50,9 +51,5 @@ export function translateDistrict(district: string, city: string, language: Lang
 }
 
 export function translateCity(city: string, language: Language): string {
-  if (language !== 'ar') return city;
-  const found = SAUDI_CITIES.find(c =>
-    c.name.toLowerCase() === city.toLowerCase()
-  );
-  return found?.nameAr || city;
+  return cityLabel(city, language);
 }

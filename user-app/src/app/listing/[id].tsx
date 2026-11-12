@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -32,6 +33,7 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const requireAuth = useRequireAuth();
   const isAr = language === 'ar';
 
   // Try fetching as unit first, fall back to property
@@ -74,6 +76,7 @@ export default function ListingDetailScreen() {
 
   const handleFavorite = async () => {
     if (!id) return;
+    if (!requireAuth()) return;
     try {
       await authService.toggleWishlist(id);
       const updated = await authService.getMe();
@@ -87,7 +90,10 @@ export default function ListingDetailScreen() {
     if (!listing) return;
     try {
       await Share.share({
-        message: `Check out ${listing.title} on Hostn! ${listing.location?.city ?? ''}`,
+        message: t('listing.shareMessage', {
+          title: listing.title,
+          city: translateCity(listing.location?.city ?? '', language),
+        }),
       });
     } catch (err) {
       if (__DEV__) console.debug('[listing] share failed:', err);
@@ -95,18 +101,17 @@ export default function ListingDetailScreen() {
   };
 
   const handleBook = () => {
-    if (isUnitDetail) {
-      router.push({
-        pathname: `/checkout/${id}` as any,
-        params: { unitId: id, isUnit: '1' },
-      });
-    } else {
-      router.push(`/checkout/${id}`);
-    }
+    // Guests sign in first, then land on the checkout they asked for.
+    const checkoutHref: Href = isUnitDetail
+      ? { pathname: `/checkout/${id}` as any, params: { unitId: id, isUnit: '1' } }
+      : (`/checkout/${id}` as Href);
+    if (!requireAuth(checkoutHref)) return;
+    router.push(checkoutHref);
   };
 
   const handleContactHost = () => {
     if (!listing?.host?._id) return;
+    if (!requireAuth()) return;
     const hostName = listing.host?.name ?? listing.host?.firstName ?? '';
     router.push({
       pathname: `/chat/${listing.host._id}`,
@@ -180,20 +185,11 @@ export default function ListingDetailScreen() {
     ? (itemData.bathroomCount ?? itemData.rooms?.bathrooms ?? listing.capacity?.bathrooms)
     : listing.capacity?.bathrooms;
 
-  const TYPE_LABELS: Record<string, { en: string; ar: string }> = {
-    rest_house: { en: 'Rest House', ar: 'استراحة' },
-    room: { en: 'Room', ar: 'غرفة' },
-    hotel_resort: { en: 'Hotel Resort', ar: 'منتجع فندقي' },
-    serviced_apartment: { en: 'Serviced Apartment', ar: 'شقة مفروشة' },
-  };
-
   const getTypeLabel = (type: string) => {
-    const key = `type.${type}` as any;
+    // Older listings may still carry "resort"; show it as a hotel resort.
+    const key = `type.${type === 'resort' ? 'hotel_resort' : type}` as any;
     const translated = t(key);
-    if (translated && translated !== key) return translated;
-    const fallback = TYPE_LABELS[type];
-    if (fallback) return isAr ? fallback.ar : fallback.en;
-    return type;
+    return translated && translated !== key ? translated : type;
   };
 
   // Sort images so primary comes first

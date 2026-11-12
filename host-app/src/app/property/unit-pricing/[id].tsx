@@ -15,6 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../../constants/theme';
 import { hostService } from '../../../services/host.service';
 import { getLocale } from '../../../utils/i18n';
+import { apiErrorMessage } from '../../../utils/apiError';
+import { cleanNumericInput, parseNumber } from '../../../utils/format';
+
+const MAX_DISCOUNT_PERCENT = 90;
 
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 const DAY_LABELS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -55,7 +59,7 @@ export default function UnitPricingScreen() {
     const pricing = raw.pricing ?? raw;
     const newPrices: Record<string, string> = {};
     for (const key of DAY_KEYS) {
-      newPrices[key] = String(pricing[key] ?? pricing.perNight ?? '');
+      newPrices[key] = String(pricing[key] ?? '');
     }
     // Fallback: if pricing uses midWeek/thursday/friday/saturday pattern
     if (pricing.midWeek != null && !pricing.sunday) {
@@ -69,7 +73,7 @@ export default function UnitPricingScreen() {
     }
     setPrices(newPrices);
     setCleaningFee(String(pricing.cleaningFee ?? '0'));
-    setDiscountPercent(String(pricing.discountPercent ?? '0'));
+    setDiscountPercent(String(Math.min(MAX_DISCOUNT_PERCENT, Number(pricing.discountPercent) || 0)));
   }, [data]);
 
   const mutation = useMutation({
@@ -77,6 +81,7 @@ export default function UnitPricingScreen() {
       hostService.updateUnitPricing(id!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unit-pricing', id] });
+      queryClient.invalidateQueries({ queryKey: ['unit', id] });
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       Alert.alert(
         l({ en: 'Success', ar: 'تم بنجاح' }),
@@ -84,48 +89,68 @@ export default function UnitPricingScreen() {
         [{ text: l({ en: 'OK', ar: 'موافق' }), onPress: () => router.back() }],
       );
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.message || '';
+    onError: (error: unknown) => {
       Alert.alert(
         l({ en: 'Error', ar: 'خطأ' }),
-        msg || l({ en: 'Failed to update pricing', ar: 'فشل تحديث الأسعار' }),
+        apiErrorMessage(error, 'تعذّر حفظ الأسعار. حاول مرة أخرى.'),
       );
     },
   });
 
   const handleSave = () => {
-    // Validate all prices are valid non-negative numbers
+    // An empty field counts as 0; anything else must be a valid number.
+    const dayPrices: Record<string, number> = {};
     for (const key of DAY_KEYS) {
-      const val = parseFloat(prices[key]);
-      if (isNaN(val) || val < 0) {
+      const val = prices[key].trim() === '' ? 0 : parseNumber(prices[key]);
+      if (!Number.isFinite(val) || val < 0) {
         Alert.alert(
           l({ en: 'Error', ar: 'خطأ' }),
-          l({ en: 'Prices must be valid non-negative numbers', ar: 'يجب أن تكون الأسعار أرقام صحيحة وغير سالبة' }),
+          l({ en: 'Prices must be valid non-negative numbers', ar: 'يجب أن تكون الأسعار أرقاماً صحيحة وغير سالبة' }),
         );
         return;
       }
+      dayPrices[key] = Math.round(val * 100) / 100;
     }
-    const cfVal = parseFloat(cleaningFee);
-    if (isNaN(cfVal) || cfVal < 0) {
+    const cfVal = cleaningFee.trim() === '' ? 0 : parseNumber(cleaningFee);
+    if (!Number.isFinite(cfVal) || cfVal < 0) {
       Alert.alert(
         l({ en: 'Error', ar: 'خطأ' }),
-        l({ en: 'Cleaning fee must be a valid non-negative number', ar: 'يجب أن تكون رسوم التنظيف رقم صحيح وغير سالب' }),
+        l({ en: 'Cleaning fee must be a valid non-negative number', ar: 'يجب أن تكون رسوم التنظيف رقماً صحيحاً وغير سالب' }),
+      );
+      return;
+    }
+    const discount = discountPercent.trim() === '' ? 0 : parseNumber(discountPercent);
+    if (!Number.isFinite(discount) || discount < 0 || discount > MAX_DISCOUNT_PERCENT) {
+      Alert.alert(
+        l({ en: 'Error', ar: 'خطأ' }),
+        l({ en: 'Discount must be between 0 and 90', ar: 'نسبة الخصم يجب أن تكون بين 0 و 90' }),
       );
       return;
     }
 
+    // PUT /units/:id/pricing reads the day prices from `pricing` (merged
+    // into the stored pricing, so other discount settings are kept).
     const payload: Record<string, unknown> = {
-      cleaningFee: cfVal,
-      discountPercent: parseFloat(discountPercent) || 0,
+      pricing: { ...dayPrices, cleaningFee: cfVal, discountPercent: discount },
     };
-    for (const key of DAY_KEYS) {
-      payload[key] = parseFloat(prices[key]) || 0;
+
+    // A unit with any day at 0 is hidden from guests — make sure that is intended.
+    if (DAY_KEYS.some((key) => dayPrices[key] <= 0)) {
+      Alert.alert(
+        'يوجد يوم بدون سعر',
+        'الوحدة لا تظهر للضيوف إلا إذا كان لكل يوم من أيام الأسبوع سعر أكبر من صفر. هل تريد الحفظ على أي حال؟',
+        [
+          { text: 'تعديل الأسعار', style: 'cancel' },
+          { text: 'حفظ على أي حال', onPress: () => mutation.mutate(payload) },
+        ],
+      );
+      return;
     }
     mutation.mutate(payload);
   };
 
   const updatePrice = (key: string, value: string) => {
-    setPrices((prev) => ({ ...prev, [key]: value }));
+    setPrices((prev) => ({ ...prev, [key]: cleanNumericInput(value) }));
   };
 
   if (isLoading) {
@@ -206,7 +231,7 @@ export default function UnitPricingScreen() {
             <TextInput
               style={styles.priceInput}
               value={cleaningFee}
-              onChangeText={setCleaningFee}
+              onChangeText={(v) => setCleaningFee(cleanNumericInput(v))}
               keyboardType="numeric"
               placeholder="0"
               placeholderTextColor={Colors.textTertiary}
@@ -220,13 +245,18 @@ export default function UnitPricingScreen() {
             <TextInput
               style={styles.priceInput}
               value={discountPercent}
-              onChangeText={setDiscountPercent}
+              onChangeText={(v) => {
+                const cleaned = cleanNumericInput(v);
+                setDiscountPercent(
+                  parseNumber(cleaned) > MAX_DISCOUNT_PERCENT ? String(MAX_DISCOUNT_PERCENT) : cleaned,
+                );
+              }}
               keyboardType="numeric"
               placeholder="0"
               placeholderTextColor={Colors.textTertiary}
             />
             <Text style={styles.priceLabel}>
-              {l({ en: 'Discount %', ar: 'نسبة الخصم %' })}
+              {l({ en: 'Discount % (0–90)', ar: 'نسبة الخصم % (من 0 إلى 90)' })}
             </Text>
           </View>
         </View>

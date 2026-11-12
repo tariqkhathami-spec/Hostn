@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+  View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { contactService } from '../../services/contact.service';
 import { useLanguage } from '../../i18n';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
+import { SUPPORT_EMAIL, SUPPORT_PHONE_DISPLAY, SUPPORT_PHONE_TEL } from '../../constants/config';
 
 export default function ContactScreen() {
   const router = useRouter();
@@ -66,14 +67,24 @@ export default function ContactScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Contact Info */}
           <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
+            <Pressable
+              style={styles.infoRow}
+              onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})}
+              accessibilityRole="link"
+              hitSlop={6}
+            >
               <Ionicons name="mail-outline" size={20} color={Colors.primary} />
-              <Text style={styles.infoText}>{t('contact.email')}</Text>
-            </View>
-            <View style={styles.infoRow}>
+              <Text style={[styles.infoText, styles.infoLink]}>{SUPPORT_EMAIL}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.infoRow}
+              onPress={() => Linking.openURL(`tel:${SUPPORT_PHONE_TEL}`).catch(() => {})}
+              accessibilityRole="link"
+              hitSlop={6}
+            >
               <Ionicons name="call-outline" size={20} color={Colors.primary} />
-              <Text style={styles.infoText}>{t('contact.phone')}</Text>
-            </View>
+              <Text style={[styles.infoText, styles.infoLink]}>{SUPPORT_PHONE_DISPLAY}</Text>
+            </Pressable>
             <View style={styles.infoRow}>
               <Ionicons name="time-outline" size={20} color={Colors.primary} />
               <Text style={styles.infoText}>{t('contact.hours')}</Text>
@@ -155,6 +166,7 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   infoText: { ...Typography.small, color: Colors.textPrimary },
+  infoLink: { color: Colors.primary, fontWeight: '600' },
   formHeading: { ...Typography.h3, color: Colors.textPrimary, marginBottom: Spacing.base },
   label: { ...Typography.smallBold, color: Colors.textPrimary, marginBottom: Spacing.xs, marginTop: Spacing.md },
   input: {

@@ -19,10 +19,13 @@ import { hostService } from '../../services/host.service';
 import { getLocale } from '../../utils/i18n';
 import {
   CITIES,
-  DISTRICTS,
   PROPERTY_TYPES,
   DIRECTIONS,
+  OTHER_DISTRICT,
+  districtOptionsFor,
+  districtLabel,
 } from '../../constants/listings';
+import { apiErrorMessage } from '../../utils/apiError';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 
 // ---------------------------------------------------------------------------
@@ -44,13 +47,15 @@ export default function CreatePropertyScreen() {
   const [direction, setDirection] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
+  // True while the host types a district that is not in the city's list.
+  const [districtOther, setDistrictOther] = useState(false);
 
   // Modals for pickers
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [showDistrictPicker, setShowDistrictPicker] = useState(false);
   const [showDirectionPicker, setShowDirectionPicker] = useState(false);
 
-  const districtOptions = city ? DISTRICTS[city] ?? [] : [];
+  const districtOptions = districtOptionsFor(city);
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => hostService.createProperty(data),
@@ -81,7 +86,7 @@ export default function CreatePropertyScreen() {
               if (propertyId) {
                 router.replace({
                   pathname: '/property/add-unit',
-                  params: { propertyId, city, district, type },
+                  params: { propertyId: String(propertyId) },
                 });
               } else {
                 router.back();
@@ -96,27 +101,40 @@ export default function CreatePropertyScreen() {
         ],
       );
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.message || '';
+    onError: (error: unknown) => {
       Alert.alert(
         l({ en: 'Error', ar: 'خطأ' }),
-        msg || l({ en: 'Failed to create property', ar: 'فشل إنشاء العقار' }),
+        apiErrorMessage(error, 'تعذّر إنشاء العقار. حاول مرة أخرى.'),
       );
     },
   });
 
-  const canSubmit = titleEn.trim().length > 0 && type.length > 0 && city.length > 0;
+  // The Arabic name is the required one; English is optional.
+  const canSubmit = titleAr.trim().length > 0 && type.length > 0 && city.length > 0;
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    if (mutation.isPending) return;
+    if (!titleAr.trim()) {
+      Alert.alert('اسم العقار مطلوب', 'اكتب اسم العقار بالعربية.');
+      return;
+    }
+    if (!type) {
+      Alert.alert('نوع العقار مطلوب', 'اختر نوع العقار من القائمة.');
+      return;
+    }
+    if (!city) {
+      Alert.alert('المدينة مطلوبة', 'اختر المدينة التي يقع فيها العقار.');
+      return;
+    }
     const payload: Record<string, unknown> = {
-      title: titleEn.trim(),
-      titleAr: titleAr.trim() || undefined,
+      // The API requires `title`: the Arabic name stands in when no English name is given.
+      title: titleEn.trim() || titleAr.trim(),
+      titleAr: titleAr.trim(),
       type,
       direction: direction || undefined,
       location: {
         city,
-        district: district || undefined,
+        district: district.trim() || undefined,
       },
     };
     mutation.mutate(payload);
@@ -189,24 +207,28 @@ export default function CreatePropertyScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Title EN */}
-        <Text style={styles.label}>{l({ en: 'Title (English)', ar: 'العنوان (إنجليزي)' })} *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={l({ en: 'e.g. Sunset Villa', ar: 'مثال: فيلا الغروب' })}
-          placeholderTextColor={Colors.textTertiary}
-          value={titleEn}
-          onChangeText={setTitleEn}
-        />
-
-        {/* Title AR */}
-        <Text style={styles.label}>{l({ en: 'Title (Arabic)', ar: 'العنوان (عربي)' })}</Text>
+        {/* Name AR (required) */}
+        <Text style={styles.label}>{l({ en: 'Property name (Arabic)', ar: 'اسم العقار (بالعربية)' })} *</Text>
         <TextInput
           style={[styles.input, { textAlign: 'right' }]}
-          placeholder={l({ en: 'Optional Arabic title', ar: 'العنوان بالعربي (اختياري)' })}
+          placeholder={l({ en: 'e.g. Sunset Villa', ar: 'مثال: فيلا الغروب' })}
           placeholderTextColor={Colors.textTertiary}
           value={titleAr}
+          maxLength={200}
           onChangeText={setTitleAr}
+        />
+
+        {/* Name EN (optional) */}
+        <Text style={styles.label}>
+          {l({ en: 'Name in English (optional)', ar: 'الاسم بالإنجليزية (اختياري)' })}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Sunset Villa"
+          placeholderTextColor={Colors.textTertiary}
+          value={titleEn}
+          maxLength={200}
+          onChangeText={setTitleEn}
         />
 
         {/* Property Type */}
@@ -257,32 +279,36 @@ export default function CreatePropertyScreen() {
           <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
         </Pressable>
 
-        {/* District */}
-        {city && districtOptions.length > 0 && (
+        {/* District: a list (with "other") when the city has one, free text otherwise */}
+        {!!city && (
           <>
             <Text style={styles.label}>{l({ en: 'District', ar: 'الحي' })}</Text>
-            <Pressable style={styles.picker} onPress={() => setShowDistrictPicker(true)}>
-              <Text style={district ? styles.pickerValue : styles.pickerPlaceholder}>
-                {district
-                  ? l(districtOptions.find((d) => d.value === district) ?? { en: district, ar: district })
-                  : l({ en: 'Select district', ar: 'اختر الحي' })}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
-            </Pressable>
-          </>
-        )}
-
-        {/* District text input fallback for cities without predefined districts */}
-        {city && districtOptions.length === 0 && (
-          <>
-            <Text style={styles.label}>{l({ en: 'District', ar: 'الحي' })}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={l({ en: 'Enter district name', ar: 'أدخل اسم الحي' })}
-              placeholderTextColor={Colors.textTertiary}
-              value={district}
-              onChangeText={setDistrict}
-            />
+            {districtOptions.length > 0 && (
+              <Pressable style={styles.picker} onPress={() => setShowDistrictPicker(true)}>
+                <Text style={district || districtOther ? styles.pickerValue : styles.pickerPlaceholder}>
+                  {districtOther
+                    ? l({ en: 'Other district', ar: 'حي آخر' })
+                    : district
+                      ? districtLabel(city, district, isAr ? 'ar' : 'en')
+                      : l({ en: 'Select district', ar: 'اختر الحي' })}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
+              </Pressable>
+            )}
+            {(districtOptions.length === 0 || districtOther) && (
+              <TextInput
+                style={[
+                  styles.input,
+                  { textAlign: 'right' },
+                  districtOptions.length > 0 && { marginTop: Spacing.sm },
+                ]}
+                placeholder={l({ en: 'Enter district name', ar: 'اكتب اسم الحي' })}
+                placeholderTextColor={Colors.textTertiary}
+                value={district}
+                maxLength={80}
+                onChangeText={setDistrict}
+              />
+            )}
           </>
         )}
 
@@ -292,9 +318,9 @@ export default function CreatePropertyScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <Pressable
-          style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
+          style={[styles.submitButton, (!canSubmit || mutation.isPending) && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={!canSubmit || mutation.isPending}
+          disabled={mutation.isPending}
         >
           {mutation.isPending ? (
             <ActivityIndicator color={Colors.white} />
@@ -314,8 +340,11 @@ export default function CreatePropertyScreen() {
         CITIES,
         city,
         (v) => {
-          setCity(v);
-          setDistrict('');
+          if (v !== city) {
+            setCity(v);
+            setDistrict('');
+            setDistrictOther(false);
+          }
         },
       )}
       {renderPickerModal(
@@ -323,8 +352,16 @@ export default function CreatePropertyScreen() {
         () => setShowDistrictPicker(false),
         l({ en: 'Select District', ar: 'اختر الحي' }),
         districtOptions,
-        district,
-        setDistrict,
+        districtOther ? OTHER_DISTRICT : district,
+        (v) => {
+          if (v === OTHER_DISTRICT) {
+            setDistrictOther(true);
+            setDistrict('');
+          } else {
+            setDistrictOther(false);
+            setDistrict(v);
+          }
+        },
       )}
       {renderPickerModal(
         showDirectionPicker,

@@ -17,6 +17,8 @@ import { useQuery } from '@tanstack/react-query';
 import { hostsService } from '../../services/hosts.service';
 import { formatCurrency, formatDate, formatRating } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
+import { cityLabel } from '../../constants/cities';
 import type { Listing, Review } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -25,6 +27,7 @@ const PROPERTY_CARD_WIDTH = SCREEN_WIDTH * 0.7;
 export default function HostProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t, language } = useLanguage();
 
   const { data, isLoading } = useQuery({
     queryKey: ['host', id],
@@ -46,7 +49,7 @@ export default function HostProfileScreen() {
 
   const { host, stats, properties, reviews } = data;
   const hostName = host.name
-    ?? (`${host.firstName ?? ''} ${host.lastName ?? ''}`.trim() || 'Host');
+    ?? (`${host.firstName ?? ''} ${host.lastName ?? ''}`.trim() || t('detail.host'));
   const memberSince = host.createdAt ? formatDate(host.createdAt, 'MMM yyyy') : null;
 
   const renderPropertyCard = ({ item }: { item: Listing }) => {
@@ -72,7 +75,7 @@ export default function HostProfileScreen() {
           <View style={styles.propertyLocationRow}>
             <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
             <Text style={styles.propertyLocation} numberOfLines={1}>
-              {item.location?.city ?? ''}
+              {cityLabel(item.location?.city, language)}
             </Text>
           </View>
           <View style={styles.propertyBottom}>
@@ -91,7 +94,7 @@ export default function HostProfileScreen() {
 
   const renderReviewCard = ({ item }: { item: Review }) => {
     const reviewerName = item.reviewer?.name
-      ?? (`${item.reviewer?.firstName ?? ''} ${item.reviewer?.lastName ?? ''}`.trim() || 'Guest');
+      ?? (`${item.reviewer?.firstName ?? ''} ${item.reviewer?.lastName ?? ''}`.trim() || t('account.guest'));
 
     return (
       <View style={styles.reviewCard}>
@@ -124,7 +127,7 @@ export default function HostProfileScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name={BACK_ICON} size={22} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={styles.headerTitle}>Host Profile</Text>
+        <Text style={styles.headerTitle}>{t('host.title')}</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -149,11 +152,11 @@ export default function HostProfileScreen() {
           {host.isVerified && (
             <View style={styles.verifiedRow}>
               <Ionicons name="shield-checkmark" size={14} color={Colors.success} />
-              <Text style={styles.verifiedText}>Verified Host</Text>
+              <Text style={styles.verifiedText}>{t('detail.verifiedHost')}</Text>
             </View>
           )}
           {memberSince && (
-            <Text style={styles.memberSince}>Member since {memberSince}</Text>
+            <Text style={styles.memberSince}>{t('host.memberSince')} {memberSince}</Text>
           )}
         </View>
 
@@ -161,19 +164,19 @@ export default function HostProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.totalProperties}</Text>
-            <Text style={styles.statLabel}>Properties</Text>
+            <Text style={styles.statLabel}>{t('host.properties')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>
               {stats.averageRating > 0 ? formatRating(stats.averageRating) : '-'}
             </Text>
-            <Text style={styles.statLabel}>Rating</Text>
+            <Text style={styles.statLabel}>{t('host.rating')}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.totalReviews}</Text>
-            <Text style={styles.statLabel}>Reviews</Text>
+            <Text style={styles.statLabel}>{t('host.totalReviews')}</Text>
           </View>
         </View>
 
@@ -181,7 +184,7 @@ export default function HostProfileScreen() {
         {properties.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Properties ({properties.length})
+              {t('host.properties')} ({properties.length})
             </Text>
             <FlatList
               data={properties}
@@ -198,7 +201,7 @@ export default function HostProfileScreen() {
         {reviews.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              Reviews ({reviews.length})
+              {t('host.totalReviews')} ({reviews.length})
             </Text>
             {reviews.map((review) => (
               <View key={review._id}>
@@ -211,7 +214,7 @@ export default function HostProfileScreen() {
         {reviews.length === 0 && (
           <View style={styles.emptyReviews}>
             <Ionicons name="chatbubble-outline" size={40} color={Colors.textTertiary} />
-            <Text style={styles.emptyText}>No reviews yet</Text>
+            <Text style={styles.emptyText}>{t('host.noReviews')}</Text>
           </View>
         )}
 

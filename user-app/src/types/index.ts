@@ -28,7 +28,9 @@ export interface Listing {
   _id: string;
   title: string;
   description: string;
-  type: 'apartment' | 'chalet' | 'villa' | 'studio' | 'farm' | 'camp' | 'resort' | 'hotel';
+  type:
+    | 'chalet' | 'apartment' | 'villa' | 'studio' | 'farm' | 'camp' | 'hotel'
+    | 'rest_house' | 'room' | 'hotel_resort' | 'serviced_apartment';
   images: PropertyImage[];
   videos?: string[];
   location: {

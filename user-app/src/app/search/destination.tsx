@@ -5,7 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSearchStore } from '../../store/searchStore';
 import { useLanguage } from '../../i18n';
-import { SAUDI_CITIES } from '../../constants/config';
+import { POPULAR_CITY_VALUES } from '../../constants/config';
+import { CITIES } from '../../constants/cities';
+
+// Popular cities first, then the rest in list order.
+const POPULAR = new Set<string>(POPULAR_CITY_VALUES);
+const ORDERED_CITIES = [
+  ...CITIES.filter((c) => POPULAR.has(c.value)),
+  ...CITIES.filter((c) => !POPULAR.has(c.value)),
+];
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 export default function DestinationScreen() {
@@ -14,14 +22,16 @@ export default function DestinationScreen() {
   const { t, language } = useLanguage();
   const [search, setSearch] = useState('');
 
-  const filtered = SAUDI_CITIES.filter(
+  const query = search.trim();
+  const filtered = ORDERED_CITIES.filter(
     (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.nameAr.includes(search)
+      c.en.toLowerCase().includes(query.toLowerCase()) ||
+      c.value.toLowerCase().includes(query.toLowerCase()) ||
+      c.ar.includes(query)
   );
 
-  const handleSelect = (cityId: string, cityName: string) => {
-    setCity(cityId, cityName);
+  const handleSelect = (cityValue: string) => {
+    setCity(cityValue, cityValue);
     router.push('/search/type-guests');
   };
 
@@ -49,13 +59,14 @@ export default function DestinationScreen() {
 
       <FlatList
         data={filtered}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.value}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
-          const primary = language === 'ar' ? item.nameAr : item.name;
-          const secondary = language === 'ar' ? item.name : item.nameAr;
+          const primary = language === 'ar' ? item.ar : item.en;
+          const secondary = language === 'ar' ? item.en : item.ar;
           return (
-            <Pressable style={styles.cityRow} onPress={() => handleSelect(item.id, item.name)}>
+            <Pressable style={styles.cityRow} onPress={() => handleSelect(item.value)}>
               <Ionicons name="location-outline" size={22} color={Colors.primary} />
               <View>
                 <Text style={styles.cityName}>{primary}</Text>

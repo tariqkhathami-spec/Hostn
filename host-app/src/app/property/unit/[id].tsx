@@ -37,13 +37,13 @@ interface DayInfo {
   isCheckOut?: boolean;
 }
 
-// Default pricing (used when API data is not yet loaded)
-const DEFAULT_PRICING: Record<string, number> = {
-  weekday: 880,
-  thursday: 1025,
-  friday: 1150,
-  saturday: 1025,
-};
+// Shown in place of a value the unit does not have (no invented numbers).
+const DASH = '—';
+
+/** A stored nightly price, or a dash when it is not set. */
+function priceText(value: number | undefined): string {
+  return typeof value === 'number' && value > 0 ? `${value.toLocaleString('en-US')} ر.س` : DASH;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ const ARABIC_MONTHS = [
 
 const ARABIC_WEEKDAYS = ['سبت', 'أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع'];
 
-function getDayOfWeekPrice(date: Date, pricing: Record<string, number>): number {
+function getDayOfWeekPrice(date: Date, pricing: Record<string, number>): number | undefined {
   const day = date.getDay();
   if (day === 4) return pricing.thursday;
   if (day === 5) return pricing.friday;
@@ -258,10 +258,7 @@ function CalendarGrid({
 
       {/* Legend */}
       <View style={calStyles.legend}>
-        <LegendItem color={Colors.primary} label="هوستن" />
-        <LegendItem color="#003580" label="Booking" />
-        <LegendItem color="#FF5A5F" label="Airbnb" />
-        <LegendItem color="#00A651" label="المسافر" />
+        <LegendItem color={Colors.primary} label="محجوز" />
         <LegendItem color={Colors.borderLight} label="متاح" />
       </View>
     </View>
@@ -349,21 +346,23 @@ export default function UnitDetailScreen() {
     return null;
   }, [propertiesData, id]);
 
-  const unitName = unitFromProps?.name || `شالية ميفارا (${id}) Mivara`;
-  const unitCode = unitFromProps?.code || `4493${id}`;
-  const unitStatus = unitFromProps?.status || 'listed';
+  // Real values only: a missing name, code or price is shown as such.
+  const unitName = (unitFromProps?.nameAr || unitFromProps?.nameEn || '').trim() || 'وحدة بدون اسم';
+  const unitCode = unitFromProps?.code || DASH;
+  const unitStatus = unitFromProps?.status || 'unlisted';
+  const missing = ((unitFromProps as any)?.publishIssues ?? [])
+    .map((issue: string) => ({ missing_name: 'الاسم', missing_price: 'السعر', missing_photos: 'الصور' } as Record<string, string>)[issue])
+    .filter(Boolean) as string[];
 
-  // Get pricing from API unit data
+  // Prices as stored on the unit (0 / missing = not set yet).
   const pricing: Record<string, number> = useMemo(() => {
-    if (unitFromProps?.pricing) {
-      return {
-        weekday: unitFromProps.pricing.midWeek || DEFAULT_PRICING.weekday,
-        thursday: unitFromProps.pricing.thursday || DEFAULT_PRICING.thursday,
-        friday: unitFromProps.pricing.friday || DEFAULT_PRICING.friday,
-        saturday: unitFromProps.pricing.saturday || DEFAULT_PRICING.saturday,
-      };
-    }
-    return DEFAULT_PRICING;
+    const p: any = unitFromProps?.pricing ?? {};
+    return {
+      weekday: Number(p.midWeek) || 0,
+      thursday: Number(p.thursday) || 0,
+      friday: Number(p.friday) || 0,
+      saturday: Number(p.saturday) || 0,
+    };
   }, [unitFromProps]);
 
   // M17: load bookings scoped to *this* unit. Pre-fix this called
@@ -470,6 +469,11 @@ export default function UnitDetailScreen() {
               </Text>
             </View>
           </View>
+          {missing.length > 0 && (
+            <Text style={styles.incompleteNote}>
+              {`غير مكتملة — ينقصها: ${missing.join('، ')}. هذه الوحدة مخفية عن الضيوف حتى تكتمل بياناتها.`}
+            </Text>
+          )}
         </View>
 
         {/* Calendar Section */}
@@ -502,56 +506,30 @@ export default function UnitDetailScreen() {
           <View style={styles.priceGrid}>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>وسط الأسبوع</Text>
-              <Text style={styles.priceValue}>{pricing.weekday} ر.س</Text>
+              <Text style={styles.priceValue}>{priceText(pricing.weekday)}</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>الخميس</Text>
-              <Text style={styles.priceValue}>{pricing.thursday} ر.س</Text>
+              <Text style={styles.priceValue}>{priceText(pricing.thursday)}</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>الجمعة</Text>
-              <Text style={[styles.priceValue, { color: Colors.primary }]}>{pricing.friday} ر.س</Text>
+              <Text style={[styles.priceValue, { color: Colors.primary }]}>{priceText(pricing.friday)}</Text>
             </View>
             <View style={styles.priceCard}>
               <Text style={styles.priceLabel}>السبت</Text>
-              <Text style={styles.priceValue}>{pricing.saturday} ر.س</Text>
+              <Text style={styles.priceValue}>{priceText(pricing.saturday)}</Text>
             </View>
           </View>
 
-          {selectedDate && selectedDayPrice && (
+          {selectedDate && !!selectedDayPrice && (
             <View style={styles.selectedPriceBox}>
               <Text style={styles.selectedPriceLabel}>
                 سعر {selectedDate.getDate()}/{selectedDate.getMonth() + 1}/{selectedDate.getFullYear()}
               </Text>
-              <Text style={styles.selectedPriceValue}>{selectedDayPrice} ر.س / ليلة</Text>
+              <Text style={styles.selectedPriceValue}>{priceText(selectedDayPrice)} / ليلة</Text>
             </View>
           )}
-        </View>
-
-        {/* Platform Sync Status */}
-        <View style={styles.syncSection}>
-          <Text style={styles.sectionTitle}>حالة المزامنة مع المنصات</Text>
-          <View style={styles.syncGrid}>
-            {[
-              { name: 'هوستن', platform: 'hostn', connected: true },
-              { name: 'Booking.com', platform: 'booking', connected: true },
-              { name: 'Airbnb', platform: 'airbnb', connected: true },
-              { name: 'المسافر', platform: 'almosafer', connected: false },
-            ].map((item) => (
-              <View key={item.platform} style={styles.syncItem}>
-                <Ionicons
-                  name={item.connected ? 'checkmark-circle' : 'close-circle'}
-                  size={20}
-                  color={item.connected ? Colors.success : Colors.textTertiary}
-                />
-                <Text style={styles.syncName}>{item.name}</Text>
-                <View style={[styles.syncDot, { backgroundColor: getPlatformColor(item.platform) }]} />
-              </View>
-            ))}
-          </View>
-          <Text style={styles.syncNote}>
-            * عند حجز تاريخ من أي منصة، يتم حجبه تلقائياً من جميع المنصات الأخرى لمنع الحجز المزدوج
-          </Text>
         </View>
 
         {/* Reservations List */}
@@ -810,6 +788,12 @@ const styles = StyleSheet.create({
   unitCode: {
     ...Typography.small,
     color: Colors.textSecondary,
+  },
+  incompleteNote: {
+    ...Typography.caption,
+    color: '#b45309',
+    marginTop: Spacing.sm,
+    lineHeight: 18,
   },
   statusBadge: {
     flexDirection: 'row',

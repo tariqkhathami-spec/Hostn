@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import { API_BASE_URL } from '../constants/config';
 import { secureStorage } from '../utils/storage';
 
@@ -7,7 +8,7 @@ const api = axios.create({
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
-    'X-Platform': 'android',
+    'X-Platform': Platform.OS,
   },
 });
 

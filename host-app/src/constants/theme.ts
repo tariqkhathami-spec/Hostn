@@ -3,25 +3,25 @@ import { I18nManager } from 'react-native';
 
 export const Colors = {
   // Primary purple palette (matching web frontend)
-  primary: '#6d28d9',
-  primary50: '#faf8ff',
-  primary100: '#f3edff',
-  primary200: '#e8dffe',
-  primary300: '#d4c4fc',
-  primary400: '#b794f6',
-  primary500: '#9461e5',
-  primary600: '#7c3aed',
-  primary700: '#6d28d9',
-  primary800: '#5521a5',
-  primary900: '#3b1578',
-  primary950: '#1e0a3e',
+  primary: '#14644b',
+  primary50: '#eefaf4',
+  primary100: '#d6f3e4',
+  primary200: '#b0e6cc',
+  primary300: '#7dd2ae',
+  primary400: '#48b78c',
+  primary500: '#259c73',
+  primary600: '#177d5c',
+  primary700: '#14644b',
+  primary800: '#124f3d',
+  primary900: '#0f4133',
+  primary950: '#06231b',
 
   // Gold accent
-  gold: '#d4af37',
-  gold50: '#fefdf4',
-  gold100: '#fdf8e1',
-  gold400: '#e8c94a',
-  gold500: '#d4af37',
+  gold: '#f08c0a',
+  gold50: '#fff9eb',
+  gold100: '#feefc7',
+  gold400: '#fbad24',
+  gold500: '#f08c0a',
 
   // Status
   success: '#059669',

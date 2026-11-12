@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supportService } from '../../../services/support.service';
 import { formatDate } from '../../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../../constants/theme';
+import { useLanguage, type TranslationKey } from '../../../i18n';
 import type { SupportTicket, SupportMessage } from '../../../types';
 
 const STATUS_COLORS: Record<SupportTicket['status'], string> = {
@@ -26,11 +27,11 @@ const STATUS_COLORS: Record<SupportTicket['status'], string> = {
   closed: Colors.textTertiary,
 };
 
-const STATUS_LABELS: Record<SupportTicket['status'], string> = {
-  open: 'Open',
-  in_progress: 'In Progress',
-  resolved: 'Resolved',
-  closed: 'Closed',
+const STATUS_LABEL_KEYS: Record<SupportTicket['status'], TranslationKey> = {
+  open: 'support.open',
+  in_progress: 'support.inProgress',
+  resolved: 'support.resolved',
+  closed: 'support.statusClosed',
 };
 
 const PRIORITY_COLORS: Record<SupportTicket['priority'], string> = {
@@ -39,19 +40,26 @@ const PRIORITY_COLORS: Record<SupportTicket['priority'], string> = {
   high: Colors.error,
 };
 
-const CATEGORY_LABELS: Record<SupportTicket['category'], string> = {
-  payment: 'Payment',
-  booking: 'Booking',
-  complaint: 'Complaint',
-  technical: 'Technical',
-  account: 'Account',
-  other: 'Other',
+const CATEGORY_LABEL_KEYS: Record<SupportTicket['category'], TranslationKey> = {
+  payment: 'support.cat.payment',
+  booking: 'support.cat.booking',
+  complaint: 'support.cat.complaint',
+  technical: 'support.cat.technical',
+  account: 'support.cat.account',
+  other: 'support.cat.other',
+};
+
+const PRIORITY_LABEL_KEYS: Record<SupportTicket['priority'], TranslationKey> = {
+  low: 'support.pri.low',
+  medium: 'support.pri.medium',
+  high: 'support.pri.high',
 };
 
 export default function TicketDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const flatListRef = useRef<FlatList>(null);
 
   const [replyText, setReplyText] = useState('');
@@ -84,7 +92,7 @@ export default function TicketDetailScreen() {
         ]}
       >
         {!isUser && (
-          <Text style={styles.adminLabel}>Support Team</Text>
+          <Text style={styles.adminLabel}>{t('support.team')}</Text>
         )}
         <Text
           style={[
@@ -113,7 +121,7 @@ export default function TicketDetailScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
           </Pressable>
-          <Text style={styles.title}>Ticket</Text>
+          <Text style={styles.title}>{t('support.ticket')}</Text>
           <View style={{ width: 24 }} />
         </View>
         <ActivityIndicator
@@ -132,11 +140,11 @@ export default function TicketDetailScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
           </Pressable>
-          <Text style={styles.title}>Ticket</Text>
+          <Text style={styles.title}>{t('support.ticket')}</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Ticket not found</Text>
+          <Text style={styles.emptyText}>{t('support.ticketNotFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -150,7 +158,7 @@ export default function TicketDetailScreen() {
           <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>
-          Ticket
+          {t('support.ticket')}
         </Text>
         <View style={{ width: 24 }} />
       </View>
@@ -171,12 +179,12 @@ export default function TicketDetailScreen() {
                 { color: STATUS_COLORS[ticket.status] },
               ]}
             >
-              {STATUS_LABELS[ticket.status]}
+              {t(STATUS_LABEL_KEYS[ticket.status] ?? 'status.unknown')}
             </Text>
           </View>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>
-              {CATEGORY_LABELS[ticket.category]}
+              {t(CATEGORY_LABEL_KEYS[ticket.category] ?? 'support.cat.other')}
             </Text>
           </View>
           <View style={styles.priorityBadgeRow}>
@@ -187,8 +195,7 @@ export default function TicketDetailScreen() {
               ]}
             />
             <Text style={styles.priorityLabel}>
-              {ticket.priority.charAt(0).toUpperCase() +
-                ticket.priority.slice(1)}
+              {t(PRIORITY_LABEL_KEYS[ticket.priority] ?? 'support.pri.medium')}
             </Text>
           </View>
         </View>
@@ -215,7 +222,7 @@ export default function TicketDetailScreen() {
           <View style={styles.replyBar}>
             <TextInput
               style={styles.replyInput}
-              placeholder="Type a reply..."
+              placeholder={t('support.replyPlaceholder')}
               placeholderTextColor={Colors.textTertiary}
               value={replyText}
               onChangeText={setReplyText}
@@ -241,7 +248,7 @@ export default function TicketDetailScreen() {
       ) : (
         <View style={styles.closedBar}>
           <Text style={styles.closedText}>
-            This ticket is {ticket.status === 'resolved' ? 'resolved' : 'closed'}.
+            {ticket.status === 'resolved' ? t('support.ticketResolved') : t('support.closed')}
           </Text>
         </View>
       )}

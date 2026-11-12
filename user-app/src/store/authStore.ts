@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
+import type { Href } from 'expo-router';
 import type { User } from '../types';
 
 interface AuthState {
@@ -7,6 +8,8 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** Where to send a guest once they have signed in (e.g. the checkout they were heading to). */
+  returnTo: Href | null;
 
   login: (token: string, refreshToken: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
@@ -14,6 +17,7 @@ interface AuthState {
   setUser: (user: User) => void;
   setToken: (token: string) => void;
   setLoading: (loading: boolean) => void;
+  setReturnTo: (href: Href | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -21,6 +25,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isAuthenticated: false,
   isLoading: true,
+  returnTo: null,
 
   login: async (token: string, refreshToken: string, user: User) => {
     await secureStorage.setToken(token);
@@ -51,4 +56,5 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user, isAuthenticated: true }),
   setToken: (token) => set({ token }),
   setLoading: (isLoading) => set({ isLoading }),
+  setReturnTo: (returnTo) => set({ returnTo }),
 }));

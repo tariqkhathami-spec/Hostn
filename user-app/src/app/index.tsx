@@ -17,11 +17,13 @@ export default function IndexScreen() {
     async function bootstrap() {
       const { token } = await loadStoredAuth();
 
+      // Signed-out visitors browse as guests; sign-in is asked for only at
+      // checkout, favourites, chat and account.
       if (!token) {
         if (!onboardingSeen) {
           router.replace('/(auth)/onboarding');
         } else {
-          router.replace('/(auth)/phone');
+          router.replace('/(tabs)');
         }
         return;
       }
@@ -31,8 +33,9 @@ export default function IndexScreen() {
         setUser(user);
         router.replace('/(tabs)');
       } catch {
+        // Session could not be restored — carry on as a guest.
         setLoading(false);
-        router.replace('/(auth)/phone');
+        router.replace('/(tabs)');
       }
     }
 

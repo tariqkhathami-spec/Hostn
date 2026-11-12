@@ -39,14 +39,6 @@ export default function PaymentMethodsScreen() {
     );
   };
 
-  const handleAddCard = () => {
-    Alert.alert(
-      t('payment.addCardSoonTitle'),
-      t('payment.addCardSoonBody'),
-      [{ text: t('common.ok') }],
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
@@ -54,9 +46,7 @@ export default function PaymentMethodsScreen() {
           <Ionicons name={BACK_ICON} size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.title}>{t('account.paymentMethods')}</Text>
-        <Pressable onPress={handleAddCard} hitSlop={12} accessibilityLabel={t('payment.addCard')}>
-          <Ionicons name="add" size={26} color={Colors.primary} />
-        </Pressable>
+        <View style={{ width: 24 }} />
       </View>
 
       {isLoading ? (
@@ -66,10 +56,6 @@ export default function PaymentMethodsScreen() {
           <Ionicons name="card-outline" size={64} color={Colors.textTertiary} />
           <Text style={styles.emptyTitle}>{t('payment.emptyTitle')}</Text>
           <Text style={styles.emptyText}>{t('payment.emptyText')}</Text>
-          <Pressable style={styles.emptyCta} onPress={handleAddCard}>
-            <Ionicons name="add" size={18} color={Colors.white} />
-            <Text style={styles.emptyCtaText}>{t('payment.addCard')}</Text>
-          </Pressable>
         </View>
       ) : (
         <FlatList
@@ -122,10 +108,4 @@ const styles = StyleSheet.create({
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl },
   emptyTitle: { ...Typography.h3, color: Colors.textPrimary },
   emptyText: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
-  emptyCta: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    borderRadius: Radius.md, marginTop: Spacing.md,
-  },
-  emptyCtaText: { ...Typography.bodyBold, color: Colors.white },
 });

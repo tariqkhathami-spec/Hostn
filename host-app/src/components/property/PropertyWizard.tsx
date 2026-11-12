@@ -15,23 +15,30 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing, Typography, Radius, Shadows } from '../../constants/theme';
 import { getLocale } from '../../utils/i18n';
 import {
   CITIES,
-  DISTRICTS,
   PROPERTY_TYPES,
-  ALL_AMENITIES,
+  UNIT_AMENITIES,
+  UNIT_FEATURES,
   TIME_OPTIONS,
+  OTHER_DISTRICT,
+  districtOptionsFor,
+  isListedDistrict,
+  districtLabel,
 } from '../../constants/listings';
-import { hostService } from '../../services/host.service';
+import { cleanNumericInput, parseNumber } from '../../utils/format';
+import { pickAndUploadImages, uploadFailureText } from '../../utils/uploadImages';
 
 // -------------------------------------------------------------------
 // Types
 // -------------------------------------------------------------------
 export interface PropertyFormData {
+  /** Arabic name (the unit's `nameAr` in unit mode). */
   title: string;
+  /** Optional English name. */
+  nameEn: string;
   description: string;
   type: string;
   city: string;
@@ -49,12 +56,18 @@ export interface PropertyFormData {
   smokingAllowed: boolean;
   petsAllowed: boolean;
   partiesAllowed: boolean;
+  /** Values of UNIT_AMENITIES (Unit.amenities enum). */
   amenities: string[];
+  /** Values of UNIT_FEATURES (Unit.features enum). */
+  features: string[];
+  /** Free-text booking terms shown to guests (Unit.writtenRules). */
+  writtenRules: string;
   images: { url: string; isPrimary: boolean }[];
 }
 
 export const defaultForm: PropertyFormData = {
   title: '',
+  nameEn: '',
   description: '',
   type: '',
   city: '',
@@ -73,6 +86,8 @@ export const defaultForm: PropertyFormData = {
   petsAllowed: false,
   partiesAllowed: false,
   amenities: [],
+  features: [],
+  writtenRules: '',
   images: [],
 };
 
@@ -81,36 +96,57 @@ export interface PropertyWizardProps {
   onSubmit: (data: PropertyFormData) => Promise<void>;
   submitLabel: { en: string; ar: string };
   isSubmitting: boolean;
+  /**
+   * 'unit' adds a unit to an existing property: the type and location steps
+   * are skipped (they belong to the property) and the form collects exactly
+   * what the Unit model stores.
+   */
+  mode?: 'property' | 'unit';
 }
 
 // -------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------
-const TOTAL_STEPS = 8;
+const PROPERTY_STEPS = [1, 2, 3, 4, 5, 6, 7, 8];
+const UNIT_STEPS = [3, 4, 5, 6, 7, 8];
+const MAX_DISCOUNT_PERCENT = 90;
 
-const STEP_TITLES: { en: string; ar: string }[] = [
-  { en: 'Property Type', ar: 'نوع العقار' },
-  { en: 'Location', ar: 'الموقع' },
-  { en: 'Details', ar: 'التفاصيل' },
-  { en: 'Pricing', ar: 'التسعير' },
-  { en: 'Amenities', ar: 'المرافق' },
-  { en: 'Images', ar: 'الصور' },
-  { en: 'Rules', ar: 'القواعد' },
-  { en: 'Review', ar: 'المراجعة' },
-];
+const STEP_TITLES: Record<number, { en: string; ar: string }> = {
+  1: { en: 'Property Type', ar: 'نوع العقار' },
+  2: { en: 'Location', ar: 'الموقع' },
+  3: { en: 'Details', ar: 'التفاصيل' },
+  4: { en: 'Pricing', ar: 'التسعير' },
+  5: { en: 'Amenities', ar: 'المرافق والمزايا' },
+  6: { en: 'Images', ar: 'الصور' },
+  7: { en: 'Rules', ar: 'القواعد' },
+  8: { en: 'Review', ar: 'المراجعة' },
+};
 
 export default function PropertyWizard({
   initialData,
   onSubmit,
   submitLabel,
   isSubmitting,
+  mode = 'property',
 }: PropertyWizardProps) {
   const router = useRouter();
   const locale = getLocale();
   const l = (obj: { en: string; ar: string }) => (locale === 'ar' ? obj.ar : obj.en);
 
-  const [step, setStep] = useState(1);
+  const isUnit = mode === 'unit';
+  const stepIds = isUnit ? UNIT_STEPS : PROPERTY_STEPS;
+  const TOTAL_STEPS = stepIds.length;
+  // `pos` is the position in the flow; `step` is the id of the step shown.
+  const [pos, setPos] = useState(0);
+  const step = stepIds[pos];
   const [form, setForm] = useState<PropertyFormData>(initialData ?? { ...defaultForm });
+  // True while the host is typing a district that is not in the city's list.
+  const [districtOther, setDistrictOther] = useState(
+    () =>
+      !!initialData?.district &&
+      districtOptionsFor(initialData.city).length > 0 &&
+      !isListedDistrict(initialData.city, initialData.district),
+  );
 
   // Modal states
   const [cityPickerVisible, setCityPickerVisible] = useState(false);
@@ -131,7 +167,8 @@ export default function PropertyWizard({
     min: number,
     max: number,
   ) => {
-    const val = parseInt(form[key], 10) || min;
+    const parsed = parseInt(form[key], 10);
+    const val = Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : min;
     return (
       <View style={styles.stepperRow}>
         <Pressable
@@ -162,10 +199,14 @@ export default function PropertyWizard({
         return !!form.city;
       case 3:
         return !!form.title.trim();
-      case 4:
-        return !!form.price && parseFloat(form.price) > 0;
+      case 4: {
+        const discount = parseNumber(form.discountPercent || '0');
+        return parseNumber(form.price) > 0 && !(discount > MAX_DISCOUNT_PERCENT);
+      }
       case 6:
         return form.images.length > 0;
+      case 7:
+        return isUnit || (parseInt(form.minNights, 10) || 1) <= (parseInt(form.maxNights, 10) || 1);
       default:
         return true;
     }
@@ -176,20 +217,29 @@ export default function PropertyWizard({
       const msgs: Record<number, { en: string; ar: string }> = {
         1: { en: 'Please select a property type', ar: 'يرجى اختيار نوع العقار' },
         2: { en: 'Please select a city', ar: 'يرجى اختيار المدينة' },
-        3: { en: 'Please enter a title', ar: 'يرجى إدخال العنوان' },
-        4: { en: 'Please enter a valid price', ar: 'يرجى إدخال سعر صحيح' },
+        3: isUnit
+          ? { en: 'Please enter the unit name in Arabic', ar: 'يرجى إدخال اسم الوحدة بالعربية' }
+          : { en: 'Please enter the name in Arabic', ar: 'يرجى إدخال الاسم بالعربية' },
+        4:
+          parseNumber(form.discountPercent || '0') > MAX_DISCOUNT_PERCENT
+            ? { en: 'Discount cannot exceed 90%', ar: 'نسبة الخصم لا يمكن أن تتجاوز 90%' }
+            : { en: 'Please enter a nightly price above zero', ar: 'يرجى إدخال سعر لليلة أكبر من صفر' },
         6: { en: 'Please add at least one image', ar: 'يرجى إضافة صورة واحدة على الأقل' },
+        7: {
+          en: 'Minimum nights cannot exceed maximum nights',
+          ar: 'الحد الأدنى لليالي لا يمكن أن يكون أكبر من الحد الأقصى',
+        },
       };
       const msg = msgs[step];
       if (msg) Alert.alert(l({ en: 'Required', ar: 'مطلوب' }), l(msg));
       return;
     }
-    if (step < TOTAL_STEPS) setStep(step + 1);
+    if (pos < TOTAL_STEPS - 1) setPos(pos + 1);
   };
 
   const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
+    if (pos > 0) {
+      setPos(pos - 1);
     } else {
       const hasData = form.title || form.type || form.city || form.images.length > 0;
       if (hasData) {
@@ -211,40 +261,26 @@ export default function PropertyWizard({
   // Image handling
   // -------------------------------------------------------------------
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-
-    if (result.canceled || !result.assets?.length) return;
-
+    if (uploadingImage) return;
     setUploadingImage(true);
     try {
-      for (const asset of result.assets) {
-        const formData = new FormData();
-        const fileName = asset.uri.split('/').pop() || 'image.jpg';
-        const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg';
-        const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
-
-        formData.append('image', {
-          uri: asset.uri,
-          name: fileName,
-          type: mimeType,
-        } as any);
-
-        const res = await hostService.uploadImage(formData);
-        const url = res?.data?.url || res?.url || asset.uri;
-        const isPrimary = form.images.length === 0;
+      // Each photo is added as soon as it uploads. `isPrimary` is decided
+      // inside the state updater, so it sees photos added earlier in the
+      // same batch (reading `form.images` here would be a stale snapshot
+      // and mark every photo of the batch as primary).
+      const result = await pickAndUploadImages((url) => {
         setForm((prev) => ({
           ...prev,
-          images: [...prev.images, { url, isPrimary }],
+          images: [...prev.images, { url, isPrimary: !prev.images.some((img) => img.isPrimary) }],
         }));
+      });
+      if (result.failed > 0) {
+        Alert.alert(l({ en: 'Upload problem', ar: 'تعذّر رفع بعض الصور' }), uploadFailureText(result));
       }
     } catch {
       Alert.alert(
         l({ en: 'Error', ar: 'خطأ' }),
-        l({ en: 'Failed to upload image', ar: 'فشل رفع الصورة' }),
+        l({ en: 'Could not open the photo library', ar: 'تعذّر فتح مكتبة الصور. تحقق من صلاحية الوصول للصور.' }),
       );
     } finally {
       setUploadingImage(false);
@@ -254,10 +290,11 @@ export default function PropertyWizard({
   const removeImage = (index: number) => {
     setForm((prev) => {
       const updated = prev.images.filter((_, i) => i !== index);
-      if (updated.length > 0 && !updated.some((img) => img.isPrimary)) {
-        updated[0].isPrimary = true;
-      }
-      return { ...prev, images: updated };
+      const hasPrimary = updated.some((img) => img.isPrimary);
+      return {
+        ...prev,
+        images: hasPrimary ? updated : updated.map((img, i) => ({ ...img, isPrimary: i === 0 })),
+      };
     });
   };
 
@@ -300,8 +337,8 @@ export default function PropertyWizard({
 
   const renderStep2 = () => {
     const cityObj = CITIES.find((c) => c.value === form.city);
-    const districts = form.city ? DISTRICTS[form.city] || [] : [];
-    const districtObj = districts.find((d) => d.value === form.district);
+    const districts = districtOptionsFor(form.city);
+    const hasList = districts.length > 0;
 
     return (
       <View>
@@ -316,25 +353,36 @@ export default function PropertyWizard({
           <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
         </Pressable>
 
-        {/* District picker */}
+        {/* District: a list when the city has one (with "other"), free text otherwise */}
         <Text style={[styles.formLabel, { marginTop: Spacing.base }]}>
           {l({ en: 'District', ar: 'الحي' })}
         </Text>
-        {districts.length > 0 ? (
+        {hasList && (
           <Pressable style={styles.pickerButton} onPress={() => setDistrictPickerVisible(true)}>
-            <Text style={[styles.pickerText, !form.district && { color: Colors.textTertiary }]}>
-              {districtObj ? l(districtObj) : l({ en: 'Select district', ar: 'اختر الحي' })}
+            <Text
+              style={[
+                styles.pickerText,
+                !form.district && !districtOther && { color: Colors.textTertiary },
+              ]}
+            >
+              {districtOther
+                ? l({ en: 'Other district', ar: 'حي آخر' })
+                : form.district
+                  ? districtLabel(form.city, form.district, locale === 'ar' ? 'ar' : 'en')
+                  : l({ en: 'Select district', ar: 'اختر الحي' })}
             </Text>
             <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
           </Pressable>
-        ) : (
+        )}
+        {(!hasList || districtOther) && (
           <TextInput
-            style={styles.input}
+            style={[styles.input, hasList && { marginTop: Spacing.sm }]}
             value={form.district}
             onChangeText={(v) => updateForm('district', v)}
-            placeholder={l({ en: 'Enter district name', ar: 'أدخل اسم الحي' })}
+            placeholder={l({ en: 'Enter district name', ar: 'اكتب اسم الحي' })}
             placeholderTextColor={Colors.textTertiary}
             textAlign="right"
+            maxLength={80}
           />
         )}
       </View>
@@ -343,16 +391,42 @@ export default function PropertyWizard({
 
   const renderStep3 = () => (
     <View>
-      <Text style={styles.sectionTitle}>{l({ en: 'Property Details', ar: 'تفاصيل العقار' })}</Text>
+      <Text style={styles.sectionTitle}>
+        {isUnit
+          ? l({ en: 'Unit Details', ar: 'تفاصيل الوحدة' })
+          : l({ en: 'Property Details', ar: 'تفاصيل العقار' })}
+      </Text>
 
-      <Text style={styles.formLabel}>{l({ en: 'Title', ar: 'العنوان' })}</Text>
+      <Text style={styles.formLabel}>
+        {isUnit
+          ? l({ en: 'Unit name (Arabic) *', ar: 'اسم الوحدة (بالعربية) *' })
+          : l({ en: 'Name (Arabic) *', ar: 'الاسم (بالعربية) *' })}
+      </Text>
       <TextInput
         style={styles.input}
         value={form.title}
         onChangeText={(v) => updateForm('title', v)}
-        placeholder={l({ en: 'Property title', ar: 'عنوان العقار' })}
+        placeholder={
+          isUnit
+            ? l({ en: 'e.g. Chalet 1', ar: 'مثال: شاليه رقم 1' })
+            : l({ en: 'Property name', ar: 'اسم العقار' })
+        }
         placeholderTextColor={Colors.textTertiary}
         textAlign="right"
+        maxLength={200}
+      />
+
+      <Text style={[styles.formLabel, { marginTop: Spacing.base }]}>
+        {l({ en: 'Name in English (optional)', ar: 'الاسم بالإنجليزية (اختياري)' })}
+      </Text>
+      <TextInput
+        style={styles.input}
+        value={form.nameEn}
+        onChangeText={(v) => updateForm('nameEn', v)}
+        placeholder="Chalet 1"
+        placeholderTextColor={Colors.textTertiary}
+        textAlign="right"
+        maxLength={200}
       />
 
       <Text style={[styles.formLabel, { marginTop: Spacing.base }]}>
@@ -362,7 +436,12 @@ export default function PropertyWizard({
         style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
         value={form.description}
         onChangeText={(v) => updateForm('description', v)}
-        placeholder={l({ en: 'Describe your property', ar: 'وصف العقار' })}
+        placeholder={
+          isUnit
+            ? l({ en: 'Describe the unit', ar: 'اكتب وصفاً للوحدة' })
+            : l({ en: 'Describe your property', ar: 'وصف العقار' })
+        }
+        maxLength={5000}
         placeholderTextColor={Colors.textTertiary}
         multiline
         textAlign="right"
@@ -375,11 +454,11 @@ export default function PropertyWizard({
         </View>
         <View style={styles.stepperItem}>
           <Text style={styles.stepperLabel}>{l({ en: 'Bathrooms', ar: 'دورات المياه' })}</Text>
-          {numericStepper('bathrooms', 1, 20)}
+          {numericStepper('bathrooms', 0, 20)}
         </View>
         <View style={styles.stepperItem}>
           <Text style={styles.stepperLabel}>{l({ en: 'Max Guests', ar: 'الحد الأقصى للضيوف' })}</Text>
-          {numericStepper('maxGuests', 1, 50)}
+          {numericStepper('maxGuests', 1, 100)}
         </View>
       </View>
     </View>
@@ -393,12 +472,18 @@ export default function PropertyWizard({
       <TextInput
         style={styles.input}
         value={form.price}
-        onChangeText={(v) => updateForm('price', v)}
+        onChangeText={(v) => updateForm('price', cleanNumericInput(v))}
         placeholder="0"
         placeholderTextColor={Colors.textTertiary}
         keyboardType="numeric"
         textAlign="right"
       />
+      <Text style={styles.fieldHint}>
+        {l({
+          en: 'Applied to all seven days. You can set a different price per day later from the pricing screen.',
+          ar: 'يُطبَّق هذا السعر على جميع أيام الأسبوع، ويمكنك لاحقاً تحديد سعر مختلف لكل يوم من شاشة التسعير.',
+        })}
+      </Text>
 
       <Text style={[styles.formLabel, { marginTop: Spacing.base }]}>
         {l({ en: 'Cleaning Fee (SAR)', ar: 'رسوم التنظيف (ريال)' })}
@@ -406,7 +491,7 @@ export default function PropertyWizard({
       <TextInput
         style={styles.input}
         value={form.cleaningFee}
-        onChangeText={(v) => updateForm('cleaningFee', v)}
+        onChangeText={(v) => updateForm('cleaningFee', cleanNumericInput(v))}
         placeholder="0"
         placeholderTextColor={Colors.textTertiary}
         keyboardType="numeric"
@@ -414,12 +499,18 @@ export default function PropertyWizard({
       />
 
       <Text style={[styles.formLabel, { marginTop: Spacing.base }]}>
-        {l({ en: 'Discount %', ar: 'نسبة الخصم %' })}
+        {l({ en: 'Discount % (0–90)', ar: 'نسبة الخصم % (من 0 إلى 90)' })}
       </Text>
       <TextInput
         style={styles.input}
         value={form.discountPercent}
-        onChangeText={(v) => updateForm('discountPercent', v)}
+        onChangeText={(v) => {
+          const cleaned = cleanNumericInput(v);
+          updateForm(
+            'discountPercent',
+            parseNumber(cleaned) > MAX_DISCOUNT_PERCENT ? String(MAX_DISCOUNT_PERCENT) : cleaned,
+          );
+        }}
         placeholder="0"
         placeholderTextColor={Colors.textTertiary}
         keyboardType="numeric"
@@ -428,35 +519,49 @@ export default function PropertyWizard({
     </View>
   );
 
+  const renderChipGrid = (
+    options: { value: string; en: string; ar: string; icon: string }[],
+    key: 'amenities' | 'features',
+  ) => (
+    <View style={styles.amenitiesGrid}>
+      {options.map((am) => {
+        const selected = form[key].includes(am.value);
+        return (
+          <Pressable
+            key={am.value}
+            style={[styles.amenityChip, selected && styles.amenityChipSelected]}
+            onPress={() =>
+              setForm((prev) => ({
+                ...prev,
+                [key]: prev[key].includes(am.value)
+                  ? prev[key].filter((a) => a !== am.value)
+                  : [...prev[key], am.value],
+              }))
+            }
+          >
+            <Ionicons
+              name={am.icon as any}
+              size={16}
+              color={selected ? Colors.white : Colors.textSecondary}
+            />
+            <Text style={[styles.amenityText, selected && styles.amenityTextSelected]}>
+              {l(am)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
   const renderStep5 = () => (
     <View>
       <Text style={styles.sectionTitle}>{l({ en: 'Amenities', ar: 'المرافق' })}</Text>
-      <View style={styles.amenitiesGrid}>
-        {ALL_AMENITIES.map((am) => {
-          const selected = form.amenities.includes(am.value);
-          return (
-            <Pressable
-              key={am.value}
-              style={[styles.amenityChip, selected && styles.amenityChipSelected]}
-              onPress={() => {
-                const list = selected
-                  ? form.amenities.filter((a) => a !== am.value)
-                  : [...form.amenities, am.value];
-                updateForm('amenities', list);
-              }}
-            >
-              <Ionicons
-                name={am.icon as any}
-                size={16}
-                color={selected ? Colors.white : Colors.textSecondary}
-              />
-              <Text style={[styles.amenityText, selected && styles.amenityTextSelected]}>
-                {l(am)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {renderChipGrid(UNIT_AMENITIES, 'amenities')}
+
+      <Text style={[styles.sectionTitle, { marginTop: Spacing.xl }]}>
+        {l({ en: 'Features', ar: 'المزايا' })}
+      </Text>
+      {renderChipGrid(UNIT_FEATURES, 'features')}
     </View>
   );
 
@@ -516,7 +621,35 @@ export default function PropertyWizard({
       )}
 
       <Text style={styles.imageCount}>
-        {form.images.length} {l({ en: 'images', ar: 'صور' })}
+        {l({ en: 'Photos added', ar: 'عدد الصور المضافة' })}: {form.images.length}
+      </Text>
+    </View>
+  );
+
+  const renderUnitRulesStep = () => (
+    <View>
+      <Text style={styles.sectionTitle}>{l({ en: 'Booking terms', ar: 'شروط الحجز' })}</Text>
+      <Text style={styles.formLabel}>
+        {l({ en: 'Written terms (optional)', ar: 'شروط مكتوبة تظهر للضيف (اختياري)' })}
+      </Text>
+      <TextInput
+        style={[styles.input, { height: 140, textAlignVertical: 'top' }]}
+        value={form.writtenRules}
+        onChangeText={(v) => updateForm('writtenRules', v)}
+        placeholder={l({
+          en: 'e.g. Families only, no loud music after midnight',
+          ar: 'مثال: للعائلات فقط، يمنع تشغيل الموسيقى بعد منتصف الليل',
+        })}
+        placeholderTextColor={Colors.textTertiary}
+        multiline
+        textAlign="right"
+        maxLength={5000}
+      />
+      <Text style={styles.fieldHint}>
+        {l({
+          en: 'Check-in and check-out times and the minimum stay are set on the property and apply to all its units.',
+          ar: 'أوقات الدخول والخروج والحد الأدنى لليالي تُحدَّد من إعدادات العقار وتنطبق على جميع وحداته.',
+        })}
       </Text>
     </View>
   );
@@ -587,58 +720,57 @@ export default function PropertyWizard({
   const renderStep8 = () => {
     const typeObj = PROPERTY_TYPES.find((pt) => pt.value === form.type);
     const cityObj = CITIES.find((c) => c.value === form.city);
+    const sar = l({ en: 'SAR', ar: 'ريال' });
 
     return (
       <View>
         <Text style={styles.sectionTitle}>{l({ en: 'Review', ar: 'المراجعة' })}</Text>
 
         <View style={styles.reviewCard}>
+          {!isUnit && (
+            <>
+              <ReviewRow label={l({ en: 'Type', ar: 'النوع' })} value={typeObj ? l(typeObj) : '-'} />
+              <ReviewRow label={l({ en: 'City', ar: 'المدينة' })} value={cityObj ? l(cityObj) : '-'} />
+              <ReviewRow
+                label={l({ en: 'District', ar: 'الحي' })}
+                value={districtLabel(form.city, form.district, locale === 'ar' ? 'ar' : 'en') || '-'}
+              />
+            </>
+          )}
           <ReviewRow
-            label={l({ en: 'Type', ar: 'النوع' })}
-            value={typeObj ? l(typeObj) : '-'}
+            label={isUnit ? l({ en: 'Unit name', ar: 'اسم الوحدة' }) : l({ en: 'Name', ar: 'الاسم' })}
+            value={form.title.trim() || '-'}
           />
+          {!!form.nameEn.trim() && (
+            <ReviewRow label={l({ en: 'English name', ar: 'الاسم بالإنجليزية' })} value={form.nameEn.trim()} />
+          )}
           <ReviewRow
-            label={l({ en: 'City', ar: 'المدينة' })}
-            value={cityObj ? l(cityObj) : '-'}
-          />
-          <ReviewRow
-            label={l({ en: 'District', ar: 'الحي' })}
-            value={form.district || '-'}
-          />
-          <ReviewRow label={l({ en: 'Title', ar: 'العنوان' })} value={form.title || '-'} />
-          <ReviewRow
-            label={l({ en: 'Price/Night', ar: 'السعر/ليلة' })}
-            value={form.price ? `${form.price} ${l({ en: 'SAR', ar: 'ريال' })}` : '-'}
+            label={l({ en: 'Price/Night', ar: 'سعر الليلة' })}
+            value={form.price ? `${form.price} ${sar}` : '-'}
           />
           <ReviewRow
             label={l({ en: 'Cleaning Fee', ar: 'رسوم التنظيف' })}
-            value={`${form.cleaningFee} ${l({ en: 'SAR', ar: 'ريال' })}`}
+            value={`${form.cleaningFee || '0'} ${sar}`}
           />
-          <ReviewRow label={l({ en: 'Discount', ar: 'الخصم' })} value={`${form.discountPercent}%`} />
+          <ReviewRow label={l({ en: 'Discount', ar: 'الخصم' })} value={`${form.discountPercent || '0'}%`} />
+          <ReviewRow label={l({ en: 'Bedrooms', ar: 'غرف النوم' })} value={form.bedrooms} />
+          <ReviewRow label={l({ en: 'Bathrooms', ar: 'دورات المياه' })} value={form.bathrooms} />
+          <ReviewRow label={l({ en: 'Max guests', ar: 'الحد الأقصى للضيوف' })} value={form.maxGuests} />
           <ReviewRow
-            label={l({ en: 'Capacity', ar: 'السعة' })}
-            value={`${form.bedrooms} ${l({ en: 'bed', ar: 'غرف' })} / ${form.bathrooms} ${l({ en: 'bath', ar: 'حمام' })} / ${form.maxGuests} ${l({ en: 'guests', ar: 'ضيوف' })}`}
+            label={l({ en: 'Amenities & features', ar: 'المرافق والمزايا المختارة' })}
+            value={String(form.amenities.length + form.features.length)}
           />
-          <ReviewRow
-            label={l({ en: 'Amenities', ar: 'المرافق' })}
-            value={`${form.amenities.length} ${l({ en: 'selected', ar: 'مختارة' })}`}
-          />
-          <ReviewRow
-            label={l({ en: 'Images', ar: 'الصور' })}
-            value={`${form.images.length} ${l({ en: 'images', ar: 'صور' })}`}
-          />
-          <ReviewRow
-            label={l({ en: 'Check-in', ar: 'الدخول' })}
-            value={form.checkInTime}
-          />
-          <ReviewRow
-            label={l({ en: 'Check-out', ar: 'الخروج' })}
-            value={form.checkOutTime}
-          />
-          <ReviewRow
-            label={l({ en: 'Nights', ar: 'الليالي' })}
-            value={`${form.minNights} - ${form.maxNights}`}
-          />
+          <ReviewRow label={l({ en: 'Images', ar: 'عدد الصور' })} value={String(form.images.length)} />
+          {!isUnit && (
+            <>
+              <ReviewRow label={l({ en: 'Check-in', ar: 'الدخول' })} value={form.checkInTime} />
+              <ReviewRow label={l({ en: 'Check-out', ar: 'الخروج' })} value={form.checkOutTime} />
+              <ReviewRow
+                label={l({ en: 'Nights', ar: 'الليالي' })}
+                value={`${form.minNights} - ${form.maxNights}`}
+              />
+            </>
+          )}
         </View>
       </View>
     );
@@ -757,7 +889,7 @@ export default function PropertyWizard({
       case 4: return renderStep4();
       case 5: return renderStep5();
       case 6: return renderStep6();
-      case 7: return renderStep7();
+      case 7: return isUnit ? renderUnitRulesStep() : renderStep7();
       case 8: return renderStep8();
       default: return null;
     }
@@ -773,13 +905,17 @@ export default function PropertyWizard({
         <Pressable onPress={handleBack} style={styles.headerBackBtn}>
           <Ionicons name="chevron-forward" size={24} color={Colors.white} />
         </Pressable>
-        <Text style={styles.headerTitle}>{l(STEP_TITLES[step - 1])}</Text>
-        <Text style={styles.headerStep}>{step}/{TOTAL_STEPS}</Text>
+        <Text style={styles.headerTitle}>
+          {isUnit && step === 7
+            ? l({ en: 'Booking terms', ar: 'شروط الحجز' })
+            : l(STEP_TITLES[step])}
+        </Text>
+        <Text style={styles.headerStep}>{pos + 1}/{TOTAL_STEPS}</Text>
       </View>
 
       {/* Progress bar */}
       <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${((pos + 1) / TOTAL_STEPS) * 100}%` }]} />
       </View>
 
       {/* Content */}
@@ -794,7 +930,7 @@ export default function PropertyWizard({
 
       {/* Bottom navigation */}
       <View style={styles.bottomBar}>
-        {step > 1 && (
+        {pos > 0 && (
           <Pressable style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>{l({ en: 'Back', ar: 'رجوع' })}</Text>
           </Pressable>
@@ -802,17 +938,17 @@ export default function PropertyWizard({
         <Pressable
           style={[
             styles.nextButton,
-            step === 1 && { flex: 1 },
+            pos === 0 && { flex: 1 },
             isSubmitting && styles.buttonDisabled,
           ]}
-          onPress={step === TOTAL_STEPS ? () => onSubmit(form) : handleNext}
+          onPress={pos === TOTAL_STEPS - 1 ? () => onSubmit(form) : handleNext}
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <ActivityIndicator size="small" color={Colors.white} />
           ) : (
             <Text style={styles.nextButtonText}>
-              {step === TOTAL_STEPS ? l(submitLabel) : l({ en: 'Next', ar: 'التالي' })}
+              {pos === TOTAL_STEPS - 1 ? l(submitLabel) : l({ en: 'Next', ar: 'التالي' })}
             </Text>
           )}
         </Pressable>
@@ -825,15 +961,29 @@ export default function PropertyWizard({
         l({ en: 'Select City', ar: 'اختر المدينة' }),
         CITIES,
         form.city,
-        (v) => updateForm('city', v),
+        (v) => {
+          // A district belongs to its city: changing the city clears it.
+          if (v !== form.city) {
+            setForm((prev) => ({ ...prev, city: v, district: '' }));
+            setDistrictOther(false);
+          }
+        },
       )}
       {renderPickerModal(
         districtPickerVisible,
         () => setDistrictPickerVisible(false),
         l({ en: 'Select District', ar: 'اختر الحي' }),
-        form.city ? DISTRICTS[form.city] || [] : [],
-        form.district,
-        (v) => updateForm('district', v),
+        districtOptionsFor(form.city),
+        districtOther ? OTHER_DISTRICT : form.district,
+        (v) => {
+          if (v === OTHER_DISTRICT) {
+            setDistrictOther(true);
+            updateForm('district', '');
+          } else {
+            setDistrictOther(false);
+            updateForm('district', v);
+          }
+        },
       )}
       {renderTimePickerModal(
         checkInPickerVisible,
@@ -946,6 +1096,14 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     textAlign: 'right',
+  },
+
+  fieldHint: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    textAlign: 'right',
+    marginTop: Spacing.xs,
+    lineHeight: 18,
   },
 
   // Picker

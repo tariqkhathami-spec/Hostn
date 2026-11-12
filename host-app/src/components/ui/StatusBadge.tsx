@@ -13,7 +13,7 @@ const statusConfig: Record<Status, { bg: string; text: string; label: string; la
   rejected: { bg: '#fecaca', text: Colors.statusCancelled, label: 'Rejected', labelAr: 'مرفوض' },
   no_show: { bg: '#f3f4f6', text: Colors.statusNoShow, label: 'No Show', labelAr: 'عدم حضور' },
   completed: { bg: '#dcfce7', text: Colors.statusConfirmed, label: 'Completed', labelAr: 'مكتمل' },
-  held: { bg: '#ede9fe', text: '#7c3aed', label: 'Held', labelAr: 'محجوز مؤقتاً' },
+  held: { bg: '#ede9fe', text: '#177d5c', label: 'Held', labelAr: 'محجوز مؤقتاً' },
 };
 
 interface Props {

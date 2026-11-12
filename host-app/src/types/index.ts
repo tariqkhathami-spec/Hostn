@@ -30,6 +30,9 @@ export interface Property {
   units: Unit[];
   unitCount: number;
   activeUnitCount?: number;
+  /** false when an admin rejected the listing; `moderationNote` says why. */
+  isApproved?: boolean;
+  moderationNote?: string | null;
   address?: {
     city: string;
     street: string;
@@ -72,6 +75,8 @@ export interface Unit {
   code?: string;
   status?: 'listed' | 'unlisted';
   isActive?: boolean;
+  /** What the unit still needs before guests can see it (empty = complete). */
+  publishIssues?: Array<'missing_name' | 'missing_price' | 'missing_photos'>;
 
   // Capacity / rooms (real shape)
   capacity?: { maxGuests?: number };

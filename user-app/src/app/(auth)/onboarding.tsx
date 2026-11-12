@@ -51,7 +51,8 @@ export default function OnboardingScreen() {
 
   const handleGetStarted = () => {
     markOnboardingSeen();
-    router.replace('/(auth)/phone');
+    // Straight to browsing — no sign-in needed to look around.
+    router.replace('/(tabs)');
   };
 
   return (

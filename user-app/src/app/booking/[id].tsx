@@ -18,6 +18,7 @@ import { bookingsService } from '../../services/bookings.service';
 import { formatCurrency, formatDate, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON, FORWARD_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { cityLabel } from '../../constants/cities';
 import type { Booking } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -42,7 +43,7 @@ export default function BookingDetailScreen() {
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', id],
@@ -163,7 +164,7 @@ export default function BookingDetailScreen() {
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
               <Text style={styles.locationText} numberOfLines={1}>
-                {booking.property.location?.city ?? ''}
+                {cityLabel(booking.property.location?.city, language)}
                 {booking.property.location?.district ? `, ${booking.property.location.district}` : ''}
               </Text>
             </View>

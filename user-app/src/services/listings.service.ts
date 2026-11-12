@@ -1,10 +1,18 @@
 import api from './api';
 import type { Listing, PaginatedResponse, SearchParams } from '../types';
+import { normalizeCity } from '../constants/cities';
+
+// The backend matches `city` against the stored value, so always send the
+// canonical spelling (e.g. "Madinah", "Al Ula", "Jazan").
+function withCanonicalCity<T extends { city?: unknown }>(params: T): T {
+  if (typeof params.city !== 'string' || !params.city) return params;
+  return { ...params, city: normalizeCity(params.city) || params.city };
+}
 
 export const listingsService = {
   search(params: SearchParams) {
     return api
-      .get<PaginatedResponse<Listing>>('/properties', { params })
+      .get<PaginatedResponse<Listing>>('/properties', { params: withCanonicalCity(params) })
       .then((r) => r.data);
   },
 
@@ -32,7 +40,7 @@ export const listingsService = {
 
   // ── Units ───────────────────────────────────────────────────
   searchUnits(params: Record<string, string | number>) {
-    return api.get('/units/search', { params }).then((r) => r.data);
+    return api.get('/units/search', { params: withCanonicalCity(params) }).then((r) => r.data);
   },
 
   getUnit(id: string) {

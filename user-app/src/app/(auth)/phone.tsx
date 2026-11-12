@@ -17,11 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/auth.service';
 import { toWesternDigits } from '../../utils/format';
-import { useLanguage } from '../../i18n';
+import { apiErrorMessage } from '../../utils/apiError';
+import { useLanguage, type TranslationKey } from '../../i18n';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 
 interface GCCCountry {
-  name: string;
+  nameKey: TranslationKey;
   code: string;
   flag: string;
   maxDigits: number;
@@ -31,12 +32,12 @@ interface GCCCountry {
 }
 
 const GCC_COUNTRIES: GCCCountry[] = [
-  { name: 'Saudi Arabia', code: '+966', flag: '\u{1F1F8}\u{1F1E6}', maxDigits: 9, minDigits: 9, startsWith: '5', placeholder: '5X XXX XXXX' },
-  { name: 'UAE', code: '+971', flag: '\u{1F1E6}\u{1F1EA}', maxDigits: 9, minDigits: 8, placeholder: 'XX XXX XXXX' },
-  { name: 'Bahrain', code: '+973', flag: '\u{1F1E7}\u{1F1ED}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-  { name: 'Kuwait', code: '+965', flag: '\u{1F1F0}\u{1F1FC}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-  { name: 'Oman', code: '+968', flag: '\u{1F1F4}\u{1F1F2}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
-  { name: 'Qatar', code: '+974', flag: '\u{1F1F6}\u{1F1E6}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
+  { nameKey: 'auth.country.sa', code: '+966', flag: '\u{1F1F8}\u{1F1E6}', maxDigits: 9, minDigits: 9, startsWith: '5', placeholder: '5X XXX XXXX' },
+  { nameKey: 'auth.country.ae', code: '+971', flag: '\u{1F1E6}\u{1F1EA}', maxDigits: 9, minDigits: 8, placeholder: 'XX XXX XXXX' },
+  { nameKey: 'auth.country.bh', code: '+973', flag: '\u{1F1E7}\u{1F1ED}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
+  { nameKey: 'auth.country.kw', code: '+965', flag: '\u{1F1F0}\u{1F1FC}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
+  { nameKey: 'auth.country.om', code: '+968', flag: '\u{1F1F4}\u{1F1F2}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
+  { nameKey: 'auth.country.qa', code: '+974', flag: '\u{1F1F6}\u{1F1E6}', maxDigits: 8, minDigits: 8, placeholder: 'XXXX XXXX' },
 ];
 
 type OtpMethod = 'sms' | 'whatsapp';
@@ -78,12 +79,18 @@ export default function PhoneScreen() {
         params: { phone: localPhone, countryCode: selectedCountry.code },
       });
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'Failed to send verification code. Please try again.'
-      );
+      Alert.alert(t('common.error'), apiErrorMessage(error, t('auth.sendFailed')));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Signing in is optional: leave this screen and keep browsing as a guest.
+  const handleBrowseAsGuest = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
     }
   };
 
@@ -102,7 +109,7 @@ export default function PhoneScreen() {
       onPress={() => handleSelectCountry(item)}
     >
       <Text style={styles.countryFlag}>{item.flag}</Text>
-      <Text style={styles.countryName}>{item.name}</Text>
+      <Text style={styles.countryName}>{t(item.nameKey)}</Text>
       <Text style={styles.countryCodeText}>{item.code}</Text>
       {item.code === selectedCountry.code && (
         <Ionicons name="checkmark" size={20} color={Colors.primary} />
@@ -169,7 +176,7 @@ export default function PhoneScreen() {
                   otpMethod === 'sms' && styles.methodTextActive,
                 ]}
               >
-                SMS
+                {t('auth.sms')}
               </Text>
             </Pressable>
             <Pressable
@@ -190,7 +197,7 @@ export default function PhoneScreen() {
                   otpMethod === 'whatsapp' && styles.methodTextActive,
                 ]}
               >
-                WhatsApp
+                {t('auth.whatsapp')}
               </Text>
             </Pressable>
           </View>
@@ -206,6 +213,10 @@ export default function PhoneScreen() {
           ) : (
             <Text style={styles.buttonText}>{t('auth.sendCode')}</Text>
           )}
+        </Pressable>
+
+        <Pressable style={styles.guestButton} onPress={handleBrowseAsGuest} hitSlop={8}>
+          <Text style={styles.guestButtonText}>{t('auth.browseAsGuest')}</Text>
         </Pressable>
       </KeyboardAvoidingView>
 
@@ -242,6 +253,15 @@ export default function PhoneScreen() {
 }
 
 const styles = StyleSheet.create({
+  guestButton: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.base,
+    marginTop: Spacing.sm,
+  },
+  guestButtonText: {
+    ...Typography.bodyBold,
+    color: Colors.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

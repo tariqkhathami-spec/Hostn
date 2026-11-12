@@ -56,7 +56,7 @@ const TIER_NAMES: Record<string, string> = {
 const TIER_COLORS: Record<string, string> = {
   basic: Colors.primary,
   silver: '#94a3b8',
-  gold: '#d4af37',
+  gold: '#f08c0a',
   peak: '#059669',
 };
 

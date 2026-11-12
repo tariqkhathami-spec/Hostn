@@ -10,8 +10,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { listingsService } from '../../services/listings.service';
 import { bookingsService } from '../../services/bookings.service';
-import { couponsService } from '../../services/coupons.service';
 import { useSearchStore } from '../../store/searchStore';
+import { useAuthStore } from '../../store/authStore';
+import { cityLabel } from '../../constants/cities';
 import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
@@ -112,14 +113,6 @@ export default function CheckoutScreen() {
     }, [checkIn, checkOut])
   );
 
-  const PAYMENT_METHODS = [
-    { id: 'card', label: isAr ? 'بطاقة ائتمان / مدى' : 'Credit Card / mada', icon: 'card-outline' },
-    { id: 'tabby', label: 'Tabby', icon: 'pricetag-outline' },
-    { id: 'tamara', label: 'Tamara', icon: 'pricetags-outline' },
-  ] as const;
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
   const [specialRequests, setSpecialRequests] = useState('');
   const [holdId, setHoldId] = useState<string | null>(null);
   const [holdLoading, setHoldLoading] = useState(false);
@@ -169,7 +162,7 @@ export default function CheckoutScreen() {
   const serviceFee = r2(serviceFeeRaw);
   const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
   const vat = r2(taxableRaw * 0.15);
-  const total = r2(taxableRaw + taxableRaw * 0.15 - couponDiscount);
+  const total = r2(taxableRaw + taxableRaw * 0.15);
 
   const maxGuests = listing?.capacity?.maxGuests ?? 20;
   const minNights = listing?.rules?.minNights ?? 1;
@@ -288,14 +281,12 @@ export default function CheckoutScreen() {
         guests: { adults, children, infants: 0 },
         specialRequests: specialRequests || undefined,
         holdId: currentHoldId || undefined,
-        paymentMethod,
-        couponCode: couponCode || undefined,
       });
     },
     onSuccess: () => {
       Alert.alert(
-        t('common.success'),
-        isAr ? 'تم إنشاء حجزك بنجاح.' : 'Your reservation has been created.',
+        t('checkout.requestSentTitle'),
+        t('checkout.requestSentBody'),
         [{ text: t('bookings.title'), onPress: () => router.replace('/(tabs)/bookings') }]
       );
     },
@@ -305,18 +296,16 @@ export default function CheckoutScreen() {
     },
   });
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode) return;
-    try {
-      const result = await couponsService.validate(couponCode, subtotal);
-      if (result.valid) {
-        setCouponDiscount(result.discount);
-      } else {
-        Alert.alert(t('common.error'), isAr ? 'كود الخصم غير صالح.' : 'This coupon code is not valid.');
-      }
-    } catch {
-      Alert.alert(t('common.error'), isAr ? 'فشل التحقق من الكوبون.' : 'Failed to validate coupon.');
+  // A booking request needs an account; guests are sent to sign in and
+  // brought back here afterwards.
+  const handleSubmit = () => {
+    if (!canBook) return;
+    if (!useAuthStore.getState().isAuthenticated) {
+      useAuthStore.getState().setReturnTo(`/checkout/${listingId}`);
+      router.push('/(auth)/phone');
+      return;
     }
+    bookMutation.mutate();
   };
 
   if (isLoading) {
@@ -370,7 +359,7 @@ export default function CheckoutScreen() {
           <Image source={{ uri: typeof listing.images?.[0] === 'string' ? listing.images[0] : listing.images?.[0]?.url }} style={styles.propertyImage} contentFit="cover" />
           <View style={styles.propertyInfo}>
             <Text style={styles.propertyTitle} numberOfLines={2}>{listing.title}</Text>
-            <Text style={styles.propertyLocation}>{listing.location?.city ?? ''}</Text>
+            <Text style={styles.propertyLocation}>{cityLabel(listing.location?.city, language)}</Text>
             {hasValidDates && (
               <Text style={styles.propertyDates}>{formatDateRange(checkIn, checkOut)}</Text>
             )}
@@ -521,36 +510,12 @@ export default function CheckoutScreen() {
               <Text style={styles.priceLabel}>{t('checkout.vat')}</Text>
               <Text style={styles.priceValue}>{formatCurrency(vat)}</Text>
             </View>
-            {couponDiscount > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={[styles.priceLabel, { color: Colors.success }]}>{t('checkout.couponDiscount')}</Text>
-                <Text style={[styles.priceValue, { color: Colors.success }]}>-{formatCurrency(couponDiscount)}</Text>
-              </View>
-            )}
             <View style={[styles.priceRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>{t('checkout.total')}</Text>
               <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
             </View>
           </View>
         )}
-
-        {/* Coupon */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.discountCode')}</Text>
-          <View style={styles.couponRow}>
-            <TextInput
-              style={styles.couponInput}
-              placeholder={t('checkout.enterCode')}
-              placeholderTextColor={Colors.textTertiary}
-              value={couponCode}
-              onChangeText={setCouponCode}
-              autoCapitalize="characters"
-            />
-            <Pressable style={styles.couponButton} onPress={handleApplyCoupon}>
-              <Text style={styles.couponButtonText}>{t('checkout.apply')}</Text>
-            </Pressable>
-          </View>
-        </View>
 
         {/* Special Requests */}
         <View style={styles.section}>
@@ -571,31 +536,10 @@ export default function CheckoutScreen() {
           <Text style={styles.charCount}>{specialRequests.length}/500</Text>
         </View>
 
-        {/* Payment Method */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('checkout.paymentMethod')}</Text>
-          {PAYMENT_METHODS.map((method) => {
-            // Only show BNPL if total is within range
-            if ((method.id === 'tabby' || method.id === 'tamara') && total > 5000) return null;
-            return (
-              <Pressable
-                key={method.id}
-                style={[styles.methodRow, paymentMethod === method.id && styles.methodRowActive]}
-                onPress={() => setPaymentMethod(method.id)}
-              >
-                <Ionicons name={method.icon as any} size={22} color={Colors.textPrimary} />
-                <View style={styles.methodInfo}>
-                  <Text style={styles.methodLabel}>{method.label}</Text>
-                  {(method.id === 'tabby' || method.id === 'tamara') && total > 0 && (
-                    <Text style={styles.methodSublabel}>
-                      {isAr ? `4 دفعات × ${formatCurrency(Math.ceil(total / 4))} بدون فوائد` : `4 × ${formatCurrency(Math.ceil(total / 4))} interest-free`}
-                    </Text>
-                  )}
-                </View>
-                <View style={[styles.radio, paymentMethod === method.id && styles.radioActive]} />
-              </Pressable>
-            );
-          })}
+        {/* No payment is taken in the app yet — say so plainly. */}
+        <View style={styles.noticeBox}>
+          <Ionicons name="information-circle-outline" size={20} color={Colors.primary} />
+          <Text style={styles.noticeText}>{t('checkout.requestNotice')}</Text>
         </View>
       </ScrollView>
 
@@ -603,7 +547,7 @@ export default function CheckoutScreen() {
       <View style={styles.footer}>
         <Pressable
           style={[styles.payButton, (!canBook || holdLoading) && styles.payButtonDisabled]}
-          onPress={() => canBook && bookMutation.mutate()}
+          onPress={handleSubmit}
           disabled={!canBook || bookMutation.isPending || holdLoading}
         >
           {bookMutation.isPending || holdLoading ? (
@@ -614,7 +558,7 @@ export default function CheckoutScreen() {
                 ? (isAr ? 'اختر التواريخ أولًا' : 'Select dates first')
                 : nights < minNights
                   ? (isAr ? `الحد الأدنى ${minNights} ليالٍ` : `Minimum ${minNights} nights`)
-                  : `${t('checkout.pay')} ${formatCurrency(total)}`}
+                  : t('checkout.sendRequest')}
             </Text>
           )}
         </Pressable>
@@ -724,15 +668,6 @@ const styles = StyleSheet.create({
   totalLabel: { ...Typography.bodyBold, color: Colors.textPrimary },
   totalValue: { ...Typography.bodyBold, color: Colors.primary },
 
-  // Coupon
-  couponRow: { flexDirection: 'row', gap: Spacing.sm },
-  couponInput: {
-    flex: 1, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, ...Typography.small,
-  },
-  couponButton: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.base, borderRadius: Radius.sm, justifyContent: 'center' },
-  couponButtonText: { ...Typography.smallBold, color: Colors.white },
-
   // Special requests
   specialRequestsInput: {
     borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm,
@@ -742,18 +677,13 @@ const styles = StyleSheet.create({
   },
   charCount: { ...Typography.caption, color: Colors.textTertiary, textAlign: 'right', marginTop: 4 },
 
-  // Payment method
-  methodRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingVertical: Spacing.md, paddingHorizontal: Spacing.base,
-    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm, marginBottom: Spacing.sm,
+  // Booking-request notice
+  noticeBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+    backgroundColor: Colors.primary50, borderRadius: Radius.sm,
+    padding: Spacing.md, marginTop: Spacing.base,
   },
-  methodRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + '08' },
-  methodInfo: { flex: 1 },
-  methodLabel: { ...Typography.body, color: Colors.textPrimary },
-  methodSublabel: { ...Typography.caption, color: Colors.textSecondary, marginTop: 2 },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.border },
-  radioActive: { borderColor: Colors.primary, backgroundColor: Colors.primary },
+  noticeText: { ...Typography.small, color: Colors.textPrimary, flex: 1, lineHeight: 20 },
 
   // Footer
   footer: { padding: Spacing.xl, borderTopWidth: 1, borderTopColor: Colors.divider },

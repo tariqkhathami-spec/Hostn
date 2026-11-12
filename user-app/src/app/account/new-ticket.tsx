@@ -115,7 +115,7 @@ export default function NewTicketScreen() {
           <Text style={styles.label}>{t('support.subject')}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Brief description of your issue"
+            placeholder={t('support.subjectPlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={subject}
             onChangeText={setSubject}
@@ -189,7 +189,7 @@ export default function NewTicketScreen() {
           <Text style={styles.label}>{t('support.message')}</Text>
           <TextInput
             style={styles.textArea}
-            placeholder="Describe your issue in detail..."
+            placeholder={t('support.messagePlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={message}
             onChangeText={setMessage}

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hostService } from '../../../services/host.service';
 import { getLocale } from '../../../utils/i18n';
-import { ALL_AMENITIES } from '../../../constants/listings';
+import { UNIT_AMENITIES, UNIT_FEATURES } from '../../../constants/listings';
+import { apiErrorMessage } from '../../../utils/apiError';
+import { cleanNumericInput, parseWhole } from '../../../utils/format';
+import { pickAndUploadImages, uploadFailureText } from '../../../utils/uploadImages';
 import { Colors, Spacing, Typography, Radius } from '../../../constants/theme';
 import type { Unit } from '../../../types';
 
@@ -32,9 +36,10 @@ import type { Unit } from '../../../types';
 //   - No `rules`, `type`, `location`, `description`, `rooms`, `pricing.perNight`
 //     on units — those keys were silently discarded by the pre-fix payload.
 //
-// Unknown amenity codes (the backend supports a wider vocabulary than
-// ALL_AMENITIES encodes) are preserved on save so we don't drop data the
-// frontend doesn't yet know how to render.
+// Amenities and features come from UNIT_AMENITIES / UNIT_FEATURES, which
+// mirror the Unit model enums. A code stored on the unit that this build
+// does not know yet is kept on save rather than dropped.
+// Photos are saved with the rest of the form (`images` on PUT /units/:id).
 // ---------------------------------------------------------------------------
 
 interface UnitFormState {
@@ -46,10 +51,25 @@ interface UnitFormState {
   singleBeds: string;
   doubleBeds: string;
   bathroomCount: string;
+  description: string;
   amenities: string[];
+  features: string[];
+  images: UnitImage[];
 }
 
-const KNOWN_AMENITY_VALUES = new Set(ALL_AMENITIES.map((a) => a.value));
+interface UnitImage {
+  url: string;
+  isPrimary: boolean;
+}
+
+const KNOWN_AMENITY_VALUES = new Set(UNIT_AMENITIES.map((a) => a.value));
+const KNOWN_FEATURE_VALUES = new Set(UNIT_FEATURES.map((a) => a.value));
+
+/** Exactly one primary photo (the first one when none is marked). */
+function withOnePrimary(images: UnitImage[]): UnitImage[] {
+  const primaryIndex = Math.max(0, images.findIndex((img) => img.isPrimary));
+  return images.map((img, i) => ({ url: img.url, isPrimary: i === primaryIndex }));
+}
 
 const intStr = (v: number | string | undefined, fallback: string) =>
   v === undefined || v === null ? fallback : String(v);
@@ -80,11 +100,16 @@ export default function EditUnitScreen() {
     singleBeds: '0',
     doubleBeds: '0',
     bathroomCount: '1',
+    description: '',
     amenities: [],
+    features: [],
+    images: [],
   });
-  // Amenity codes present on the unit but not in our ALL_AMENITIES catalog —
-  // round-tripped through the form invisibly so we don't strip them on save.
+  // Codes stored on the unit that this build has no label for — sent back
+  // unchanged on save so they are not stripped.
   const [unknownAmenities, setUnknownAmenities] = useState<string[]>([]);
+  const [unknownFeatures, setUnknownFeatures] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
@@ -95,6 +120,14 @@ export default function EditUnitScreen() {
       if (KNOWN_AMENITY_VALUES.has(a)) known.push(a);
       else unknown.push(a);
     }
+    const knownFeatures = (unit.features ?? []).filter((f) => KNOWN_FEATURE_VALUES.has(f));
+    const images: UnitImage[] = [];
+    for (const img of unit.images ?? []) {
+      const url = typeof img === 'string' ? img : img?.url;
+      if (typeof url === 'string' && url) {
+        images.push({ url, isPrimary: typeof img === 'object' && !!img.isPrimary });
+      }
+    }
     setForm({
       nameEn: unit.nameEn ?? '',
       nameAr: unit.nameAr ?? unit.name ?? '',
@@ -103,13 +136,17 @@ export default function EditUnitScreen() {
       // `String({...})` = "[object Object]" when capacity was an object
       // missing maxGuests.
       maxGuests: intStr(unit.capacity?.maxGuests, '2'),
-      bedroomsCount: intStr(unit.bedrooms?.count, '1'),
+      bedroomsCount: intStr(unit.bedrooms?.count, '0'),
       singleBeds: intStr(unit.bedrooms?.singleBeds, '0'),
       doubleBeds: intStr(unit.bedrooms?.doubleBeds, '0'),
-      bathroomCount: intStr(unit.bathroomCount, '1'),
+      bathroomCount: intStr(unit.bathroomCount, '0'),
+      description: unit.description ?? '',
       amenities: known,
+      features: knownFeatures,
+      images: images.length > 0 ? withOnePrimary(images) : [],
     });
     setUnknownAmenities(unknown);
+    setUnknownFeatures((unit.features ?? []).filter((f) => !KNOWN_FEATURE_VALUES.has(f)));
     setHydrated(true);
   }, [unit, hydrated]);
 
@@ -125,47 +162,139 @@ export default function EditUnitScreen() {
         [{ text: l({ en: 'OK', ar: 'موافق' }), onPress: () => router.back() }],
       );
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.message || '';
+    onError: (error: unknown) => {
       Alert.alert(
         l({ en: 'Error', ar: 'خطأ' }),
-        msg || l({ en: 'Failed to update unit', ar: 'فشل تحديث الوحدة' }),
+        apiErrorMessage(error, 'تعذّر حفظ تعديلات الوحدة. حاول مرة أخرى.'),
       );
     },
   });
 
-  const canSubmit = form.nameEn.trim().length > 0 || form.nameAr.trim().length > 0;
+  const canSubmit = form.nameAr.trim().length > 0 || form.nameEn.trim().length > 0;
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
-    // Only fields the backend actually accepts on PUT /units/:id. Anything
-    // else (rules, type, location, description, rooms, pricing.perNight) is
-    // silently dropped server-side, which is what made the pre-fix saves
-    // appear to succeed while losing data.
+    if (!canSubmit) {
+      Alert.alert('اسم الوحدة مطلوب', 'اكتب اسم الوحدة بالعربية قبل الحفظ.');
+      return;
+    }
+    if (uploading) {
+      Alert.alert('جارٍ رفع الصور', 'انتظر حتى يكتمل رفع الصور ثم احفظ.');
+      return;
+    }
+    const bedrooms = Math.max(0, parseWhole(form.bedroomsCount, 0));
+    const area = parseWhole(form.area, 0);
+    // Only fields the backend accepts on PUT /units/:id (ALLOWED_UNIT_FIELDS).
     const payload: Record<string, unknown> = {
-      nameEn: form.nameEn.trim() || undefined,
-      nameAr: form.nameAr.trim() || undefined,
-      area: parseInt(form.area, 10) || undefined,
-      capacity: { maxGuests: parseInt(form.maxGuests, 10) || 1 },
+      nameAr: form.nameAr.trim(),
+      nameEn: form.nameEn.trim(),
+      description: form.description.trim(),
+      ...(area > 0 ? { area } : {}),
+      capacity: { maxGuests: Math.min(100, Math.max(1, parseWhole(form.maxGuests, 1))) },
+      hasBedrooms: bedrooms > 0,
       bedrooms: {
-        count: parseInt(form.bedroomsCount, 10) || 1,
-        singleBeds: parseInt(form.singleBeds, 10) || 0,
-        doubleBeds: parseInt(form.doubleBeds, 10) || 0,
+        count: bedrooms,
+        singleBeds: Math.max(0, parseWhole(form.singleBeds, 0)),
+        doubleBeds: Math.max(0, parseWhole(form.doubleBeds, 0)),
       },
-      bathroomCount: parseInt(form.bathroomCount, 10) || 1,
+      bathroomCount: Math.max(0, parseWhole(form.bathroomCount, 0)),
       amenities: [...form.amenities, ...unknownAmenities],
+      features: [...form.features, ...unknownFeatures],
+      images: withOnePrimary(form.images),
     };
+
+    if (form.images.length === 0) {
+      Alert.alert(
+        'لا توجد صور',
+        'الوحدة بدون صور لا تظهر للضيوف. هل تريد الحفظ على أي حال؟',
+        [
+          { text: 'إضافة صور', style: 'cancel' },
+          { text: 'حفظ على أي حال', onPress: () => mutation.mutate(payload) },
+        ],
+      );
+      return;
+    }
     mutation.mutate(payload);
   };
 
-  const toggleAmenity = (value: string) => {
+  const toggleListValue = (key: 'amenities' | 'features', value: string) => {
     setForm((s) => ({
       ...s,
-      amenities: s.amenities.includes(value)
-        ? s.amenities.filter((a) => a !== value)
-        : [...s.amenities, value],
+      [key]: s[key].includes(value) ? s[key].filter((a) => a !== value) : [...s[key], value],
     }));
   };
+
+  // ── Photos ────────────────────────────────────────────────────────────
+  const handleAddPhotos = async () => {
+    if (uploading) return;
+    setUploading(true);
+    try {
+      const result = await pickAndUploadImages((url) => {
+        setForm((s) => ({
+          ...s,
+          images: [...s.images, { url, isPrimary: !s.images.some((img) => img.isPrimary) }],
+        }));
+      });
+      if (result.failed > 0) {
+        Alert.alert('تعذّر رفع بعض الصور', uploadFailureText(result));
+      }
+    } catch {
+      Alert.alert('خطأ', 'تعذّر فتح مكتبة الصور. تحقق من صلاحية الوصول للصور.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    Alert.alert('حذف الصورة', 'هل تريد حذف هذه الصورة من الوحدة؟ يُطبَّق الحذف عند حفظ التعديلات.', [
+      { text: 'إلغاء', style: 'cancel' },
+      {
+        text: 'حذف',
+        style: 'destructive',
+        onPress: () =>
+          setForm((s) => {
+            const rest = s.images.filter((_, i) => i !== index);
+            return { ...s, images: rest.length > 0 ? withOnePrimary(rest) : [] };
+          }),
+      },
+    ]);
+  };
+
+  const handleSetPrimary = (index: number) => {
+    setForm((s) => ({
+      ...s,
+      images: s.images.map((img, i) => ({ ...img, isPrimary: i === index })),
+    }));
+  };
+
+  const renderOptionGrid = (
+    options: { value: string; en: string; ar: string; icon: string }[],
+    key: 'amenities' | 'features',
+  ) => (
+    <View style={styles.amenityGrid}>
+      {options.map((a) => {
+        const selected = form[key].includes(a.value);
+        return (
+          <Pressable
+            key={a.value}
+            style={[styles.amenityCard, selected && styles.amenityCardActive]}
+            onPress={() => toggleListValue(key, a.value)}
+          >
+            <Ionicons
+              name={a.icon as any}
+              size={20}
+              color={selected ? Colors.primary : Colors.textSecondary}
+            />
+            <Text
+              style={[styles.amenityLabel, selected && styles.amenityLabelActive]}
+              numberOfLines={2}
+            >
+              {l(a)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 
   const handleManagePricing = () => {
     if (!id) return;
@@ -212,29 +341,106 @@ export default function EditUnitScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {(unit.publishIssues?.length ?? 0) > 0 && (
+          <View style={styles.incompleteBox}>
+            <Ionicons name="alert-circle" size={18} color={Colors.warning} />
+            <Text style={styles.incompleteText}>
+              {`هذه الوحدة غير مكتملة ومخفية عن الضيوف. ينقصها: ${(unit.publishIssues ?? [])
+                .map((i) => ({ missing_name: 'الاسم', missing_price: 'السعر', missing_photos: 'الصور' }[i]))
+                .filter(Boolean)
+                .join('، ')}.`}
+            </Text>
+          </View>
+        )}
         {/* ── Section: Names ──────────────────────────────────────────── */}
         <Text style={styles.sectionTitle}>
           {l({ en: 'Unit name', ar: 'اسم الوحدة' })}
         </Text>
 
-        <Text style={styles.label}>{l({ en: 'Name (English)', ar: 'الاسم (إنجليزي)' })}</Text>
+        <Text style={styles.label}>{l({ en: 'Name (Arabic) *', ar: 'الاسم بالعربية *' })}</Text>
+        <TextInput
+          style={[styles.input, { textAlign: 'right' }]}
+          placeholder={l({ en: 'e.g. Chalet 1', ar: 'مثال: شاليه رقم 1' })}
+          placeholderTextColor={Colors.textTertiary}
+          value={form.nameAr}
+          maxLength={200}
+          onChangeText={(v) => setForm((s) => ({ ...s, nameAr: v }))}
+        />
+
+        <Text style={styles.label}>
+          {l({ en: 'Name in English (optional)', ar: 'الاسم بالإنجليزية (اختياري)' })}
+        </Text>
         <TextInput
           style={styles.input}
-          placeholder={l({ en: 'e.g. Deluxe Suite', ar: 'مثال: جناح فاخر' })}
+          placeholder="Chalet 1"
           placeholderTextColor={Colors.textTertiary}
           value={form.nameEn}
+          maxLength={200}
           onChangeText={(v) => setForm((s) => ({ ...s, nameEn: v }))}
         />
 
-        <Text style={styles.label}>{l({ en: 'Name (Arabic)', ar: 'الاسم (عربي)' })}</Text>
+        <Text style={styles.label}>{l({ en: 'Description', ar: 'الوصف' })}</Text>
         <TextInput
-          style={[styles.input, { textAlign: 'right' }]}
-          placeholder={l({ en: 'الاسم بالعربي', ar: 'الاسم بالعربي' })}
+          style={[styles.input, { height: 100, textAlign: 'right', textAlignVertical: 'top' }]}
+          placeholder={l({ en: 'Describe the unit', ar: 'اكتب وصفاً للوحدة' })}
           placeholderTextColor={Colors.textTertiary}
-          value={form.nameAr}
-          onChangeText={(v) => setForm((s) => ({ ...s, nameAr: v }))}
+          value={form.description}
+          multiline
+          maxLength={5000}
+          onChangeText={(v) => setForm((s) => ({ ...s, description: v }))}
         />
+
+        {/* ── Section: Photos ─────────────────────────────────────────── */}
+        <Text style={[styles.sectionTitle, { marginTop: Spacing.xxl }]}>
+          {l({ en: 'Photos', ar: 'الصور' })} ({form.images.length})
+        </Text>
+        <Text style={styles.sectionHint}>
+          {l({
+            en: 'A unit needs at least one photo to be visible to guests. Changes apply when you save.',
+            ar: 'تحتاج الوحدة إلى صورة واحدة على الأقل لتظهر للضيوف. تُطبَّق التغييرات عند حفظ التعديلات.',
+          })}
+        </Text>
+        <View style={styles.photoGrid}>
+          {form.images.map((img, index) => (
+            <View key={`${img.url}-${index}`} style={styles.photoCard}>
+              <Image source={{ uri: img.url }} style={styles.photoImage} resizeMode="cover" />
+              <Pressable
+                style={styles.photoRemove}
+                hitSlop={8}
+                onPress={() => handleRemovePhoto(index)}
+                accessibilityLabel="حذف الصورة"
+              >
+                <Ionicons name="close" size={16} color={Colors.white} />
+              </Pressable>
+              {img.isPrimary ? (
+                <View style={styles.photoPrimaryBadge}>
+                  <Text style={styles.photoPrimaryText}>{l({ en: 'Primary', ar: 'الرئيسية' })}</Text>
+                </View>
+              ) : (
+                <Pressable style={styles.photoSetPrimary} onPress={() => handleSetPrimary(index)}>
+                  <Text style={styles.photoSetPrimaryText}>
+                    {l({ en: 'Set primary', ar: 'تعيين كرئيسية' })}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ))}
+          <Pressable
+            style={[styles.photoCard, styles.photoAdd]}
+            onPress={handleAddPhotos}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <ActivityIndicator color={Colors.primary} />
+            ) : (
+              <>
+                <Ionicons name="camera-outline" size={26} color={Colors.primary} />
+                <Text style={styles.photoAddText}>{l({ en: 'Add photos', ar: 'إضافة صور' })}</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
 
         {/* ── Section: Capacity ───────────────────────────────────────── */}
         <Text style={[styles.sectionTitle, { marginTop: Spacing.xxl }]}>
@@ -248,7 +454,7 @@ export default function EditUnitScreen() {
               style={styles.input}
               keyboardType="number-pad"
               value={form.maxGuests}
-              onChangeText={(v) => setForm((s) => ({ ...s, maxGuests: v }))}
+              onChangeText={(v) => setForm((s) => ({ ...s, maxGuests: cleanNumericInput(v, false) }))}
             />
           </View>
           <View style={styles.rowItem}>
@@ -259,7 +465,7 @@ export default function EditUnitScreen() {
               placeholder="—"
               placeholderTextColor={Colors.textTertiary}
               value={form.area}
-              onChangeText={(v) => setForm((s) => ({ ...s, area: v }))}
+              onChangeText={(v) => setForm((s) => ({ ...s, area: cleanNumericInput(v, false) }))}
             />
           </View>
         </View>
@@ -272,7 +478,7 @@ export default function EditUnitScreen() {
               style={styles.input}
               keyboardType="number-pad"
               value={form.bedroomsCount}
-              onChangeText={(v) => setForm((s) => ({ ...s, bedroomsCount: v }))}
+              onChangeText={(v) => setForm((s) => ({ ...s, bedroomsCount: cleanNumericInput(v, false) }))}
             />
           </View>
           <View style={styles.rowItem}>
@@ -281,7 +487,7 @@ export default function EditUnitScreen() {
               style={styles.input}
               keyboardType="number-pad"
               value={form.singleBeds}
-              onChangeText={(v) => setForm((s) => ({ ...s, singleBeds: v }))}
+              onChangeText={(v) => setForm((s) => ({ ...s, singleBeds: cleanNumericInput(v, false) }))}
             />
           </View>
           <View style={styles.rowItem}>
@@ -290,7 +496,7 @@ export default function EditUnitScreen() {
               style={styles.input}
               keyboardType="number-pad"
               value={form.doubleBeds}
-              onChangeText={(v) => setForm((s) => ({ ...s, doubleBeds: v }))}
+              onChangeText={(v) => setForm((s) => ({ ...s, doubleBeds: cleanNumericInput(v, false) }))}
             />
           </View>
         </View>
@@ -300,7 +506,7 @@ export default function EditUnitScreen() {
           style={styles.input}
           keyboardType="number-pad"
           value={form.bathroomCount}
-          onChangeText={(v) => setForm((s) => ({ ...s, bathroomCount: v }))}
+          onChangeText={(v) => setForm((s) => ({ ...s, bathroomCount: cleanNumericInput(v, false) }))}
         />
 
         {/* ── Section: Manage pricing (link out) ──────────────────────── */}
@@ -343,33 +549,16 @@ export default function EditUnitScreen() {
             }`,
           })}
         </Text>
-        <View style={styles.amenityGrid}>
-          {ALL_AMENITIES.map((a) => {
-            const selected = form.amenities.includes(a.value);
-            return (
-              <Pressable
-                key={a.value}
-                style={[styles.amenityCard, selected && styles.amenityCardActive]}
-                onPress={() => toggleAmenity(a.value)}
-              >
-                <Ionicons
-                  name={a.icon as any}
-                  size={20}
-                  color={selected ? Colors.primary : Colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.amenityLabel,
-                    selected && styles.amenityLabelActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {l(a)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {renderOptionGrid(UNIT_AMENITIES, 'amenities')}
+
+        {/* ── Section: Features ───────────────────────────────────────── */}
+        <Text style={[styles.sectionTitle, { marginTop: Spacing.xxl }]}>
+          {l({ en: 'Features', ar: 'المزايا' })}
+        </Text>
+        <Text style={styles.sectionHint}>
+          {l({ en: `Selected ${form.features.length}`, ar: `تم تحديد ${form.features.length}` })}
+        </Text>
+        {renderOptionGrid(UNIT_FEATURES, 'features')}
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -378,10 +567,10 @@ export default function EditUnitScreen() {
         <Pressable
           style={[
             styles.submitButton,
-            (!canSubmit || mutation.isPending) && styles.submitButtonDisabled,
+            (!canSubmit || mutation.isPending || uploading) && styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!canSubmit || mutation.isPending}
+          disabled={mutation.isPending}
         >
           {mutation.isPending ? (
             <ActivityIndicator color={Colors.white} />
@@ -500,6 +689,70 @@ const styles = StyleSheet.create({
   },
   amenityLabel: { ...Typography.caption, color: Colors.textSecondary, textAlign: 'center' },
   amenityLabelActive: { color: Colors.primary, fontWeight: '600' },
+
+  incompleteBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.warning + '14',
+    borderWidth: 1,
+    borderColor: Colors.warning + '55',
+    borderRadius: Radius.sm,
+    padding: Spacing.md,
+    marginBottom: Spacing.base,
+  },
+  incompleteText: { ...Typography.small, color: Colors.textPrimary, flex: 1, lineHeight: 20 },
+
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  photoCard: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    backgroundColor: Colors.surfaceAlt,
+  },
+  photoImage: { width: '100%', height: '100%' },
+  photoRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPrimaryBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.primary,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  photoPrimaryText: { ...Typography.tiny, color: Colors.white, fontWeight: '700' },
+  photoSetPrimary: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  photoSetPrimaryText: { ...Typography.tiny, color: Colors.white },
+  photoAdd: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '0A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  photoAddText: { ...Typography.caption, color: Colors.primary, fontWeight: '600' },
 
   footer: {
     padding: Spacing.xl,

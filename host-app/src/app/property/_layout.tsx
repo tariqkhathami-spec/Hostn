@@ -9,7 +9,7 @@ export default function PropertyLayout() {
         headerBackVisible: true,
         headerTitle: '',
         headerTransparent: true,
-        headerTintColor: '#6d28d9',
+        headerTintColor: '#14644b',
       }}
     >
       <Stack.Screen name="create" options={{ headerShown: false }} />

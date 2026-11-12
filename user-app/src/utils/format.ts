@@ -20,7 +20,9 @@ export function formatCurrency(amount: number, currency = 'SAR'): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `${formatted} ${currency}`;
+  // Arabic shows the riyal as "ر.س" after the amount; English keeps "SAR".
+  const unit = currency === 'SAR' && getCurrentLanguage() === 'ar' ? 'ر.س' : currency;
+  return `${formatted} ${unit}`;
 }
 
 export function formatDate(

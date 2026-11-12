@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '../../constants/config';
 import { Colors, Typography, Spacing } from '../../constants/theme';
+import { useLanguage } from '../../i18n';
 
 // Backend mounts /health/ready at the root, not under the /api/v* prefix that
 // API_URL points to. Strip the api-version suffix so the health probe hits the
@@ -12,6 +13,7 @@ const HEALTH_URL = API_URL.replace(/\/api\/v\d+\/?$/, '') + '/health/ready';
 
 export default function NetworkBanner() {
   const [isOffline, setIsOffline] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -42,7 +44,7 @@ export default function NetworkBanner() {
   return (
     <View style={styles.banner}>
       <Ionicons name="cloud-offline-outline" size={16} color={Colors.white} />
-      <Text style={styles.text}>No internet connection</Text>
+      <Text style={styles.text}>{t('network.offline')}</Text>
     </View>
   );
 }

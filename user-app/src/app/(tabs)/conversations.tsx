@@ -11,15 +11,18 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
 import type { Conversation } from '../../types';
 import { useAuthStore } from '../../store/authStore';
+import LoginPrompt from '../../components/ui/LoginPrompt';
 
 export default function ConversationsScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const userId = useAuthStore((s) => s.user?._id);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => chatService.getConversations(),
+    enabled: isAuthenticated,
   });
 
   const conversations = data ?? [];
@@ -28,6 +31,15 @@ export default function ConversationsScreen() {
     const participants = conv.participants ?? [];
     return participants.find((p) => p._id !== userId) ?? participants[0] ?? null;
   };
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Text style={styles.header}>{t('chat.conversations')}</Text>
+        <LoginPrompt icon="chatbubbles-outline" message={t('auth.loginChat')} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { paymentsService, bnplService } from '../../services/payments.service';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { apiErrorMessage } from '../../utils/apiError';
 
 type PaymentStatus = 'loading' | 'success' | 'failure';
 
@@ -27,7 +28,7 @@ export default function PaymentCallbackScreen() {
 
   async function verifyPayment() {
     if (!paymentId || !provider) {
-      setErrorMessage('Missing payment information.');
+      setErrorMessage(t('payment.missingInfo'));
       setPaymentStatus('failure');
       return;
     }
@@ -49,7 +50,7 @@ export default function PaymentCallbackScreen() {
       setPaymentStatus('success');
     } catch (error: any) {
       setErrorMessage(
-        error.response?.data?.message || error.message || 'Payment verification failed.'
+        apiErrorMessage(error, t('payment.verifyFailed'))
       );
       setPaymentStatus('failure');
     }

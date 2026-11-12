@@ -35,7 +35,7 @@ const statusFilters: StatusFilter[] = [
   { key: 'confirmed', label: 'مؤكد', color: '#22c55e' },
   { key: 'in_payment', label: 'جاري السداد', color: '#3b82f6' },
   { key: 'waiting', label: 'منتظر', color: '#eab308' },
-  { key: 'held', label: 'محجوز مؤقتاً', color: '#7c3aed' },
+  { key: 'held', label: 'محجوز مؤقتاً', color: '#177d5c' },
   { key: 'cancelled', label: 'ملغي', color: '#ef4444' },
   { key: 'no_show', label: 'عدم حضور', color: '#6b7280' },
 ];

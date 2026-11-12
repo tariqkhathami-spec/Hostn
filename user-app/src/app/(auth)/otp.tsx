@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/auth.service';
+import { connectSocket } from '../../services/socket';
 import { toWesternDigits } from '../../utils/format';
+import { apiErrorMessage } from '../../utils/apiError';
 import { useAuthStore } from '../../store/authStore';
 import { formatPhone } from '../../utils/format';
 import { useLanguage } from '../../i18n';
@@ -25,6 +27,7 @@ const OTP_LENGTH = 4;
 
 export default function OtpScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { phone, countryCode } = useLocalSearchParams<{ phone: string; countryCode?: string }>();
   const login = useAuthStore((s) => s.login);
   const { t } = useLanguage();
@@ -71,10 +74,25 @@ export default function OtpScreen() {
     try {
       const result = await authService.verifyOtp(phone, code);
       await login(result.token, result.refreshToken, result.user);
-      router.replace('/(tabs)');
+      // The socket is only opened at launch when a token exists; a guest who
+      // signs in mid-session needs it opened now.
+      connectSocket().catch(() => {});
+
+      // Where next: on to the screen the guest was heading to (e.g. checkout),
+      // otherwise back to the screen they signed in from, otherwise home.
+      const { returnTo, setReturnTo } = useAuthStore.getState();
+      setReturnTo(null);
+      const parent = navigation.getParent();
+      if (returnTo) {
+        router.replace(returnTo);
+      } else if (parent?.canGoBack()) {
+        parent.goBack();
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       setCode('');
-      setErrorMsg(error.response?.data?.message || t('auth.invalidCodeMsg'));
+      setErrorMsg(apiErrorMessage(error, t('auth.invalidCodeMsg')));
       triggerShake();
     } finally {
       setLoading(false);
@@ -88,7 +106,7 @@ export default function OtpScreen() {
       setCountdown(60);
       setCode('');
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to resend code.');
+      Alert.alert(t('common.error'), apiErrorMessage(error, t('auth.resendFailed')));
     }
   };
 

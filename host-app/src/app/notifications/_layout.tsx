@@ -9,7 +9,7 @@ export default function NotificationsLayout() {
         headerBackVisible: true,
         headerTitle: '',
         headerTransparent: true,
-        headerTintColor: '#6d28d9',
+        headerTintColor: '#14644b',
       }}
     />
   );

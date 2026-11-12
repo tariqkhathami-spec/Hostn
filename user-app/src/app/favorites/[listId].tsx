@@ -19,7 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { wishlistsService } from '../../services/wishlists.service';
 import { listingsService } from '../../services/listings.service';
 import { Colors, Typography, Spacing, Radius } from '../../constants/theme';
-import { SAUDI_CITIES } from '../../constants/config';
+import { CITIES, cityLabel, normalizeCity } from '../../constants/cities';
 import { useLanguage } from '../../i18n/LanguageContext';
 import ListingCard from '../../components/listing/ListingCard';
 import type { Listing } from '../../types';
@@ -79,12 +79,12 @@ export default function WishlistDetailScreen() {
 
   const handleRemove = (unitId: string, title: string) => {
     Alert.alert(
-      'Remove from List',
-      `Remove "${title}" from this list?`,
+      t('favorites.removeTitle'),
+      t('favorites.removeConfirm', { title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('favorites.remove'),
           style: 'destructive',
           onPress: () => removeUnit.mutate(unitId),
         },
@@ -128,13 +128,10 @@ export default function WishlistDetailScreen() {
 
       // City mismatch
       if (selectedCity) {
-        const cityObj = SAUDI_CITIES.find((c) => c.id === selectedCity);
-        const listingCity = listing.location?.city?.toLowerCase() || '';
-        const cityName = cityObj?.name?.toLowerCase() || '';
-        const cityNameAr = cityObj?.nameAr || '';
-        if (listingCity !== cityName && listingCity !== cityNameAr && listingCity !== selectedCity) {
-          const displayCity = language === 'ar' ? cityNameAr : (cityObj?.name || selectedCity);
-          reasons.push(t('favorites.mismatchCity' as any, { city: displayCity }));
+        // Compare stored values so any spelling of the same city matches.
+        const listingCity = normalizeCity(listing.location?.city) || listing.location?.city || '';
+        if (listingCity !== selectedCity) {
+          reasons.push(t('favorites.mismatchCity', { city: cityLabel(selectedCity, language) }));
         }
       }
 
@@ -168,18 +165,17 @@ export default function WishlistDetailScreen() {
 
   // Filtered city list for modal
   const filteredCities = useMemo(() => {
-    if (!citySearch.trim()) return [...SAUDI_CITIES];
-    const q = citySearch.toLowerCase();
-    return SAUDI_CITIES.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.nameAr.includes(citySearch)
+    const q = citySearch.trim();
+    if (!q) return CITIES;
+    const lower = q.toLowerCase();
+    return CITIES.filter(
+      (c) => c.en.toLowerCase().includes(lower) || c.value.toLowerCase().includes(lower) || c.ar.includes(q)
     );
   }, [citySearch]);
 
   const selectedCityLabel = useMemo(() => {
     if (!selectedCity) return t('favorites.filterCity' as any);
-    const city = SAUDI_CITIES.find((c) => c.id === selectedCity);
-    if (!city) return selectedCity;
-    return language === 'ar' ? city.nameAr : city.name;
+    return cityLabel(selectedCity, language);
   }, [selectedCity, language, t]);
 
   const isLoading = listLoading || propertiesLoading;
@@ -340,7 +336,7 @@ export default function WishlistDetailScreen() {
           }}
         >
           <Text style={[styles.cityItemText, !selectedCity && styles.cityItemTextActive]}>
-            {language === 'ar' ? 'جميع المدن' : 'All Cities'}
+            {t('favorites.allCities')}
           </Text>
           {!selectedCity && (
             <Ionicons name="checkmark" size={20} color={Colors.primary} />
@@ -348,15 +344,16 @@ export default function WishlistDetailScreen() {
         </Pressable>
         <FlatList
           data={filteredCities}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.value}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <Pressable
               style={[
                 styles.cityItem,
-                selectedCity === item.id && styles.cityItemActive,
+                selectedCity === item.value && styles.cityItemActive,
               ]}
               onPress={() => {
-                setSelectedCity(item.id);
+                setSelectedCity(item.value);
                 setCityModalVisible(false);
                 setCitySearch('');
               }}
@@ -364,12 +361,12 @@ export default function WishlistDetailScreen() {
               <Text
                 style={[
                   styles.cityItemText,
-                  selectedCity === item.id && styles.cityItemTextActive,
+                  selectedCity === item.value && styles.cityItemTextActive,
                 ]}
               >
-                {language === 'ar' ? item.nameAr : item.name}
+                {language === 'ar' ? item.ar : item.en}
               </Text>
-              {selectedCity === item.id && (
+              {selectedCity === item.value && (
                 <Ionicons name="checkmark" size={20} color={Colors.primary} />
               )}
             </Pressable>
@@ -386,7 +383,7 @@ export default function WishlistDetailScreen() {
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {list?.name ?? 'Wishlist'}
+          {list?.name ?? t('favorites.listFallback')}
         </Text>
         <View style={styles.headerSpacer} />
       </View>

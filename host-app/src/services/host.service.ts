@@ -30,8 +30,8 @@ export const hostService = {
     api.put(`/units/${id}`, data).then((r: any) => r.data),
   deleteUnit: (id: string) =>
     api.delete(`/units/${id}`).then((r: any) => r.data),
-  duplicateUnit: (id: string) =>
-    api.post(`/units/${id}/duplicate`).then((r: any) => r.data),
+  duplicateUnit: (id: string, exclude: string[] = []) =>
+    api.post(`/units/${id}/duplicate`, { exclude }).then((r: any) => r.data),
   toggleUnit: (id: string) =>
     api.patch(`/units/${id}/toggle`).then((r: any) => r.data),
 
@@ -214,6 +214,8 @@ export const hostService = {
   uploadImage: (formData: FormData) =>
     api.post('/upload/single', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      // Photos are large and mobile uplinks are slow: the default 15s is not enough.
+      timeout: 60000,
     }).then((r: any) => r.data),
 
   // Legal & Support

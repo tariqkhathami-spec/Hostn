@@ -10,6 +10,8 @@ import { getSocket } from '../../services/socket';
 import { formatCurrency, formatDateRange } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { useAuthStore } from '../../store/authStore';
+import LoginPrompt from '../../components/ui/LoginPrompt';
 import type { Booking } from '../../types';
 
 const TABS = ['upcoming', 'previous'] as const;
@@ -25,6 +27,7 @@ export default function BookingsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'previous'>('upcoming');
 
   const handleBookingEvent = useCallback(() => {
@@ -47,6 +50,7 @@ export default function BookingsScreen() {
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['bookings', activeTab],
     queryFn: () => bookingsService.getMyBookings(activeTab),
+    enabled: isAuthenticated,
   });
 
   const bookings = data ?? [];
@@ -79,6 +83,15 @@ export default function BookingsScreen() {
       </Pressable>
     );
   };
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Text style={styles.header}>{t('bookings.title')}</Text>
+        <LoginPrompt icon="calendar-outline" message={t('auth.loginBookings')} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

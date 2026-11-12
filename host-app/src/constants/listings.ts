@@ -1,23 +1,9 @@
-export interface CityOption {
-  value: string;
-  en: string;
-  ar: string;
-}
+// The city list is shared with the website and the guest app — see cities.ts.
+import { CITIES, normalizeCity, cityLabel } from './cities';
+import type { CityOption } from './cities';
 
-export const CITIES: CityOption[] = [
-  { value: 'Riyadh', en: 'Riyadh', ar: 'الرياض' },
-  { value: 'Jeddah', en: 'Jeddah', ar: 'جدة' },
-  { value: 'Abha', en: 'Abha', ar: 'أبها' },
-  { value: 'Khobar', en: 'Khobar', ar: 'الخبر' },
-  { value: 'Taif', en: 'Taif', ar: 'الطائف' },
-  { value: 'Al Ula', en: 'Al Ula', ar: 'العلا' },
-  { value: 'Hail', en: 'Hail', ar: 'حائل' },
-  { value: 'Mecca', en: 'Mecca', ar: 'مكة المكرمة' },
-  { value: 'Madinah', en: 'Madinah', ar: 'المدينة' },
-  { value: 'Dammam', en: 'Dammam', ar: 'الدمام' },
-  { value: 'Yanbu', en: 'Yanbu', ar: 'ينبع' },
-  { value: 'Tabuk', en: 'Tabuk', ar: 'تبوك' },
-];
+export { CITIES, normalizeCity, cityLabel };
+export type { CityOption };
 
 export interface DistrictOption {
   value: string;
@@ -118,6 +104,32 @@ export const DISTRICTS: Record<string, DistrictOption[]> = {
   ],
 };
 
+/** Picker entry that lets the host type a district that is not in the list. */
+export const OTHER_DISTRICT = '__other__';
+export const OTHER_DISTRICT_OPTION: DistrictOption = {
+  value: OTHER_DISTRICT,
+  en: 'Other district',
+  ar: 'حي آخر',
+};
+
+/** Districts of a city plus the "other" entry, or [] when the city has no list. */
+export function districtOptionsFor(city: string): DistrictOption[] {
+  const list = (city && DISTRICTS[city]) || [];
+  return list.length > 0 ? [...list, OTHER_DISTRICT_OPTION] : [];
+}
+
+/** True when `district` is one of the listed districts of `city`. */
+export function isListedDistrict(city: string, district: string): boolean {
+  return !!district && ((city && DISTRICTS[city]) || []).some((d) => d.value === district);
+}
+
+/** Display name of a stored district (listed value → label, free text as typed). */
+export function districtLabel(city: string | undefined | null, district: string | undefined | null, lang: 'ar' | 'en'): string {
+  if (!district) return '';
+  const hit = ((city && DISTRICTS[normalizeCity(city) || city]) || []).find((d) => d.value === district);
+  return hit ? hit[lang] : district;
+}
+
 export interface PropertyTypeOption {
   value: string;
   en: string;
@@ -146,30 +158,64 @@ export interface AmenityOption {
   icon: string;
 }
 
-export const ALL_AMENITIES: AmenityOption[] = [
-  { value: 'wifi', en: 'WiFi', ar: 'واي فاي', icon: 'wifi' },
-  { value: 'pool', en: 'Pool', ar: 'مسبح', icon: 'water' },
-  { value: 'parking', en: 'Parking', ar: 'موقف سيارات', icon: 'car' },
-  { value: 'ac', en: 'AC', ar: 'تكييف', icon: 'snow' },
-  { value: 'kitchen', en: 'Kitchen', ar: 'مطبخ', icon: 'restaurant' },
-  { value: 'tv', en: 'TV', ar: 'تلفزيون', icon: 'tv' },
-  { value: 'washer', en: 'Washer', ar: 'غسالة', icon: 'water-outline' },
-  { value: 'dryer', en: 'Dryer', ar: 'مجفف', icon: 'sunny' },
-  { value: 'gym', en: 'Gym', ar: 'صالة رياضية', icon: 'barbell' },
-  { value: 'bbq', en: 'BBQ', ar: 'شواء', icon: 'flame' },
-  { value: 'garden', en: 'Garden', ar: 'حديقة', icon: 'leaf' },
-  { value: 'balcony', en: 'Balcony', ar: 'بلكونة', icon: 'resize-outline' },
-  { value: 'sea_view', en: 'Sea View', ar: 'إطلالة بحرية', icon: 'boat' },
-  { value: 'mountain_view', en: 'Mountain View', ar: 'إطلالة جبلية', icon: 'triangle' },
-  { value: 'elevator', en: 'Elevator', ar: 'مصعد', icon: 'arrow-up' },
-  { value: 'security', en: 'Security', ar: 'أمن', icon: 'shield-checkmark' },
-  { value: 'pet_friendly', en: 'Pet Friendly', ar: 'حيوانات أليفة', icon: 'paw' },
-  { value: 'smoking_allowed', en: 'Smoking Allowed', ar: 'تدخين مسموح', icon: 'cloudy' },
-  { value: 'breakfast_included', en: 'Breakfast', ar: 'إفطار', icon: 'cafe' },
-  { value: 'heating', en: 'Heating', ar: 'تدفئة', icon: 'thermometer' },
-  { value: 'beach_access', en: 'Beach Access', ar: 'وصول للشاطئ', icon: 'umbrella' },
-  { value: 'fireplace', en: 'Fireplace', ar: 'مدفأة', icon: 'bonfire' },
-  { value: 'hot_tub', en: 'Hot Tub', ar: 'جاكوزي', icon: 'water' },
+// Unit amenities and features. The values are exactly the enums of
+// backend/src/models/Unit.js (`amenities` and `features`) — the API rejects
+// anything else, so add a value here only after it exists in that model.
+export const UNIT_AMENITIES: AmenityOption[] = [
+  { value: 'two_sections', en: 'Two sections', ar: 'قسمين', icon: 'git-compare-outline' },
+  { value: 'two_separate_sections', en: 'Two separate sections', ar: 'قسمين منفصلين', icon: 'git-compare-outline' },
+  { value: 'two_sections_connected', en: 'Two connected sections', ar: 'قسمين متصلين', icon: 'git-merge-outline' },
+  { value: 'womens_pool', en: "Women's pool", ar: 'مسبح نساء', icon: 'water-outline' },
+  { value: 'shared_pool', en: 'Shared pool', ar: 'مسبح مشترك', icon: 'water' },
+  { value: 'lit_pool', en: 'Lit pool', ar: 'مسبح مضاء', icon: 'water' },
+  { value: 'slide', en: 'Water slide', ar: 'زحليقة مائية', icon: 'trending-down-outline' },
+  { value: 'outdoor_annex', en: 'Outdoor annex', ar: 'ملحق خارجي', icon: 'home-outline' },
+  { value: 'tent', en: 'Tent', ar: 'خيمة', icon: 'triangle-outline' },
+  { value: 'dining_hall', en: 'Dining hall', ar: 'صالة طعام', icon: 'restaurant-outline' },
+  { value: 'drivers_room', en: "Drivers' room", ar: 'غرفة سائقين', icon: 'car-outline' },
+  { value: 'cinema_room', en: 'Cinema room', ar: 'غرفة سينما', icon: 'film-outline' },
+  { value: 'bridal_room', en: 'Bridal room', ar: 'غرفة عروس', icon: 'heart-outline' },
+  { value: 'luxury_salon', en: 'Luxury salon', ar: 'صالون فاخر', icon: 'diamond-outline' },
+  { value: 'hair_salon', en: 'Hair salon', ar: 'مشغل نسائي', icon: 'cut-outline' },
+  { value: 'balcony', en: 'Balcony', ar: 'شرفة', icon: 'resize-outline' },
+  { value: 'outdoor_seating', en: 'Outdoor seating', ar: 'جلسة خارجية', icon: 'sunny-outline' },
+  { value: 'green_area', en: 'Green area', ar: 'مسطح أخضر', icon: 'leaf-outline' },
+  { value: 'bbq_area', en: 'BBQ area', ar: 'ركن شواء', icon: 'flame-outline' },
+  { value: 'fire_pit', en: 'Fire pit', ar: 'مشب نار', icon: 'bonfire-outline' },
+  { value: 'mist_fan', en: 'Mist fans', ar: 'مراوح رذاذ', icon: 'snow-outline' },
+  { value: 'tv', en: 'TV', ar: 'تلفزيون', icon: 'tv-outline' },
+  { value: 'projector', en: 'Projector', ar: 'بروجكتر', icon: 'videocam-outline' },
+  { value: 'speakers', en: 'Speakers', ar: 'سماعات', icon: 'volume-high-outline' },
+  { value: 'extra_lighting', en: 'Extra lighting', ar: 'إضاءة إضافية', icon: 'bulb-outline' },
+  { value: 'playstation', en: 'PlayStation', ar: 'بلايستيشن', icon: 'game-controller-outline' },
+  { value: 'billiards', en: 'Billiards', ar: 'بلياردو', icon: 'ellipse-outline' },
+  { value: 'table_tennis', en: 'Table tennis', ar: 'تنس طاولة', icon: 'tennisball-outline' },
+  { value: 'football', en: 'Football pitch', ar: 'ملعب كرة قدم', icon: 'football-outline' },
+  { value: 'volleyball', en: 'Volleyball court', ar: 'ملعب كرة طائرة', icon: 'baseball-outline' },
+  { value: 'basketball', en: 'Basketball court', ar: 'ملعب كرة سلة', icon: 'basketball-outline' },
+  { value: 'kids_playground', en: 'Kids playground', ar: 'ألعاب أطفال', icon: 'happy-outline' },
+  { value: 'trampoline', en: 'Trampoline', ar: 'نطيطة', icon: 'arrow-up-circle-outline' },
+  { value: 'sand_games', en: 'Sand games', ar: 'ألعاب رملية', icon: 'color-fill-outline' },
+  { value: 'sand_skiing', en: 'Sand skiing', ar: 'تزلج على الرمال', icon: 'analytics-outline' },
+  { value: 'zipline', en: 'Zipline', ar: 'زيب لاين', icon: 'git-commit-outline' },
+  { value: 'massage_chairs', en: 'Massage chairs', ar: 'كراسي مساج', icon: 'body-outline' },
+];
+
+export const UNIT_FEATURES: AmenityOption[] = [
+  { value: 'internet', en: 'Internet', ar: 'إنترنت', icon: 'wifi-outline' },
+  { value: 'parking', en: 'Parking', ar: 'موقف سيارات', icon: 'car-outline' },
+  { value: 'self_checkin', en: 'Self check-in', ar: 'دخول ذاتي', icon: 'key-outline' },
+  { value: 'cleaning', en: 'Cleaning service', ar: 'خدمة تنظيف', icon: 'sparkles-outline' },
+  { value: 'elevator', en: 'Elevator', ar: 'مصعد', icon: 'arrow-up-outline' },
+  { value: 'workspace', en: 'Workspace', ar: 'مكان للعمل', icon: 'laptop-outline' },
+  { value: 'wardrobe', en: 'Wardrobe', ar: 'خزانة ملابس', icon: 'shirt-outline' },
+  { value: 'personal_care', en: 'Personal care items', ar: 'أدوات عناية شخصية', icon: 'medkit-outline' },
+  { value: 'security_office', en: 'Security office', ar: 'مكتب أمن', icon: 'shield-checkmark-outline' },
+  { value: 'sea_view', en: 'Sea view', ar: 'إطلالة بحرية', icon: 'boat-outline' },
+  { value: 'mountain_view', en: 'Mountain view', ar: 'إطلالة جبلية', icon: 'triangle-outline' },
+  { value: 'garden_view', en: 'Garden view', ar: 'إطلالة على حديقة', icon: 'flower-outline' },
+  { value: 'mountain_waterfall', en: 'Mountain waterfall', ar: 'شلال جبلي', icon: 'rainy-outline' },
+  { value: 'private_beach', en: 'Private beach', ar: 'شاطئ خاص', icon: 'umbrella-outline' },
 ];
 
 export interface DirectionOption {

@@ -52,3 +52,31 @@ export function toWesternDigits(value: string): string {
     .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
     .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
 }
+
+/**
+ * Clean what the host types into a numeric field: Arabic-Indic digits become
+ * Western digits, the Arabic decimal separator (٫) and a comma become a dot,
+ * and every other character is dropped. Use it in `onChangeText`.
+ */
+export function cleanNumericInput(value: string, allowDecimal = true): string {
+  let out = toWesternDigits(value || '').replace(/[٫,]/g, '.');
+  out = out.replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, '');
+  if (allowDecimal) {
+    const dot = out.indexOf('.');
+    if (dot !== -1) out = out.slice(0, dot + 1) + out.slice(dot + 1).replace(/\./g, '');
+  }
+  return out;
+}
+
+/** Parse a typed number (Western or Arabic-Indic digits); NaN when empty or invalid. */
+export function parseNumber(value: string | number | undefined | null): number {
+  if (typeof value === 'number') return value;
+  const cleaned = cleanNumericInput(String(value ?? ''));
+  return cleaned === '' || cleaned === '.' ? NaN : Number(cleaned);
+}
+
+/** Parse a typed whole number; `fallback` when empty or invalid. */
+export function parseWhole(value: string | number | undefined | null, fallback: number): number {
+  const n = parseNumber(value);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}

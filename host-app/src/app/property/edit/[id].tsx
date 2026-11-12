@@ -21,11 +21,17 @@ import { useAuthStore } from '../../../store/authStore';
 import { getLocale } from '../../../utils/i18n';
 import {
   CITIES,
-  DISTRICTS,
   PROPERTY_TYPES,
   DIRECTIONS,
   TIME_OPTIONS,
+  OTHER_DISTRICT,
+  districtOptionsFor,
+  isListedDistrict,
+  districtLabel,
+  normalizeCity,
 } from '../../../constants/listings';
+import { apiErrorMessage } from '../../../utils/apiError';
+import { cleanNumericInput, parseWhole } from '../../../utils/format';
 import { Colors, Spacing, Typography, Radius } from '../../../constants/theme';
 import type { Property, PropertyRules, Unit } from '../../../types';
 
@@ -85,7 +91,12 @@ export default function EditPropertyScreen() {
   const [direction, setDirection] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
+  const [districtOther, setDistrictOther] = useState(false);
   const [rules, setRules] = useState<PropertyRules>(DEFAULT_RULES);
+  // Typed text of the two night fields (kept as text so they can be cleared
+  // while editing and accept Arabic-Indic digits).
+  const [minNightsText, setMinNightsText] = useState('1');
+  const [maxNightsText, setMaxNightsText] = useState('30');
 
   // Picker visibility
   const [showCityPicker, setShowCityPicker] = useState(false);
@@ -94,19 +105,36 @@ export default function EditPropertyScreen() {
   const [showCheckInPicker, setShowCheckInPicker] = useState(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
 
-  const districtOptions = useMemo(() => (city ? DISTRICTS[city] ?? [] : []), [city]);
+  const districtOptions = useMemo(() => districtOptionsFor(city), [city]);
 
   // Hydrate form once when property arrives.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
     if (!property || hydrated) return;
-    setTitleEn(property.title || property.name || '');
-    setTitleAr(property.titleAr || property.nameAr || '');
+    // `title` holds the English name, or a copy of the Arabic one when the
+    // host gave no English name — show it only where it belongs.
+    const storedTitle = (property.title || property.name || '').trim();
+    const storedTitleAr = (property.titleAr || property.nameAr || '').trim();
+    const titleIsArabic = /[\u0600-\u06FF]/.test(storedTitle);
+    setTitleAr(storedTitleAr || (titleIsArabic ? storedTitle : ''));
+    setTitleEn(titleIsArabic || storedTitle === storedTitleAr ? '' : storedTitle);
     setType(property.type || '');
     setDirection(property.direction || property.address?.direction || '');
-    setCity(property.location?.city || property.address?.city || '');
-    setDistrict(property.location?.district || '');
-    setRules({ ...DEFAULT_RULES, ...(property.rules ?? {}) });
+    // Older listings may store another spelling of the city (e.g. "Medina").
+    const rawCity = property.location?.city || property.address?.city || '';
+    const loadedCity = normalizeCity(rawCity) || rawCity;
+    const loadedDistrict = property.location?.district || '';
+    setCity(loadedCity);
+    setDistrict(loadedDistrict);
+    setDistrictOther(
+      !!loadedDistrict &&
+        districtOptionsFor(loadedCity).length > 0 &&
+        !isListedDistrict(loadedCity, loadedDistrict),
+    );
+    const loadedRules = { ...DEFAULT_RULES, ...(property.rules ?? {}) };
+    setRules(loadedRules);
+    setMinNightsText(String(loadedRules.minNights ?? 1));
+    setMaxNightsText(String(loadedRules.maxNights ?? 30));
     setHydrated(true);
   }, [property, hydrated]);
 
@@ -126,21 +154,33 @@ export default function EditPropertyScreen() {
         [{ text: l({ en: 'OK', ar: 'موافق' }), onPress: () => router.back() }],
       );
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || error?.message || '';
+    onError: (error: unknown) => {
       Alert.alert(
         l({ en: 'Error', ar: 'خطأ' }),
-        msg || l({ en: 'Failed to update property', ar: 'فشل تحديث العقار' }),
+        apiErrorMessage(error, 'تعذّر حفظ تعديلات العقار. حاول مرة أخرى.'),
       );
     },
   });
 
-  const canSubmit = titleEn.trim().length > 0 && type.length > 0 && city.length > 0;
+  // The Arabic name is the required one; English is optional.
+  const canSubmit = titleAr.trim().length > 0 && type.length > 0 && city.length > 0;
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
-    const minN = rules.minNights || 1;
-    const maxN = rules.maxNights || 30;
+    if (mutation.isPending) return;
+    if (!titleAr.trim()) {
+      Alert.alert('اسم العقار مطلوب', 'اكتب اسم العقار بالعربية.');
+      return;
+    }
+    if (!type || !city) {
+      Alert.alert('بيانات ناقصة', 'اختر نوع العقار والمدينة.');
+      return;
+    }
+    const minN = parseWhole(minNightsText, 0);
+    const maxN = parseWhole(maxNightsText, 0);
+    if (minN < 1 || minN > 365 || maxN < 1 || maxN > 365) {
+      Alert.alert('مدة إقامة غير صالحة', 'أدخل عدد ليالٍ بين 1 و 365 للحد الأدنى والحد الأقصى.');
+      return;
+    }
     if (maxN < minN) {
       Alert.alert(
         l({ en: 'Invalid stay length', ar: 'مدة إقامة غير صالحة' }),
@@ -152,13 +192,15 @@ export default function EditPropertyScreen() {
       return;
     }
     const payload: Record<string, unknown> = {
-      title: titleEn.trim(),
-      titleAr: titleAr.trim() || undefined,
+      // The API requires `title`: the Arabic name stands in when no English name is given.
+      title: titleEn.trim() || titleAr.trim(),
+      titleAr: titleAr.trim(),
       type,
       direction: direction || undefined,
+      // The server merges `location`, so address and coordinates are kept.
       location: {
         city,
-        district: district || undefined,
+        district: district.trim(),
       },
       rules: {
         checkInTime: rules.checkInTime,
@@ -293,22 +335,26 @@ export default function EditPropertyScreen() {
           {l({ en: 'Property details', ar: 'تفاصيل العقار' })}
         </Text>
 
-        <Text style={styles.label}>{l({ en: 'Title (English)', ar: 'العنوان (إنجليزي)' })} *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={l({ en: 'e.g. Sunset Villa', ar: 'مثال: فيلا الغروب' })}
-          placeholderTextColor={Colors.textTertiary}
-          value={titleEn}
-          onChangeText={setTitleEn}
-        />
-
-        <Text style={styles.label}>{l({ en: 'Title (Arabic)', ar: 'العنوان (عربي)' })}</Text>
+        <Text style={styles.label}>{l({ en: 'Property name (Arabic)', ar: 'اسم العقار (بالعربية)' })} *</Text>
         <TextInput
           style={[styles.input, { textAlign: 'right' }]}
-          placeholder={l({ en: 'Optional Arabic title', ar: 'العنوان بالعربي (اختياري)' })}
+          placeholder={l({ en: 'e.g. Sunset Villa', ar: 'مثال: فيلا الغروب' })}
           placeholderTextColor={Colors.textTertiary}
           value={titleAr}
+          maxLength={200}
           onChangeText={setTitleAr}
+        />
+
+        <Text style={styles.label}>
+          {l({ en: 'Name in English (optional)', ar: 'الاسم بالإنجليزية (اختياري)' })}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Sunset Villa"
+          placeholderTextColor={Colors.textTertiary}
+          value={titleEn}
+          maxLength={200}
+          onChangeText={setTitleEn}
         />
 
         <Text style={styles.label}>{l({ en: 'Property Type', ar: 'نوع العقار' })} *</Text>
@@ -357,35 +403,35 @@ export default function EditPropertyScreen() {
           <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
         </Pressable>
 
-        {city && districtOptions.length > 0 && (
+        {!!city && (
           <>
             <Text style={styles.label}>{l({ en: 'District', ar: 'الحي' })}</Text>
-            <Pressable style={styles.picker} onPress={() => setShowDistrictPicker(true)}>
-              <Text style={district ? styles.pickerValue : styles.pickerPlaceholder}>
-                {district
-                  ? l(
-                      districtOptions.find((d) => d.value === district) ?? {
-                        en: district,
-                        ar: district,
-                      },
-                    )
-                  : l({ en: 'Select district', ar: 'اختر الحي' })}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
-            </Pressable>
-          </>
-        )}
-
-        {city && districtOptions.length === 0 && (
-          <>
-            <Text style={styles.label}>{l({ en: 'District', ar: 'الحي' })}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={l({ en: 'Enter district name', ar: 'أدخل اسم الحي' })}
-              placeholderTextColor={Colors.textTertiary}
-              value={district}
-              onChangeText={setDistrict}
-            />
+            {districtOptions.length > 0 && (
+              <Pressable style={styles.picker} onPress={() => setShowDistrictPicker(true)}>
+                <Text style={district || districtOther ? styles.pickerValue : styles.pickerPlaceholder}>
+                  {districtOther
+                    ? l({ en: 'Other district', ar: 'حي آخر' })
+                    : district
+                      ? districtLabel(city, district, isAr ? 'ar' : 'en')
+                      : l({ en: 'Select district', ar: 'اختر الحي' })}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={Colors.textTertiary} />
+              </Pressable>
+            )}
+            {(districtOptions.length === 0 || districtOther) && (
+              <TextInput
+                style={[
+                  styles.input,
+                  { textAlign: 'right' },
+                  districtOptions.length > 0 && { marginTop: Spacing.sm },
+                ]}
+                placeholder={l({ en: 'Enter district name', ar: 'اكتب اسم الحي' })}
+                placeholderTextColor={Colors.textTertiary}
+                value={district}
+                maxLength={80}
+                onChangeText={setDistrict}
+              />
+            )}
           </>
         )}
 
@@ -418,10 +464,9 @@ export default function EditPropertyScreen() {
             <TextInput
               style={styles.input}
               keyboardType="number-pad"
-              value={String(rules.minNights ?? 1)}
-              onChangeText={(v) =>
-                setRules((r) => ({ ...r, minNights: parseInt(v, 10) || 1 }))
-              }
+              value={minNightsText}
+              maxLength={3}
+              onChangeText={(v) => setMinNightsText(cleanNumericInput(v, false))}
             />
           </View>
           <View style={styles.rowItem}>
@@ -429,10 +474,9 @@ export default function EditPropertyScreen() {
             <TextInput
               style={styles.input}
               keyboardType="number-pad"
-              value={String(rules.maxNights ?? 30)}
-              onChangeText={(v) =>
-                setRules((r) => ({ ...r, maxNights: parseInt(v, 10) || 30 }))
-              }
+              value={maxNightsText}
+              maxLength={3}
+              onChangeText={(v) => setMaxNightsText(cleanNumericInput(v, false))}
             />
           </View>
         </View>
@@ -484,7 +528,7 @@ export default function EditPropertyScreen() {
             <View key={unit.id || (unit as any)._id} style={styles.unitRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.unitName} numberOfLines={1}>
-                  {(unit as any).nameEn || unit.name || (unit as any).nameAr || '—'}
+                  {unit.nameAr || unit.name || unit.nameEn || 'وحدة بدون اسم'}
                 </Text>
                 {!!unit.code && <Text style={styles.unitMeta}>#{unit.code}</Text>}
               </View>
@@ -504,7 +548,7 @@ export default function EditPropertyScreen() {
         <Pressable
           style={[styles.submitButton, (!canSubmit || mutation.isPending) && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={!canSubmit || mutation.isPending}
+          disabled={mutation.isPending}
         >
           {mutation.isPending ? (
             <ActivityIndicator color={Colors.white} />
@@ -524,8 +568,11 @@ export default function EditPropertyScreen() {
         CITIES,
         city,
         (v) => {
-          setCity(v);
-          setDistrict('');
+          if (v !== city) {
+            setCity(v);
+            setDistrict('');
+            setDistrictOther(false);
+          }
         },
       )}
       {renderPickerModal(
@@ -533,8 +580,16 @@ export default function EditPropertyScreen() {
         () => setShowDistrictPicker(false),
         l({ en: 'Select District', ar: 'اختر الحي' }),
         districtOptions,
-        district,
-        setDistrict,
+        districtOther ? OTHER_DISTRICT : district,
+        (v) => {
+          if (v === OTHER_DISTRICT) {
+            setDistrictOther(true);
+            setDistrict('');
+          } else {
+            setDistrictOther(false);
+            setDistrict(v);
+          }
+        },
       )}
       {renderPickerModal(
         showDirectionPicker,

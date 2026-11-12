@@ -20,6 +20,8 @@ import { wishlistsService } from '../../services/wishlists.service';
 import { listingsService } from '../../services/listings.service';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { useAuthStore } from '../../store/authStore';
+import LoginPrompt from '../../components/ui/LoginPrompt';
 import type { WishlistList, Listing } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -30,6 +32,7 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newListName, setNewListName] = useState('');
 
@@ -41,6 +44,7 @@ export default function FavoritesScreen() {
   } = useQuery({
     queryKey: ['wishlists'],
     queryFn: () => wishlistsService.getLists().catch(() => []),
+    enabled: isAuthenticated,
   });
 
   const lists = Array.isArray(listsRaw) ? listsRaw : [];
@@ -201,6 +205,15 @@ export default function FavoritesScreen() {
       </Pressable>
     );
   };
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Text style={styles.header}>{t('favorites.title')}</Text>
+        <LoginPrompt icon="heart-outline" message={t('auth.loginFavorites')} />
+      </SafeAreaView>
+    );
+  }
 
   if (isLoading) {
     return (

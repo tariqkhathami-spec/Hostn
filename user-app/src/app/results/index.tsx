@@ -10,7 +10,9 @@ import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/auth.service';
 import { Colors, Typography, Spacing, Radius, BACK_ICON } from '../../constants/theme';
 import { useLanguage } from '../../i18n';
+import { cityLabel, normalizeCity } from '../../constants/cities';
 import ListingCard from '../../components/listing/ListingCard';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 export default function ResultsScreen() {
   const router = useRouter();
@@ -19,9 +21,13 @@ export default function ResultsScreen() {
   const searchStore = useSearchStore();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const requireAuth = useRequireAuth();
 
-  const city = params.city ?? searchStore.city;
-  const cityName = params.cityName ?? searchStore.cityName ?? 'Results';
+  // Always search with the stored city value (e.g. "Madinah"), whatever
+  // spelling arrived through params or an older saved state.
+  const rawCity = params.city ?? searchStore.city;
+  const city = rawCity ? normalizeCity(rawCity) || rawCity : null;
+  const cityName = city ? cityLabel(city, language) : t('results.title');
 
   const {
     minPrice, maxPrice, bedrooms, bathrooms, amenities,
@@ -81,6 +87,7 @@ export default function ResultsScreen() {
   const total = data?.pages[0]?.pagination?.total ?? 0;
 
   const handleToggleFavorite = async (propertyId: string) => {
+    if (!requireAuth()) return;
     try {
       await authService.toggleWishlist(propertyId);
       const updatedUser = await authService.getMe();
@@ -120,9 +127,9 @@ export default function ResultsScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={64} color={Colors.error} />
           <Text style={styles.emptyTitle}>{t('results.noResults')}</Text>
-          <Text style={styles.emptyText}>{language === 'ar' ? 'حدث خطأ أثناء البحث' : 'An error occurred while searching'}</Text>
+          <Text style={styles.emptyText}>{t('results.searchError')}</Text>
           <Pressable style={{ backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.md, marginTop: Spacing.md }} onPress={() => refetch()}>
-            <Text style={{ ...Typography.bodyBold, color: Colors.white }}>{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</Text>
+            <Text style={{ ...Typography.bodyBold, color: Colors.white }}>{t('common.tryAgain')}</Text>
           </Pressable>
         </View>
       ) : listings.length === 0 ? (
