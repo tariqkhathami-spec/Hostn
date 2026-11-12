@@ -134,7 +134,7 @@ export const unitsApi = {
     api.get(`/properties/${propertyId}/units`, { params }),
   /** List ALL units for a property including inactive (host dashboard) */
   getManage: (propertyId: string, params?: Record<string, unknown>) =>
-    api.get(`/properties/${propertyId}/units/manage`, { params }),
+    api.get(`/properties/${propertyId}/units/manage`, { params: { limit: 50, ...params } }),
   /** Get single unit with populated property + host */
   getOne: (id: string) => api.get(`/units/${id}`),
   /** Create a new unit under a property */
@@ -186,7 +186,7 @@ export const hostApi = {
   blockDates: (propertyId: string, data: { startDate: string; endDate: string; action: string; unitId?: string }) =>
     api.put(`/host/calendar/${propertyId}/block`, data),
   getReviews: (params?: Record<string, unknown>) =>
-    api.get('/host/reviews', { params }),
+    api.get('/host/reviews', { params: { limit: 100, ...params } }),
   togglePropertyStatus: (id: string) => api.put(`/host/properties/${id}/toggle`),
   addPropertyImage: (id: string, formData: FormData) =>
     api.post(`/host/properties/${id}/images`, formData, {
@@ -326,7 +326,7 @@ export const contactApi = {
 };
 
 export const supportApi = {
-  getMyTickets: () => api.get('/support'),
+  getMyTickets: () => api.get('/support', { params: { limit: 100 } }),
   createTicket: (data: { subject: string; category: string; priority: string; message: string }) =>
     api.post('/support', data),
   getTicket: (id: string) => api.get(`/support/${id}`),
@@ -336,7 +336,7 @@ export const supportApi = {
   updateTicketStatus: (id: string, status: string) =>
     api.put(`/support/admin/${id}/status`, { status }),
   // Admin
-  getAllTickets: (params?: Record<string, string>) => api.get('/support/admin/all', { params }),
+  getAllTickets: (params?: Record<string, string>) => api.get('/support/admin/all', { params: { limit: 100, ...params } }),
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -346,7 +346,7 @@ export const reportsApi = {
   createReport: (data: { targetType: string; targetId: string; reason: string; description: string; relatedBooking?: string }) =>
     api.post('/reports', data),
   // Admin
-  getAllReports: () => api.get('/reports/admin/all'),
+  getAllReports: () => api.get('/reports/admin/all', { params: { limit: 100 } }),
   getReport: (id: string) => api.get(`/reports/admin/${id}`),
   takeAction: (id: string, data: { status: string; actionTaken: string; adminNotes?: string }) =>
     api.put(`/reports/admin/${id}/action`, data),
@@ -377,7 +377,7 @@ export const adminApi = {
     api.get(`/admin/properties/${propertyId}/units`, { params }),
   toggleUnit: (id: string) => api.patch(`/admin/units/${id}/toggle`),
   // Tourism permits
-  getLicenses: (params?: Record<string, unknown>) => api.get('/admin/licenses', { params }),
+  getLicenses: (params?: Record<string, unknown>) => api.get('/admin/licenses', { params: { limit: 100, ...params } }),
   reviewLicense: (unitId: string, data: { action: 'approve' | 'reject'; reason?: string }) =>
     api.put(`/admin/licenses/${unitId}`, data),
   // Staff and account managers (super admin only)

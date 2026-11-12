@@ -389,7 +389,9 @@ exports.createHold = async (req, res, next) => {
       holdExpiresAt,
     });
 
-    res.status(201).json({ success: true, data: { holdId: hold._id, holdExpiresAt } });
+    // The price is returned so clients show exactly what will be charged
+    // instead of recomputing it (and drifting from) the server's rules.
+    res.status(201).json({ success: true, data: { holdId: hold._id, holdExpiresAt, pricing } });
   } catch (error) {
     next(error);
   }
@@ -670,8 +672,21 @@ exports.createBooking = async (req, res, next) => {
 // @access  Private
 exports.getMyBookings = async (req, res, next) => {
   try {
-    const bookings = await Booking.find({ guest: req.user._id, status: { $ne: 'held' } })
-      .populate('property', 'title titleAr images location type pricing')
+    const query = { guest: req.user._id, status: { $ne: 'held' } };
+    // ?status=upcoming | previous — the apps' two tabs.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    if (req.query.status === 'upcoming') {
+      query.status = { $in: ['pending', 'confirmed'] };
+      query.checkOut = { $gte: startOfToday };
+    } else if (req.query.status === 'previous') {
+      query.$or = [
+        { status: { $in: ['cancelled', 'rejected', 'completed'] } },
+        { checkOut: { $lt: startOfToday } },
+      ];
+    }
+    const bookings = await Booking.find(query)
+      .populate({ path: 'property', select: 'title titleAr images location type pricing host', populate: { path: 'host', select: 'name avatar isVerified' } })
       .populate('unit', 'nameEn nameAr images')
       .sort('-createdAt');
 
@@ -835,6 +850,8 @@ exports.updateBookingStatus = async (req, res, next) => {
     // ── Real-time: push status change to guest + property watchers ──
     const bookingObj = booking.toObject();
     emitToUser(booking.guest.toString(), 'booking:updated', bookingObj);
+    // The host's other devices (and the dashboard) follow the change too.
+    if (property && property.host) emitToUser(property.host.toString(), 'booking:updated', bookingObj);
     emitToProperty(booking.property.toString(), 'availability:changed', {
       propertyId: booking.property.toString(),
       bookingId: booking._id,
@@ -934,7 +951,30 @@ exports.getUnitBookedDates = async (req, res, next) => {
     if (canSeeGuests) bookingsQuery = bookingsQuery.populate('guest', 'name');
     const bookings = await bookingsQuery.lean();
 
-    res.json({ success: true, data: bookings });
+    // Nights the host closed (blocked ranges, or single dates blocked on the
+    // pricing calendar) are just as unavailable as booked ones.
+    const blocked = [];
+    const now = new Date();
+    const pushRange = (start, end) => {
+      if (start && end && new Date(end) > now) blocked.push({ checkIn: start, checkOut: end, status: 'blocked' });
+    };
+    if (idIsUnit) {
+      const unitDoc = await Unit.findById(unitId).select('unavailableDates datePricing property').lean();
+      if (unitDoc) {
+        (unitDoc.unavailableDates || []).forEach((r) => pushRange(r.start, r.end));
+        (unitDoc.datePricing || []).filter((d) => d.isBlocked && d.date).forEach((d) => {
+          const start = new Date(d.date);
+          pushRange(start, new Date(start.getTime() + 24 * 60 * 60 * 1000));
+        });
+        const prop = await Property.findById(unitDoc.property).select('unavailableDates').lean();
+        ((prop && prop.unavailableDates) || []).forEach((r) => pushRange(r.start, r.end));
+      }
+    } else {
+      const prop = await Property.findById(unitId).select('unavailableDates').lean();
+      ((prop && prop.unavailableDates) || []).forEach((r) => pushRange(r.start, r.end));
+    }
+
+    res.json({ success: true, data: bookings.concat(blocked) });
   } catch (error) {
     next(error);
   }

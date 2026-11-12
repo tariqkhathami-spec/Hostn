@@ -707,12 +707,13 @@ exports.getPropertyUnits = async (req, res, next) => {
     const Unit = require('../models/Unit');
     const { page = 1, limit = 20 } = req.query;
 
-    const units = await Unit.find({ property: req.params.propertyId })
+    const unitQuery = { property: req.params.propertyId, isDeleted: { $ne: true } };
+    const units = await Unit.find(unitQuery)
       .sort('-createdAt')
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
-    const total = await Unit.countDocuments({ property: req.params.propertyId });
+    const total = await Unit.countDocuments(unitQuery);
 
     res.json({
       success: true,
@@ -768,9 +769,33 @@ exports.getLogs = async (req, res, next) => {
 
     const total = await ActivityLog.countDocuments(query);
 
+    // Many entries (bookings, payments) were written with the actor's id but
+    // without saying which kind of account it is, so the populate above
+    // leaves a bare id and the log cannot say WHO did it. Look those ids up
+    // in the three account collections.
+    const rows = logs.map((l) => l.toObject());
+    const loose = [...new Set(rows.filter((r) => r.actor && !r.actor.name).map((r) => String(r.actor._id || r.actor)))];
+    if (loose.length) {
+      const found = {};
+      for (const [type, model] of [['Guest', require('../models/Guest')], ['Host', require('../models/Host')], ['Admin', require('../models/Admin')]]) {
+        const docs = await model.find({ _id: { $in: loose } }).select('name email adminRole').lean();
+        docs.forEach((d) => { found[String(d._id)] = { ...d, type }; });
+      }
+      rows.forEach((r) => {
+        if (r.actor && !r.actor.name) {
+          const hit = found[String(r.actor._id || r.actor)];
+          if (hit) {
+            r.actor = { _id: hit._id, name: hit.name, email: hit.email, adminRole: hit.adminRole };
+            r.actorType = r.actorType || hit.type;
+            r.actorRole = r.actorRole || hit.type.toLowerCase();
+          }
+        }
+      });
+    }
+
     res.json({
       success: true,
-      data: logs,
+      data: rows,
       pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {

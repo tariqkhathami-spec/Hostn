@@ -7,6 +7,23 @@ const BlogCategory = require('../models/BlogCategory');
 
 // @desc    Get published blog posts
 // @route   GET /api/v1/blog/posts
+// A slug the admin did not type is derived from the English title (or made
+// unique with a short suffix) so creating content never fails on a hidden field.
+function makeSlug(text) {
+  const base = String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return `${base || 'item'}-${Date.now().toString(36).slice(-5)}`;
+}
+// One language is enough to start with; the other falls back to it.
+function bothLanguages(value) {
+  if (typeof value === 'string') return { en: value, ar: value };
+  const v = value || {};
+  return { ...v, en: v.en || v.ar, ar: v.ar || v.en };
+}
+
 // @access  Public
 exports.getPosts = async (req, res, next) => {
   try {
@@ -91,11 +108,12 @@ exports.getCategories = async (req, res, next) => {
 // @access  Admin
 exports.createPost = async (req, res, next) => {
   try {
-    const { title, slug, excerpt, content, coverImage, category, tags, isPublished } = req.body;
-
-    if (!title?.en || !title?.ar || !slug) {
-      return res.status(400).json({ success: false, message: 'Title (en + ar) and slug are required' });
+    const { excerpt, content, coverImage, category, tags, isPublished } = req.body;
+    const title = bothLanguages(req.body.title);
+    if (!title.en || !title.ar) {
+      return res.status(400).json({ success: false, message: 'A title is required' });
     }
+    const slug = req.body.slug || makeSlug(req.body.title && req.body.title.en ? req.body.title.en : '');
 
     const existing = await BlogPost.findOne({ slug });
     if (existing) {
@@ -187,11 +205,11 @@ exports.deletePost = async (req, res, next) => {
 // @access  Admin
 exports.createCategory = async (req, res, next) => {
   try {
-    const { name, slug } = req.body;
-
-    if (!name?.en || !name?.ar || !slug) {
-      return res.status(400).json({ success: false, message: 'Name (en + ar) and slug are required' });
+    const name = bothLanguages(req.body.name);
+    if (!name.en || !name.ar) {
+      return res.status(400).json({ success: false, message: 'A name is required' });
     }
+    const slug = req.body.slug || makeSlug(req.body.name && req.body.name.en ? req.body.name.en : '');
 
     const existing = await BlogCategory.findOne({ slug });
     if (existing) {

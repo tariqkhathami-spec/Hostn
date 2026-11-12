@@ -80,10 +80,12 @@ exports.getPayouts = async (req, res) => {
 
     // Booking number search — find bookings matching the number, then filter payouts
     if (bookingNumber) {
-      const matchingBookings = await Booking.find({
-        _id: { $regex: bookingNumber, $options: 'i' },
-      }).select('_id');
-      const bookingIds = matchingBookings.map((b) => b._id);
+      // A booking number is the tail of its id (what the apps and invoices
+      // show). An ObjectId cannot be matched with a regex, so compare text.
+      const needle = String(bookingNumber).trim().toLowerCase().replace(/^#/, '');
+      const hostPropertyIds = await require('../models/Property').find({ host: req.user._id }).distinct('_id');
+      const candidates = await Booking.find({ property: { $in: hostPropertyIds } }).select('_id').lean();
+      const bookingIds = candidates.filter((b) => String(b._id).toLowerCase().includes(needle)).map((b) => b._id);
       filter.bookings = { $in: bookingIds };
     }
 

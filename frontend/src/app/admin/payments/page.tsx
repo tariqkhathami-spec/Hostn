@@ -41,7 +41,7 @@ export default function AdminPaymentsPage() {
       const res = await adminApi.getPayments({ page });
       const data = res.data;
       setPayments(data.data || data.payments || []);
-      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 10) || 1);
+      setTotalPages(data.pagination?.pages || data.totalPages || 1);
     } catch {
       toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0627\u062a' : 'Failed to load payments');
     } finally {
@@ -70,8 +70,8 @@ export default function AdminPaymentsPage() {
   };
 
   const statusLabels: Record<string, string> = isAr
-    ? { paid: '\u0645\u062f\u0641\u0648\u0639', pending: '\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631', refunded: '\u0645\u0633\u062a\u0631\u062f', failed: '\u0641\u0627\u0634\u0644' }
-    : { paid: 'Paid', pending: 'Pending', refunded: 'Refunded', failed: 'Failed' };
+    ? { completed: 'مدفوع', paid: '\u0645\u062f\u0641\u0648\u0639', pending: '\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631', refunded: '\u0645\u0633\u062a\u0631\u062f', failed: '\u0641\u0627\u0634\u0644' }
+    : { completed: 'Paid', paid: 'Paid', pending: 'Pending', refunded: 'Refunded', failed: 'Failed' };
 
   return (
     <div>
@@ -127,7 +127,7 @@ export default function AdminPaymentsPage() {
                       {new Date(p.createdAt).toLocaleDateString(isAr ? 'ar-u-nu-latn' : 'en-US')}
                     </td>
                     <td className="px-4 py-3">
-                      {p.status === 'paid' && (
+                      {(p.status === 'completed' || p.status === 'paid') && (
                         <button
                           onClick={() => refund(p._id)}
                           disabled={refundingId === p._id}

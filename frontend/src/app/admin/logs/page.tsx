@@ -10,6 +10,8 @@ import { usePageTitle } from '@/lib/usePageTitle';
 interface LogItem {
   _id: string;
   user?: { name: string; email: string };
+  actor?: { name?: string };
+  actorRole?: string;
   userName?: string;
   action: string;
   details?: string;
@@ -84,7 +86,7 @@ export default function AdminLogsPage() {
       const res = await adminApi.getLogs({ page });
       const data = res.data;
       setLogs(data.data || data.logs || []);
-      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / 20) || 1);
+      setTotalPages(data.pagination?.pages || data.totalPages || 1);
     } catch {
       toast.error(isAr ? '\u0641\u0634\u0644 \u0641\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0633\u062c\u0644\u0627\u062a' : 'Failed to load logs');
     } finally {
@@ -138,7 +140,12 @@ export default function AdminLogsPage() {
                       })}
                     </td>
                     <td className="px-4 py-3 text-gray-900">
-                      {log.user?.name || log.userName || '-'}
+                      {log.actor?.name || log.user?.name || log.userName || '-'}
+                      {log.actorRole && (
+                        <span className="ms-2 text-xs text-gray-400">
+                          {({ guest: isAr ? 'ضيف' : 'Guest', host: isAr ? 'مضيف' : 'Host', admin: isAr ? 'مشرف' : 'Admin' } as Record<string, string>)[log.actorRole] || log.actorRole}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700">
