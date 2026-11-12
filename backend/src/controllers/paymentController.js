@@ -241,8 +241,8 @@ exports.verifyPayment = async (req, res, next) => {
             user: property.host,
             userType: 'Host',
             type: 'payment_success',
-            title: 'Payment Received',
-            message: `Payment of ${payment.amount} SAR received for booking at ${property.title}`,
+            title: 'تم استلام دفعة',
+            message: `استلمنا ${payment.amount} ر.س عن حجز في ${property.titleAr || property.title}`,
             data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id },
           });
         }
@@ -252,8 +252,8 @@ exports.verifyPayment = async (req, res, next) => {
           user: req.user._id,
           userType: 'Guest',
           type: 'payment_success',
-          title: 'Payment Successful',
-          message: `Your payment of ${payment.amount} SAR has been confirmed`,
+          title: 'تم الدفع بنجاح',
+          message: `تم تأكيد دفعتك بقيمة ${payment.amount} ر.س`,
           data: { bookingId: booking._id, paymentId: payment._id },
         });
       }
@@ -281,8 +281,8 @@ exports.verifyPayment = async (req, res, next) => {
         user: req.user._id,
         userType: 'Guest',
         type: 'payment_failed',
-        title: 'Payment Failed',
-        message: `Your payment of ${payment.amount} SAR was declined. Please try again.`,
+        title: 'لم تكتمل عملية الدفع',
+        message: `تعذّر خصم ${payment.amount} ر.س. حاول مرة أخرى أو استخدم بطاقة أخرى.`,
         data: { bookingId: payment.booking, paymentId: payment._id },
       });
 
@@ -428,16 +428,16 @@ exports.simulatePayment = async (req, res, next) => {
             user: property.host,
             userType: 'Host',
             type: 'payment_success',
-            title: 'Payment Received (simulated)',
-            message: `Simulated payment of ${payment.amount} SAR received for booking at ${property.title}`,
+            title: 'تم استلام دفعة',
+            message: `استلمنا ${payment.amount} ر.س عن حجز في ${property.titleAr || property.title} (تشغيل تجريبي)`,
             data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id, simulated: true },
           });
           await Notification.createNotification({
             user: req.user._id,
             userType: 'Guest',
             type: 'payment_success',
-            title: 'Payment Successful (simulated)',
-            message: `Your simulated payment of ${payment.amount} SAR has been recorded`,
+            title: 'تم تسجيل الدفع',
+            message: `سُجّلت دفعتك بقيمة ${payment.amount} ر.س (تشغيل تجريبي — لم يُخصم أي مبلغ)`,
             data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
           });
         } else if (spec.paymentStatus === 'failed' || spec.paymentStatus === 'cancelled') {
@@ -445,8 +445,8 @@ exports.simulatePayment = async (req, res, next) => {
             user: req.user._id,
             userType: 'Guest',
             type: 'payment_failed',
-            title: 'Payment Failed (simulated)',
-            message: `Simulated payment failure — ${spec.failureReason}`,
+            title: 'لم تكتمل عملية الدفع',
+            message: 'تعذّر إتمام الدفع. حاول مرة أخرى.',
             data: { bookingId: booking._id, paymentId: payment._id, simulated: true },
           });
         }
@@ -759,8 +759,8 @@ exports.refundPayment = async (req, res, next) => {
       user: payment.user,
       userType: 'Guest',
       type: 'payment_success', // reuse type, message clarifies it's a refund
-      title: 'Payment Refunded',
-      message: `Your payment of ${payment.amount} SAR has been refunded`,
+      title: 'تم استرداد المبلغ',
+      message: `تم استرداد ${payment.amount} ر.س إلى وسيلة الدفع الأصلية`,
       data: { bookingId: payment.booking, paymentId: payment._id },
     });
 

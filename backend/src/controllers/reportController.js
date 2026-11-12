@@ -252,8 +252,8 @@ exports.takeAction = async (req, res) => {
           user: report.targetId,
           userType: type,
           type: 'system',
-          title: 'Account Warning',
-          message: 'Your account has received a warning due to reported behavior. Please review our community guidelines.',
+          title: 'تنبيه على حسابك',
+          message: 'وصلنا بلاغ عن سلوك مخالف في حسابك. نرجو مراجعة شروط الاستخدام.',
         });
       }
     }
@@ -267,8 +267,8 @@ exports.takeAction = async (req, res) => {
           user: report.targetId,
           userType: type,
           type: 'system',
-          title: 'Account Suspended',
-          message: 'Your account has been suspended due to policy violations.',
+          title: 'تم إيقاف حسابك',
+          message: 'أُوقف حسابك بسبب مخالفة شروط الاستخدام. للاستفسار تواصل مع الدعم.',
         });
         await ActivityLog.create({
           actor: req.user._id,
@@ -291,8 +291,8 @@ exports.takeAction = async (req, res) => {
           user: property.host,
           userType: 'Host',
           type: 'listing_rejected',
-          title: 'Listing Removed',
-          message: `Your listing has been removed due to policy violations.`,
+          title: 'تمت إزالة عقارك',
+          message: 'أُزيل عقارك من العرض بسبب مخالفة شروط الاستخدام. للاستفسار تواصل مع الدعم.',
           data: { propertyId: report.targetId },
         });
       }
@@ -326,8 +326,8 @@ exports.takeAction = async (req, res) => {
       user: report.reporter,
       userType: report.reporterType,
       type: 'system',
-      title: 'Report Updated',
-      message: `Your report has been reviewed. Status: ${report.status}`,
+      title: 'تمت مراجعة بلاغك',
+      message: 'راجع فريقنا بلاغك واتخذ الإجراء المناسب. شكراً لمساعدتك.',
     });
 
     await report.populate('reviewedBy', 'name avatar');
