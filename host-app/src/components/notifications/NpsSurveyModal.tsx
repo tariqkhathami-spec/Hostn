@@ -84,12 +84,12 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
 
                 {/* Title */}
                 <Text style={styles.title}>
-                  {'قيّم تجربتك مع منصة حسّن'}
+                  {'قيّم تجربتك مع منصة هوستن'}
                 </Text>
 
                 {/* Question 1 */}
                 <Text style={styles.question}>
-                  {'ما مدى احتمالية أن توصي بمنصة حسّن لمضيف آخر؟'}
+                  {'ما مدى احتمالية أن توصي بمنصة هوستن لمضيف آخر؟'}
                 </Text>
 
                 {/* Rating Scale */}
@@ -131,7 +131,7 @@ export default function NpsSurveyModal({ visible, onDismiss }: NpsSurveyModalPro
 
                 {/* Question 2 */}
                 <Text style={styles.question}>
-                  {'ما الشيء الذي سيدفعك لمنح منصة حسّن درجة أعلى؟'}
+                  {'ما الشيء الذي سيدفعك لمنح منصة هوستن درجة أعلى؟'}
                 </Text>
 
                 {/* Comment Input */}

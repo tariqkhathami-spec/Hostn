@@ -113,10 +113,10 @@ export default function OtpVerifyScreen() {
 
       <View style={styles.content}>
         <Text style={styles.title}>{t('auth.otp')}</Text>
-        <Text style={styles.subtitle}>
-          تم إرسال رمز التحقق إلى{'\n'}
-          <Text style={styles.phoneHighlight}>{`\u2066+966${phone}\u2069`}</Text>
-        </Text>
+        {/* Two separate lines: nested inside one RTL paragraph, the LTR number
+            was pushed to the right edge instead of being centred. */}
+        <Text style={styles.subtitleLine}>تم إرسال رمز التحقق إلى</Text>
+        <Text style={styles.phoneHighlight}>{`+966 ${phone}`}</Text>
 
         <View style={styles.otpContainer}>
           <TextInput
@@ -146,7 +146,7 @@ export default function OtpVerifyScreen() {
         <View style={styles.resendRow}>
           {countdown > 0 ? (
             <Text style={styles.countdown}>
-              {t('auth.resend')} ({countdown}s)
+              {t('auth.resend')} ({countdown} ث)
             </Text>
           ) : (
             <View style={styles.resendButtons}>
@@ -202,9 +202,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xxl,
     lineHeight: 26,
   },
+  subtitleLine: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 26,
+  },
   phoneHighlight: {
     ...Typography.bodyBold,
     color: Colors.primary,
+    textAlign: 'center',
+    writingDirection: 'ltr',
+    lineHeight: 26,
+    marginBottom: Spacing.xxl,
   },
   otpContainer: {
     marginBottom: Spacing.xl,

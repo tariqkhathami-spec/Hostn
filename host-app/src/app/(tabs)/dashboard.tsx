@@ -41,8 +41,12 @@ export default function DashboardScreen() {
   React.useEffect(() => {
     if (npsQuery.data?.data?.shouldShow) {
       setShowNps(true);
+      // The server has already recorded this prompt and will answer "false"
+      // from now on. Clear the cached "true" too, otherwise the survey opens
+      // again every time the dashboard is mounted (e.g. after signing in).
+      queryClient.setQueryData(['nps', 'shouldShow'], { success: true, data: { shouldShow: false } });
     }
-  }, [npsQuery.data]);
+  }, [npsQuery.data, queryClient]);
 
   // --- Stats overview ---
   const statsQuery = useQuery({

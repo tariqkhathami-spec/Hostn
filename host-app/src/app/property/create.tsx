@@ -411,7 +411,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   typeCard: {
-    width: '30%',
+    // Three per row filling the width: (100% - 2 gaps) / 3.
+    width: '31.5%',
     aspectRatio: 1.2,
     borderWidth: 1,
     borderColor: Colors.border,
