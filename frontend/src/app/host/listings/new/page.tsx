@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { propertiesApi } from '@/lib/api';
 import { CITIES, DISTRICTS } from '@/lib/constants';
+import { normalizeCity } from '@/lib/cities';
+import { apiErrorText } from '@/lib/apiError';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -77,10 +79,13 @@ export default function NewListingPage() {
   });
 
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | undefined>();
+  // True when the host types a district that is not in our list for the city.
+  const [customDistrict, setCustomDistrict] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'city') {
+      setCustomDistrict(false);
       setForm({ ...form, city: value, district: '' });
     } else {
       setForm({ ...form, [name]: value });
@@ -88,18 +93,21 @@ export default function NewListingPage() {
   };
 
   const handleAddressResolved = (addr: { city: string; district: string; address: string }) => {
+    // The map only fills what the host left empty, and only with a city
+    // from our own list — a free-form name from the map service would be
+    // saved but never found by search.
+    const mappedCity = normalizeCity(addr.city);
     setForm(prev => ({
       ...prev,
-      ...(addr.address && { address: addr.address }),
-      ...(addr.city && !prev.city && { city: addr.city }),
-      ...(addr.district && !prev.district && { district: addr.district }),
+      ...(addr.address && !prev.address && { address: addr.address }),
+      ...(mappedCity && !prev.city && { city: mappedCity }),
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const missing: string[] = [];
-    if (!form.title) missing.push(isAr ? 'الاسم' : 'Name');
+    if (!form.titleAr.trim() && !form.title.trim()) missing.push(isAr ? 'اسم العقار' : 'Property name');
     if (!form.type) missing.push(isAr ? 'نوع العقار' : 'Property Type');
     if (!form.city) missing.push(isAr ? 'المدينة' : 'City');
     if (missing.length > 0) {
@@ -112,8 +120,8 @@ export default function NewListingPage() {
     setSubmitting(true);
     try {
       const res = await propertiesApi.create({
-        title: form.title,
-        ...(form.titleAr && { titleAr: form.titleAr }),
+        title: form.title.trim() || form.titleAr.trim(),
+        titleAr: form.titleAr.trim() || form.title.trim(),
         type: form.type,
         ...(form.direction && { direction: form.direction }),
         location: {
@@ -127,15 +135,7 @@ export default function NewListingPage() {
       const propertyId = res.data?.data?._id || res.data?._id;
       router.push(propertyId ? `/listings/${propertyId}/units` : '/listings');
     } catch (err: unknown) {
-      const errData = (err as { response?: { data?: { message?: string; errors?: Record<string, { message: string }> } } })?.response?.data;
-      if (errData?.errors) {
-        const firstError = Object.values(errData.errors)[0]?.message;
-        toast.error(firstError || t.error[lang]);
-      } else if (errData?.message) {
-        toast.error(errData.message);
-      } else {
-        toast.error(t.error[lang]);
-      }
+      toast.error(apiErrorText(err, lang, t.error[lang]));
     } finally {
       setSubmitting(false);
     }
@@ -158,14 +158,16 @@ export default function NewListingPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t.nameEn[lang]} *</label>
-              <input name="title" value={form.title} onChange={handleChange} required className={inputClass}
-                placeholder="e.g. Sunset Beach Resort" dir="ltr" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t.nameAr[lang]} *</label>
+              <input name="titleAr" value={form.titleAr} onChange={handleChange} className={inputClass}
+                placeholder="مثال: استراحة الواحة" dir="rtl" maxLength={200} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t.nameAr[lang]}</label>
-              <input name="titleAr" value={form.titleAr} onChange={handleChange} className={inputClass}
-                placeholder="مثال: منتجع شاطئ الغروب" dir="rtl" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t.nameEn[lang]} <span className="text-gray-400 font-normal">({isAr ? 'اختياري' : 'optional'})</span>
+              </label>
+              <input name="title" value={form.title} onChange={handleChange} className={inputClass}
+                placeholder="e.g. Al Waha Rest House" dir="ltr" maxLength={200} />
             </div>
           </div>
 
@@ -207,17 +209,30 @@ export default function NewListingPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t.district[lang]}</label>
-              {form.city && DISTRICTS[form.city]?.length > 0 ? (
-                <select name="district" value={form.district} onChange={handleChange} className={inputClass}>
+              {form.city && DISTRICTS[form.city]?.length > 0 && !customDistrict ? (
+                <select
+                  name="district"
+                  value={form.district}
+                  onChange={(e) => {
+                    if (e.target.value === '__other__') {
+                      setCustomDistrict(true);
+                      setForm({ ...form, district: '' });
+                    } else {
+                      handleChange(e);
+                    }
+                  }}
+                  className={inputClass}
+                >
                   <option value="">{isAr ? 'اختر الحي' : 'Select district'}</option>
                   {DISTRICTS[form.city].map((d) => (
                     <option key={d.value} value={d.value}>{isAr ? d.ar : d.en}</option>
                   ))}
+                  <option value="__other__">{isAr ? 'حي آخر (اكتبه)' : 'Another district (type it)'}</option>
                 </select>
               ) : (
                 <input name="district" value={form.district} onChange={handleChange} className={inputClass}
-                  placeholder={form.city ? (isAr ? 'أدخل اسم الحي' : 'Enter district name') : (isAr ? 'اختر المدينة أولاً' : 'Select a city first')}
-                  disabled={!form.city} />
+                  placeholder={form.city ? (isAr ? 'اكتب اسم الحي أو المنطقة' : 'Type the district or area') : (isAr ? 'اختر المدينة أولاً' : 'Select a city first')}
+                  disabled={!form.city} maxLength={100} />
               )}
             </div>
           </div>

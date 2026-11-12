@@ -29,6 +29,7 @@ export default function EditUnitPage() {
   usePageTitle(isAr ? 'تعديل الوحدة' : 'Edit Unit');
 
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [formData, setFormData] = useState<UnitFormData>(defaultFormData);
   const [images, setImages] = useState<{ url: string; isPrimary: boolean }[]>([]);
   const [bathroomAmenities, setBathroomAmenities] = useState<string[]>([]);
@@ -106,7 +107,8 @@ export default function EditUnitPage() {
         }))
       );
     } catch {
-      toast.error(t.loadError[lang]);
+      // Never show an empty form here: saving it would overwrite the real unit.
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -128,6 +130,23 @@ export default function EditUnitPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="max-w-md mx-auto mt-16 text-center bg-white rounded-xl border border-gray-200 p-8">
+        <p className="text-gray-900 font-semibold mb-2">{t.loadError[lang]}</p>
+        <p className="text-sm text-gray-500 mb-5">
+          {lang === 'ar' ? 'تعذّر تحميل بيانات الوحدة. تأكد من الاتصال ثم حاول مرة أخرى.' : 'The unit could not be loaded. Check your connection and try again.'}
+        </p>
+        <button
+          onClick={() => { setLoadFailed(false); setLoading(true); loadUnit(); }}
+          className="bg-primary-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-800"
+        >
+          {lang === 'ar' ? 'إعادة المحاولة' : 'Try again'}
+        </button>
       </div>
     );
   }

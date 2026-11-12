@@ -231,6 +231,20 @@ export default function UnitsListPage() {
               <div className="p-4">
                 <h3 className="font-semibold text-gray-900 mb-2 truncate">{unitName(unit)}</h3>
 
+                {/* What the unit still needs before guests can see it */}
+                {((unit as { publishIssues?: string[] }).publishIssues || []).length > 0 && (
+                  <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 leading-relaxed">
+                    <span className="font-semibold">{isAr ? 'غير مكتملة ولا تظهر للضيوف. ينقصها: ' : 'Incomplete — hidden from guests. Missing: '}</span>
+                    {((unit as { publishIssues?: string[] }).publishIssues || [])
+                      .map((code) => ({
+                        missing_name: isAr ? 'الاسم' : 'name',
+                        missing_price: isAr ? 'السعر' : 'price',
+                        missing_photos: isAr ? 'الصور' : 'photos',
+                      } as Record<string, string>)[code] || code)
+                      .join(isAr ? '، ' : ', ')}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
                   {(unit.capacity?.maxGuests ?? 0) > 0 && (
                     <span className="flex items-center gap-1">
@@ -260,8 +274,8 @@ export default function UnitsListPage() {
                 )}
 
                 {/* Actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-2 pt-3 border-t border-gray-100">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/listings/${propertyId}/units/${unit._id}/edit`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"

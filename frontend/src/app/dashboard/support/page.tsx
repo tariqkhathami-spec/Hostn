@@ -57,7 +57,7 @@ export default function SupportPage() {
   const [form, setForm] = useState({ subject: '', category: 'technical' as TicketCategory, priority: 'medium' as TicketPriority, message: '' });
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push('/auth/login?redirect=/dashboard/support');
+    if (!isLoading && !isAuthenticated) router.push('/auth?redirect=/dashboard/support');
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {

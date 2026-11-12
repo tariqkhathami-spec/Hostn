@@ -54,7 +54,14 @@ export function middleware(request: NextRequest) {
   if (subdomain === 'main') {
     const isHostDashboard = pathname === '/host' || pathname.startsWith('/host/');
     const isAdminDashboard = pathname === '/admin' || pathname.startsWith('/admin/');
-    if (isHostDashboard || isAdminDashboard) {
+    if (isHostDashboard) {
+      // Send hosts to their portal instead of a bare "Not Found".
+      const url = request.nextUrl.clone();
+      url.host = `business.${host.replace(/^www\./, '')}`;
+      url.pathname = pathname.replace(/^\/host/, '') || '/';
+      return NextResponse.redirect(url, 307);
+    }
+    if (isAdminDashboard) {
       return new NextResponse('Not Found', { status: 404 });
     }
   }

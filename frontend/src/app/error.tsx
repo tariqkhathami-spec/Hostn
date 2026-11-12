@@ -27,16 +27,16 @@ export default function Error({ error, reset }: ErrorPageProps) {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return (
-    <html>
+    <html lang="ar" dir="rtl">
       <body>
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', backgroundColor: '#f5f5f5', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
           <div style={{ maxWidth: '600px', textAlign: 'center', backgroundColor: 'white', padding: '40px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
             <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '16px', color: '#1e1e2e' }}>
-              Something went wrong
+              حدث خطأ غير متوقع
             </h1>
 
             <p style={{ fontSize: '16px', color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
-              An unexpected error occurred. Our team has been notified and is working to fix the issue. Please try again later.
+              نعتذر عن ذلك. حاول مرة أخرى، وإذا استمرت المشكلة تواصل معنا.
             </p>
 
             {isDevelopment && error?.message && (
@@ -58,8 +58,8 @@ export default function Error({ error, reset }: ErrorPageProps) {
                 onClick={() => reset()}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: '#f08c0a',
-                  color: '#1e1e2e',
+                  backgroundColor: '#14644b',
+                  color: '#ffffff',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '16px',
@@ -68,13 +68,13 @@ export default function Error({ error, reset }: ErrorPageProps) {
                   transition: 'background-color 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#c9a227';
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0f4133';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f08c0a';
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#14644b';
                 }}
               >
-                Try again
+                إعادة المحاولة
               </button>
 
               <Link href="/">
@@ -97,15 +97,15 @@ export default function Error({ error, reset }: ErrorPageProps) {
                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f5f5f5';
                   }}
                 >
-                  Go home
+                  الصفحة الرئيسية
                 </button>
               </Link>
             </div>
 
             <p style={{ fontSize: '12px', color: '#999', marginTop: '24px' }}>
-              If the problem persists, please contact{' '}
-              <a href="mailto:support@hostn.com" style={{ color: '#f08c0a', textDecoration: 'none' }}>
-                support@hostn.com
+              للمساعدة:{' '}
+              <a href="mailto:hello@hostn.co" style={{ color: '#14644b', textDecoration: 'none' }}>
+                hello@hostn.co
               </a>
             </p>
           </div>

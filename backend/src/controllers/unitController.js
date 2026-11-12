@@ -1,5 +1,6 @@
 const Unit = require('../models/Unit');
 const Property = require('../models/Property');
+const { unitPublishIssues, requirePublishable } = require('../utils/unitPublish');
 
 // SECURITY: the licence holder's national ID, commercial register and the
 // uploaded licence document are private to the host and admins. Public unit
@@ -115,6 +116,8 @@ exports.searchUnits = async (req, res, next) => {
       isDeleted: { $ne: true },
       property: { $in: matchingPropertyIds },
     };
+    // Incomplete units (no name, no photos or a zero price) stay private.
+    requirePublishable(unitFilter);
     if (guests) unitFilter['capacity.maxGuests'] = { $gte: Number(guests) };
     if (bedrooms) unitFilter['bedrooms.count'] = { $gte: Number(bedrooms) };
     if (rating) unitFilter['ratings.average'] = { $gte: Number(rating) };
@@ -347,7 +350,7 @@ exports.getUnits = async (req, res, next) => {
 
     const { page = 1, limit = 20 } = req.query;
 
-    const query = { property: propertyId, isActive: true, isDeleted: { $ne: true } };
+    const query = requirePublishable({ property: propertyId, isActive: true, isDeleted: { $ne: true } });
 
     const safePage = Math.max(1, Number(page) || 1);
     const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 50);
@@ -402,9 +405,12 @@ exports.getMyPropertyUnits = async (req, res, next) => {
       Unit.countDocuments(query),
     ]);
 
+    // Tell the dashboard what each unit still needs before guests can see it.
+    const withIssues = units.map((u) => ({ ...u.toObject({ virtuals: true }), publishIssues: unitPublishIssues(u) }));
+
     res.json({
       success: true,
-      data: units,
+      data: withIssues,
       pagination: {
         total,
         page: safePage,
@@ -428,16 +434,28 @@ exports.getUnit = async (req, res, next) => {
       populate: { path: 'host', select: 'name avatar isVerified _id createdAt' },
     });
 
-    if (!unit || !unit.isActive || unit.isDeleted) {
+    if (!unit || unit.isDeleted) {
       return res.status(404).json({ success: false, message: 'Unit not found' });
     }
 
-    // If the parent property has been soft-deleted, hide the unit from the public view.
+    // If the parent property has been soft-deleted, hide the unit from everyone.
     if (unit.property && unit.property.isDeleted) {
       return res.status(404).json({ success: false, message: 'Unit not found' });
     }
 
-    res.json({ success: true, data: unit });
+    // The owner (and admins) can open their own unit while it is unlisted or
+    // still incomplete; everyone else only sees finished, active units.
+    const ownerId = unit.property && unit.property.host && (unit.property.host._id || unit.property.host);
+    const isOwner = req.user && ownerId && String(ownerId) === String(req.user._id);
+    const isAdmin = req.user && req.user.role === 'admin';
+    const issues = unitPublishIssues(unit);
+    if (!isOwner && !isAdmin && (!unit.isActive || issues.length > 0)) {
+      return res.status(404).json({ success: false, message: 'Unit not found' });
+    }
+
+    const data = unit.toObject({ virtuals: true });
+    if (isOwner || isAdmin) data.publishIssues = issues;
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
@@ -462,6 +480,14 @@ exports.updateUnit = async (req, res, next) => {
 
     if (Object.keys(sanitizedBody).length === 0) {
       return res.status(400).json({ success: false, message: 'No valid fields to update' });
+    }
+
+    // Merge pricing instead of replacing it: the details form only knows the
+    // day prices, and replacing the object used to wipe the discount switches
+    // (weekly/monthly discounts, stackable flags) set on the pricing screen.
+    if (sanitizedBody.pricing && typeof sanitizedBody.pricing === 'object') {
+      const current = auth.unit.pricing && auth.unit.pricing.toObject ? auth.unit.pricing.toObject() : (auth.unit.pricing || {});
+      sanitizedBody.pricing = { ...current, ...sanitizedBody.pricing };
     }
 
     const unit = await Unit.findByIdAndUpdate(req.params.id, sanitizedBody, {
@@ -583,6 +609,12 @@ exports.duplicateUnit = async (req, res, next) => {
     // Append "(Copy)" to names so duplicates are easy to spot
     if (doc.nameEn) doc.nameEn = `${doc.nameEn} (Copy)`;
     if (doc.nameAr) doc.nameAr = `${doc.nameAr} (نسخة)`;
+    // A copy is a different unit: it needs its own tourism permit review,
+    // and starts with no ratings or blocked dates of the original.
+    delete doc.tourismLicense;
+    delete doc.ratings;
+    delete doc.isDeleted;
+    delete doc.deletedAt;
 
     // Generate fresh _id values for pool sub-documents
     if (doc.pools && Array.isArray(doc.pools)) {
@@ -724,6 +756,16 @@ exports.toggleUnitStatus = async (req, res, next) => {
 
     auth.unit.isActive = !auth.unit.isActive;
     await auth.unit.save();
+
+    // Switching a unit back on brings its property back too (unless an admin
+    // rejected the property) — otherwise the unit says "active" while the
+    // whole listing stays hidden.
+    if (auth.unit.isActive) {
+      await Property.updateOne(
+        { _id: auth.unit.property, isActive: false, isApproved: { $ne: false }, isDeleted: { $ne: true } },
+        { isActive: true }
+      );
+    }
 
     // If deactivated and was last active unit, deactivate the property too
     if (!auth.unit.isActive) {

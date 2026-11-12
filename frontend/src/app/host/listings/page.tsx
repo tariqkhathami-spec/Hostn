@@ -94,6 +94,10 @@ const PROPERTY_TYPES: Record<string, Record<string, string>> = {
   farm: { en: 'Farm', ar: '\u0645\u0632\u0631\u0639\u0629' },
   camp: { en: 'Camp', ar: '\u0645\u062e\u064a\u0645' },
   hotel: { en: 'Hotel', ar: '\u0641\u0646\u062f\u0642' },
+  hotel_resort: { en: 'Hotel Resort', ar: 'منتجع فندقي' },
+  rest_house: { en: 'Rest House', ar: 'استراحة' },
+  room: { en: 'Room', ar: 'غرفة' },
+  serviced_apartment: { en: 'Serviced Apartment', ar: 'شقة مفروشة' },
 };
 
 export default function HostListingsPage() {

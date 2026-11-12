@@ -15,7 +15,7 @@ const {
   getNearby,
   reverseGeocode,
 } = require('../controllers/propertyController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 const {
   createPropertyRules,
   propertySearchRules,
@@ -30,7 +30,7 @@ router.get('/stats/public', getPublicStats);
 router.get('/nearby', getNearby);
 router.get('/geocode/reverse', reverseGeocode);
 router.get('/my-properties', protect, getMyProperties);
-router.get('/:id', mongoIdParam(), getProperty);
+router.get('/:id', mongoIdParam(), optionalAuth, getProperty);
 router.get('/:id/availability', mongoIdParam(), checkAvailability);
 router.post('/', protect, authorize('host', 'admin'), createPropertyRules, createProperty);
 router.put('/:id', protect, mongoIdParam(), updateProperty);

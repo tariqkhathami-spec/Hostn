@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { cityLabel } from '@/lib/cities';
 import { adminApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Search, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Layers, Trash2 } from 'lucide-react';
@@ -107,10 +108,10 @@ export default function AdminPropertiesPage() {
       const raw: PropertyRaw[] = data.data || data.properties || [];
       setProperties(raw.map((p) => ({
         _id: p._id,
-        title: p.title,
+        title: (isAr ? p.titleAr || p.title : p.title || p.titleAr) || '-',
         host: p.host,
         hostName: p.hostName,
-        city: p.location?.city || p.city || '-',
+        city: cityLabel(p.location?.city || p.city, isAr ? 'ar' : 'en') || '-',
         status: deriveStatus(p),
         createdAt: p.createdAt,
       })));

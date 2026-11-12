@@ -3,6 +3,7 @@ const Property = require('../models/Property');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const Unit = require('../models/Unit');
+const { unitPublishIssues } = require('../utils/unitPublish');
 
 // @desc    Get host dashboard stats
 // @route   GET /api/host/stats
@@ -529,6 +530,16 @@ exports.togglePropertyStatus = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // A property an admin rejected stays off until an admin approves it again.
+    if (!property.isActive && property.isApproved === false) {
+      return res.status(403).json({
+        success: false,
+        code: 'PROPERTY_REJECTED',
+        message: 'This property was rejected by the admin team and cannot be listed until it is approved.',
+        moderationNote: property.moderationNote || null,
+      });
+    }
+
     // If trying to activate, check if property has units but none are active
     if (!property.isActive) {
       const totalUnits = await Unit.countDocuments({ property: property._id });
@@ -561,33 +572,35 @@ exports.getHostProperties = async (req, res, next) => {
   try {
     const properties = await Property.find({ host: req.user._id, isDeleted: { $ne: true } }).sort('title');
 
-    // Real per-unit values (area, deposit, day prices) come from the Unit
-    // documents. This list used to invent them (area 120, deposit 500,
-    // weekend prices as a multiple of the weekday price).
+    // Every row under a property is a real Unit document with its own id.
+    // (This list used to hand out the PROPERTY id as the unit id, so the
+    // app's edit / pricing screens could not load anything, and units a
+    // host added never showed up.)
     const unitDocs = await Unit.find({
       property: { $in: properties.map((p) => p._id) },
       isDeleted: { $ne: true },
-    }).select('property area capacity pricing insuranceOnArrival insuranceAmount depositPercent isActive').sort('createdAt').lean();
-    const firstUnitByProperty = {};
+    }).sort('createdAt').lean();
+    const unitsByProperty = {};
     unitDocs.forEach((u) => {
       const key = String(u.property);
-      if (!firstUnitByProperty[key]) firstUnitByProperty[key] = u;
+      (unitsByProperty[key] = unitsByProperty[key] || []).push(u);
     });
 
-    // Group properties by their tag (e.g., "شاليهات ميفارا") to form property groups
+    const urls = (images) => (images || []).map((img) => (typeof img === 'string' ? img : img && img.url)).filter(Boolean);
+
+    // Group properties by their tag (e.g. a resort with several buildings)
     const groups = {};
     properties.forEach((p) => {
-      const unit = firstUnitByProperty[String(p._id)] || null;
-      const up = (unit && unit.pricing) || {};
-      const dayPrice = (day) => (up[day] > 0 ? up[day] : p.pricing.perNight);
-      const groupTag = (p.tags && p.tags[0]) || p.title;
+      const groupTag = (p.tags && p.tags[0]) || p.titleAr || p.title;
       if (!groups[groupTag]) {
         groups[groupTag] = {
-          id: p._id, // Use first property's ID as group ID
+          id: p._id, // first property's id doubles as the group id
           name: groupTag,
           nameAr: groupTag,
           classification: p.type,
           status: p.isActive ? 'listed' : 'unlisted',
+          isApproved: p.isApproved !== false,
+          moderationNote: p.moderationNote || null,
           unitCount: 0,
           units: [],
           address: {
@@ -598,32 +611,39 @@ exports.getHostProperties = async (req, res, next) => {
           },
         };
       }
-      groups[groupTag].unitCount++;
-      groups[groupTag].units.push({
-        id: p._id,
-        propertyId: groups[groupTag].id,
-        name: p.title,
-        code: (p.tags && p.tags[1] === 'mivara')
-          ? `4493${groups[groupTag].units.length + 1}`
-          : p._id.toString().slice(-5),
-        status: p.isActive ? 'listed' : 'unlisted',
-        area: unit && unit.area ? unit.area : null,
-        capacity: (unit && unit.capacity && unit.capacity.maxGuests) || p.capacity.maxGuests,
-        occupancyPercent: 0,
-        suitability: 'families_and_singles',
-        deposit: (unit && unit.depositPercent) || 0,
-        securityDeposit: unit && unit.insuranceOnArrival ? unit.insuranceAmount || 0 : 0,
-        description: p.description,
-        images: p.images.map(img => img.url),
-        photos: p.images.map(img => img.url),
-        amenities: p.amenities,
-        features: p.amenities,
-        pricing: {
-          midWeek: dayPrice('sunday'),
-          thursday: dayPrice('thursday'),
-          friday: dayPrice('friday'),
-          saturday: dayPrice('saturday'),
-        },
+      (unitsByProperty[String(p._id)] || []).forEach((unit) => {
+        const up = unit.pricing || {};
+        const unitImages = urls(unit.images);
+        const images = unitImages.length ? unitImages : urls(p.images);
+        groups[groupTag].unitCount++;
+        groups[groupTag].units.push({
+          id: unit._id,
+          propertyId: p._id,
+          name: unit.nameAr || unit.nameEn || p.titleAr || p.title,
+          nameAr: unit.nameAr || '',
+          nameEn: unit.nameEn || '',
+          code: unit._id.toString().slice(-5),
+          status: unit.isActive && p.isActive ? 'listed' : 'unlisted',
+          isActive: !!unit.isActive,
+          publishIssues: unitPublishIssues(unit),
+          area: unit.area || null,
+          capacity: (unit.capacity && unit.capacity.maxGuests) || p.capacity.maxGuests,
+          occupancyPercent: 0,
+          suitability: unit.suitability || 'both',
+          deposit: unit.depositPercent || 0,
+          securityDeposit: unit.insuranceOnArrival ? unit.insuranceAmount || 0 : 0,
+          description: unit.description || p.description,
+          images,
+          photos: images,
+          amenities: unit.amenities || [],
+          features: unit.features || [],
+          pricing: {
+            midWeek: up.sunday || 0,
+            thursday: up.thursday || 0,
+            friday: up.friday || 0,
+            saturday: up.saturday || 0,
+          },
+        });
       });
     });
 

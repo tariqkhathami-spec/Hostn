@@ -97,7 +97,7 @@ function TamaraCallbackContent() {
                   <span>tamara</span>
                   <span>{isAr ? '4 أقساط بدون رسوم تأخير' : '4 installments, no late fees'}</span>
                 </div>
-                <Button onClick={() => router.push(`/bookings`)} size="lg" className="w-full">
+                <Button onClick={() => router.push('/dashboard/bookings')} size="lg" className="w-full">
                   {isAr ? 'عرض حجوزاتي' : 'View My Bookings'}
                 </Button>
               </>
