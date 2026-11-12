@@ -741,7 +741,10 @@ exports.refundPayment = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Payment not found' });
     }
 
-    if (payment.status !== 'completed') {
+    if (payment.status === 'refunded') {
+      return res.status(400).json({ success: false, message: 'Payment already refunded' });
+    }
+    if (payment.status !== 'completed' && payment.status !== 'paid') {
       return res.status(400).json({ success: false, message: 'Only completed payments can be refunded' });
     }
 
@@ -755,7 +758,7 @@ exports.refundPayment = async (req, res, next) => {
 
     payment.status = 'refunded';
     payment.refundedAmount = payment.amount;
-    payment.refundReason = reason;
+    payment.refundReason = reason || 'Admin refund';
     payment.refundedAt = new Date();
     await payment.save();
 
@@ -774,6 +777,9 @@ exports.refundPayment = async (req, res, next) => {
 
     await ActivityLog.create({
       actor: req.user._id,
+      actorType: 'Admin',
+      actorRole: req.user.userType || req.user.role,
+      actorAdminRole: req.user.adminRole || null,
       action: 'payment_refunded',
       target: { type: 'Payment', id: payment._id },
       details: `Refunded ${payment.amount} SAR — ${reason || 'No reason given'}`,

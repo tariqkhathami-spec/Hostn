@@ -114,6 +114,9 @@ function ListingsContent() {
   // How many units match in total (the list shows up to 50 of them).
   const [totalFound, setTotalFound] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [featuredOnly, setFeaturedOnly] = useState(false);
 
   // ── Search state ──
   const [searchCity, setSearchCity] = useState('');
@@ -169,6 +172,26 @@ function ListingsContent() {
       if (saved.adults) setAdults(saved.adults);
       if (saved.children) setChildren(saved.children);
       if (saved.type) setSelectedTypes(saved.type.split(','));
+    }
+    // A link such as /search?city=Jeddah or /search?type=chalet says what the
+    // visitor just asked for, so it wins over whatever the cookie remembers.
+    const qs = new URLSearchParams(window.location.search);
+    const qCity = qs.get('city');
+    if (qCity) {
+      const found = CITIES.find((c) => c.value.toLowerCase() === qCity.toLowerCase());
+      setSearchCity(found ? found.value : qCity);
+      setCitySearch(found ? (isAr ? found.ar : found.en) : qCity);
+    }
+    const qType = qs.get('type');
+    if (qType) setSelectedTypes(qType.split(',').filter(Boolean));
+    const isDate = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const qIn = qs.get('checkIn');
+    const qOut = qs.get('checkOut');
+    if (isDate(qIn)) setCheckIn(qIn);
+    if (isDate(qOut)) setCheckOut(qOut);
+    if (qs.get('featured') === 'true') setFeaturedOnly(true);
+    if (qCity || qType) {
+      saveSearchCookies({ city: qCity || '', type: qType || '' });
     }
     setReady(true);
   }, []);
@@ -259,8 +282,11 @@ function ListingsContent() {
   };
 
   // ── Fetch ──
-  const fetchUnits = async () => {
-    setLoading(true);
+  const PAGE_SIZE = 24;
+  const fetchUnits = async (nextPage = 1) => {
+    const append = nextPage > 1;
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     try {
       const params: Record<string, string> = {};
       if (searchCity) params.city = searchCity;
@@ -276,16 +302,26 @@ function ListingsContent() {
       if (hasPool) params.pool = '1';
       if (direction) params.direction = direction;
       if (areaRange < 1500) params.maxArea = String(areaRange);
-      // Ask for the largest page the API serves; the default is only 12.
-      params.limit = '50';
+      if (featuredOnly) params.featured = 'true';
+      params.limit = String(PAGE_SIZE);
+      params.page = String(nextPage);
       const res = await unitsApi.search(params);
-      setUnits(res.data.data || []);
-      setTotalFound(res.data.pagination?.total ?? (res.data.data || []).length);
+      const rows: Unit[] = res.data.data || [];
+      setUnits((prev) => {
+        if (!append) return rows;
+        const seen = new Set(prev.map((u) => u._id));
+        return [...prev, ...rows.filter((u) => !seen.has(u._id))];
+      });
+      setPage(nextPage);
+      setTotalFound(res.data.pagination?.total ?? rows.length);
     } catch {
-      setUnits([]);
-      setTotalFound(0);
+      if (!append) {
+        setUnits([]);
+        setTotalFound(0);
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -344,11 +380,11 @@ function ListingsContent() {
     );
   };
 
-  const hasActiveFilters = !!(priceRange < 4000 || minBedrooms || minRating || hasDiscount || district || hasPool || direction || areaRange < 1500);
+  const hasActiveFilters = !!(priceRange < 4000 || minBedrooms || minRating || hasDiscount || district || hasPool || direction || areaRange < 1500 || featuredOnly);
   const clearAllFilters = () => {
     setPriceRange(4000); setMinBedrooms(''); setMinRating('');
     setHasDiscount(false); setDistrict(''); setSelectedTypes([]);
-    setHasPool(false); setDirection(''); setAreaRange(1500);
+    setHasPool(false); setDirection(''); setAreaRange(1500); setFeaturedOnly(false);
     setAutoSearch((n) => n + 1);
   };
 
@@ -794,11 +830,32 @@ function ListingsContent() {
               <p className="text-sm text-gray-400 mt-2">{isAr ? 'حاول تعديل معايير البحث' : 'Try adjusting your search criteria'}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {units.map((unit) => (
-                <UnitCard key={unit._id} unit={unit} checkIn={checkIn} checkOut={checkOut} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {units.map((unit) => (
+                  <UnitCard key={unit._id} unit={unit} checkIn={checkIn} checkOut={checkOut} />
+                ))}
+              </div>
+              {units.length < totalFound && (
+                <div className="mt-10 flex flex-col items-center gap-3">
+                  <p className="text-sm text-gray-500">
+                    {isAr
+                      ? `عرض ${units.length} من ${totalFound}`
+                      : `Showing ${units.length} of ${totalFound}`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => fetchUnits(page + 1)}
+                    disabled={loadingMore}
+                    className="px-8 py-3 rounded-xl border border-primary-600 text-primary-700 font-semibold hover:bg-primary-50 disabled:opacity-60"
+                  >
+                    {loadingMore
+                      ? (isAr ? 'جارٍ التحميل…' : 'Loading…')
+                      : (isAr ? 'عرض المزيد' : 'Show more')}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>

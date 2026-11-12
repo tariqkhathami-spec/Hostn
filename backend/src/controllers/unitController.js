@@ -87,6 +87,7 @@ exports.searchUnits = async (req, res, next) => {
       city, type, minPrice, maxPrice, guests, checkIn, checkOut,
       amenities, page = 1, limit = 12, sort = '-ratings.average',
       search, bedrooms, bathrooms, rating, discount, district, direction,
+      featured,
       pool, minArea, maxArea, suitability,
     } = req.query;
 
@@ -103,6 +104,7 @@ exports.searchUnits = async (req, res, next) => {
     // Reviews are written against the property, so a minimum rating is a
     // property filter (a unit carries no rating of its own).
     if (rating && Number(rating) > 0) propFilter['ratings.average'] = { $gte: Number(rating) };
+    if (featured === 'true') propFilter.isFeatured = true;
 
     const matchingPropertyIds = await Property.distinct('_id', propFilter);
     if (matchingPropertyIds.length === 0) {
@@ -263,7 +265,9 @@ exports.searchUnits = async (req, res, next) => {
       case 'newest':   sortStage = { createdAt: -1 };          break;
       default:         sortStage = { 'ratings.average': -1 };  break;
     }
-    pipeline.push({ $sort: sortStage });
+    // Many units share a rating or price; without a unique tie-breaker the
+    // order differs between requests and pages repeat or skip units.
+    pipeline.push({ $sort: { ...sortStage, _id: 1 } });
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: safeLimit });
 
@@ -278,7 +282,7 @@ exports.searchUnits = async (req, res, next) => {
             $project: {
               title: 1, titleAr: 1, type: 1,
               location: { city: 1, district: 1 },
-              direction: 1, ratings: 1, host: 1,
+              direction: 1, ratings: 1, host: 1, isFeatured: 1,
             },
           },
         ],
@@ -662,6 +666,24 @@ exports.updateUnitPricing = async (req, res, next) => {
 
     const { weekday, weekend, pricing, datePricing, applyWeekday, applyWeekend } = req.body;
     const unit = auth.unit;
+
+    // Prices are money: refuse anything that is not a sensible number rather
+    // than storing it (a negative or text price would make the unit bookable
+    // at a wrong total).
+    const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const badAmount = (v) => typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1000000;
+    const invalid = (message) => res.status(400).json({ success: false, message });
+    if (weekday != null && badAmount(weekday)) return invalid('سعر أيام الأسبوع غير صحيح');
+    if (weekend != null && badAmount(weekend)) return invalid('سعر نهاية الأسبوع غير صحيح');
+    if (pricing != null) {
+      if (typeof pricing !== 'object' || Array.isArray(pricing)) return invalid('بيانات الأسعار غير صحيحة');
+      for (const key of [...DAYS, 'cleaningFee']) {
+        if (pricing[key] != null && badAmount(pricing[key])) return invalid('السعر غير صحيح');
+      }
+      if (pricing.discountPercent != null && (badAmount(pricing.discountPercent) || pricing.discountPercent > 90)) {
+        return invalid('نسبة الخصم يجب أن تكون بين 0 و90');
+      }
+    }
 
     // 1. If "Apply weekday" — set Sun, Mon, Tue, Wed to the weekday price
     if (applyWeekday && weekday != null) {

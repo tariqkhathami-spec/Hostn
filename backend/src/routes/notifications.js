@@ -8,6 +8,7 @@ const {
   getUnreadCount,
   getUnreadSummary,
   registerDeviceToken,
+  removeDeviceToken,
 } = require('../controllers/notificationController');
 
 router.use(protect);
@@ -18,5 +19,6 @@ router.get('/unread-summary', getUnreadSummary);
 router.put('/read-all', markAllAsRead);
 router.put('/:id/read', markAsRead);
 router.post('/device-token', registerDeviceToken);
+router.delete('/device-token', removeDeviceToken);
 
 module.exports = router;

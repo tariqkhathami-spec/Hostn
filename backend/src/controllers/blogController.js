@@ -77,7 +77,9 @@ exports.getPost = async (req, res, next) => {
       .populate('author', 'name avatar')
       .lean();
 
-    if (!post) {
+    // A draft is visible to admins only, the same rule as the list.
+    const isAdmin = req.user && (req.user.userType === 'admin' || req.user.role === 'admin');
+    if (!post || (post.isPublished === false && !isAdmin)) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
