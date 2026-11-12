@@ -11,6 +11,7 @@ import { usePageTitle } from '@/lib/usePageTitle';
 interface PropertyRaw {
   _id: string;
   title: string;
+  titleAr?: string;
   host?: { name: string };
   hostName?: string;
   location?: { city?: string };
