@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { hostPortalUrl } from '@/lib/hostPortal';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -27,7 +28,7 @@ export default function GuestDashboardPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/auth');
     }
   }, [authLoading, isAuthenticated, router]);
 
@@ -50,7 +51,7 @@ export default function GuestDashboardPage() {
     setUpgrading(true);
     try {
       await upgradeToHost();
-      router.push('/host');
+      window.location.href = hostPortalUrl('/');
     } catch {
       setUpgrading(false);
     }

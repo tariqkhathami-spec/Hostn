@@ -34,6 +34,7 @@ router.post('/refresh', refresh);
 router.post('/logout', logout);
 router.post('/logout-all', protect, logoutAll);
 router.get('/me', protect, getMe);
+router.get('/socket-token', protect, require('../controllers/authController').getSocketToken);
 router.put('/profile', protect, updateProfileRules, updateProfile);
 router.put('/change-password', protect, changePasswordRules, changePassword);
 router.put('/upgrade-to-host', protect, upgradeToHost);

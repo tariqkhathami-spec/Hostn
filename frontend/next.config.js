@@ -10,6 +10,18 @@ const apiConnectSources = (() => {
   }
 })();
 
+// The realtime (Socket.IO) server is the API host itself; browsers connect to
+// it directly because the same-origin API proxy cannot carry WebSockets.
+const socketConnectSources = (() => {
+  const url = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://hostn-production.up.railway.app';
+  try {
+    const { origin } = new URL(url);
+    return [origin, origin.replace(/^http/, 'ws')];
+  } catch {
+    return [];
+  }
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -95,7 +107,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.moyasar.com",
               "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://api.dicebear.com https://cdn.moyasar.com https://maps.googleapis.com https://maps.gstatic.com https://*.ggpht.com https://*.amazonaws.com https://*.cloudfront.net",
-              `connect-src 'self' http://localhost:5000 ${apiConnectSources.join(' ')} https://api.moyasar.com https://*.mongodb.net https://maps.googleapis.com`.replace(/\s+/g, ' '),
+              `connect-src 'self' http://localhost:5000 http://localhost:5050 ws://localhost:5050 ${apiConnectSources.join(' ')} ${socketConnectSources.join(' ')} https://api.moyasar.com https://*.mongodb.net https://maps.googleapis.com`.replace(/\s+/g, ' '),
               "frame-src 'self' https://cdn.moyasar.com https://api.moyasar.com",
               "object-src 'none'",
               "base-uri 'self'",

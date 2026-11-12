@@ -52,7 +52,7 @@ const changePasswordRules = [
 const createPropertyRules = [
   body('title').trim().notEmpty().withMessage('Title is required').isLength({ max: 200 }).withMessage('Title too long'),
   body('description').optional().trim().isLength({ max: 5000 }).withMessage('Description too long'),
-  body('type').isIn(['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel']).withMessage('Invalid property type'),
+  body('type').isIn(['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel', 'rest_house', 'room', 'hotel_resort', 'serviced_apartment']).withMessage('Invalid property type'),
   body('location.city').trim().notEmpty().withMessage('City is required'),
   body('pricing.perNight').optional().isFloat({ min: 0 }).withMessage('Price per night must be positive'),
   body('capacity.maxGuests').optional().isInt({ min: 1 }).withMessage('Max guests must be at least 1'),
@@ -63,7 +63,7 @@ const createPropertyRules = [
 const propertySearchRules = [
   query('city').optional().trim().customSanitizer(escapeRegex),
   query('search').optional().trim().isLength({ max: 200 }).withMessage('Search too long'),
-  query('type').optional().isIn(['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel', '']),
+  query('type').optional().isIn(['chalet', 'apartment', 'villa', 'studio', 'farm', 'camp', 'hotel', 'rest_house', 'room', 'hotel_resort', 'serviced_apartment', '']),
   query('minPrice').optional().isFloat({ min: 0 }).withMessage('Min price must be positive'),
   query('maxPrice').optional().isFloat({ min: 0 }).withMessage('Max price must be positive'),
   query('guests').optional().isInt({ min: 1 }).withMessage('Guests must be at least 1'),

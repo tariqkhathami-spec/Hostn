@@ -3,24 +3,58 @@
 import { io, Socket } from 'socket.io-client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-const SOCKET_URL = API_URL.replace(/\/api\/v1\/?$/, '') || 'http://localhost:5000';
-
-let socket: Socket | null = null;
-let eventCallbacks: Map<string, Set<(data: any) => void>> = new Map();
 
 /**
- * Connect to Socket.IO server using the auth token from cookies.
- * For the web app, the token is in an HttpOnly cookie, so we also
- * accept passing it explicitly from AuthContext.
+ * Where the realtime server lives.
+ *
+ * In production the API is reached through a same-origin proxy ('/api/v1'),
+ * which cannot carry WebSockets, so the socket goes to the API host directly.
+ * NEXT_PUBLIC_SOCKET_URL overrides everything.
+ */
+function resolveSocketUrl(): string {
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
+  if (/^https?:\/\//.test(API_URL)) return API_URL.replace(/\/api\/v1\/?$/, '');
+  if (typeof window !== 'undefined' && /(^|\.)hostn\.co$/.test(window.location.hostname)) {
+    return 'https://hostn-production.up.railway.app';
+  }
+  return process.env.NEXT_PUBLIC_DEV_SOCKET_URL || 'http://localhost:5050';
+}
+
+let socket: Socket | null = null;
+let connecting = false;
+let eventCallbacks: Map<string, Set<(data: any) => void>> = new Map();
+
+/** Ask the API (with the session cookie) for a short-lived socket token. */
+async function fetchSocketToken(): Promise<string | null> {
+  try {
+    const base = API_URL.replace(/\/$/, '');
+    const res = await fetch(`${base}/auth/socket-token`, { credentials: 'include' });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body?.data?.token || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Connect to the Socket.IO server.
+ *
+ * The session lives in an HttpOnly cookie the page cannot read, and the
+ * socket host is a different domain, so the page first asks the API for a
+ * short-lived token and presents that. A fresh token is fetched on every
+ * (re)connection attempt because each one expires after a few minutes.
  */
 export function connectSocket(token?: string) {
-  if (socket?.connected) return socket;
+  if (socket || connecting) return socket;
+  connecting = true;
 
-  // On the web, try to get token from localStorage as fallback
-  const authToken = token || (typeof window !== 'undefined' ? localStorage.getItem('hostn_token') : null);
-
-  socket = io(SOCKET_URL, {
-    auth: authToken ? { token: authToken } : undefined,
+  socket = io(resolveSocketUrl(), {
+    autoConnect: false,
+    auth: (cb) => {
+      if (token) return cb({ token });
+      fetchSocketToken().then((t) => cb(t ? { token: t } : {}));
+    },
     withCredentials: true,
     transports: ['websocket', 'polling'],
     reconnection: true,
@@ -28,6 +62,8 @@ export function connectSocket(token?: string) {
     reconnectionDelay: 2000,
     reconnectionDelayMax: 30000,
   });
+  connecting = false;
+  socket.connect();
 
   socket.on('connect', () => {
     console.log('[SOCKET] Connected:', socket?.id);

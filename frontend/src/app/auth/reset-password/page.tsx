@@ -91,7 +91,7 @@ function ResetPasswordContent() {
           <p className="text-sm text-gray-500 mb-6">
             {isAr ? 'يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.' : 'You can now sign in with your new password.'}
           </p>
-          <Link href="/auth/login">
+          <Link href="/auth">
             <Button className="w-full">{isAr ? 'تسجيل الدخول' : 'Sign In'}</Button>
           </Link>
         </div>
@@ -147,7 +147,7 @@ function ResetPasswordContent() {
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-500">
-          <Link href="/auth/login" className="text-primary-600 hover:text-primary-700 font-medium">
+          <Link href="/auth" className="text-primary-600 hover:text-primary-700 font-medium">
             {isAr ? 'العودة لتسجيل الدخول' : 'Back to Sign In'}
           </Link>
         </p>

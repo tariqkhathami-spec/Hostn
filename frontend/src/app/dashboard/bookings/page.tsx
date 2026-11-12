@@ -26,7 +26,7 @@ export default function MyBookingsPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/auth');
     }
   }, [authLoading, isAuthenticated, router]);
 

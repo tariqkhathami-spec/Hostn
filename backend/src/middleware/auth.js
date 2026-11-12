@@ -29,6 +29,11 @@ exports.protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // A socket token only opens the realtime connection; it is readable by
+    // page scripts, so it must never work as an API session.
+    if (decoded.purpose === 'socket') {
+      return res.status(401).json({ success: false, message: 'Not authorized' });
+    }
     // Support both new `userType` and legacy `role` field in JWT payload
     const userType = decoded.userType || decoded.role;
     const Model = getModelForUserType(userType);
@@ -79,6 +84,39 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Token expired', code: 'TOKEN_EXPIRED' });
     }
     return res.status(401).json({ success: false, message: 'Token invalid or expired' });
+  }
+};
+
+/**
+ * Attach req.user when a valid token is present, but never reject.
+ * For public endpoints that show more to the owner (e.g. a host opening
+ * their own unlisted property). Account managers are treated as anonymous
+ * here: their reach is limited to /manager by protect().
+ */
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.hostn_token) {
+      token = req.cookies.hostn_token;
+    }
+    if (!token) return next();
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.purpose === 'socket') return next();
+    const userType = decoded.userType || decoded.role;
+    const Model = getModelForUserType(userType);
+    if (!Model) return next();
+    const user = await Model.findById(decoded.id).select('-password');
+    if (!user || user.isSuspended) return next();
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) return next();
+    if (userType === 'admin' && user.adminRole === 'account_manager') return next();
+    req.user = user;
+    req.user.userType = userType;
+    if (!req.user.role) req.user.role = userType;
+    return next();
+  } catch (e) {
+    return next();
   }
 };
 

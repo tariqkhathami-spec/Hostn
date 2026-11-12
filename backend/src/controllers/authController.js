@@ -309,6 +309,29 @@ exports.logoutAll = async (req, res, next) => {
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
+// @desc    Short-lived token for the realtime (Socket.IO) connection
+// @route   GET /api/v1/auth/socket-token
+// @access  Private
+//
+// The website keeps its session in an HttpOnly cookie on its own domain, and
+// reaches the API through a same-origin proxy. WebSockets cannot go through
+// that proxy, so the browser connects to the API host directly — where the
+// cookie is not sent. This hands the signed-in page a token that is only
+// good for a few minutes, enough to open the socket.
+exports.getSocketToken = async (req, res, next) => {
+  try {
+    const userType = req.user.userType || req.user.role;
+    const token = jwt.sign(
+      { id: req.user._id, role: userType, userType, tokenVersion: req.user.tokenVersion, purpose: 'socket' },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+    res.json({ success: true, data: { token, expiresIn: 600 } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getMe = async (req, res, next) => {
   try {
     const Model = getUserModel(req.user);

@@ -49,7 +49,7 @@ export default function TicketDetailPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push('/auth/login');
+    if (!isLoading && !isAuthenticated) router.push('/auth');
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {

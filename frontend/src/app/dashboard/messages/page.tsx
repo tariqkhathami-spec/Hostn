@@ -54,7 +54,7 @@ function GuestMessagesContent() {
   }, [showMenu]);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.push('/auth/login?redirect=/dashboard/messages');
+    if (!isLoading && !isAuthenticated) router.push('/auth?redirect=/dashboard/messages');
   }, [isAuthenticated, isLoading, router]);
 
   const loadConversations = useCallback(async () => {

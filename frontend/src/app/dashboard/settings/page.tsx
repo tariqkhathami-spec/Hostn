@@ -59,7 +59,7 @@ export default function SettingsPage() {
   const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) router.push('/auth/login');
+    if (!authLoading && !isAuthenticated) router.push('/auth');
   }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
