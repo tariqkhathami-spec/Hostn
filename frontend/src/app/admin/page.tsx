@@ -15,6 +15,7 @@ interface Stats {
   totalProperties: number;
   totalBookings: number;
   totalRevenue: number;
+  platformIncome: number;
 }
 
 // Map the nested backend response to flat Stats
@@ -25,12 +26,13 @@ function mapStats(raw: Record<string, unknown>): Stats {
   const users = raw.users as { total?: number } | undefined;
   const properties = raw.properties as { total?: number } | undefined;
   const bookings = raw.bookings as { total?: number } | undefined;
-  const payments = raw.payments as { revenue?: number } | undefined;
+  const payments = raw.payments as { revenue?: number; platformIncome?: number } | undefined;
   return {
     totalUsers: users?.total ?? 0,
     totalProperties: properties?.total ?? 0,
     totalBookings: bookings?.total ?? 0,
     totalRevenue: payments?.revenue ?? 0,
+    platformIncome: payments?.platformIncome ?? 0,
   };
 }
 
@@ -93,11 +95,21 @@ export default function AdminDashboardPage() {
       bg: 'bg-violet-50',
     },
     {
-      label: isAr ? '\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0625\u064a\u0631\u0627\u062f\u0627\u062a' : 'Total Revenue',
+      // Everything guests paid: the hosts' money and the VAT are in it.
+      label: isAr ? 'إجمالي المبالغ المحصّلة' : 'Total collected',
       value: stats?.totalRevenue ?? 0,
       icon: CreditCard,
       color: 'text-green-600',
       bg: 'bg-green-50',
+      isCurrency: true,
+    },
+    {
+      // Guest service fees + host commission on paid bookings.
+      label: isAr ? 'دخل المنصة (الرسوم والعمولة)' : 'Platform income (fees)',
+      value: stats?.platformIncome ?? 0,
+      icon: CreditCard,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
       isCurrency: true,
     },
   ];
@@ -121,7 +133,7 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (

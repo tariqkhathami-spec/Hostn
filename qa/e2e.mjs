@@ -154,7 +154,12 @@ async function bookUnit(unit) {
     const stay = (pr.subtotal || 0) - (pr.discount || 0);
     const near = (a, b) => Math.abs(a - b) < 0.011;
     check('guest pays a 10% service fee and 15% VAT on top', near(pr.serviceFee, stay * 0.10) && near(pr.vat, (stay + (pr.cleaningFee || 0) + stay * 0.10) * 0.15) && near(pr.total, (stay + (pr.cleaningFee || 0) + stay * 0.10) * 1.15), JSON.stringify(pr));
-    check('booking stores a 5% host commission and the host payout', pr.hostCommissionRate === 0.05 && near(pr.hostCommission, stay * 0.05) && near(pr.hostPayout, stay + (pr.cleaningFee || 0) - stay * 0.05) && pr.hostPayout < pr.total, JSON.stringify(pr));
+    // The host's side is stored on the booking but never shown to the guest.
+    const asGuest = await call('guest', 'GET', `/bookings/${booking?._id}`);
+    check('guest never sees the host commission or payout', pr.hostPayout === undefined && pr.hostCommission === undefined && asGuest.status === 200 && asGuest.data?.pricing?.total === pr.total && asGuest.data?.pricing?.hostPayout === undefined && asGuest.data?.pricing?.hostCommission === undefined, JSON.stringify(asGuest.data?.pricing));
+    const asAdmin = await call('admin', 'GET', `/bookings/${booking?._id}`);
+    const hp = asAdmin.data?.pricing || {};
+    check('booking stores a 5% host commission and the host payout', hp.hostCommissionRate === 0.05 && near(hp.hostCommission, stay * 0.05) && near(hp.hostPayout, stay + (pr.cleaningFee || 0) - stay * 0.05) && hp.hostPayout < pr.total, JSON.stringify(hp));
     return booking;
   }
   check('found free dates to book', false, 'no free slot in 12 attempts');
@@ -803,9 +808,15 @@ await step('booking on the throwaway listing: availability, payment records, hos
   const up = await call('tHost', 'GET', '/host/bookings/upcoming');
   const row = (up.data || []).find((b) => String(b.id) === tBooking._id);
   check('upcoming guests screen shows the booking in its own shape', up.status === 200 && row && row.guestName === users.tGuest.name && row.status === 'confirmed' && row.checkIn === dayAt(200) && row.checkOut === dayAt(202) && row.totalAmount === tBooking.pricing.total && typeof row.hostAmount === 'number' && row.bookingNumber, brief(up, 300));
+  // Host payout = stay after discount + cleaning fee, less 5% of the stay.
+  const tStay = (tBooking.pricing.subtotal || 0) - (tBooking.pricing.discount || 0);
+  const tHostPayout = Math.round((tStay + (tBooking.pricing.cleaningFee || 0) - tStay * 0.05) * 100) / 100;
+  const payRec = await call('admin', 'GET', `/admin/payments?limit=100`);
+  const payRow = (payRec.data?.payments || payRec.data || []).find((x) => String(x._id) === String(tPaymentId));
+  check('the payment record keeps the platform fee and the host payout', payRow && Math.abs((payRow.fees?.hostPayout ?? -1) - tHostPayout) < 0.011 && Math.abs((payRow.fees?.platformFee ?? -1) - (tBooking.pricing.serviceFee + tStay * 0.05)) < 0.011, JSON.stringify(payRow?.fees));
   const earn = await call('tHost', 'GET', `/host/earnings?year=${new Date().getFullYear()}`);
   const month = (earn.data?.monthly || [])[new Date().getMonth()];
-  check('earnings screen adds the host payout of the booking to this month', earn.status === 200 && earn.data?.monthly?.length === 12 && Math.abs(earn.data.totalEarnings - tBooking.pricing.hostPayout) < 0.01 && earn.data.totalBookings === 1 && month?.bookings === 1 && earn.data.topProperties?.[0]?.propertyId === p, brief(earn, 200));
+  check('earnings screen adds the host payout of the booking to this month', earn.status === 200 && earn.data?.monthly?.length === 12 && Math.abs(earn.data.totalEarnings - tHostPayout) < 0.01 && earn.data.totalBookings === 1 && month?.bookings === 1 && earn.data.topProperties?.[0]?.propertyId === p, brief(earn, 200));
   const wcal = await call('tHost', 'GET', `/host/calendar/${p}?startDate=${dayAt(190)}&endDate=${dayAt(215)}`);
   check('website calendar shows the booking with the guest name and total', (wcal.data?.bookings || []).some((b) => idOf(b) === tBooking._id && b.guest?.name === users.tGuest.name && b.total === tBooking.pricing.total && b.status === 'confirmed'), brief(wcal, 260));
 
@@ -1403,6 +1414,8 @@ await step('admin: units of a property, bookings and refunds', async () => {
   const bk = await call('tGuest', 'GET', `/bookings/${tBooking._id}`);
   check('a refunded payment is reflected on its booking', bk.data?.paymentStatus === 'refunded',
     `after POST /admin/payments/{id}/refund → 200 status "refunded", GET /bookings/{id} still answers paymentStatus "${bk.data?.paymentStatus}" and status "${bk.data?.status}": adminController.refundPayment only edits the Payment record (no booking update, no gateway call, no guest notification)`);
+  const earnAfter = await call('tHost', 'GET', `/host/earnings?year=${new Date().getFullYear()}`);
+  check('a refunded booking no longer counts in the host earnings', earnAfter.status === 200 && earnAfter.data?.totalEarnings === 0, brief(earnAfter, 160));
 });
 
 await step('blog: categories, posts, the host app article list', async () => {

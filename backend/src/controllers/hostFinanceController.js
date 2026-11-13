@@ -3,7 +3,7 @@ const Payout = require('../models/Payout');
 const HostInvoice = require('../models/HostInvoice');
 const HostStatement = require('../models/HostStatement');
 const Booking = require('../models/Booking');
-const { hostBreakdownOf, HOST_COMMISSION_RATE } = require('../config/fees');
+const { hostBreakdownOf, HOST_COMMISSION_RATE, EARNING_FILTER } = require('../config/fees');
 
 // ─── Helper: month names for fallback statements ─────────────────────────────
 const MONTH_NAMES = [
@@ -246,7 +246,7 @@ exports.getStatements = async (req, res) => {
         // fee and the VAT are not the host's money.
         const monthBookings = await Booking.find({
           property: { $in: propertyIds },
-          status: { $in: ['confirmed', 'completed'] },
+          ...EARNING_FILTER,
           checkIn: {
             $gte: new Date(`${targetYear}-01-01`),
             $lt: new Date(`${targetYear + 1}-01-01`),
@@ -316,7 +316,7 @@ exports.getStatementDetail = async (req, res) => {
 
       const bookings = await Booking.find({
         property: { $in: propertyIds },
-        status: { $in: ['confirmed', 'completed'] },
+        ...EARNING_FILTER,
         checkIn: { $gte: startDate, $lte: endDate },
       })
         .sort({ checkIn: 1 })

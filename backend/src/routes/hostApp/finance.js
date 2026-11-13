@@ -18,7 +18,7 @@ const Conversation = require('../../models/Conversation');
 const Message = require('../../models/Message');
 const Payout = require('../../models/Payout');
 const HostInvoice = require('../../models/HostInvoice');
-const { hostBreakdownOf, hostPayoutOf, HOST_COMMISSION_RATE } = require('../../config/fees');
+const { hostBreakdownOf, hostPayoutOf, HOST_COMMISSION_RATE, EARNING_FILTER, countsAsEarning } = require('../../config/fees');
 const HostStatement = require('../../models/HostStatement');
 const HostBankAccount = require('../../models/HostBankAccount');
 
@@ -416,7 +416,7 @@ router.get('/statements', wrap(async (req, res) => {
   if (props.length > 0) {
     const bookings = await Booking.find({
       property: { $in: props.map((p) => p._id) },
-      status: { $in: EARNING_STATUSES },
+      ...EARNING_FILTER,
       checkIn: { $gte: from, $lt: to },
     }).select('checkIn pricing').lean();
     // Host money only: stay + cleaning fee as credit, platform commission as
@@ -477,7 +477,7 @@ router.get('/statements/:month', wrap(async (req, res) => {
   const bookings = props.length
     ? await Booking.find({
         property: { $in: props.map((p) => p._id) },
-        status: { $in: EARNING_STATUSES },
+        ...EARNING_FILTER,
         checkIn: { $gte: start, $lt: end },
       }).sort({ checkIn: 1 }).select('reference checkIn pricing property').lean()
     : [];
@@ -568,7 +568,7 @@ router.get('/account-summary', wrap(async (req, res) => {
   }
 
   const { start, end } = monthRange(year, month);
-  const scope = { property: { $in: propertyIds }, status: { $in: EARNING_STATUSES } };
+  const scope = { property: { $in: propertyIds }, ...EARNING_FILTER };
   if (unitId) scope.unit = new mongoose.Types.ObjectId(unitId);
 
   const [inMonth, overlapping] = propertyIds.length
@@ -709,7 +709,7 @@ const buildWeeklyReports = async (hostId, weekStarts) => {
   const [bookings, reviews, complaints, conversations] = await Promise.all([
     propertyIds.length
       ? Booking.find({ property: { $in: propertyIds }, status: { $ne: 'held' }, ...created })
-          .select('status pricing createdAt').lean()
+          .select('status paymentStatus pricing createdAt').lean()
       : [],
     propertyIds.length
       ? Review.find({ property: { $in: propertyIds }, ...created }).select('ratings createdAt').lean()
@@ -748,7 +748,7 @@ const buildWeeklyReports = async (hostId, weekStarts) => {
     const inWeek = (d) => d >= start && d < end;
 
     const wb = bookings.filter((b) => inWeek(b.createdAt));
-    const confirmed = wb.filter((b) => EARNING_STATUSES.includes(b.status));
+    const confirmed = wb.filter(countsAsEarning);
     const wr = reviews.filter((r) => inWeek(r.createdAt));
     const rating = (field) => avg(wr.map((r) => r.ratings?.[field]).filter((n) => typeof n === 'number'));
 

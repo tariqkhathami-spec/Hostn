@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { paymentFees } = require('../config/fees');
 const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
@@ -102,6 +103,7 @@ exports.initiatePayment = async (req, res, next) => {
       status: 'pending',
       moyasarStatus: 'initiated',
       idempotencyKey,
+      fees: paymentFees(booking.pricing),
     });
 
     // Log activity
@@ -668,7 +670,7 @@ exports.webhook = async (req, res, next) => {
 exports.getPayment = async (req, res, next) => {
   try {
     const payment = await Payment.findById(req.params.id)
-      .populate('booking', 'checkIn checkOut pricing status property')
+      .populate('booking', 'checkIn checkOut pricing.perNight pricing.nights pricing.subtotal pricing.cleaningFee pricing.serviceFee pricing.discount pricing.vat pricing.total status property')
       .populate('user', 'name email');
 
     if (!payment) {
@@ -692,7 +694,7 @@ exports.getPayment = async (req, res, next) => {
 exports.getMyPayments = async (req, res, next) => {
   try {
     const payments = await Payment.find({ user: req.user._id })
-      .populate('booking', 'checkIn checkOut pricing status property')
+      .populate('booking', 'checkIn checkOut pricing.perNight pricing.nights pricing.subtotal pricing.cleaningFee pricing.serviceFee pricing.discount pricing.vat pricing.total status property')
       .sort('-createdAt');
 
     res.json({ success: true, data: payments });

@@ -4,7 +4,7 @@ const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const Unit = require('../models/Unit');
 const { unitPublishIssues } = require('../utils/unitPublish');
-const { hostPayoutOf } = require('../config/fees');
+const { hostPayoutOf, countsAsEarning, EARNING_FILTER } = require('../config/fees');
 
 // @desc    Get host dashboard stats
 // @route   GET /api/host/stats
@@ -26,7 +26,7 @@ exports.getDashboardStats = async (req, res, next) => {
 
     // Earnings
     const totalEarnings = allBookings
-      .filter((b) => ['confirmed', 'completed'].includes(b.status))
+      .filter(countsAsEarning)
       .reduce((sum, b) => sum + hostPayoutOf(b.pricing), 0);
 
     // This month earnings
@@ -34,7 +34,7 @@ exports.getDashboardStats = async (req, res, next) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthlyBookings = allBookings.filter(
       (b) =>
-        ['confirmed', 'completed'].includes(b.status) &&
+        countsAsEarning(b) &&
         new Date(b.createdAt) >= startOfMonth
     );
     const monthlyEarnings = monthlyBookings.reduce((sum, b) => sum + hostPayoutOf(b.pricing), 0);
@@ -189,7 +189,7 @@ exports.getEarnings = async (req, res, next) => {
 
     const bookings = await Booking.find({
       property: { $in: propertyIds },
-      status: { $in: ['confirmed', 'completed'] },
+      ...EARNING_FILTER,
       createdAt: { $gte: startDate, $lte: endDate },
     })
       .populate('property', 'title titleAr type')
@@ -901,7 +901,7 @@ exports.getHostDashboardStats = async (req, res, next) => {
     const propertyIds = properties.map(p => p._id);
 
     const allBookings = await Booking.find({ property: { $in: propertyIds } });
-    const activeBookings = allBookings.filter(b => ['confirmed', 'completed'].includes(b.status));
+    const activeBookings = allBookings.filter(countsAsEarning);
     const totalEarnings = activeBookings.reduce((sum, b) => sum + hostPayoutOf(b.pricing), 0);
     // Confirmed stays that are running now or still to come.
     const startOfToday = new Date();
