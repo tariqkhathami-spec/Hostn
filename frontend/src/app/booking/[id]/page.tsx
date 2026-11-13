@@ -8,6 +8,7 @@ import { Property } from '@/types';
 import { propertiesApi, unitsApi, bookingsApi, paymentsApi, type SimulatedOutcome } from '@/lib/api';
 import {
   calculateStayPricing,
+  SERVICE_FEE_RATE,
   DISCOUNT_LABELS_EN,
   DISCOUNT_LABELS_AR,
   type PricingUnit,
@@ -376,7 +377,7 @@ function BookingContent() {
       : 0;
     const r2 = (n: number) => Math.round(n * 100) / 100;
     const discountedSubtotal = Math.max(0, subtotal - discount);
-    const serviceFeeRaw = discountedSubtotal * 0.11;
+    const serviceFeeRaw = discountedSubtotal * SERVICE_FEE_RATE;
     serviceFee = r2(serviceFeeRaw);
     const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
     const vatRaw = taxableRaw * 0.15;

@@ -62,7 +62,15 @@ export const hostService = {
       checkIn: day(raw.checkIn),
       checkOut: day(raw.checkOut),
       totalAmount: total,
-      hostAmount: Math.round(total * 0.85),
+      // The host's share is fixed by the server when the booking is created.
+      // Older bookings have none stored: stay after discount + cleaning fee,
+      // less the 5% platform commission on the stay.
+      hostAmount: typeof raw.pricing?.hostPayout === 'number'
+        ? raw.pricing.hostPayout
+        : (() => {
+            const stay = Math.max(0, (raw.pricing?.subtotal ?? 0) - (raw.pricing?.discount ?? 0));
+            return Math.round((stay + (raw.pricing?.cleaningFee ?? 0) - stay * 0.05) * 100) / 100;
+          })(),
       status: raw.status,
       createdAt: day(raw.createdAt),
       invoice: raw.invoice ?? null,

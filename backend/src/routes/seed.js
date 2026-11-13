@@ -293,7 +293,7 @@ router.post('/finance-data', async (req, res) => {
       },
     ];
 
-    const commissionRate = 0.10; // 10% platform fee
+    const commissionRate = require("../config/fees").HOST_COMMISSION_RATE; // platform commission
     const vatRate = 0.15;        // 15% VAT on commission
 
     const payouts = [];

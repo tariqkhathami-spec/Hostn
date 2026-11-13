@@ -225,7 +225,7 @@ export interface StayPricing {
 }
 
 /** PR G: service fee rate applied to the POST-discount subtotal, pre-VAT. */
-export const SERVICE_FEE_RATE = 0.11;
+export const SERVICE_FEE_RATE = 0.10;
 
 /**
  * Full pricing calculation for a stay — mirrors the backend's
@@ -249,7 +249,7 @@ export function calculateStayPricing(
 
   // PR L: full-float precision throughout. The UI rounds to 2 decimals at
   // display time (via `formatPriceNumber`), so no per-step rounding here.
-  // Keeps `150 × 10% discount + 11% service + 15% VAT` producing 172.33
+  // Keeps `discount + service fee + 15% VAT` exact to the halala
   // instead of 173.00 from cumulative per-step `Math.round()`.
   const r2 = (n: number) => Math.round(n * 100) / 100;
 

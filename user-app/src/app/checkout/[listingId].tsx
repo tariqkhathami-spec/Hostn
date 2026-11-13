@@ -19,6 +19,10 @@ import { formatCurrency, formatDateRange, getNights } from '../../utils/format';
 import { Colors, Typography, Spacing, Radius, Shadows, BACK_ICON } from '../../constants/theme';
 import { useLanguage, type TranslationKey } from '../../i18n';
 
+// Guest service fee. Must match GUEST_SERVICE_FEE_RATE in backend/src/config/fees.js:
+// this is only the on-screen estimate, the server computes what is charged.
+const SERVICE_FEE_RATE = 0.10;
+
 function calculateDateRangePrice(
   listing: any, checkIn: string, checkOut: string
 ): { subtotal: number; blocked: boolean; nights: number } {
@@ -157,7 +161,7 @@ export default function CheckoutScreen() {
   const pricePerNight = listing?.pricing?.perNight ?? 0;
   const cleaningFee = listing?.pricing?.cleaningFee ?? 0;
   // Same formula as the server (bookingController) and the web checkout:
-  // service fee is 11% of the post-discount subtotal, VAT is 15% of
+  // service fee is 10% of the post-discount subtotal, VAT is 15% of
   // (discounted subtotal + cleaning + service fee), rounded to halalas once.
   // The old 10%-of-gross integer maths showed guests a different total
   // from the one the booking was created with.
@@ -165,7 +169,7 @@ export default function CheckoutScreen() {
   const discountPercent = listing?.pricing?.discountPercent ?? 0;
   const discount = discountPercent > 0 ? r2(subtotal * (discountPercent / 100)) : 0;
   const discountedSubtotal = Math.max(0, subtotal - discount);
-  const serviceFeeRaw = discountedSubtotal * 0.11;
+  const serviceFeeRaw = discountedSubtotal * SERVICE_FEE_RATE;
   const serviceFee = r2(serviceFeeRaw);
   const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
   const vat = r2(taxableRaw * 0.15);

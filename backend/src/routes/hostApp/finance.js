@@ -18,6 +18,7 @@ const Conversation = require('../../models/Conversation');
 const Message = require('../../models/Message');
 const Payout = require('../../models/Payout');
 const HostInvoice = require('../../models/HostInvoice');
+const { hostBreakdownOf, hostPayoutOf, HOST_COMMISSION_RATE } = require('../../config/fees');
 const HostStatement = require('../../models/HostStatement');
 const HostBankAccount = require('../../models/HostBankAccount');
 
@@ -110,7 +111,7 @@ router.get('/transfers/:id', wrap(async (req, res) => {
     reservationId: b.reference || String(b._id),
     bookingId: String(b._id),
     guestName: b.guest?.name || '',
-    amount: b.pricing?.total ?? 0,
+    amount: hostPayoutOf(b.pricing),
     unitName: b.unit?.nameAr || b.unit?.nameEn || b.property?.titleAr || b.property?.title || '',
     checkIn: b.checkIn,
     checkOut: b.checkOut,
@@ -417,11 +418,17 @@ router.get('/statements', wrap(async (req, res) => {
       property: { $in: props.map((p) => p._id) },
       status: { $in: EARNING_STATUSES },
       checkIn: { $gte: from, $lt: to },
-    }).select('checkIn pricing.total').lean();
+    }).select('checkIn pricing').lean();
+    // Host money only: stay + cleaning fee as credit, platform commission as
+    // debit. The guest's service fee and the VAT are never the host's.
     bookings.forEach((b) => {
       const d = new Date(b.checkIn);
       const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-      derived.set(key, (derived.get(key) || 0) + (b.pricing?.total || 0));
+      const row = derived.get(key) || { credits: 0, debits: 0 };
+      const { gross, commission } = hostBreakdownOf(b.pricing);
+      row.credits += gross;
+      row.debits += commission;
+      derived.set(key, row);
     });
   }
 
@@ -430,14 +437,14 @@ router.get('/statements', wrap(async (req, res) => {
     const key = `${m.year}-${m.month}`;
     if (byKey.has(key)) return data.push(toStatement(byKey.get(key), false));
     if (derived.has(key)) {
-      const total = round2(derived.get(key));
+      const row = derived.get(key);
       data.push(toStatement({
         _id: `fallback-${m.year}-${m.month}`,
         period: m,
         openingBalance: 0,
-        closingBalance: total,
-        totalCredits: total,
-        totalDebits: 0,
+        closingBalance: round2(row.credits - row.debits),
+        totalCredits: round2(row.credits),
+        totalDebits: round2(row.debits),
         status: 'closed',
         isFallback: true,
       }, false));
@@ -472,24 +479,43 @@ router.get('/statements/:month', wrap(async (req, res) => {
         property: { $in: props.map((p) => p._id) },
         status: { $in: EARNING_STATUSES },
         checkIn: { $gte: start, $lt: end },
-      }).sort({ checkIn: 1 }).select('reference checkIn pricing.total property').lean()
+      }).sort({ checkIn: 1 }).select('reference checkIn pricing property').lean()
     : [];
   if (bookings.length === 0) return fail(res, 404, 'Statement not found');
 
+  const ratePct = Math.round(HOST_COMMISSION_RATE * 100);
   let balance = 0;
-  const entries = bookings.map((b) => {
-    const credit = b.pricing?.total ?? 0;
-    balance = round2(balance + credit);
+  let totalCredits = 0;
+  let totalDebits = 0;
+  const entries = [];
+  bookings.forEach((b) => {
+    const { gross, commission } = hostBreakdownOf(b.pricing);
     const title = titles.get(String(b.property)) || '';
-    return {
+    const reference = b.reference || String(b._id);
+    balance = round2(balance + gross);
+    totalCredits = round2(totalCredits + gross);
+    entries.push({
       date: b.checkIn,
       type: 'booking_earning',
       descriptionAr: `حجز ${b.reference || ''}${title ? ` - ${title}` : ''}`.trim(),
-      reference: b.reference || String(b._id),
-      credit,
+      reference,
+      credit: gross,
       debit: 0,
       balance,
-    };
+    });
+    if (commission > 0) {
+      balance = round2(balance - commission);
+      totalDebits = round2(totalDebits + commission);
+      entries.push({
+        date: b.checkIn,
+        type: 'commission',
+        descriptionAr: `عمولة المنصة (${ratePct}%) - حجز ${reference}`,
+        reference,
+        credit: 0,
+        debit: commission,
+        balance,
+      });
+    }
   });
 
   res.json({
@@ -499,8 +525,8 @@ router.get('/statements/:month', wrap(async (req, res) => {
       period: { month, year },
       openingBalance: 0,
       closingBalance: balance,
-      totalCredits: balance,
-      totalDebits: 0,
+      totalCredits,
+      totalDebits,
       status: 'closed',
       isFallback: true,
       entries,
@@ -552,7 +578,8 @@ router.get('/account-summary', wrap(async (req, res) => {
       ])
     : [[], []];
 
-  const totalRevenue = round2(inMonth.reduce((s, b) => s + (b.pricing?.total || 0), 0));
+  // Revenue = what the host receives (after the platform commission).
+  const totalRevenue = round2(inMonth.reduce((s, b) => s + hostPayoutOf(b.pricing), 0));
   const nights = inMonth.reduce((s, b) => s + (b.pricing?.nights || 0), 0);
   const nightsValue = inMonth.reduce((s, b) => s + (b.pricing?.perNight || 0) * (b.pricing?.nights || 0), 0);
 
@@ -682,7 +709,7 @@ const buildWeeklyReports = async (hostId, weekStarts) => {
   const [bookings, reviews, complaints, conversations] = await Promise.all([
     propertyIds.length
       ? Booking.find({ property: { $in: propertyIds }, status: { $ne: 'held' }, ...created })
-          .select('status pricing.total createdAt').lean()
+          .select('status pricing createdAt').lean()
       : [],
     propertyIds.length
       ? Review.find({ property: { $in: propertyIds }, ...created }).select('ratings createdAt').lean()
@@ -749,7 +776,7 @@ const buildWeeklyReports = async (hostId, weekStarts) => {
       views: null, // not tracked
       clicks: null, // not tracked
       conversionRate: null, // needs views
-      sales: round2(confirmed.reduce((s, b) => s + (b.pricing?.total || 0), 0)),
+      sales: round2(confirmed.reduce((s, b) => s + hostPayoutOf(b.pricing), 0)),
       totalBookings: wb.length,
       confirmedBookings: confirmed.length,
       ratings: {

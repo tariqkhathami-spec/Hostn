@@ -193,12 +193,12 @@ export default function BookingDetailScreen() {
           </View>
           <View style={styles.cardBody}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>المبلغ الإجمالي</Text>
+              <Text style={styles.infoLabel}>المبلغ المدفوع من الضيف</Text>
               <Text style={styles.infoValueBold}>{formatCurrency(booking.totalAmount)}</Text>
             </View>
             {booking.hostAmount !== booking.totalAmount && (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>مبلغ المضيف</Text>
+                <Text style={styles.infoLabel}>صافي مستحقاتك بعد عمولة المنصة</Text>
                 <Text style={styles.infoValueBold}>{formatCurrency(booking.hostAmount)}</Text>
               </View>
             )}
