@@ -4,6 +4,51 @@ const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
+const Property = require('../models/Property');
+const { emitToUser, emitToProperty } = require('../config/socket');
+const { guestBooking } = require('../config/fees');
+
+/**
+ * A fully refunded booking does not stand any more: its money went back to
+ * the guest, so it is cancelled and its dates open again. A stay that already
+ * finished ("completed") keeps its status — there are no dates left to free.
+ */
+async function releaseRefundedBooking(bookingId, reason) {
+  const booking = await Booking.findById(bookingId);
+  if (!booking) return null;
+  booking.paymentStatus = 'refunded';
+  const wasStanding = ['held', 'pending', 'confirmed'].includes(booking.status);
+  if (wasStanding) {
+    booking.status = 'cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancellationReason = reason || 'استرداد كامل للمبلغ';
+  }
+  await booking.save();
+  if (!wasStanding) return booking;
+
+  try {
+    const property = await Property.findById(booking.property).select('host title titleAr');
+    const obj = booking.toObject();
+    emitToUser(booking.guest.toString(), 'booking:updated', guestBooking(obj));
+    if (property) {
+      Notification.createNotification({
+        user: property.host,
+        userType: 'Host',
+        type: 'booking_cancelled',
+        title: 'أُلغي حجز بعد استرداد المبلغ',
+        message: `أُلغي حجز في "${property.titleAr || property.title}" بعد استرداد المبلغ للضيف، والتواريخ صارت متاحة من جديد`,
+        data: { bookingId: booking._id, propertyId: booking.property },
+      }).catch(() => {});
+      emitToUser(property.host.toString(), 'booking:cancelled', obj);
+      emitToProperty(booking.property.toString(), 'availability:changed', {
+        propertyId: booking.property.toString(),
+        bookingId: booking._id,
+        status: 'cancelled',
+      });
+    }
+  } catch (_) { /* the cancellation is saved; telling people is best effort */ }
+  return booking;
+}
 
 // Moyasar API config
 const MOYASAR_API_URL = process.env.MOYASAR_API_URL || 'https://api.moyasar.com/v1';
@@ -647,7 +692,7 @@ exports.webhook = async (req, res, next) => {
     if (payment.status === 'completed') {
       await Booking.findByIdAndUpdate(payment.booking, { paymentStatus: 'paid' });
     } else if (payment.status === 'refunded') {
-      await Booking.findByIdAndUpdate(payment.booking, { paymentStatus: 'refunded' });
+      await releaseRefundedBooking(payment.booking);
     }
 
     // Step 8: Log successful processing (with idempotency key)
@@ -765,7 +810,7 @@ exports.refundPayment = async (req, res, next) => {
     await payment.save();
 
     // Update booking
-    await Booking.findByIdAndUpdate(payment.booking, { paymentStatus: 'refunded' });
+    await releaseRefundedBooking(payment.booking, reason ? `استرداد المبلغ: ${reason}` : undefined);
 
     // Notify user
     await Notification.createNotification({
@@ -773,7 +818,7 @@ exports.refundPayment = async (req, res, next) => {
       userType: 'Guest',
       type: 'payment_success', // reuse type, message clarifies it's a refund
       title: 'تم استرداد المبلغ',
-      message: `تم استرداد ${payment.amount} ر.س إلى وسيلة الدفع الأصلية`,
+      message: `تم استرداد ${payment.amount} ر.س إلى وسيلة الدفع الأصلية، وأُلغي الحجز`,
       data: { bookingId: payment.booking, paymentId: payment._id },
     });
 
