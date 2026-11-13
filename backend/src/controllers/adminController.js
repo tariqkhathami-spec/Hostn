@@ -137,7 +137,13 @@ exports.getStats = async (req, res, next) => {
           { $sort: { '_id.year': 1, '_id.month': 1 } },
         ]),
       ]);
-      data.payments = { total: totalPayments, revenue: totalRevenue[0]?.total || 0 };
+      // `revenue` is everything guests paid (host money and VAT included).
+      // The platform's own income is the guest service fee plus the host
+      // commission on bookings that are paid and not refunded.
+      const { hostCommissionOf } = require('../config/fees');
+      const paidBookings = await Booking.find({ paymentStatus: 'paid', status: { $in: ['confirmed', 'completed'] } }).select('pricing').lean();
+      const platformIncome = Math.round(paidBookings.reduce((sum, b) => sum + (b.pricing?.serviceFee || 0) + hostCommissionOf(b.pricing), 0) * 100) / 100;
+      data.payments = { total: totalPayments, revenue: totalRevenue[0]?.total || 0, platformIncome };
       data.monthlyRevenue = monthlyRevenue;
     }
 

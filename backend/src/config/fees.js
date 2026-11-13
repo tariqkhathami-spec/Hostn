@@ -68,7 +68,50 @@ function hostBreakdownOf(pricing) {
   return { gross: r2(payout + commission), commission, payout };
 }
 
+/**
+ * A booking is host income while it stands and its money was not returned.
+ * A refunded booking keeps its status, so the payment status decides too.
+ */
+const EARNING_STATUSES = ['confirmed', 'completed'];
+const EARNING_FILTER = { status: { $in: EARNING_STATUSES }, paymentStatus: { $ne: 'refunded' } };
+const countsAsEarning = (b) => !!b && EARNING_STATUSES.includes(b.status) && b.paymentStatus !== 'refunded';
+
+/** Booking pricing as a guest may see it: without the host's side. */
+function guestPricing(pricing) {
+  if (!pricing) return pricing;
+  const { hostGross, hostCommissionRate, hostCommission, hostPayout, ...rest } =
+    typeof pricing.toObject === 'function' ? pricing.toObject() : pricing;
+  return rest;
+}
+
+/** A booking (document or plain object) as its guest may see it. */
+function guestBooking(booking) {
+  if (!booking) return booking;
+  const o = typeof booking.toJSON === 'function' ? booking.toJSON() : { ...booking };
+  if (o.pricing) o.pricing = guestPricing(o.pricing);
+  return o;
+}
+
+/**
+ * How a booking's paid amount splits, for the payment record: what the
+ * platform keeps (guest service fee + host commission) and what is the
+ * host's. The remainder of the amount is the VAT collected.
+ */
+function paymentFees(pricing) {
+  if (!pricing) return undefined;
+  return {
+    platformFee: r2((Number(pricing.serviceFee) || 0) + hostCommissionOf(pricing)),
+    hostPayout: hostPayoutOf(pricing),
+  };
+}
+
 module.exports = {
+  paymentFees,
+  EARNING_STATUSES,
+  EARNING_FILTER,
+  countsAsEarning,
+  guestPricing,
+  guestBooking,
   hostBreakdownOf,
   GUEST_SERVICE_FEE_RATE,
   HOST_COMMISSION_RATE,

@@ -34,6 +34,8 @@ interface Booking {
     subtotal?: number;
     cleaningFee?: number;
     serviceFee?: number;
+    hostCommission?: number;
+    hostPayout?: number;
     discount?: number;
     vat?: number;
   };
@@ -80,7 +82,7 @@ const t: Record<string, Record<string, string>> = {
   serviceFee: { en: 'Service fee', ar: 'رسوم الخدمة' },
   discount: { en: 'Discount', ar: 'الخصم' },
   vat: { en: 'VAT', ar: 'الضريبة' },
-  total: { en: 'Total', ar: 'المجموع' },
+  total: { en: 'Total paid by guest', ar: 'المجموع (يدفعه الضيف)' },
   // Sort
   sortBy: { en: 'Sort by', ar: 'ترتيب حسب' },
   newest: { en: 'Newest first', ar: 'الأحدث' },
@@ -498,6 +500,20 @@ function Row({
                     <span>{t.total[lang]}</span>
                     <span dir="ltr"><SarSymbol /> {total.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
+                  {typeof pricing.hostPayout === 'number' ? (
+                    <>
+                      {pricing.hostCommission ? (
+                        <Field
+                          label={isAr ? 'عمولة المنصة' : 'Platform commission'}
+                          value={<span dir="ltr">- <SarSymbol /> {pricing.hostCommission.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                        />
+                      ) : null}
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 text-sm font-semibold text-emerald-700">
+                        <span>{isAr ? 'صافي مستحقاتك' : 'Your payout'}</span>
+                        <span dir="ltr"><SarSymbol /> {pricing.hostPayout.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </>
+                  ) : null}
                 </dl>
               </div>
             </div>

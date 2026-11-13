@@ -5,7 +5,7 @@ const Unit = require('../models/Unit');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const { emitToUser, emitToProperty } = require('../config/socket');
-const { GUEST_SERVICE_FEE_RATE, VAT_RATE, hostShare } = require('../config/fees');
+const { GUEST_SERVICE_FEE_RATE, VAT_RATE, hostShare, guestPricing, guestBooking } = require('../config/fees');
 
 // Helper: overlap query for date-range conflicts (includes active holds)
 // When unitId is provided, checks unit-level availability instead of property-level.
@@ -393,7 +393,7 @@ exports.createHold = async (req, res, next) => {
 
     // The price is returned so clients show exactly what will be charged
     // instead of recomputing it (and drifting from) the server's rules.
-    res.status(201).json({ success: true, data: { holdId: hold._id, holdExpiresAt, pricing } });
+    res.status(201).json({ success: true, data: { holdId: hold._id, holdExpiresAt, pricing: guestPricing(pricing) } });
   } catch (error) {
     next(error);
   }
@@ -461,7 +461,7 @@ exports.createBooking = async (req, res, next) => {
             ip: req.ip,
           }).catch(() => {});
 
-          return res.status(201).json({ success: true, data: hold });
+          return res.status(201).json({ success: true, data: guestBooking(hold) });
         }
         // Hold expired — mark as cancelled and fall through to normal creation
         hold.status = 'cancelled';
@@ -660,7 +660,7 @@ exports.createBooking = async (req, res, next) => {
       ip: req.ip,
     }).catch(() => {});
 
-    res.status(201).json({ success: true, data: booking });
+    res.status(201).json({ success: true, data: guestBooking(booking) });
   } catch (error) {
     if (error.message === 'DATES_UNAVAILABLE') {
       return res.status(400).json({ success: false, code: 'DATES_UNAVAILABLE', message: 'Property not available for selected dates' });
@@ -692,7 +692,7 @@ exports.getMyBookings = async (req, res, next) => {
       .populate('unit', 'nameEn nameAr images')
       .sort('-createdAt');
 
-    res.json({ success: true, data: bookings });
+    res.json({ success: true, data: bookings.map(guestBooking) });
   } catch (error) {
     next(error);
   }
@@ -763,7 +763,10 @@ exports.getBooking = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    res.json({ success: true, data: booking });
+    // The host's commission and payout are the host's and the platform's
+    // business; the guest sees only what they pay.
+    const onlyGuest = isGuest && !isHost && req.user.role !== 'admin';
+    res.json({ success: true, data: onlyGuest ? guestBooking(booking) : booking });
   } catch (error) {
     next(error);
   }
@@ -851,7 +854,7 @@ exports.updateBookingStatus = async (req, res, next) => {
 
     // ── Real-time: push status change to guest + property watchers ──
     const bookingObj = booking.toObject();
-    emitToUser(booking.guest.toString(), 'booking:updated', bookingObj);
+    emitToUser(booking.guest.toString(), 'booking:updated', guestBooking(bookingObj));
     // The host's other devices (and the dashboard) follow the change too.
     if (property && property.host) emitToUser(property.host.toString(), 'booking:updated', bookingObj);
     emitToProperty(booking.property.toString(), 'availability:changed', {
@@ -910,7 +913,7 @@ exports.cancelBooking = async (req, res, next) => {
       });
     }
 
-    res.json({ success: true, data: booking });
+    res.json({ success: true, data: req.user.role === 'guest' ? guestBooking(booking) : booking });
   } catch (error) {
     next(error);
   }
