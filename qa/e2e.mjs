@@ -1414,6 +1414,13 @@ await step('admin: units of a property, bookings and refunds', async () => {
   const bk = await call('tGuest', 'GET', `/bookings/${tBooking._id}`);
   check('a refunded payment is reflected on its booking', bk.data?.paymentStatus === 'refunded',
     `after POST /admin/payments/{id}/refund → 200 status "refunded", GET /bookings/{id} still answers paymentStatus "${bk.data?.paymentStatus}" and status "${bk.data?.status}": adminController.refundPayment only edits the Payment record (no booking update, no gateway call, no guest notification)`);
+  check('a full refund cancels the booking', bk.data?.status === 'cancelled' && bk.data?.cancelledAt, `status ${bk.data?.status}`);
+  const again = await bookAs('tGuest', tUnit, dayAt(200), dayAt(202));
+  check('the refunded dates can be booked again', again.booking?._id, brief(again.made || again.hold));
+  if (again.booking?._id) await call('tGuest', 'PUT', `/bookings/${again.booking._id}/cancel`, { reason: 'تنظيف بعد الاختبار' });
+  const hostNotes = await call('tHost', 'GET', '/host/notifications?page=1');
+  const noteRows = hostNotes.data?.notifications || hostNotes.data || [];
+  check('the host is told the refunded booking was cancelled', noteRows.some((n) => n.type === 'booking_cancelled' && /استرداد/.test(n.title || '')), `${noteRows.length} notifications`);
   const earnAfter = await call('tHost', 'GET', `/host/earnings?year=${new Date().getFullYear()}`);
   check('a refunded booking no longer counts in the host earnings', earnAfter.status === 200 && earnAfter.data?.totalEarnings === 0, brief(earnAfter, 160));
 });
@@ -1566,7 +1573,7 @@ await step('clean up: cancel, delete the listing, delete both throwaway accounts
 
   if (tBooking?._id) {
     const c = await call('tGuest', 'PUT', `/bookings/${tBooking._id}/cancel`, { reason: 'تنظيف بعد الاختبار' });
-    check('guest cancels the remaining booking', c.status === 200, brief(c, 120));
+    check('the refunded booking is already cancelled and cannot be cancelled again', c.status === 400, brief(c, 120));
   }
   if (tUnit?._id) {
     await call('tHost', 'DELETE', `/host/units/${tUnit._id}/permit`);
