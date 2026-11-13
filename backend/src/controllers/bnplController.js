@@ -3,6 +3,7 @@
  */
 
 const Payment = require('../models/Payment');
+const { paymentFees } = require('../config/fees');
 const Booking = require('../models/Booking');
 const Property = require('../models/Property');
 const Guest = require('../models/Guest');
@@ -113,6 +114,7 @@ exports.createTabbyCheckout = async (req, res, next) => {
       providerPaymentId: session.sessionId || session.paymentId,
       providerStatus: session.status,
       idempotencyKey,
+      fees: paymentFees(booking.pricing),
       metadata: {
         tabbySessionId: session.sessionId,
         tabbyPaymentId: session.paymentId,
@@ -356,6 +358,7 @@ exports.createTamaraCheckout = async (req, res, next) => {
       providerPaymentId: session.orderId,
       providerStatus: session.status,
       idempotencyKey,
+      fees: paymentFees(booking.pricing),
       metadata: {
         tamaraOrderId: session.orderId,
         tamaraCheckoutUrl: session.checkoutUrl,
