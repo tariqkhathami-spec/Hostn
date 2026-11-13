@@ -4,6 +4,7 @@ const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const Unit = require('../models/Unit');
 const { unitPublishIssues } = require('../utils/unitPublish');
+const { hostPayoutOf } = require('../config/fees');
 
 // @desc    Get host dashboard stats
 // @route   GET /api/host/stats
@@ -26,7 +27,7 @@ exports.getDashboardStats = async (req, res, next) => {
     // Earnings
     const totalEarnings = allBookings
       .filter((b) => ['confirmed', 'completed'].includes(b.status))
-      .reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
+      .reduce((sum, b) => sum + hostPayoutOf(b.pricing), 0);
 
     // This month earnings
     const now = new Date();
@@ -36,7 +37,7 @@ exports.getDashboardStats = async (req, res, next) => {
         ['confirmed', 'completed'].includes(b.status) &&
         new Date(b.createdAt) >= startOfMonth
     );
-    const monthlyEarnings = monthlyBookings.reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
+    const monthlyEarnings = monthlyBookings.reduce((sum, b) => sum + hostPayoutOf(b.pricing), 0);
 
     // Reviews
     const reviews = await Review.find({ property: { $in: propertyIds } });
@@ -205,7 +206,7 @@ exports.getEarnings = async (req, res, next) => {
 
     bookings.forEach((b) => {
       const month = new Date(b.createdAt).getMonth();
-      monthly[month].earnings += b.pricing?.total || 0;
+      monthly[month].earnings += hostPayoutOf(b.pricing);
       monthly[month].bookings += 1;
     });
 
@@ -218,7 +219,7 @@ exports.getEarnings = async (req, res, next) => {
     bookings.forEach((b) => {
       const type = b.property?.type || 'unknown';
       if (!byType[type]) byType[type] = { earnings: 0, bookings: 0 };
-      byType[type].earnings += b.pricing?.total || 0;
+      byType[type].earnings += hostPayoutOf(b.pricing);
       byType[type].bookings += 1;
     });
 
@@ -236,7 +237,7 @@ exports.getEarnings = async (req, res, next) => {
           bookings: 0,
         };
       }
-      byProperty[pid].earnings += b.pricing?.total || 0;
+      byProperty[pid].earnings += hostPayoutOf(b.pricing);
       byProperty[pid].bookings += 1;
     });
 
@@ -697,7 +698,7 @@ exports.getHostBookings = async (req, res, next) => {
       checkIn: b.checkIn.toISOString().split('T')[0],
       checkOut: b.checkOut.toISOString().split('T')[0],
       totalAmount: b.pricing?.total || 0,
-      hostAmount: Math.round((b.pricing?.total || 0) * 0.85),
+      hostAmount: hostPayoutOf(b.pricing),
       status: b.status === 'pending' ? 'waiting'
         : b.status === 'confirmed' ? 'confirmed'
         : b.status === 'completed' ? 'completed'
@@ -741,7 +742,7 @@ exports.getUpcomingGuests = async (req, res, next) => {
       checkIn: b.checkIn.toISOString().split('T')[0],
       checkOut: b.checkOut.toISOString().split('T')[0],
       totalAmount: b.pricing?.total || 0,
-      hostAmount: Math.round((b.pricing?.total || 0) * 0.85),
+      hostAmount: hostPayoutOf(b.pricing),
       status: b.status === 'pending' ? 'waiting' : b.status,
       createdAt: b.createdAt.toISOString().split('T')[0],
     }));
@@ -901,7 +902,7 @@ exports.getHostDashboardStats = async (req, res, next) => {
 
     const allBookings = await Booking.find({ property: { $in: propertyIds } });
     const activeBookings = allBookings.filter(b => ['confirmed', 'completed'].includes(b.status));
-    const totalEarnings = activeBookings.reduce((sum, b) => sum + (b.pricing?.total || 0), 0);
+    const totalEarnings = activeBookings.reduce((sum, b) => sum + hostPayoutOf(b.pricing), 0);
     // Confirmed stays that are running now or still to come.
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);

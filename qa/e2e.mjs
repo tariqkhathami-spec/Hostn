@@ -148,6 +148,13 @@ async function bookUnit(unit) {
     const made = await call('guest', 'POST', '/bookings', { ...body, holdId });
     const booking = made.data?.booking || made.data;
     check('booking is created from the hold with a positive total', made.status < 300 && booking?._id && booking?.pricing?.total > 0, `status ${made.status} ${JSON.stringify(made.json).slice(0, 160)}`);
+    // Commission: 10% service fee from the guest, 5% from the host, both on
+    // the stay after discount; the host never receives the fee or the VAT.
+    const pr = booking?.pricing || {};
+    const stay = (pr.subtotal || 0) - (pr.discount || 0);
+    const near = (a, b) => Math.abs(a - b) < 0.011;
+    check('guest pays a 10% service fee and 15% VAT on top', near(pr.serviceFee, stay * 0.10) && near(pr.vat, (stay + (pr.cleaningFee || 0) + stay * 0.10) * 0.15) && near(pr.total, (stay + (pr.cleaningFee || 0) + stay * 0.10) * 1.15), JSON.stringify(pr));
+    check('booking stores a 5% host commission and the host payout', pr.hostCommissionRate === 0.05 && near(pr.hostCommission, stay * 0.05) && near(pr.hostPayout, stay + (pr.cleaningFee || 0) - stay * 0.05) && pr.hostPayout < pr.total, JSON.stringify(pr));
     return booking;
   }
   check('found free dates to book', false, 'no free slot in 12 attempts');
@@ -798,7 +805,7 @@ await step('booking on the throwaway listing: availability, payment records, hos
   check('upcoming guests screen shows the booking in its own shape', up.status === 200 && row && row.guestName === users.tGuest.name && row.status === 'confirmed' && row.checkIn === dayAt(200) && row.checkOut === dayAt(202) && row.totalAmount === tBooking.pricing.total && typeof row.hostAmount === 'number' && row.bookingNumber, brief(up, 300));
   const earn = await call('tHost', 'GET', `/host/earnings?year=${new Date().getFullYear()}`);
   const month = (earn.data?.monthly || [])[new Date().getMonth()];
-  check('earnings screen adds the booking to this month', earn.status === 200 && earn.data?.monthly?.length === 12 && Math.abs(earn.data.totalEarnings - tBooking.pricing.total) < 0.01 && earn.data.totalBookings === 1 && month?.bookings === 1 && earn.data.topProperties?.[0]?.propertyId === p, brief(earn, 200));
+  check('earnings screen adds the host payout of the booking to this month', earn.status === 200 && earn.data?.monthly?.length === 12 && Math.abs(earn.data.totalEarnings - tBooking.pricing.hostPayout) < 0.01 && earn.data.totalBookings === 1 && month?.bookings === 1 && earn.data.topProperties?.[0]?.propertyId === p, brief(earn, 200));
   const wcal = await call('tHost', 'GET', `/host/calendar/${p}?startDate=${dayAt(190)}&endDate=${dayAt(215)}`);
   check('website calendar shows the booking with the guest name and total', (wcal.data?.bookings || []).some((b) => idOf(b) === tBooking._id && b.guest?.name === users.tGuest.name && b.total === tBooking.pricing.total && b.status === 'confirmed'), brief(wcal, 260));
 
@@ -1201,6 +1208,11 @@ await step('host reports and statements (seed host, read only)', async () => {
     const tx = det.data?.transactions || [];
     check('app statement opens by month and its lines add up to the total', det.status === 200 && det.data?.month === row.month && det.data?.year === row.year && tx.length > 0 && Math.abs(det.data.closingBalance - row.closingBalance) < 0.01
       && Math.abs(tx.reduce((s, t) => s + t.credit - t.debit, 0) - det.data.closingBalance) < 0.01 && tx.every((t) => t.date && typeof t.description === 'string' && typeof t.balance === 'number'), brief(det, 300));
+    if (det.data?.isFallback) {
+      const debits = tx.filter((t) => t.type === 'commission');
+      check('statement shows the platform commission as its own debit lines', debits.length > 0 && debits.every((t) => t.debit > 0 && t.credit === 0 && /عمولة المنصة \(5%\)/.test(t.description))
+        && Math.abs(debits.reduce((s, t) => s + t.debit, 0) - det.data.totalDebits) < 0.01 && Math.abs(det.data.totalCredits - det.data.totalDebits - det.data.closingBalance) < 0.01, brief(det, 300));
+    }
     const badMonth = await call('host', 'GET', '/host/statements/13');
     check('an impossible month is refused', badMonth.status === 400, brief(badMonth));
     const web = await call('host', 'GET', `/host/finance/statements?year=${row.year}`);

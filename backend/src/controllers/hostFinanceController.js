@@ -3,6 +3,7 @@ const Payout = require('../models/Payout');
 const HostInvoice = require('../models/HostInvoice');
 const HostStatement = require('../models/HostStatement');
 const Booking = require('../models/Booking');
+const { hostBreakdownOf, HOST_COMMISSION_RATE } = require('../config/fees');
 
 // ─── Helper: month names for fallback statements ─────────────────────────────
 const MONTH_NAMES = [
@@ -240,38 +241,42 @@ exports.getStatements = async (req, res) => {
       const propertyIds = hostProperties.map((p) => p._id);
 
       if (propertyIds.length > 0) {
-        const bookingAgg = await Booking.aggregate([
-          {
-            $match: {
-              property: { $in: propertyIds },
-              status: { $in: ['confirmed', 'completed'] },
-              checkIn: {
-                $gte: new Date(`${targetYear}-01-01`),
-                $lt: new Date(`${targetYear + 1}-01-01`),
-              },
-            },
+        // What the host earned per month: the stay (after discount) plus the
+        // cleaning fee, less the platform commission. The guest's service
+        // fee and the VAT are not the host's money.
+        const monthBookings = await Booking.find({
+          property: { $in: propertyIds },
+          status: { $in: ['confirmed', 'completed'] },
+          checkIn: {
+            $gte: new Date(`${targetYear}-01-01`),
+            $lt: new Date(`${targetYear + 1}-01-01`),
           },
-          {
-            $group: {
-              _id: { $month: '$checkIn' },
-              totalCredits: { $sum: '$pricing.total' },
-              bookingCount: { $sum: 1 },
-            },
-          },
-          { $sort: { _id: -1 } },
-        ]);
+        }).select('checkIn pricing').lean();
 
-        statements = bookingAgg.map((item) => ({
-          _id: `fallback-${targetYear}-${item._id}`,
-          period: { month: item._id, year: targetYear },
-          openingBalance: 0,
-          closingBalance: item.totalCredits,
-          totalCredits: item.totalCredits,
-          totalDebits: 0,
-          status: 'closed',
-          currency: 'SAR',
-          isFallback: true,
-        }));
+        const byMonth = new Map();
+        monthBookings.forEach((b) => {
+          const m = new Date(b.checkIn).getMonth() + 1;
+          const row = byMonth.get(m) || { credits: 0, debits: 0 };
+          const { gross, commission } = hostBreakdownOf(b.pricing);
+          row.credits += gross;
+          row.debits += commission;
+          byMonth.set(m, row);
+        });
+        const r2 = (n) => Math.round(n * 100) / 100;
+
+        statements = Array.from(byMonth.entries())
+          .sort((a, b) => b[0] - a[0])
+          .map(([month, row]) => ({
+            _id: `fallback-${targetYear}-${month}`,
+            period: { month, year: targetYear },
+            openingBalance: 0,
+            closingBalance: r2(row.credits - row.debits),
+            totalCredits: r2(row.credits),
+            totalDebits: r2(row.debits),
+            status: 'closed',
+            currency: 'SAR',
+            isFallback: true,
+          }));
       }
     }
 
@@ -318,22 +323,43 @@ exports.getStatementDetail = async (req, res) => {
         .select('checkIn checkOut pricing status property')
         .lean();
 
+      const r2 = (n) => Math.round(n * 100) / 100;
+      const ratePct = Math.round(HOST_COMMISSION_RATE * 100);
       let balance = 0;
-      const entries = bookings.map((b) => {
-        const credit = b.pricing?.total ?? 0;
-        balance += credit;
+      let totalCredits = 0;
+      let totalDebits = 0;
+      const entries = [];
+      bookings.forEach((b) => {
+        const { gross, commission } = hostBreakdownOf(b.pricing);
         const prop = propertyMap[b.property?.toString()];
-        return {
+        balance = r2(balance + gross);
+        totalCredits = r2(totalCredits + gross);
+        entries.push({
           date: b.checkIn,
           type: 'booking_earning',
           description: `Booking at ${prop?.title ?? 'Property'}`,
           descriptionAr: `حجز في ${prop?.titleAr ?? prop?.title ?? 'عقار'}`,
           reference: b._id.toString(),
           referenceId: b._id,
-          credit,
+          credit: gross,
           debit: 0,
           balance,
-        };
+        });
+        if (commission > 0) {
+          balance = r2(balance - commission);
+          totalDebits = r2(totalDebits + commission);
+          entries.push({
+            date: b.checkIn,
+            type: 'commission',
+            description: `Platform commission (${ratePct}%)`,
+            descriptionAr: `عمولة المنصة (${ratePct}%)`,
+            reference: b._id.toString(),
+            referenceId: b._id,
+            credit: 0,
+            debit: commission,
+            balance,
+          });
+        }
       });
 
       return res.json({
@@ -343,8 +369,8 @@ exports.getStatementDetail = async (req, res) => {
           period: { month, year },
           openingBalance: 0,
           closingBalance: balance,
-          totalCredits: balance,
-          totalDebits: 0,
+          totalCredits,
+          totalDebits,
           currency: 'SAR',
           entries,
           status: 'closed',

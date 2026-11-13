@@ -5,6 +5,7 @@ const Unit = require('../models/Unit');
 const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const { emitToUser, emitToProperty } = require('../config/socket');
+const { GUEST_SERVICE_FEE_RATE, VAT_RATE, hostShare } = require('../config/fees');
 
 // Helper: overlap query for date-range conflicts (includes active holds)
 // When unitId is provided, checks unit-level availability instead of property-level.
@@ -153,19 +154,20 @@ function calculateUnitPricing(unit, checkInDate, checkOutDate) {
 
   const perNight = nights > 0 ? r2(subtotalBase / nights) : 0;
   const cleaningFee = r2(unit.pricing?.cleaningFee || 0);
-  // PR G: service fee is 11% of the POST-discount subtotal, pre-VAT.
+  // PR G: service fee (GUEST_SERVICE_FEE_RATE) is charged on the POST-discount subtotal, pre-VAT.
   // PR L: all arithmetic done at full precision, rounded to 2dp only once.
   const discountedSubtotal = Math.max(0, subtotalBase - discount);
-  const serviceFeeRaw = discountedSubtotal * 0.11;
+  const serviceFeeRaw = discountedSubtotal * GUEST_SERVICE_FEE_RATE;
   const serviceFee = r2(serviceFeeRaw);
   const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
-  const vatRaw = taxableRaw * 0.15;
+  const vatRaw = taxableRaw * VAT_RATE;
   const vat = r2(vatRaw);
   const total = r2(taxableRaw + vatRaw);
 
   return {
     perNight, nights, subtotal, cleaningFee, serviceFee, discount,
     discountPercent, discountType, vat, total,
+    ...hostShare({ subtotal, discount, cleaningFee }),
     appliedDiscountTypes: Array.from(appliedTypes),
   };
 }
@@ -360,14 +362,14 @@ exports.createHold = async (req, res, next) => {
       const discount = property.pricing.discountPercent > 0
         ? r2(subtotal * (property.pricing.discountPercent / 100))
         : 0;
-      // PR G: service fee is 11% post-discount, pre-VAT.
+      // PR G: service fee (GUEST_SERVICE_FEE_RATE) is post-discount, pre-VAT.
       const discountedSubtotal = Math.max(0, subtotal - discount);
-      const serviceFeeRaw = discountedSubtotal * 0.11;
+      const serviceFeeRaw = discountedSubtotal * GUEST_SERVICE_FEE_RATE;
       const serviceFee = r2(serviceFeeRaw);
       const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
-      const vat = r2(taxableRaw * 0.15);
-      const total = r2(taxableRaw * 1.15);
-      pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
+      const vat = r2(taxableRaw * VAT_RATE);
+      const total = r2(taxableRaw * (1 + VAT_RATE));
+      pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total, ...hostShare({ subtotal, discount, cleaningFee }) };
     }
 
     // Never take a booking for a unit that is not ready (no price set).
@@ -581,14 +583,14 @@ exports.createBooking = async (req, res, next) => {
       const discount = property.pricing.discountPercent > 0
         ? r2(subtotal * (property.pricing.discountPercent / 100))
         : 0;
-      // PR G: service fee is 11% post-discount, pre-VAT.
+      // PR G: service fee (GUEST_SERVICE_FEE_RATE) is post-discount, pre-VAT.
       const discountedSubtotal = Math.max(0, subtotal - discount);
-      const serviceFeeRaw = discountedSubtotal * 0.11;
+      const serviceFeeRaw = discountedSubtotal * GUEST_SERVICE_FEE_RATE;
       const serviceFee = r2(serviceFeeRaw);
       const taxableRaw = discountedSubtotal + cleaningFee + serviceFeeRaw;
-      const vat = r2(taxableRaw * 0.15);
-      const total = r2(taxableRaw * 1.15);
-      pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total };
+      const vat = r2(taxableRaw * VAT_RATE);
+      const total = r2(taxableRaw * (1 + VAT_RATE));
+      pricing = { perNight, nights, subtotal, cleaningFee, serviceFee, discount, vat, total, ...hostShare({ subtotal, discount, cleaningFee }) };
     }
 
     // Never take a booking for a unit that is not ready (no price set).
