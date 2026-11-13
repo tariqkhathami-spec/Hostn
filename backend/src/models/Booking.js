@@ -57,6 +57,11 @@ const bookingSchema = new mongoose.Schema(
       discount: { type: Number, default: 0 },
       vat: { type: Number, default: 0 },
       total: { type: Number, required: true },
+      // Host side, fixed when the booking is created (see config/fees.js).
+      // Absent on bookings made before the commission existed.
+      hostCommissionRate: { type: Number },
+      hostCommission: { type: Number },
+      hostPayout: { type: Number },
     },
     status: {
       type: String,

@@ -189,7 +189,7 @@ export default function BookingWidget({ property, initialCheckIn = '', initialCh
     // PR L: 2-decimal precision — full floats, round to 2dp only at the end.
     const r2 = (n: number) => Math.round(n * 100) / 100;
     discount = propDiscPct > 0 ? r2(subtotal * (propDiscPct / 100)) : 0;
-    // PR G: service fee = 11% of the post-discount subtotal, pre-VAT.
+    // PR G: service fee (SERVICE_FEE_RATE) on the post-discount subtotal, pre-VAT.
     const discountedSubtotal = Math.max(0, subtotal - discount);
     const serviceFeeRaw = discountedSubtotal * SERVICE_FEE_RATE;
     serviceFee = r2(serviceFeeRaw);
