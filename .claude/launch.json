@@ -1,0 +1,70 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hostn-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "backend",
+        "run",
+        "dev"
+      ],
+      "port": 5050
+    },
+    {
+      "name": "hostn-web",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_API_URL=/api/v1",
+        "API_PROXY_TARGET=http://localhost:5050",
+        "NEXT_PUBLIC_APP_URL=http://localhost:3000",
+        "NEXT_PUBLIC_MAIN_URL=http://localhost:3000",
+        "NEXT_PUBLIC_BUSINESS_URL=http://business.localhost:3000",
+        "NEXT_PUBLIC_ADMIN_URL=http://admin.localhost:3000",
+        "npm",
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "host-app-metro",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd host-app && EXPO_PUBLIC_API_URL=http://localhost:5050/api/v1 npx expo start --dev-client --port 8081"
+      ],
+      "port": 8081
+    },
+    {
+      "name": "user-app-metro",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd user-app && EXPO_PUBLIC_API_URL=http://localhost:5050/api/v1 npx expo start --dev-client --port 8082"
+      ],
+      "port": 8082
+    },
+    {
+      "name": "host-app-go",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd host-app && EXPO_PUBLIC_API_URL=http://localhost:5050/api/v1 npx expo start --go --offline --port 8081"
+      ],
+      "port": 8081
+    },
+    {
+      "name": "user-app-go",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd user-app && EXPO_PUBLIC_API_URL=http://localhost:5050/api/v1 npx expo start --go --offline --port 8082"
+      ],
+      "port": 8082
+    }
+  ]
+}

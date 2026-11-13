@@ -1,0 +1,48 @@
+› Skipping dev server
+› Using --device 0F89BA42-D9B2-40B2-AB52-75D1A917C847
+› Planning build
+› Preparing expo-image Pods/SDWebImage-SDWebImage » ResourceBundle-SDWebImage-SDWebImage-Info.plist
+› Executing react-native Pods/hermes-engine » [CP-User] [Hermes] Replace Hermes for the right configuration, if needed
+› Executing react-native Pods/ReactNativeDependencies » [CP-User] [RNDeps] Replace React Native Dependencies for the right configuration, if needed
+› Preparing Pods/React-Core-React-Core_privacy » ResourceBundle-React-Core_privacy-React-Core-Info.plist
+› Preparing Pods/ExpoNotifications-ExpoNotifications_privacy » ResourceBundle-ExpoNotifications_privacy-ExpoNotifications-Info.plist
+› Preparing Pods/EXConstants-ExpoConstants_privacy » ResourceBundle-ExpoConstants_privacy-EXConstants-Info.plist
+› Preparing Pods/EXApplication-ExpoApplication_privacy » ResourceBundle-ExpoApplication_privacy-EXApplication-Info.plist
+› Preparing Pods/React-cxxreact-React-cxxreact_privacy » ResourceBundle-React-cxxreact_privacy-React-cxxreact-Info.plist
+› Preparing Pods/ExpoFileSystem-ExpoFileSystem_privacy » ResourceBundle-ExpoFileSystem_privacy-ExpoFileSystem-Info.plist
+› Preparing expo-constants Pods/EXConstants-EXConstants » ResourceBundle-EXConstants-EXConstants-Info.plist
+› Preparing Pods/expo-dev-menu-EXDevMenu » ResourceBundle-EXDevMenu-expo-dev-menu-Info.plist
+› Preparing Pods/expo-dev-launcher-EXDevLauncher » ResourceBundle-EXDevLauncher-expo-dev-launcher-Info.plist
+› Executing react-native Pods/React-Core-prebuilt » [CP-User] [RNDeps] Replace React Native Core for the right configuration, if needed
+› Executing react-native Pods/React-RCTFBReactNativeSpec » [CP-User] [RN]Check FBReactNativeSpec
+› Compiling host-app Pods/ReactAppDependencyProvider » RCTAppDependencyProvider.mm
+› Executing react-native-maps Pods/react-native-maps » [CP-User] react-native-maps patches
+› Executing expo-constants Pods/EXConstants » [CP-User] Generate app.config for prebuilt Constants.manifest
+› Compiling react-native-maps Pods/react-native-maps » PlaceHolderPolygonView.mm
+› Packaging host-app Pods/ReactAppDependencyProvider » libReactAppDependencyProvider.a
+› Compiling react-native-maps Pods/react-native-maps » PlaceHolderGoogleMapView.mm
+› Packaging react-native-maps Pods/react-native-maps » libreact-native-maps.a
+    Run script build phase '[Expo Dev Launcher] Strip Local Network Keys for Release' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'HostnHost' from project 'HostnHost')
+› Executing HostnHost » [Expo] Configure project
+› Preparing HostnHost » Info.plist
+› Linking   HostnHost » HostnHost.debug.dylib
+› Linking   HostnHost » HostnHost
+› Executing HostnHost » Bundle React Native code and images
+› Executing HostnHost » [CP] Copy Pods Resources
+› Executing HostnHost » [Expo Dev Launcher] Strip Local Network Keys for Release
+› Generating debug HostnHost » HostnHost.app.dSYM
+› Generating debug HostnHost » HostnHost.app.dSYM
+› Signing   HostnHost » HostnHost.debug.dylib
+› Signing   HostnHost » __preview.dylib
+› Signing   HostnHost » HostnHost.app
+    Run script build phase '[CP-User] [Hermes] Replace Hermes for the right configuration, if needed' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'hermes-engine' from project 'Pods')
+    Run script build phase '[CP-User] react-native-maps patches' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'react-native-maps' from project 'Pods')
+› Build Succeeded
+
+› 0 error(s), and 3 warning(s)
+
+Waiting on http://localhost:8081
+› Installing /Users/tariqalkhathami/Library/Developer/Xcode/DerivedData/HostnHost-exhpywzzwnvfizfroqbiicmbzpji/Build/Products/Debug-iphonesimulator/HostnHost.app
+› Installing on iPhone 17 Pro
+› Opening on iPhone 17 Pro (com.hostn.host)
+› Opening exp+hostn-host://expo-development-client/?url=http%3A%2F%2F192.168.1.3%3A8081 on iPhone 17 Pro
