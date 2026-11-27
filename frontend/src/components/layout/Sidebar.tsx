@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, Home, MessageSquare, Settings,
   CreditCard, Star, BarChart3, Users, Building, BookOpen,
   FileText, Shield, LogOut, ChevronRight, Heart, Wallet, Globe, Newspaper,
-  Trophy, ShieldCheck, Award,
+  Trophy, ShieldCheck, Award, KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { notificationsApi, messagesApi } from '@/lib/api';
@@ -65,6 +65,7 @@ const adminNav: NavItem[] = [
   { href: '/admin/blog', icon: Newspaper, label: { en: 'Blog', ar: 'المدونة' }, adminRoles: ['super'] },
   { href: '/admin/logs', icon: BarChart3, label: { en: 'Activity Logs', ar: 'سجل النشاط' }, adminRoles: ['super', 'support', 'finance'] },
   { href: '/admin/account-managers', icon: ShieldCheck, label: { en: 'Account Managers', ar: 'مدراء الحسابات' }, adminRoles: ['super'] },
+  { href: '/admin/integrations', icon: KeyRound, label: { en: 'Keys & Integrations', ar: 'المفاتيح والربط' }, adminRoles: ['super'] },
 ];
 
 const NAV_MAP: Record<string, NavItem[]> = {

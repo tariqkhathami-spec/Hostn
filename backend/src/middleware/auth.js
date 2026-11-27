@@ -29,9 +29,9 @@ exports.protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // A socket token only opens the realtime connection; it is readable by
-    // page scripts, so it must never work as an API session.
-    if (decoded.purpose === 'socket') {
+    // A token issued for one purpose (the socket token, the integrations
+    // step-up token) must never work as an API session.
+    if (decoded.purpose) {
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
     // Support both new `userType` and legacy `role` field in JWT payload
@@ -103,7 +103,7 @@ exports.optionalAuth = async (req, res, next) => {
     }
     if (!token) return next();
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.purpose === 'socket') return next();
+    if (decoded.purpose) return next();
     const userType = decoded.userType || decoded.role;
     const Model = getModelForUserType(userType);
     if (!Model) return next();

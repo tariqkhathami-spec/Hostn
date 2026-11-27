@@ -11,14 +11,16 @@
  * 4. We verify payment status via API
  */
 
-const TABBY_API_URL = process.env.TABBY_API_URL || 'https://api.tabby.ai/api/v2';
-const TABBY_SECRET_KEY = process.env.TABBY_SECRET_KEY;
-const TABBY_PUBLIC_KEY = process.env.TABBY_PUBLIC_KEY;
-const TABBY_MERCHANT_CODE = process.env.TABBY_MERCHANT_CODE || 'hostn';
-
-const TAMARA_API_URL = process.env.TAMARA_API_URL || 'https://api.tamara.co';
-const TAMARA_TOKEN = process.env.TAMARA_TOKEN;
-const TAMARA_NOTIFICATION_TOKEN = process.env.TAMARA_NOTIFICATION_TOKEN;
+// Read on every call: these keys can be changed from the admin dashboard.
+const cfg = {
+  get TABBY_API_URL() { return process.env.TABBY_API_URL || 'https://api.tabby.ai/api/v2'; },
+  get TABBY_SECRET_KEY() { return process.env.TABBY_SECRET_KEY; },
+  get TABBY_PUBLIC_KEY() { return process.env.TABBY_PUBLIC_KEY; },
+  get TABBY_MERCHANT_CODE() { return process.env.TABBY_MERCHANT_CODE || 'hostn'; },
+  get TAMARA_API_URL() { return process.env.TAMARA_API_URL || 'https://api.tamara.co'; },
+  get TAMARA_TOKEN() { return process.env.TAMARA_TOKEN; },
+  get TAMARA_NOTIFICATION_TOKEN() { return process.env.TAMARA_NOTIFICATION_TOKEN; },
+};
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
@@ -26,11 +28,11 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 async function tabbyRequest(method, path, data = null) {
   const fetch = (await import('node-fetch')).default;
-  const url = `${TABBY_API_URL}${path}`;
+  const url = `${cfg.TABBY_API_URL}${path}`;
   const options = {
     method,
     headers: {
-      Authorization: `Bearer ${TABBY_SECRET_KEY}`,
+      Authorization: `Bearer ${cfg.TABBY_SECRET_KEY}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
@@ -104,7 +106,7 @@ async function createTabbySession({
       },
     },
     lang: 'ar',
-    merchant_code: TABBY_MERCHANT_CODE,
+    merchant_code: cfg.TABBY_MERCHANT_CODE,
     merchant_urls: {
       success: `${CLIENT_URL}/callback/tabby?booking=${bookingId}&status=success`,
       cancel: `${CLIENT_URL}/callback/tabby?booking=${bookingId}&status=cancel`,
@@ -145,11 +147,11 @@ async function captureTabbyPayment(paymentId, amount) {
 
 async function tamaraRequest(method, path, data = null) {
   const fetch = (await import('node-fetch')).default;
-  const url = `${TAMARA_API_URL}${path}`;
+  const url = `${cfg.TAMARA_API_URL}${path}`;
   const options = {
     method,
     headers: {
-      Authorization: `Bearer ${TAMARA_TOKEN}`,
+      Authorization: `Bearer ${cfg.TAMARA_TOKEN}`,
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
@@ -283,7 +285,7 @@ function getBnplAvailability(amount) {
 
   const result = {
     tabby: {
-      available: !!TABBY_SECRET_KEY && amount >= TABBY_MIN && amount <= TABBY_MAX,
+      available: !!cfg.TABBY_SECRET_KEY && amount >= TABBY_MIN && amount <= TABBY_MAX,
       installments: 4,
       installmentAmount: Math.ceil((amount / 4) * 100) / 100,
       currency: 'SAR',
@@ -293,7 +295,7 @@ function getBnplAvailability(amount) {
       noInterest: true,
     },
     tamara: {
-      available: !!TAMARA_TOKEN && amount >= TAMARA_MIN && amount <= TAMARA_MAX,
+      available: !!cfg.TAMARA_TOKEN && amount >= TAMARA_MIN && amount <= TAMARA_MAX,
       installments: 4,
       installmentAmount: Math.ceil((amount / 4) * 100) / 100,
       currency: 'SAR',
@@ -312,9 +314,9 @@ function getBnplAvailability(amount) {
 const crypto = require('crypto');
 
 function verifyTabbyWebhook(rawBody, signature) {
-  if (!TABBY_SECRET_KEY || !signature) return false;
+  if (!cfg.TABBY_SECRET_KEY || !signature) return false;
   const expected = crypto
-    .createHmac('sha256', TABBY_SECRET_KEY)
+    .createHmac('sha256', cfg.TABBY_SECRET_KEY)
     .update(rawBody)
     .digest('hex');
   try {
@@ -329,7 +331,7 @@ function verifyTabbyWebhook(rawBody, signature) {
 
 function verifyTamaraWebhook(rawBody, token) {
   // Tamara uses a notification token in the header
-  return token === TAMARA_NOTIFICATION_TOKEN;
+  return token === cfg.TAMARA_NOTIFICATION_TOKEN;
 }
 
 module.exports = {

@@ -408,6 +408,23 @@ export const adminApi = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// INTEGRATION KEYS (super admin)
+// ═══════════════════════════════════════════════════════════════════════════════
+const stepUpHeader = (token?: string | null) => (token ? { headers: { 'X-Step-Up-Token': token } } : {});
+
+export const integrationsApi = {
+  list: () => api.get('/admin/integrations'),
+  sendStepUp: () => api.post('/admin/integrations/step-up/send'),
+  verifyStepUp: (otp: string) => api.post('/admin/integrations/step-up/verify', { otp }),
+  setKey: (key: string, value: string, stepUpToken?: string | null) =>
+    api.put(`/admin/integrations/${encodeURIComponent(key)}`, { value }, stepUpHeader(stepUpToken)),
+  clearKey: (key: string, stepUpToken?: string | null) =>
+    api.delete(`/admin/integrations/${encodeURIComponent(key)}`, stepUpHeader(stepUpToken)),
+  // Served by the AI assistant's routes (separate PR).
+  testAi: () => api.post('/ai/admin/test'),
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // UPLOAD
 // ═══════════════════════════════════════════════════════════════════════════════
 export const uploadApi = {
