@@ -262,6 +262,12 @@ export default function ListingDetailScreen() {
           {displaySubtitle ? (
             <Text style={styles.locationText}>{displaySubtitle}</Text>
           ) : null}
+          {isUnitDetail && itemData?.tourismLicense?.status === 'active' && itemData.tourismLicense.licenseNumber ? (
+            <Text style={styles.locationText}>
+              {isAr ? 'رقم ترخيص وزارة السياحة: ' : 'Ministry of Tourism licence no.: '}
+              {itemData.tourismLicense.licenseNumber}
+            </Text>
+          ) : null}
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={16} color={Colors.textSecondary} />
             <Text style={styles.locationText}>

@@ -240,6 +240,7 @@ export default function UnitsListPage() {
                         missing_name: isAr ? 'الاسم' : 'name',
                         missing_price: isAr ? 'السعر' : 'price',
                         missing_photos: isAr ? 'الصور' : 'photos',
+                        missing_license: isAr ? 'ترخيص وزارة السياحة (ساري ومعتمد)' : 'an approved, valid tourism licence',
                       } as Record<string, string>)[code] || code)
                       .join(isAr ? '، ' : ', ')}
                   </div>

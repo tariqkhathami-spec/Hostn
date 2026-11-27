@@ -190,6 +190,12 @@ export interface Unit {
   discountRules?: { type: 'weekday' | 'weekend'; percent: number; stackable?: boolean; enabled?: boolean }[];
   createdAt?: string;
   updatedAt?: string;
+  /** Public part of the Ministry of Tourism licence (number and status only). */
+  tourismLicense?: {
+    licenseNumber?: string;
+    status?: 'pending' | 'active' | 'expired' | 'rejected';
+    expiryDate?: string;
+  };
 }
 
 export interface GuestCount {

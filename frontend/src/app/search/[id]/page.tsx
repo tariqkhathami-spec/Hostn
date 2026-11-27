@@ -397,6 +397,13 @@ function UnitDetailContent() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{displayTitle}</h1>
+                {unit.tourismLicense?.status === 'active' && unit.tourismLicense.licenseNumber && (
+                  <p className="flex items-center gap-1 text-xs text-gray-500 mb-1" data-testid="tourism-license">
+                    <BadgeCheck className="w-4 h-4 text-primary-600" />
+                    {isAr ? 'رقم ترخيص وزارة السياحة: ' : 'Ministry of Tourism licence no.: '}
+                    <span dir="ltr" className="font-medium text-gray-700">{unit.tourismLicense.licenseNumber}</span>
+                  </p>
+                )}
                 {propertyTitle && property && (
                   <p className="text-base text-gray-500 mb-2">
                     <Link href={`/property/${property._id}`} className="hover:text-primary-600 hover:underline transition-colors">

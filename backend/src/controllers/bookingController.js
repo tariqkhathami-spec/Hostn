@@ -257,9 +257,15 @@ async function resolveUnitId(propertyId, unitId) {
   return { unitId: null };
 }
 
+const { hasActiveLicense, licenseRequired } = require('../utils/unitPublish');
+
 // Rules every reservation must satisfy, whether it is created directly or as
 // a hold that is later converted. Returns null when OK, else { code, message }.
 function checkStayRules({ property, unit, checkInDate, checkOutDate, guests }) {
+  // Ministry of Tourism: only units with a valid tourism licence may be booked.
+  if (licenseRequired() && !hasActiveLicense(unit)) {
+    return { code: 'LICENSE_REQUIRED', message: 'This unit is not available for booking yet' };
+  }
   if (checkInDate < new Date(new Date().toDateString())) {
     return { code: 'CHECKIN_IN_PAST', message: 'Check-in date cannot be in the past' };
   }
@@ -510,6 +516,11 @@ exports.createBooking = async (req, res, next) => {
     // Check if user is trying to book their own property
     if (property.host.toString() === req.user._id.toString()) {
       return res.status(400).json({ success: false, code: 'OWN_PROPERTY', message: 'Cannot book your own property' });
+    }
+
+    // Ministry of Tourism: only units with a valid tourism licence may be booked.
+    if (licenseRequired() && !hasActiveLicense(unit)) {
+      return res.status(400).json({ success: false, code: 'LICENSE_REQUIRED', message: 'This unit is not available for booking yet' });
     }
 
     // ── Guest count validation ────────────────────────────────────────

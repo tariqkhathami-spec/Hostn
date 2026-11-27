@@ -14,8 +14,32 @@
 const https = require('https');
 const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...args));
 
-// Authentica's SSL cert is mismatched from some regions (*.t2.sa instead of *.authentica.sa)
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+const tls = require('tls');
+
+// SECURITY: certificate verification stays ON. With it off, anyone on the
+// network path could answer "OTP valid" and sign in to any account.
+//
+// From some regions Authentica serves a certificate issued to its parent
+// company's domain (*.t2.sa) instead of *.authentica.sa. That certificate is
+// still checked against the trusted CA chain; only that one known alternate
+// name is accepted in addition to the real hostname.
+const ALTERNATE_CERT_HOST = 'api.t2.sa';
+let warnedAlternateCert = false;
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  checkServerIdentity(host, cert) {
+    const err = tls.checkServerIdentity(host, cert);
+    if (!err) return undefined;
+    if (!tls.checkServerIdentity(ALTERNATE_CERT_HOST, cert)) {
+      if (!warnedAlternateCert) {
+        warnedAlternateCert = true;
+        console.warn('[AUTHENTICA] Server presented the *.t2.sa certificate; accepted as a known alternate name.');
+      }
+      return undefined;
+    }
+    return err;
+  },
+});
 
 const AUTHENTICA_BASE_URL = 'https://api.authentica.sa/api/v2';
 const API_KEY = process.env.AUTHENTICA_API_KEY;
@@ -267,4 +291,4 @@ async function getBalance() {
   }
 }
 
-module.exports = { sendOTP, verifyOTP, getBalance, getUserErrorMessage };
+module.exports = { sendOTP, verifyOTP, getBalance, getUserErrorMessage, httpsAgent };

@@ -26,7 +26,9 @@ host's money screens, every admin list, and access control. It asserts on the
 content that comes back — that the other side can read what was sent — not only
 on status codes.
 
-Run it locally with the development database and seed accounts:
+Run it locally with the development database and seed accounts. Seed units
+have no approved tourism licence, so start the API with
+`TOURISM_LICENSE_REQUIRED=false` or the booking steps will be refused:
 
 ```bash
 node qa/e2e.mjs
