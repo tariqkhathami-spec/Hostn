@@ -4,14 +4,15 @@
  * Swap the implementation to Mapbox/OSM without changing callers.
  */
 
-const GOOGLE_MAPS_SERVER_KEY = process.env.GOOGLE_MAPS_SERVER_KEY;
+// Read on every call: the key can be changed from the admin dashboard.
+const serverKey = () => process.env.GOOGLE_MAPS_SERVER_KEY;
 const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 /**
  * Check if geocoding is available (API key configured).
  */
 function isAvailable() {
-  return Boolean(GOOGLE_MAPS_SERVER_KEY);
+  return Boolean(serverKey());
 }
 
 /**
@@ -20,7 +21,7 @@ function isAvailable() {
  * @returns {Promise<{ lat: number; lng: number; formattedAddress: string } | null>}
  */
 async function geocodeAddress(address) {
-  if (!GOOGLE_MAPS_SERVER_KEY) {
+  if (!serverKey()) {
     console.warn('[Geocoding] No GOOGLE_MAPS_SERVER_KEY set — skipping geocode');
     return null;
   }
@@ -28,7 +29,7 @@ async function geocodeAddress(address) {
   try {
     const params = new URLSearchParams({
       address,
-      key: GOOGLE_MAPS_SERVER_KEY,
+      key: serverKey(),
       region: 'sa',
       language: 'en',
     });
@@ -58,7 +59,7 @@ async function geocodeAddress(address) {
  * @returns {Promise<{ city: string; district: string; address: string } | null>}
  */
 async function reverseGeocode(lat, lng) {
-  if (!GOOGLE_MAPS_SERVER_KEY) {
+  if (!serverKey()) {
     console.warn('[Geocoding] No GOOGLE_MAPS_SERVER_KEY set — skipping reverse geocode');
     return null;
   }
@@ -66,7 +67,7 @@ async function reverseGeocode(lat, lng) {
   try {
     const params = new URLSearchParams({
       latlng: `${lat},${lng}`,
-      key: GOOGLE_MAPS_SERVER_KEY,
+      key: serverKey(),
       language: 'en',
     });
     const resp = await fetch(`${GEOCODE_URL}?${params}`, { signal: AbortSignal.timeout(5000) });

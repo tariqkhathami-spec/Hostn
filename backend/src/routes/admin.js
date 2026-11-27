@@ -68,6 +68,17 @@ router.get('/host-assignments', authorizePermission(PERMISSIONS.MANAGE_ADMINS), 
 router.post('/host-assignments/distribute', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.distributeUnassigned);
 router.put('/hosts/:id/account-manager', authorizePermission(PERMISSIONS.MANAGE_ADMINS), staff.assignManager);
 
+// Integration keys and AI settings — super admins only, step-up for changes
+const integrations = require('../controllers/adminIntegrationsController');
+const userRateLimit = require('../middleware/userRateLimit');
+const stepUpLimiter = userRateLimit({ name: 'stepup', windowMs: 15 * 60 * 1000, max: 8, message: 'محاولات كثيرة، حاول بعد ربع ساعة' });
+const manageIntegrations = authorizePermission(PERMISSIONS.MANAGE_INTEGRATIONS);
+router.get('/integrations', manageIntegrations, integrations.list);
+router.post('/integrations/step-up/send', manageIntegrations, stepUpLimiter, integrations.sendStepUp);
+router.post('/integrations/step-up/verify', manageIntegrations, stepUpLimiter, integrations.verifyStepUp);
+router.put('/integrations/:key', manageIntegrations, integrations.requireStepUp, integrations.setKey);
+router.delete('/integrations/:key', manageIntegrations, integrations.requireStepUp, integrations.clearKey);
+
 // Activity Logs — super + support + finance
 router.get('/logs', authorizePermission(PERMISSIONS.VIEW_LOGS), getLogs);
 

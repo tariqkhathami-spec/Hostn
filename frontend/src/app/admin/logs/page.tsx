@@ -73,6 +73,9 @@ export default function AdminLogsPage() {
     bnpl_tamara_failed: 'فشل دفع تمارا',
     bnpl_webhook_tabby: 'إشعار من تابي',
     bnpl_webhook_tamara: 'إشعار من تمارا',
+    integration_key_set: 'حفظ مفتاح ربط',
+    integration_key_cleared: 'حذف مفتاح ربط',
+    integration_stepup_verified: 'تحقق إضافي لصفحة المفاتيح',
   } : {};
 
   const translateAction = (action: string) => {

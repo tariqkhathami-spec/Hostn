@@ -39,6 +39,9 @@ const PERMISSIONS = {
 
   // Admin management (super only)
   MANAGE_ADMINS: 'manage_admins',
+
+  // Integration keys and AI settings (super only)
+  MANAGE_INTEGRATIONS: 'manage_integrations',
 };
 
 /**

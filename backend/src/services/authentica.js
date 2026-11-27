@@ -18,7 +18,8 @@ const fetch = (...args) => import('node-fetch').then(({ default: f }) => f(...ar
 const httpsAgent = new https.Agent({ rejectUnauthorized: false });
 
 const AUTHENTICA_BASE_URL = 'https://api.authentica.sa/api/v2';
-const API_KEY = process.env.AUTHENTICA_API_KEY;
+// Read on every call: the key can be changed from the admin dashboard.
+const apiKey = () => process.env.AUTHENTICA_API_KEY;
 
 // Template IDs (from https://portal.authentica.sa/templates/)
 const TEMPLATE_ID_AR = 5;
@@ -93,7 +94,7 @@ function getUserErrorMessage(error, lang = 'ar') {
  * Make a single API request to Authentica
  */
 async function authenticaRequest(method, endpoint, body = null) {
-  if (!API_KEY) {
+  if (!apiKey()) {
     throw Object.assign(new Error('AUTHENTICA_API_KEY is not configured'), { status: 500 });
   }
 
@@ -106,7 +107,7 @@ async function authenticaRequest(method, endpoint, body = null) {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'X-Authorization': API_KEY,
+      'X-Authorization': apiKey(),
     },
     signal: controller.signal,
     agent: httpsAgent,

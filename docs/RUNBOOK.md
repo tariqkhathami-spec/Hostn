@@ -88,6 +88,20 @@ eas build --profile production --platform ios
 eas build --profile production --platform android
 ```
 
+## Integration keys and the AI assistant
+
+Service keys (Moyasar, Tabby/Tamara, Authentica, Cloudinary/S3, email, SMS, push, maps, Claude) can be set by a super admin at **/admin/integrations** instead of Railway.
+
+- Requires `SECRETS_MASTER_KEY` in Railway (32+ random characters, `openssl rand -base64 48`). Without it the page is read-only and the app uses env vars only. Never rotate it casually: saved keys are decrypted with it.
+- Values are AES-256-GCM encrypted in the `integrationsettings` collection; secrets are never returned to the browser.
+- A saved value overrides the Railway variable of the same name; the reset button removes it and the Railway value applies again.
+- Each change asks for an SMS code to the admin's phone (Authentica) and is written to the activity log.
+- Keys marked "needs restart" (Moyasar secret + webhook secret, S3, Resend/SMTP, Firebase) are read when the server starts: redeploy or restart the Railway service after changing them.
+- `MONGODB_URI`, `JWT_SECRET`, `SECRETS_MASTER_KEY` and `REDIS_URL` stay Railway-only.
+- The server entry point is `src/index.js` (loads saved keys, then starts `src/server.js`).
+
+AI assistant: its provider, keys, model and on/off switches (`AI_PROVIDER`, `ANTHROPIC_API_KEY`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `AI_*_ENABLED`, `AI_EXTRA_INSTRUCTIONS`) are set on the same page; the assistant itself ships separately and reads them from `process.env` per request.
+
 ## Health Checks
 
 ```bash

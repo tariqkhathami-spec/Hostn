@@ -80,6 +80,10 @@ const activityLogSchema = new mongoose.Schema(
         // Staff and account managers
         'staff_created',
         'account_manager_assigned',
+        // Integration keys managed from the admin dashboard (never the value)
+        'integration_key_set',
+        'integration_key_cleared',
+        'integration_stepup_verified',
       ],
     },
     target: {
