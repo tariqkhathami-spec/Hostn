@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Calendar, Home, MessageSquare, Settings,
   CreditCard, Star, BarChart3, Users, Building, BookOpen,
   FileText, Shield, LogOut, ChevronRight, Heart, Wallet, Globe, Newspaper,
-  Trophy, ShieldCheck, Award,
+  Trophy, ShieldCheck, Award, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { notificationsApi, messagesApi } from '@/lib/api';
@@ -62,6 +62,7 @@ const adminNav: NavItem[] = [
   { href: '/admin/payments', icon: CreditCard, label: { en: 'Payments', ar: 'المدفوعات' }, adminRoles: ['super', 'finance'] },
   { href: '/admin/reports', icon: Shield, label: { en: 'Reports', ar: 'البلاغات' }, adminRoles: ['super', 'support'] },
   { href: '/admin/support', icon: FileText, label: { en: 'Support', ar: 'الدعم' }, adminRoles: ['super', 'support'] },
+  { href: '/admin/ai', icon: Sparkles, label: { en: 'AI Assistant', ar: 'المساعد الذكي' }, adminRoles: ['super', 'support', 'finance'] },
   { href: '/admin/blog', icon: Newspaper, label: { en: 'Blog', ar: 'المدونة' }, adminRoles: ['super'] },
   { href: '/admin/logs', icon: BarChart3, label: { en: 'Activity Logs', ar: 'سجل النشاط' }, adminRoles: ['super', 'support', 'finance'] },
   { href: '/admin/account-managers', icon: ShieldCheck, label: { en: 'Account Managers', ar: 'مدراء الحسابات' }, adminRoles: ['super'] },
