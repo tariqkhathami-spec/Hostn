@@ -100,15 +100,20 @@ function BookingContent() {
     fetchProperty();
   }, [id, isAuthenticated, authLoading]);
 
-  // Load Moyasar form when moving to step 2
+  // Step 2 renders the real Moyasar card form whenever the server hands us a
+  // publishable key. The simulator is a tester's tool: it is used only when
+  // the server allows it AND the tester opened the page with ?sim=1, or when
+  // there is no Moyasar key at all on a dev/staging server.
+  const hasMoyasarKey = !!paymentConfig?.publishableKey;
+  const simulatorAllowed = !!paymentConfig?.simulatorEnabled;
+  const useSimulator = simulatorAllowed && (showSimulatorPicker || !hasMoyasarKey);
+  const useMoyasarForm = paymentMethod === 'card' && hasMoyasarKey && !useSimulator;
+
   useEffect(() => {
-    // PR K: real Moyasar form is disabled while the simulator owns step 2.
-    // Re-enable by setting `NEXT_PUBLIC_PAYMENT_SIMULATOR=0` and restoring
-    // the `loadMoyasarForm()` call below when the real integration ships.
-    if (false && step === 2 && paymentConfig) {
+    if (step === 2 && paymentConfig && useMoyasarForm) {
       loadMoyasarForm();
     }
-  }, [step, paymentConfig]);
+  }, [step, paymentConfig, useMoyasarForm]);
 
   const fetchProperty = async () => {
     try {
@@ -160,34 +165,51 @@ function BookingContent() {
     }
   };
 
-  const loadMoyasarForm = () => {
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://cdn.moyasar.com/mpf/1.14.0/moyasar.css';
-    document.head.appendChild(cssLink);
+  const MOYASAR_VERSION = '1.14.0';
+  const initMoyasar = () => {
+    if (!window.Moyasar || !paymentConfig) return;
+    const el = document.querySelector('.mysr-form');
+    if (!el) return;
+    el.innerHTML = '';
+    window.Moyasar.init({
+      element: '.mysr-form',
+      // Moyasar expects the smallest unit (halalas), computed by the server.
+      amount: paymentConfig.amountHalalas,
+      currency: paymentConfig.currency,
+      description: paymentConfig.description,
+      publishable_api_key: paymentConfig.publishableKey,
+      callback_url: paymentConfig.callbackUrl,
+      methods: ['creditcard'],
+      supported_networks: ['visa', 'mastercard', 'mada'],
+      metadata: paymentConfig.metadata,
+      language: isAr ? 'ar' : 'en',
+    });
+  };
 
-    const script = document.createElement('script');
-    script.src = 'https://cdn.moyasar.com/mpf/1.14.0/moyasar.js';
-    script.async = true;
-    script.onload = () => {
-      if (window.Moyasar) {
-        window.Moyasar.init({
-          element: '.mysr-form',
-          amount: paymentConfig.amount,
-          currency: paymentConfig.currency,
-          description: paymentConfig.description,
-          publishable_api_key: paymentConfig.publishableKey,
-          callback_url: paymentConfig.callbackUrl,
-          methods: ['creditcard'],
-          supported_networks: ['visa', 'mastercard', 'mada'],
-          metadata: paymentConfig.metadata,
-          on_completed: function(payment: any) {
-            console.log('Payment completed:', payment.id);
-          },
-        });
-      }
-    };
-    document.head.appendChild(script);
+  const loadMoyasarForm = () => {
+    if (window.Moyasar) {
+      initMoyasar();
+      return;
+    }
+    if (!document.querySelector('link[data-moyasar]')) {
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = `https://cdn.moyasar.com/mpf/${MOYASAR_VERSION}/moyasar.css`;
+      cssLink.setAttribute('data-moyasar', '1');
+      document.head.appendChild(cssLink);
+    }
+    let script = document.querySelector<HTMLScriptElement>('script[data-moyasar]');
+    if (!script) {
+      script = document.createElement('script');
+      script.src = `https://cdn.moyasar.com/mpf/${MOYASAR_VERSION}/moyasar.js`;
+      script.async = true;
+      script.setAttribute('data-moyasar', '1');
+      script.onerror = () => {
+        toast.error(isAr ? 'تعذّر تحميل نموذج الدفع. حدّث الصفحة وحاول مرة أخرى.' : 'Could not load the payment form. Refresh and try again.');
+      };
+      document.head.appendChild(script);
+    }
+    script.addEventListener('load', initMoyasar, { once: true });
   };
 
   const handleContinueToPayment = async () => {
@@ -223,11 +245,8 @@ function BookingContent() {
       const newBookingId = bookingRes.data.data._id;
       setBookingId(newBookingId);
 
-      // PR K: every payment method now routes through the in-app simulator
-      // (demo mode). We still call `paymentsApi.initiate` to create a Payment
-      // record — the simulator picks an outcome against that record on step 2.
-      // The BNPL off-site redirects and Moyasar card form are deferred to the
-      // real payment milestone; the UX is the same for all three methods.
+      // Create the Payment record. Step 2 then shows the Moyasar card form
+      // (or the simulator on dev/staging servers that allow it).
       const paymentRes = await paymentsApi.initiate({
         bookingId: newBookingId,
       });
@@ -684,13 +703,8 @@ function BookingContent() {
                   </>
                 )}
 
-                {/* Step 2: Payment Simulator (PR K) */}
-                {/* Step 2 (PR M): realistic payment UI. Tabs mimic Visa/
-                    Mastercard/Mada card entry + Tamara + Tabby. Fields
-                    don't validate or ship anywhere — the simulator
-                    endpoint decides the outcome — but the UX mirrors a
-                    production gateway. Demo "outcome" selector sits in
-                    its own clearly-marked section at the bottom. */}
+                {/* Step 2: payment. The real Moyasar form by default; the
+                    mock card form + outcome picker only in simulator mode. */}
                 {step === 2 && paymentConfig && (
                   <div className="bg-white rounded-2xl shadow-card overflow-hidden">
                     {/* Secure header */}
@@ -735,8 +749,27 @@ function BookingContent() {
                       </div>
                     </div>
 
-                    {/* Card form */}
-                    {paymentMethod === 'card' && (
+                    {/* Real card form (Moyasar). Card data goes straight
+                        to Moyasar; it never touches our servers. */}
+                    {useMoyasarForm && (
+                      <div className="px-6 py-5">
+                        <div className="mysr-form" />
+                      </div>
+                    )}
+
+                    {/* Payment unavailable: no Moyasar key and no simulator. */}
+                    {!hasMoyasarKey && !useSimulator && (
+                      <div className="px-6 py-5">
+                        <p className="text-sm text-red-600">
+                          {isAr
+                            ? 'الدفع الإلكتروني غير متاح حالياً. حاول لاحقاً أو تواصل مع الدعم.'
+                            : 'Online payment is unavailable right now. Please try later or contact support.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Mock card form (simulator only) */}
+                    {useSimulator && paymentMethod === 'card' && (
                       <div className="px-6 py-5 space-y-4">
                         <div className="flex items-center gap-3">
                           <div className="w-11 h-7 bg-blue-50 rounded flex items-center justify-center text-[10px] font-bold text-blue-700">VISA</div>
@@ -887,7 +920,7 @@ function BookingContent() {
                     )}
 
                     {/* Outcome picker for testers only: add ?sim=1 to the address. */}
-                    {showSimulatorPicker && (
+                    {useSimulator && showSimulatorPicker && (
                     <div className="mx-6 mb-5 p-4 border border-dashed border-amber-300 bg-amber-50/50 rounded-xl">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
@@ -913,7 +946,8 @@ function BookingContent() {
                     </div>
                     )}
 
-                    {/* Pay button */}
+                    {/* Pay button (simulator only — the Moyasar form has its own) */}
+                    {useSimulator && (
                     <div className="px-6 pb-6">
                       <Button
                         onClick={handleSimulatePayment}
@@ -928,10 +962,21 @@ function BookingContent() {
                       </Button>
                       <p className="text-[11px] text-gray-400 text-center mt-3">
                         {isAr
-                          ? 'بالدفع فإنك توافق على شروط الحجز. الدفع الإلكتروني في مرحلة التشغيل التجريبي ولن يُخصم أي مبلغ من بطاقتك الآن.'
-                          : 'By paying you agree to the booking terms. Online payment is in a trial phase — your card will not be charged now.'}
+                          ? 'وضع تجريبي: لن يُخصم أي مبلغ من بطاقتك.'
+                          : 'Test mode: your card will not be charged.'}
                       </p>
                     </div>
+                    )}
+                    {useMoyasarForm && (
+                      <p className="px-6 pb-6 text-[11px] text-gray-400 text-center">
+                        {isAr ? 'بالدفع فإنك توافق على شروط الحجز.' : 'By paying you agree to the booking terms.'}
+                      </p>
+                    )}
+                    {hasMoyasarKey && !useSimulator && paymentMethod !== 'card' && (
+                      <p className="px-6 pb-6 text-sm text-gray-500 text-center">
+                        {isAr ? 'التقسيط غير متاح بعد. ادفع بالبطاقة.' : 'Pay-later is not available yet. Please pay by card.'}
+                      </p>
+                    )}
                   </div>
                 )}
 

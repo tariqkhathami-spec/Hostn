@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const { paymentFees } = require('../config/fees');
 const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
@@ -7,6 +6,7 @@ const ActivityLog = require('../models/ActivityLog');
 const Property = require('../models/Property');
 const { emitToUser, emitToProperty } = require('../config/socket');
 const { guestBooking } = require('../config/fees');
+const { verifySecretToken, parseEvent } = require('../services/moyasarWebhook');
 
 /**
  * A fully refunded booking does not stand any more: its money went back to
@@ -84,6 +84,106 @@ async function moyasarRequest(method, path, data = null) {
   return res.json();
 }
 
+const UNSETTLED = ['pending', 'processing', 'failed'];
+
+/** What the web client needs to render the Moyasar payment form. */
+function paymentConfig(payment, booking) {
+  const title = booking.property?.titleAr || booking.property?.title || '';
+  return {
+    paymentId: payment._id,
+    amount: payment.amount,
+    // Moyasar takes the smallest currency unit (halalas).
+    amountHalalas: Math.round(payment.amount * 100),
+    currency: payment.currency,
+    bookingId: booking._id,
+    description: `Hostn booking ${booking._id}${title ? ` — ${title}` : ''}`.slice(0, 255),
+    // Echoed back on the webhook, so a payment links even if the guest
+    // closes the tab before the callback page runs.
+    metadata: { payment_id: String(payment._id), booking_id: String(booking._id) },
+    publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY || null,
+    callbackUrl: `${process.env.CLIENT_URL}/booking/${booking._id}/payment-callback`,
+    simulatorEnabled: isSimulatorEnabled(),
+  };
+}
+
+function sourceFromGateway(src) {
+  if (!src) return undefined;
+  return {
+    type: src.type,
+    company: src.company,
+    name: src.name,
+    number: src.number,
+    message: src.message,
+  };
+}
+
+/**
+ * Mark a payment paid, exactly once. Both the browser callback (verify) and
+ * the Moyasar webhook call this; whichever arrives first wins the atomic
+ * update and sends the notifications, the other becomes a no-op.
+ * Returns { payment, settledNow }.
+ */
+async function settlePaid(paymentId, { moyasarPaymentId, moyasarStatus, source, ip, via }) {
+  const update = {
+    status: 'completed',
+    moyasarPaymentId,
+    moyasarStatus,
+    paidAt: new Date(),
+    failureReason: null,
+  };
+  const src = sourceFromGateway(source);
+  if (src) update.source = src;
+
+  const payment = await Payment.findOneAndUpdate(
+    { _id: paymentId, status: { $in: UNSETTLED } },
+    { $set: update },
+    { new: true }
+  );
+  if (!payment) {
+    return { payment: await Payment.findById(paymentId), settledNow: false };
+  }
+
+  const booking = await Booking.findById(payment.booking);
+  if (booking) {
+    booking.paymentStatus = 'paid';
+    await booking.save();
+
+    try {
+      const property = await Property.findById(booking.property);
+      if (property) {
+        await Notification.createNotification({
+          user: property.host,
+          userType: 'Host',
+          type: 'payment_success',
+          title: 'تم استلام دفعة',
+          message: `استلمنا ${payment.amount} ر.س عن حجز في ${property.titleAr || property.title}`,
+          data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id },
+        });
+      }
+      await Notification.createNotification({
+        user: payment.user,
+        userType: 'Guest',
+        type: 'payment_success',
+        title: 'تم الدفع بنجاح',
+        message: `تم تأكيد دفعتك بقيمة ${payment.amount} ر.س`,
+        data: { bookingId: booking._id, paymentId: payment._id },
+      });
+    } catch (notifErr) {
+      console.warn('[settlePaid] notification dispatch failed:', notifErr?.message);
+    }
+  }
+
+  await ActivityLog.create({
+    actor: payment.user,
+    action: 'payment_completed',
+    target: { type: 'Payment', id: payment._id },
+    details: `Payment completed via Moyasar (${via}) — ${payment.amount} SAR`,
+    ip,
+  }).catch(() => {});
+
+  return { payment, settledNow: true };
+}
+
 // @desc    Initiate a payment for a booking
 // @route   POST /api/payments/initiate
 // @access  Private
@@ -122,14 +222,7 @@ exports.initiatePayment = async (req, res, next) => {
       // Same shape as a fresh payment, so a retry finds `paymentId`.
       return res.json({
         success: true,
-        data: {
-          paymentId: existingPayment._id,
-          amount: existingPayment.amount,
-          currency: existingPayment.currency,
-          bookingId: booking._id,
-          publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY,
-          callbackUrl: `${process.env.CLIENT_URL}/booking/${bookingId}/payment-callback`,
-        },
+        data: paymentConfig(existingPayment, booking),
         message: 'Existing pending payment found',
       });
     }
@@ -160,18 +253,7 @@ exports.initiatePayment = async (req, res, next) => {
       ip: req.ip,
     });
 
-    res.status(201).json({
-      success: true,
-      data: {
-        paymentId: payment._id,
-        amount: payment.amount,
-        currency: payment.currency,
-        bookingId: booking._id,
-        // Moyasar publishable key for frontend form
-        publishableKey: process.env.MOYASAR_PUBLISHABLE_KEY,
-        callbackUrl: `${process.env.CLIENT_URL}/booking/${bookingId}/payment-callback`,
-      },
-    });
+    res.status(201).json({ success: true, data: paymentConfig(payment, booking) });
   } catch (error) {
     next(error);
   }
@@ -266,63 +348,14 @@ exports.verifyPayment = async (req, res, next) => {
       moyasarPayment.status === 'captured';
 
     if (isPaid) {
-      // Update payment
-      payment.status = 'completed';
-      payment.moyasarPaymentId = moyasarPaymentId;
-      payment.moyasarStatus = moyasarPayment.status;
-      payment.paidAt = new Date();
-      if (moyasarPayment.source) {
-        payment.source = {
-          type: moyasarPayment.source.type,
-          company: moyasarPayment.source.company,
-          name: moyasarPayment.source.name,
-          number: moyasarPayment.source.number,
-          message: moyasarPayment.source.message,
-        };
-      }
-      await payment.save();
-
-      // Update booking payment status
-      const booking = await Booking.findById(payment.booking);
-      if (booking) {
-        booking.paymentStatus = 'paid';
-        await booking.save();
-
-        // Notify host about new paid booking
-        const Property = require('../models/Property');
-        const property = await Property.findById(booking.property);
-        if (property) {
-          await Notification.createNotification({
-            user: property.host,
-            userType: 'Host',
-            type: 'payment_success',
-            title: 'تم استلام دفعة',
-            message: `استلمنا ${payment.amount} ر.س عن حجز في ${property.titleAr || property.title}`,
-            data: { bookingId: booking._id, paymentId: payment._id, propertyId: property._id },
-          });
-        }
-
-        // Notify guest
-        await Notification.createNotification({
-          user: req.user._id,
-          userType: 'Guest',
-          type: 'payment_success',
-          title: 'تم الدفع بنجاح',
-          message: `تم تأكيد دفعتك بقيمة ${payment.amount} ر.س`,
-          data: { bookingId: booking._id, paymentId: payment._id },
-        });
-      }
-
-      // Log
-      await ActivityLog.create({
-        actor: req.user._id,
-        action: 'payment_completed',
-        target: { type: 'Payment', id: payment._id },
-        details: `Payment completed via Moyasar — ${payment.amount} SAR`,
+      const { payment: settled } = await settlePaid(payment._id, {
+        moyasarPaymentId,
+        moyasarStatus: moyasarPayment.status,
+        source: moyasarPayment.source,
         ip: req.ip,
+        via: 'callback',
       });
-
-      res.json({ success: true, data: payment, message: 'Payment verified successfully' });
+      res.json({ success: true, data: settled, message: 'Payment verified successfully' });
     } else {
       // Payment failed
       payment.status = 'failed';
@@ -367,14 +400,20 @@ exports.verifyPayment = async (req, res, next) => {
 // instead of running an actual card charge. Every outcome mirrors the state
 // transitions that would happen if the real processor returned that result.
 //
-// PR: demo mode is the default today. Explicitly disable by setting
-// `PAYMENT_SIMULATOR_DISABLED=true` on the environment once the real
-// payment integration is live — that'll flip the endpoint back to 404.
+// The simulator marks bookings paid without charging anyone, so it is OFF in
+// production unless `PAYMENT_SIMULATOR_ENABLED=true` is set explicitly (e.g. a
+// staging deploy that runs with NODE_ENV=production). Outside production it
+// stays on for local development unless `PAYMENT_SIMULATOR_DISABLED=true`.
 //
 // The check is a GETTER (not a top-level const) so it picks up env var
 // changes after a Railway "Restart" without needing a full rebuild.
 
-const isSimulatorEnabled = () => process.env.PAYMENT_SIMULATOR_DISABLED !== 'true';
+const isSimulatorEnabled = () => {
+  if (process.env.PAYMENT_SIMULATOR_ENABLED === 'true') return true;
+  if (process.env.NODE_ENV === 'production') return false;
+  return process.env.PAYMENT_SIMULATOR_DISABLED !== 'true';
+};
+exports.isSimulatorEnabled = isSimulatorEnabled;
 
 const SIMULATED_OUTCOMES = {
   approved: {
@@ -574,132 +613,148 @@ exports.getPaymentStatus = async (req, res, next) => {
   }
 };
 
-// @desc    Verify Moyasar webhook signature (HMAC-SHA256)
-function verifyWebhookSignature(rawBody, signatureHeader) {
-  if (!MOYASAR_WEBHOOK_SECRET) {
-    console.error('[WEBHOOK] MOYASAR_WEBHOOK_SECRET not configured — rejecting all webhooks');
-    return false;
-  }
-  if (!signatureHeader) return false;
-
-  const expectedSignature = crypto
-    .createHmac('sha256', MOYASAR_WEBHOOK_SECRET)
-    .update(rawBody)
-    .digest('hex');
-
-  // Constant-time comparison to prevent timing attacks
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(signatureHeader, 'utf8'),
-      Buffer.from(expectedSignature, 'utf8')
-    );
-  } catch {
-    return false;
-  }
-}
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // @desc    Moyasar webhook handler
 // @route   POST /api/payments/webhook
-// @access  Public (verified by Moyasar signature)
+// @access  Public (verified by the `secret_token` Moyasar puts in the body)
 exports.webhook = async (req, res, next) => {
   try {
-    // Step 1: Verify webhook signature
-    const signature = req.headers['x-moyasar-signature'] || req.headers['x-signature'];
-    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      console.error('[WEBHOOK] Signature verification failed');
+    // Step 1: Authenticate. Moyasar sends no signature header; the body
+    // carries the secret token configured on the webhook in the dashboard.
+    if (!MOYASAR_WEBHOOK_SECRET) {
+      console.error('[WEBHOOK] MOYASAR_WEBHOOK_SECRET not configured — rejecting all webhooks');
+    }
+    if (!verifySecretToken(req.body, MOYASAR_WEBHOOK_SECRET)) {
       await ActivityLog.create({
         action: 'webhook_signature_failed',
-        details: `Rejected webhook with invalid signature from IP: ${req.ip}`,
+        details: `Rejected Moyasar webhook with invalid secret_token from IP: ${req.ip}`,
         ip: req.ip,
-      });
-      return res.status(403).json({ success: false, message: 'Invalid webhook signature' });
+      }).catch(() => {});
+      return res.status(403).json({ success: false, message: 'Invalid webhook token' });
     }
 
-    // Step 2: Parse and validate payload
-    const { id, status, amount, source, metadata } = req.body;
-
-    if (!id || !status) {
-      return res.status(400).json({ success: false, message: 'Invalid webhook payload' });
+    // Step 2: Parse the event envelope.
+    const event = parseEvent(req.body);
+    if (event.error) {
+      return res.status(400).json({ success: false, message: event.error });
+    }
+    if (event.action === 'verification') {
+      // Enter this code in the Moyasar dashboard to activate the webhook.
+      console.log(`[WEBHOOK] Moyasar webhook verification code: ${event.code}`);
+      return res.status(200).json({ success: true, message: 'Verification received' });
+    }
+    if (event.action === 'ignore') {
+      return res.status(200).json({ success: true, message: `Event ${event.type} ignored` });
     }
 
-    // Step 3: Idempotency — check if we already processed this event
-    const idempotencyKey = `webhook_${id}_${status}`;
+    // A test-mode event must never settle a live booking (and vice versa).
+    if (MOYASAR_SECRET_KEY && typeof event.live === 'boolean') {
+      const serverIsLive = MOYASAR_SECRET_KEY.startsWith('sk_live_');
+      if (event.live !== serverIsLive) {
+        console.warn(`[WEBHOOK] Ignored ${event.live ? 'live' : 'test'} event on a ${serverIsLive ? 'live' : 'test'} server`);
+        return res.status(200).json({ success: true, message: 'Mode mismatch, ignored' });
+      }
+    }
+
+    const mp = event.payment;
+    const idempotencyKey = `webhook_${event.eventId}_${event.type}`;
+
+    // Step 3: Idempotency — Moyasar retries up to 5 times.
     const existingLog = await ActivityLog.findOne({
       action: 'webhook_processed',
-      'details': { $regex: idempotencyKey },
+      details: { $regex: `^${escapeRegex(idempotencyKey)}` },
     });
     if (existingLog) {
       return res.status(200).json({ success: true, message: 'Already processed' });
     }
 
-    // Step 4: Find payment
-    const payment = await Payment.findOne({ moyasarPaymentId: id });
+    // Step 4: Find our Payment. The gateway id is linked once the browser
+    // callback runs; if the guest closed the tab before that, fall back to
+    // the payment_id we put in the Moyasar form's metadata.
+    let payment = await Payment.findOne({ moyasarPaymentId: mp.id });
+    const metaId = mp.metadata?.payment_id;
+    if (!payment && typeof metaId === 'string' && /^[a-f0-9]{24}$/i.test(metaId)) {
+      const candidate = await Payment.findById(metaId);
+      if (candidate && UNSETTLED.includes(candidate.status)) payment = candidate;
+    }
     if (!payment) {
-      // Acknowledge but log — could be a payment we haven't linked yet
       await ActivityLog.create({
         action: 'webhook_unlinked',
-        details: `Webhook for unknown moyasarPaymentId: ${id}, status: ${status}`,
+        details: `Webhook ${event.type} for unknown Moyasar payment ${mp.id}`,
         ip: req.ip,
-      });
+      }).catch(() => {});
       return res.status(200).json({ success: true, message: 'Payment not found, acknowledged' });
     }
 
-    // Step 5: Validate amount matches (prevent amount tampering)
-    if (amount) {
-      const expectedAmountHalalas = Math.round(payment.amount * 100);
-      if (status !== 'refunded' && amount !== expectedAmountHalalas) {
-        await ActivityLog.create({
-          action: 'webhook_amount_mismatch',
-          target: { type: 'Payment', id: payment._id },
-          details: `Webhook amount mismatch: expected ${expectedAmountHalalas}, got ${amount}. ${idempotencyKey}`,
-          ip: req.ip,
-        });
-        return res.status(400).json({ success: false, message: 'Amount mismatch' });
+    // Step 5: Amount + currency must match what we charged.
+    const expectedHalalas = Math.round(payment.amount * 100);
+    if ((mp.currency && mp.currency !== 'SAR') || mp.amount !== expectedHalalas) {
+      await ActivityLog.create({
+        action: 'webhook_amount_mismatch',
+        target: { type: 'Payment', id: payment._id },
+        details: `Webhook ${event.type}: expected ${expectedHalalas} SAR halalas, got ${mp.amount} ${mp.currency}. ${idempotencyKey}`,
+        ip: req.ip,
+      }).catch(() => {});
+      // 200 so Moyasar stops retrying; the mismatch is logged for review.
+      return res.status(200).json({ success: true, message: 'Amount mismatch, logged' });
+    }
+
+    // Step 6: Apply the event.
+    let outcome = 'no change';
+    if (event.action === 'paid') {
+      const { settledNow, payment: p } = await settlePaid(payment._id, {
+        moyasarPaymentId: mp.id,
+        moyasarStatus: mp.status,
+        source: mp.source,
+        ip: req.ip,
+        via: 'webhook',
+      });
+      outcome = settledNow ? 'completed' : `already ${p?.status}`;
+    } else if (event.action === 'failed' || event.action === 'voided') {
+      // Only an unsettled payment can fail. A failure for an older attempt
+      // must not undo a later successful one.
+      const updated = await Payment.findOneAndUpdate(
+        { _id: payment._id, status: { $in: ['pending', 'processing'] } },
+        {
+          $set: {
+            status: event.action === 'failed' ? 'failed' : 'cancelled',
+            moyasarPaymentId: mp.id,
+            moyasarStatus: mp.status,
+            failureReason: mp.source?.message || (event.action === 'failed' ? 'Payment failed' : 'Payment voided'),
+          },
+        },
+        { new: true }
+      );
+      outcome = updated ? updated.status : 'ignored (already settled)';
+    } else if (event.action === 'refunded') {
+      if (payment.status === 'refunded') {
+        outcome = 'already refunded';
+      } else if (payment.status === 'completed' || payment.status === 'paid') {
+        const refundedHalalas = mp.refunded || 0;
+        payment.moyasarStatus = mp.status;
+        payment.refundedAmount = refundedHalalas / 100;
+        if (refundedHalalas >= expectedHalalas) {
+          payment.status = 'refunded';
+          payment.refundedAt = new Date();
+          await payment.save();
+          await releaseRefundedBooking(payment.booking);
+          outcome = 'refunded';
+        } else {
+          // Partial refund: the booking stands. Record the amount only.
+          await payment.save();
+          outcome = `partial refund ${refundedHalalas} halalas`;
+        }
+      } else {
+        outcome = `ignored (payment is ${payment.status})`;
       }
     }
 
-    // Step 6: Update payment status
-    if (status === 'paid' || status === 'captured') {
-      payment.status = 'completed';
-      payment.moyasarStatus = status;
-      payment.paidAt = payment.paidAt || new Date();
-    } else if (status === 'failed') {
-      payment.status = 'failed';
-      payment.moyasarStatus = status;
-      payment.failureReason = source?.message || 'Payment failed';
-    } else if (status === 'refunded') {
-      payment.status = 'refunded';
-      payment.moyasarStatus = status;
-      payment.refundedAmount = (amount || 0) / 100; // Moyasar sends in halalas
-      payment.refundedAt = new Date();
-    }
-
-    if (source) {
-      payment.source = {
-        type: source.type,
-        company: source.company,
-        name: source.name,
-        number: source.number,
-        message: source.message,
-      };
-    }
-
-    await payment.save();
-
-    // Step 7: Update booking
-    if (payment.status === 'completed') {
-      await Booking.findByIdAndUpdate(payment.booking, { paymentStatus: 'paid' });
-    } else if (payment.status === 'refunded') {
-      await releaseRefundedBooking(payment.booking);
-    }
-
-    // Step 8: Log successful processing (with idempotency key)
+    // Step 7: Log with the idempotency key.
     await ActivityLog.create({
       action: 'webhook_processed',
       target: { type: 'Payment', id: payment._id },
-      details: `${idempotencyKey} — status updated to ${payment.status}`,
+      details: `${idempotencyKey} — ${outcome}`,
       ip: req.ip,
     });
 
@@ -796,7 +851,7 @@ exports.refundPayment = async (req, res, next) => {
     }
 
     // Refund via Moyasar if we have a payment ID
-    if (MOYASAR_SECRET_KEY && payment.moyasarPaymentId) {
+    if (MOYASAR_SECRET_KEY && payment.moyasarPaymentId && !payment.moyasarPaymentId.startsWith('sim_')) {
       const refundResult = await moyasarRequest('POST', `/payments/${payment.moyasarPaymentId}/refund`);
       if (refundResult.type === 'api_error') {
         return res.status(400).json({ success: false, message: refundResult.message || 'Refund failed at gateway' });
