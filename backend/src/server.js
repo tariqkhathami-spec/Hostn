@@ -212,6 +212,7 @@ app.use('/api/v1/properties/:propertyId/units', unitRoutes);
 app.use('/api/v1/units', unitRoutes);
 app.use('/api/v1/hosts', require('./routes/publicHost'));
 app.use('/api/v1/contact', require('./routes/contact'));
+app.use('/api/v1/ai', require('./routes/ai'));
 // SECURITY: seed endpoints wipe and fabricate data and are guarded only by a
 // secret that lives in this (public) repository. Never mount them in production.
 if (process.env.NODE_ENV !== 'production') {

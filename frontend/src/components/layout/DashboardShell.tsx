@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import Sidebar from './Sidebar';
+import AiAssistant from '@/components/ai/AiAssistant';
 
 interface DashboardShellProps {
   role: 'guest' | 'host' | 'admin';
@@ -53,6 +54,8 @@ export default function DashboardShell({ role, children }: DashboardShellProps) 
       <main className="flex-1 p-6 lg:p-8 overflow-auto pt-16 lg:pt-6">
         {children}
       </main>
+
+      <AiAssistant role={role} />
     </div>
   );
 }

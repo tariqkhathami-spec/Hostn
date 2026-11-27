@@ -269,6 +269,29 @@ await step('support ticket: guest → admin → guest', async () => {
   check('ticket is in the guest list', (mine.data || []).some((x) => x._id === id));
 });
 
+await step('AI assistant: access control', async () => {
+  // Works with or without a model key: without one the chat answers 503.
+  for (const role of ['guest', 'host', 'admin']) {
+    const s = await call(role, 'GET', '/ai/status');
+    check(`${role} reads the assistant status`, s.status === 200 && s.data?.role === role);
+    check(`${role} never receives the API key`, !JSON.stringify(s.json).includes('apiKey"'), 'apiKey field in response');
+  }
+  const ov = await call('guest', 'GET', '/ai/admin/overview');
+  check('guest cannot open the AI admin overview', ov.status === 403, `status ${ov.status}`);
+  const aov = await call('admin', 'GET', '/ai/admin/overview');
+  check('admin opens the AI admin overview', aov.status === 200 && aov.data?.settings);
+  const fake = await call('guest', 'POST', '/ai/actions/000000000000000000000000/confirm');
+  check('confirming an unknown action is refused', fake.status === 404, `status ${fake.status}`);
+  const chat = await call('guest', 'POST', '/ai/chat', { message: 'وش حجوزاتي القادمة؟' });
+  check('guest chat answers, or says the assistant is off', chat.status === 200 || chat.status === 503, `status ${chat.status}`);
+  if (chat.status === 200) {
+    const convId = chat.data?.conversationId;
+    const other = await call('host', 'GET', `/ai/conversations/${convId}`);
+    check("host cannot open the guest's conversation", other.status === 404, `status ${other.status}`);
+    await call('guest', 'DELETE', `/ai/conversations/${convId}`);
+  }
+});
+
 await step('report: guest → admin', async () => {
   const description = 'بلاغ اختبار آلي';
   const made = await call('guest', 'POST', '/reports', { targetType: 'property', targetId: unit.property._id, reason: 'spam', description });

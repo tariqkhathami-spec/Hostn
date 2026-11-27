@@ -342,6 +342,28 @@ export const supportApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
+// AI assistant — role-scoped; write actions need explicit confirmation.
+export interface AiAction { id: string; tool: string; summary: string; status: 'pending' | 'executed' | 'rejected' | 'failed' | 'expired'; error?: string | null }
+export interface AiChatMessage { role: 'user' | 'assistant'; text: string }
+export interface AiPublicSettings {
+  enabled: boolean; switchedOff: boolean; missing: string[]; provider: string; model: string;
+  baseUrl: string | null; effort: string; hasApiKey: boolean; ratePerMinute: number; dailyLimit: number;
+  roles: { admin: boolean; guest: boolean; host: boolean }; hasExtraInstructions: boolean;
+}
+export const aiApi = {
+  status: () => api.get<{ success: boolean; data: { enabled: boolean; role: string; settings?: AiPublicSettings } }>('/ai/status'),
+  chat: (message: string, conversationId?: string | null) =>
+    api.post<{ success: boolean; data: { conversationId: string; reply: string; actions: AiAction[] } }>('/ai/chat', { message, conversationId: conversationId || undefined }),
+  conversations: () => api.get<{ success: boolean; data: { id: string; title: string; updatedAt: string }[] }>('/ai/conversations'),
+  conversation: (id: string) =>
+    api.get<{ success: boolean; data: { id: string; title: string; messages: AiChatMessage[]; actions: AiAction[] } }>(`/ai/conversations/${id}`),
+  deleteConversation: (id: string) => api.delete(`/ai/conversations/${id}`),
+  confirmAction: (id: string) => api.post<{ success: boolean; data: AiAction }>(`/ai/actions/${id}/confirm`),
+  rejectAction: (id: string) => api.post<{ success: boolean; data: AiAction }>(`/ai/actions/${id}/reject`),
+  adminOverview: () => api.get('/ai/admin/overview'),
+  adminTest: () => api.post('/ai/admin/test'),
+};
+
 export const reportsApi = {
   createReport: (data: { targetType: string; targetId: string; reason: string; description: string; relatedBooking?: string }) =>
     api.post('/reports', data),

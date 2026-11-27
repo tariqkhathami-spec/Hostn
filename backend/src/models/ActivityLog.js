@@ -80,6 +80,8 @@ const activityLogSchema = new mongoose.Schema(
         // Staff and account managers
         'staff_created',
         'account_manager_assigned',
+        // AI assistant: a change the user confirmed
+        'ai_action_executed',
       ],
     },
     target: {
