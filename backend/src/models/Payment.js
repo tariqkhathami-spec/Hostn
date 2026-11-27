@@ -51,7 +51,7 @@ const paymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'paid', 'completed', 'failed', 'refunded', 'cancelled'],
+      enum: ['pending', 'processing', 'paid', 'completed', 'failed', 'partially_refunded', 'refunded', 'cancelled'],
       default: 'pending',
       index: true,
     },
@@ -78,6 +78,8 @@ const paymentSchema = new mongoose.Schema(
     },
     refundReason: String,
     refundedAt: Date,
+    // Set while a refund is talking to the gateway (services/refundService.js).
+    refundLockAt: Date,
     paidAt: Date,
     failedAt: Date,
     failureReason: String,

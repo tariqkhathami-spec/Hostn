@@ -7,6 +7,7 @@ const ActivityLog = require('../models/ActivityLog');
 const Property = require('../models/Property');
 const { emitToUser, emitToProperty } = require('../config/socket');
 const { guestBooking } = require('../config/fees');
+const { refundPayment: refundAtGateway, RefundError } = require('../services/refundService');
 
 /**
  * A fully refunded booking does not stand any more: its money went back to
@@ -50,6 +51,8 @@ async function releaseRefundedBooking(bookingId, reason) {
   return booking;
 }
 
+exports.releaseRefundedBooking = releaseRefundedBooking;
+
 // Moyasar API config
 const MOYASAR_API_URL = process.env.MOYASAR_API_URL || 'https://api.moyasar.com/v1';
 const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
@@ -59,7 +62,8 @@ const MOYASAR_WEBHOOK_SECRET = process.env.MOYASAR_WEBHOOK_SECRET;
 const VALID_TRANSITIONS = {
   pending: ['processing', 'completed', 'failed', 'cancelled'],
   processing: ['completed', 'failed'],
-  completed: ['refunded'],
+  completed: ['partially_refunded', 'refunded'],
+  partially_refunded: ['partially_refunded', 'refunded'],
   failed: ['pending'], // Allow retry
   refunded: [],
   cancelled: [],
@@ -617,15 +621,21 @@ exports.webhook = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Invalid webhook signature' });
     }
 
-    // Step 2: Parse and validate payload
-    const { id, status, amount, source, metadata } = req.body;
+    // Step 2: Parse and validate payload. Moyasar sends an event whose `data`
+    // is the payment object; a bare payment object is accepted too.
+    const event = req.body && req.body.data && req.body.data.id ? req.body.data : req.body || {};
+    const { id, status, amount, refunded, source } = event;
 
     if (!id || !status) {
       return res.status(400).json({ success: false, message: 'Invalid webhook payload' });
     }
 
     // Step 3: Idempotency — check if we already processed this event
-    const idempotencyKey = `webhook_${id}_${status}`;
+    // Each partial refund is its own event with the same status, so the
+    // refunded running total is part of the key.
+    const idempotencyKey = status === 'refunded'
+      ? `webhook_${id}_${status}_${refunded ?? amount ?? ''}`
+      : `webhook_${id}_${status}`;
     const existingLog = await ActivityLog.findOne({
       action: 'webhook_processed',
       'details': { $regex: idempotencyKey },
@@ -670,9 +680,15 @@ exports.webhook = async (req, res, next) => {
       payment.moyasarStatus = status;
       payment.failureReason = source?.message || 'Payment failed';
     } else if (status === 'refunded') {
-      payment.status = 'refunded';
+      // Moyasar marks the payment "refunded" after a partial refund too; the
+      // `refunded` field (halalas, running total) says how much went back.
+      // Without it the event is taken as a full refund.
+      const refundedSar = Number.isFinite(Number(refunded)) && refunded !== null && refunded !== undefined
+        ? Number(refunded) / 100
+        : payment.amount;
+      payment.refundedAmount = Math.round(Math.max(payment.refundedAmount || 0, refundedSar) * 100) / 100;
+      payment.status = payment.refundedAmount >= payment.amount ? 'refunded' : 'partially_refunded';
       payment.moyasarStatus = status;
-      payment.refundedAmount = (amount || 0) / 100; // Moyasar sends in halalas
       payment.refundedAt = new Date();
     }
 
@@ -776,51 +792,39 @@ exports.getAllPayments = async (req, res, next) => {
   }
 };
 
-// @desc    Refund a payment (admin)
-// @route   POST /api/payments/:id/refund
+// @desc    Refund a payment (admin), fully or partly
+// @route   POST /api/payments/:id/refund   body: { reason?, amount? (SAR) }
 // @access  Private (Admin)
+// A full refund cancels the booking and frees its dates; a partial refund
+// (amount below what is left) returns that money and leaves the booking as is.
 exports.refundPayment = async (req, res, next) => {
   try {
-    const { reason } = req.body;
+    const { reason, amount } = req.body || {};
     const payment = await Payment.findById(req.params.id);
 
-    if (!payment) {
-      return res.status(404).json({ success: false, message: 'Payment not found' });
+    let result;
+    try {
+      result = await refundAtGateway(payment, { amount, reason: reason || 'Admin refund' });
+    } catch (err) {
+      if (err instanceof RefundError) return res.status(err.status).json({ success: false, message: err.message });
+      throw err;
+    }
+    const { payment: saved, refunded, fullyRefunded } = result;
+
+    if (fullyRefunded) {
+      await releaseRefundedBooking(saved.booking, reason ? `استرداد المبلغ: ${reason}` : undefined);
     }
 
-    if (payment.status === 'refunded') {
-      return res.status(400).json({ success: false, message: 'Payment already refunded' });
-    }
-    if (payment.status !== 'completed' && payment.status !== 'paid') {
-      return res.status(400).json({ success: false, message: 'Only completed payments can be refunded' });
-    }
-
-    // Refund via Moyasar if we have a payment ID
-    if (MOYASAR_SECRET_KEY && payment.moyasarPaymentId) {
-      const refundResult = await moyasarRequest('POST', `/payments/${payment.moyasarPaymentId}/refund`);
-      if (refundResult.type === 'api_error') {
-        return res.status(400).json({ success: false, message: refundResult.message || 'Refund failed at gateway' });
-      }
-    }
-
-    payment.status = 'refunded';
-    payment.refundedAmount = payment.amount;
-    payment.refundReason = reason || 'Admin refund';
-    payment.refundedAt = new Date();
-    await payment.save();
-
-    // Update booking
-    await releaseRefundedBooking(payment.booking, reason ? `استرداد المبلغ: ${reason}` : undefined);
-
-    // Notify user
     await Notification.createNotification({
-      user: payment.user,
+      user: saved.user,
       userType: 'Guest',
       type: 'payment_success', // reuse type, message clarifies it's a refund
       title: 'تم استرداد المبلغ',
-      message: `تم استرداد ${payment.amount} ر.س إلى وسيلة الدفع الأصلية، وأُلغي الحجز`,
-      data: { bookingId: payment.booking, paymentId: payment._id },
-    });
+      message: fullyRefunded
+        ? `تم استرداد ${refunded} ر.س إلى وسيلة الدفع الأصلية، وأُلغي الحجز`
+        : `تم استرداد ${refunded} ر.س من مبلغ حجزك إلى وسيلة الدفع الأصلية، وحجزك ما زال قائماً`,
+      data: { bookingId: saved.booking, paymentId: saved._id },
+    }).catch(() => {});
 
     await ActivityLog.create({
       actor: req.user._id,
@@ -828,12 +832,12 @@ exports.refundPayment = async (req, res, next) => {
       actorRole: req.user.userType || req.user.role,
       actorAdminRole: req.user.adminRole || null,
       action: 'payment_refunded',
-      target: { type: 'Payment', id: payment._id },
-      details: `Refunded ${payment.amount} SAR — ${reason || 'No reason given'}`,
+      target: { type: 'Payment', id: saved._id },
+      details: `Refunded ${refunded} SAR (${fullyRefunded ? 'full' : 'partial'}, ${saved.refundedAmount}/${saved.amount}) — ${reason || 'No reason given'}`,
       ip: req.ip,
     });
 
-    res.json({ success: true, data: payment });
+    res.json({ success: true, data: saved });
   } catch (error) {
     next(error);
   }

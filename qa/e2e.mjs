@@ -1405,8 +1405,14 @@ await step('admin: units of a property, bookings and refunds', async () => {
     check('the deletion is in the activity log', logRows.some((l) => l.action === 'booking_deleted' && String(l.target?.id) === tBooking2._id), `${logRows.length} rows`);
   }
 
+  const part = await call('admin', 'POST', `/admin/payments/${tPaymentId}/refund`, { reason: 'جزئي', amount: 10 });
+  check('admin refunds part of the payment', part.status === 200 && part.data?.status === 'partially_refunded' && part.data?.refundedAmount === 10, brief(part, 200));
+  const bkPart = await call('tGuest', 'GET', `/bookings/${tBooking._id}`);
+  check('a partial refund leaves the booking standing', bkPart.data?.status !== 'cancelled' && bkPart.data?.paymentStatus === 'paid', `status ${bkPart.data?.status} / ${bkPart.data?.paymentStatus}`);
+  const over = await call('admin', 'POST', `/admin/payments/${tPaymentId}/refund`, { amount: tBooking.pricing.total });
+  check('a refund larger than what is left is refused', over.status === 400, brief(over));
   const ref = await call('admin', 'POST', `/admin/payments/${tPaymentId}/refund`, { reason: 'اختبار آلي' });
-  check('admin refunds the payment in full', ref.status === 200 && ref.data?.status === 'refunded' && ref.data?.refundedAmount === tBooking.pricing.total && ref.data?.refundReason === 'اختبار آلي' && ref.data?.refundedAt, brief(ref, 200));
+  check('admin refunds the rest, which completes the refund', ref.status === 200 && ref.data?.status === 'refunded' && ref.data?.refundedAmount === tBooking.pricing.total && ref.data?.refundReason === 'اختبار آلي' && ref.data?.refundedAt, brief(ref, 200));
   const ref2 = await call('admin', 'POST', `/admin/payments/${tPaymentId}/refund`, { reason: 'مرة ثانية' });
   check('a payment cannot be refunded twice', ref2.status === 400, brief(ref2));
   const st = await call('tGuest', 'GET', `/payments/${tPaymentId}/status`);
@@ -1417,7 +1423,18 @@ await step('admin: units of a property, bookings and refunds', async () => {
   check('a full refund cancels the booking', bk.data?.status === 'cancelled' && bk.data?.cancelledAt, `status ${bk.data?.status}`);
   const again = await bookAs('tGuest', tUnit, dayAt(200), dayAt(202));
   check('the refunded dates can be booked again', again.booking?._id, brief(again.made || again.hold));
-  if (again.booking?._id) await call('tGuest', 'PUT', `/bookings/${again.booking._id}/cancel`, { reason: 'تنظيف بعد الاختبار' });
+  if (again.booking?._id) {
+    // Guest cancels a paid booking well inside the unit's (default flexible) window.
+    const init2 = await call('tGuest', 'POST', '/payments/initiate', { bookingId: again.booking._id });
+    const pay2 = init2.data?.paymentId;
+    await call('tGuest', 'POST', '/payments/simulate', { paymentId: pay2, outcome: 'approved' });
+    const quote = await call('tGuest', 'GET', `/bookings/${again.booking._id}/cancellation-quote`);
+    check('the guest sees a full refund quoted before cancelling', quote.status === 200 && quote.data?.policy && quote.data?.refundAmount === again.booking.pricing?.total && quote.data?.withinDeadline === true, brief(quote, 200));
+    const gc = await call('tGuest', 'PUT', `/bookings/${again.booking._id}/cancel`, { reason: 'تنظيف بعد الاختبار' });
+    check('guest cancelling a paid booking inside the policy window is refunded', gc.status === 200 && gc.json?.cancellation?.refundAmount === again.booking.pricing?.total && gc.data?.paymentStatus === 'refunded', brief(gc, 200));
+    const pst = await call('tGuest', 'GET', `/payments/${pay2}/status`);
+    check('the cancelled booking\'s payment is refunded', pst.data?.status === 'refunded', brief(pst));
+  }
   const hostNotes = await call('tHost', 'GET', '/host/notifications?page=1');
   const noteRows = hostNotes.data?.notifications || hostNotes.data || [];
   check('the host is told the refunded booking was cancelled', noteRows.some((n) => n.type === 'booking_cancelled' && /استرداد/.test(n.title || '')), `${noteRows.length} notifications`);
