@@ -58,6 +58,10 @@ The backend auto-deploys from the `main` branch via Railway.
 - `JWT_SECRET` — At least 32 characters
 - `NODE_ENV` — `production`
 - `MOYASAR_SECRET_KEY`, `MOYASAR_PUBLISHABLE_KEY`, `MOYASAR_WEBHOOK_SECRET`
+  - `MOYASAR_WEBHOOK_SECRET` must equal the **Secret Token** set on the webhook in the Moyasar dashboard (Settings → Webhooks). Moyasar sends it in the body as `secret_token`; there is no signature header.
+  - Webhook URL: `https://<backend>/api/payments/webhook`, method POST, events `payment_paid`, `payment_failed`, `payment_refunded`, `payment_voided`. The verification code Moyasar sends is printed in the backend logs (`[WEBHOOK] Moyasar webhook verification code`).
+  - A `sk_test_` key only accepts test-mode webhooks and a `sk_live_` key only live ones.
+- `PAYMENT_SIMULATOR_ENABLED` — leave unset in production. The payment simulator is off when `NODE_ENV=production` unless this is `true` (staging only: it marks bookings paid without charging).
 - `CLIENT_URL` — Frontend production URL
 - `CORS_ORIGINS` — Comma-separated allowed origins
 
@@ -69,7 +73,7 @@ The backend auto-deploys from the `main` branch via Railway.
 
 **Environment Variables (Vercel Dashboard):**
 - `NEXT_PUBLIC_API_URL` — Backend API URL
-- `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` — Moyasar public key
+- `NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY` — not used by the booking page; the publishable key comes from the backend's `MOYASAR_PUBLISHABLE_KEY` via `/payments/initiate`
 
 ### Mobile (EAS Build)
 
