@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Sparkles, CheckCircle2, XCircle, Loader2, PlugZap } from 'lucide-react';
 import { aiApi, AiPublicSettings } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { usePageTitle } from '@/lib/usePageTitle';
 import AiChat from '@/components/ai/AiChat';
 
@@ -22,6 +23,8 @@ export default function AdminAiPage() {
   const { language } = useLanguage();
   const isAr = language === 'ar';
   usePageTitle(isAr ? 'المساعد الذكي' : 'AI Assistant');
+  const { user } = useAuth();
+  const isSuper = !user?.adminRole || user.adminRole === 'super';
   const [data, setData] = useState<Overview | null>(null);
   const [loadError, setLoadError] = useState('');
   const [testing, setTesting] = useState(false);
@@ -38,7 +41,7 @@ export default function AdminAiPage() {
     setTest(null);
     try {
       const r = await aiApi.adminTest();
-      setTest({ ok: true, text: `${isAr ? 'الاتصال شغال' : 'Connected'} · ${r.data.data.model} · ${r.data.data.ms}ms` });
+      setTest({ ok: true, text: r.data.message || `${r.data.data.model} · ${r.data.data.ms}ms` });
     } catch (err: unknown) {
       const m = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setTest({ ok: false, text: m || (isAr ? 'فشل الاتصال' : 'Connection failed') });
@@ -92,11 +95,11 @@ export default function AdminAiPage() {
             )}
             <p className="text-xs text-gray-500">{isAr ? 'المفتاح والمودل وتشغيل المساعد للضيوف والملاك من صفحة المفاتيح والربط.' : 'Key, model and guest/host access are set on the integration keys page.'}</p>
             {s.switchedOff && <p className="text-xs text-gray-600">{isAr ? 'المساعد مطفأ يدوياً (AI_ENABLED=false).' : 'Switched off (AI_ENABLED=false).'}</p>}
-            <button onClick={runTest} disabled={!s.enabled || testing}
+            {isSuper && <button onClick={runTest} disabled={!s.enabled || testing}
               className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlugZap className="w-4 h-4" />}
               {isAr ? 'اختبار الاتصال' : 'Test connection'}
-            </button>
+            </button>}
             {test && <p className={`text-xs ${test.ok ? 'text-green-700' : 'text-red-600'}`} dir="auto">{test.text}</p>}
           </div>
 

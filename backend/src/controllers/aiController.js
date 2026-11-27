@@ -119,11 +119,12 @@ exports.testConnection = async (req, res, next) => {
         messages: [{ role: 'user', content: 'ping' }],
         maxTokens: 512,
       });
-      return res.json({ success: true, data: { ok: true, model: r.model, ms: Date.now() - started } });
+      return res.json({ success: true, message: `الاتصال شغال (${r.model}، ${Date.now() - started}ms)`, data: { ok: true, model: r.model, ms: Date.now() - started } });
     } catch (err) {
       const reason = provider.classifyError(err);
       logger.warn('AI connection test failed', { provider: settings.provider, model: settings.model, reason });
-      return res.status(502).json({ success: false, message: `فشل الاتصال بالمودل (${reason})`, data: { ok: false, reason } });
+      const why = { auth: 'المفتاح غير صحيح', rate_limited: 'المزوّد رافض بسبب كثرة الطلبات', bad_request: 'اسم المودل أو الإعداد غير صحيح', unavailable: 'المزوّد ما يرد' }[reason] || 'خطأ غير معروف';
+      return res.status(400).json({ success: false, message: `فشل الاتصال بالمودل: ${why}`, data: { ok: false, reason } });
     }
   } catch (e) { next(e); }
 };

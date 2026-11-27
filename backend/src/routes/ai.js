@@ -16,6 +16,7 @@ router.post('/actions/:id/confirm', c.confirmAction);
 router.post('/actions/:id/reject', c.rejectAction);
 
 router.get('/admin/overview', authorize('admin'), authorizePermission(PERMISSIONS.VIEW_DASHBOARD), c.getAdminOverview);
-router.post('/admin/test', authorize('admin'), authorizePermission(PERMISSIONS.VIEW_DASHBOARD), c.testConnection);
+// Spends a few tokens: super admins only (same as the keys page).
+router.post('/admin/test', authorize('admin'), authorizePermission(PERMISSIONS.MANAGE_ADMINS), c.testConnection);
 
 module.exports = router;
