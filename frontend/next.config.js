@@ -46,6 +46,12 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.cloudfront.net',
       },
+      {
+        // Backend falls back to Cloudinary when S3 isn't configured
+        // (backend/src/routes/upload.js), so uploads come back on this host.
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
     ],
     // Optimize images for Vercel
     formats: ['image/avif', 'image/webp'],
@@ -106,7 +112,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.moyasar.com https://cdnjs.cloudflare.com https://maps.googleapis.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.moyasar.com",
               "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://api.dicebear.com https://cdn.moyasar.com https://maps.googleapis.com https://maps.gstatic.com https://*.ggpht.com https://*.amazonaws.com https://*.cloudfront.net",
+              "img-src 'self' data: blob: https://images.unsplash.com https://*.unsplash.com https://api.dicebear.com https://cdn.moyasar.com https://maps.googleapis.com https://maps.gstatic.com https://*.ggpht.com https://*.amazonaws.com https://*.cloudfront.net https://res.cloudinary.com",
               `connect-src 'self' http://localhost:5000 http://localhost:5050 ws://localhost:5050 ${apiConnectSources.join(' ')} ${socketConnectSources.join(' ')} https://api.moyasar.com https://*.mongodb.net https://maps.googleapis.com`.replace(/\s+/g, ' '),
               "frame-src 'self' https://cdn.moyasar.com https://api.moyasar.com",
               "object-src 'none'",

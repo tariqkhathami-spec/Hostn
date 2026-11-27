@@ -82,13 +82,18 @@ function validateEnv() {
       console.warn('BNPL (Tabby/Tamara) will be disabled until these are set.');
     }
 
+    // Uploads use S3 when AWS_ACCESS_KEY_ID + AWS_S3_BUCKET are set and fall
+    // back to Cloudinary otherwise (routes/upload.js). Only warn when the
+    // storage that will actually be used is missing its credentials.
+    const useS3 = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_S3_BUCKET);
     const missingCloudinary = warnCloudinary.filter(
       (key) => !process.env[key] || process.env[key].trim() === ''
     );
-    if (missingCloudinary.length > 0) {
-      console.warn('=== WARNING: Missing Cloudinary environment variables ===');
+    if (!useS3 && missingCloudinary.length > 0) {
+      console.warn('=== WARNING: No image storage configured ===');
+      console.warn('S3 is not configured (AWS_ACCESS_KEY_ID / AWS_S3_BUCKET), and Cloudinary is missing:');
       missingCloudinary.forEach((key) => console.warn(`  - ${key}`));
-      console.warn('Image uploads will fail until these are set.');
+      console.warn('Image uploads will fail until S3 or Cloudinary credentials are set.');
     }
   }
 
