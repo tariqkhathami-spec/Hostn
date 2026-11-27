@@ -10,6 +10,9 @@ const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const { hasPermission, PERMISSIONS } = require('../config/permissions');
 
+// Payments whose money (or part of it) stayed with us; sums are net of refunds.
+const KEPT_PAYMENT_STATUSES = ['completed', 'partially_refunded'];
+
 const MODEL_BY_ROLE = { guest: Guest, host: Host, admin: Admin };
 const TYPE_CAPITALIZED = { guest: 'Guest', host: 'Host', admin: 'Admin' };
 
@@ -120,17 +123,17 @@ exports.getStats = async (req, res, next) => {
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
       const [totalPayments, totalRevenue, monthlyRevenue] = await Promise.all([
-        Payment.countDocuments({ status: 'completed' }),
+        Payment.countDocuments({ status: { $in: KEPT_PAYMENT_STATUSES } }),
         Payment.aggregate([
-          { $match: { status: 'completed' } },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
+          { $match: { status: { $in: KEPT_PAYMENT_STATUSES } } },
+          { $group: { _id: null, total: { $sum: { $subtract: ['$amount', { $ifNull: ['$refundedAmount', 0] }] } } } },
         ]),
         Payment.aggregate([
-          { $match: { status: 'completed', paidAt: { $gte: sixMonthsAgo } } },
+          { $match: { status: { $in: KEPT_PAYMENT_STATUSES }, paidAt: { $gte: sixMonthsAgo } } },
           {
             $group: {
               _id: { year: { $year: '$paidAt' }, month: { $month: '$paidAt' } },
-              total: { $sum: '$amount' },
+              total: { $sum: { $subtract: ['$amount', { $ifNull: ['$refundedAmount', 0] }] } },
               count: { $sum: 1 },
             },
           },
@@ -222,8 +225,8 @@ exports.getUserDetail = async (req, res, next) => {
         Booking.countDocuments({ guest: user._id }),
         Review.countDocuments({ guest: user._id }),
         Payment.aggregate([
-          { $match: { user: user._id, status: 'completed' } },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
+          { $match: { user: user._id, status: { $in: KEPT_PAYMENT_STATUSES } } },
+          { $group: { _id: null, total: { $sum: { $subtract: ['$amount', { $ifNull: ['$refundedAmount', 0] }] } } } },
         ]),
       ]);
       stats = {
@@ -377,8 +380,8 @@ exports.getHostDetail = async (req, res, next) => {
         },
       },
       { $unwind: '$bookingData' },
-      { $match: { 'bookingData.property': { $in: propertyIds }, status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+      { $match: { 'bookingData.property': { $in: propertyIds }, status: { $in: KEPT_PAYMENT_STATUSES } } },
+      { $group: { _id: null, total: { $sum: { $subtract: ['$amount', { $ifNull: ['$refundedAmount', 0] }] } } } },
     ]);
 
     res.json({

@@ -9,6 +9,7 @@ const {
   getBooking,
   updateBookingStatus,
   cancelBooking,
+  getCancellationQuote,
 } = require('../controllers/bookingController');
 const { protect } = require('../middleware/auth');
 const {
@@ -30,6 +31,7 @@ router.get('/my-bookings', getMyBookings);
 router.get('/host-bookings', getHostBookings);
 router.get('/:id', mongoIdParam(), getBooking);
 router.put('/:id/status', mongoIdParam(), updateBookingStatusRules, updateBookingStatus);
+router.get('/:id/cancellation-quote', mongoIdParam(), getCancellationQuote);
 router.put('/:id/cancel', mongoIdParam(), cancelBooking);
 
 module.exports = router;

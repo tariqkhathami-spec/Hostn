@@ -6,6 +6,39 @@ const Notification = require('../models/Notification');
 const ActivityLog = require('../models/ActivityLog');
 const { emitToUser, emitToProperty } = require('../config/socket');
 const { GUEST_SERVICE_FEE_RATE, VAT_RATE, hostShare, guestPricing, guestBooking } = require('../config/fees');
+const Payment = require('../models/Payment');
+const { cancellationQuote } = require('../utils/cancellationPolicy');
+const { refundPayment, RefundError, REFUNDABLE_STATUSES } = require('../services/refundService');
+
+/** The settled payment of a paid booking (the one money can come back from). */
+const paidPaymentOf = (booking) =>
+  Payment.findOne({ booking: booking._id, status: { $in: REFUNDABLE_STATUSES } }).sort('-createdAt');
+
+/**
+ * What a guest cancelling `booking` now gets back under its unit's policy.
+ * { quote, payment } — payment is null for an unpaid booking.
+ */
+async function guestCancellationTerms(booking, now = new Date()) {
+  const unit = booking.unit ? await Unit.findById(booking.unit).select('cancellationPolicy').lean() : null;
+  const payment = booking.paymentStatus === 'paid' ? await paidPaymentOf(booking) : null;
+  const quote = cancellationQuote({
+    policy: unit && unit.cancellationPolicy,
+    checkIn: booking.checkIn,
+    paidAmount: payment ? payment.amount : 0,
+    refundedAmount: payment ? payment.refundedAmount : 0,
+    now,
+  });
+  return { quote, payment };
+}
+
+/** Refund everything left on a booking's payment; marks the booking refunded. */
+async function refundWholeBooking(booking, reason) {
+  const payment = await paidPaymentOf(booking);
+  if (!payment) return null;
+  const result = await refundPayment(payment, { reason });
+  if (result.fullyRefunded) booking.paymentStatus = 'refunded';
+  return result;
+}
 
 // Helper: overlap query for date-range conflicts (includes active holds)
 // When unitId is provided, checks unit-level availability instead of property-level.
@@ -813,6 +846,17 @@ exports.updateBookingStatus = async (req, res, next) => {
       });
     }
 
+    // The host turning down or cancelling a paid booking is never the guest's
+    // fault: everything paid goes back, whatever the cancellation policy.
+    if ((status === 'cancelled' || status === 'rejected') && booking.paymentStatus === 'paid') {
+      try {
+        await refundWholeBooking(booking, status === 'rejected' ? 'Host rejected the booking' : 'Host cancelled the booking');
+      } catch (err) {
+        if (err instanceof RefundError) return res.status(err.status).json({ success: false, message: err.message });
+        throw err;
+      }
+    }
+
     booking.status = status;
     if (status === 'confirmed') booking.confirmedAt = new Date();
     if (status === 'cancelled') booking.cancelledAt = new Date();
@@ -869,9 +913,32 @@ exports.updateBookingStatus = async (req, res, next) => {
   }
 };
 
+// @desc    What cancelling now would refund (guest)
+// @route   GET /api/bookings/:id/cancellation-quote
+// @access  Private (Guest)
+exports.getCancellationQuote = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.guest.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+    if (['completed', 'cancelled', 'rejected'].includes(booking.status)) {
+      return res.status(400).json({ success: false, message: 'Cannot cancel this booking' });
+    }
+    const { quote } = await guestCancellationTerms(booking);
+    res.json({ success: true, data: quote });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Cancel booking (guest)
 // @route   PUT /api/bookings/:id/cancel
 // @access  Private (Guest)
+// A paid booking is refunded according to its unit's cancellation policy
+// (utils/cancellationPolicy.js). The refund happens before the booking is
+// cancelled: if the gateway refuses, the booking stays and the guest can retry.
 exports.cancelBooking = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.id);
@@ -884,14 +951,65 @@ exports.cancelBooking = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
-    if (['completed', 'cancelled'].includes(booking.status)) {
+    if (['completed', 'cancelled', 'rejected'].includes(booking.status)) {
       return res.status(400).json({ success: false, message: 'Cannot cancel this booking' });
+    }
+
+    const { quote, payment } = await guestCancellationTerms(booking);
+    if (booking.paymentStatus === 'paid' && !payment) {
+      // Marked paid but no settled payment to refund from: do not guess.
+      return res.status(409).json({
+        success: false,
+        message: 'This booking\'s payment could not be found. Please contact support to cancel it.',
+      });
+    }
+
+    let refund = null;
+    if (quote.refundAmount > 0) {
+      try {
+        refund = await refundPayment(payment, {
+          amount: quote.refundAmount,
+          reason: `Guest cancellation (${quote.policy} policy)`,
+        });
+      } catch (err) {
+        if (err instanceof RefundError) return res.status(err.status).json({ success: false, message: err.message });
+        throw err;
+      }
+      if (refund.fullyRefunded) booking.paymentStatus = 'refunded';
     }
 
     booking.status = 'cancelled';
     booking.cancelledAt = new Date();
     booking.cancellationReason = req.body.reason;
     await booking.save();
+
+    const cancellation = {
+      policy: quote.policy,
+      deadline: quote.deadline,
+      refundAmount: refund ? refund.refunded : 0,
+      retainedAmount: quote.retainedAmount,
+    };
+
+    if (payment) {
+      Notification.createNotification({
+        user: booking.guest,
+        userType: 'Guest',
+        type: 'booking_cancelled',
+        title: 'تم إلغاء حجزك',
+        message: cancellation.refundAmount > 0
+          ? `سيُعاد ${cancellation.refundAmount} ر.س إلى وسيلة الدفع الأصلية`
+          : 'أُلغي الحجز بعد انتهاء مهلة الاسترداد في سياسة الإلغاء، فلا يُسترد المبلغ',
+        data: { bookingId: booking._id, propertyId: booking.property },
+      }).catch(() => {});
+      ActivityLog.create({
+        actor: req.user._id,
+        actorType: 'Guest',
+        action: cancellation.refundAmount > 0 ? 'payment_refunded' : 'booking_cancelled',
+        target: { type: 'Booking', id: booking._id },
+        details: `Guest cancelled under "${quote.policy}" policy — refunded ${cancellation.refundAmount} SAR, retained ${cancellation.retainedAmount} SAR`,
+        ip: req.ip,
+      }).catch(() => {});
+    }
 
     // ── Real-time: notify host about cancellation + update property ──
     const property = await Property.findById(booking.property).select('host title titleAr');
@@ -913,7 +1031,11 @@ exports.cancelBooking = async (req, res, next) => {
       });
     }
 
-    res.json({ success: true, data: req.user.role === 'guest' ? guestBooking(booking) : booking });
+    res.json({
+      success: true,
+      data: req.user.role === 'guest' ? guestBooking(booking) : booking,
+      cancellation,
+    });
   } catch (error) {
     next(error);
   }
